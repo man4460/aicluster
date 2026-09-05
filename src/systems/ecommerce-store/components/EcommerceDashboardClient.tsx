@@ -1,44 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatEcommerceBaht } from "@/lib/ecommerce/sales-period";
-import { bangkokDateKey } from "@/lib/time/bangkok";
-import { ECOMMERCE_STORE_SETTINGS_PORTAL_HREF } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
+import {
+  ECOMMERCE_STORE_FINANCE_HREF,
+  ECOMMERCE_STORE_SETTINGS_PORTAL_HREF,
+} from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
   ecommerceStoreDashboardStatsGridClass,
-  ecommerceStoreFilterChipShellClass,
   ecommerceStoreOutlineButtonClass,
-  ecommerceStorePrimaryButtonClass,
   ecommerceStoreSectionHeadingClass,
   ecommerceStoreStatInlineClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
-
-type SalesPeriod = "today" | "month" | "year" | "custom";
-
-type SalesSummary = {
-  period: SalesPeriod;
-  label: string;
-  from: string;
-  to: string;
-  orderCount: number;
-  totalBaht: number;
-};
 
 type Summary = {
   store: { id: string; storeName: string; merchantPaused: boolean };
   pendingOrders: number;
   lowStockCount: number;
   productCount: number;
+  monthRevenueBaht: number;
+  monthOrderCount: number;
 };
-
-const PERIOD_OPTIONS: { key: SalesPeriod; label: string }[] = [
-  { key: "today", label: "วันนี้" },
-  { key: "month", label: "เดือนนี้" },
-  { key: "year", label: "ปีนี้" },
-  { key: "custom", label: "ย้อนหลัง" },
-];
 
 const STAT_ACCENTS = {
   slate: "border-l-slate-400 text-slate-700",
@@ -73,87 +57,39 @@ function OverviewStat({
   );
 }
 
-function periodChipClass(active: boolean) {
-  return cn(
-    "min-h-8 shrink-0 rounded-md px-2.5 text-xs font-bold leading-none transition sm:min-h-9 sm:px-3",
-    active
-      ? "bg-gradient-to-r from-[#0000BF] via-[#5b61ff] to-[#c026d3] text-white shadow-sm"
-      : "border border-slate-200/90 bg-white text-[#5f5a8a] hover:bg-slate-50 hover:text-[#4d47b6]",
-  );
-}
-
 export function EcommerceDashboardClient() {
   const [data, setData] = useState<Summary | null>(null);
-  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>("today");
-  const [customFrom, setCustomFrom] = useState(() => bangkokDateKey());
-  const [customTo, setCustomTo] = useState(() => bangkokDateKey());
-  const [customDraftFrom, setCustomDraftFrom] = useState(customFrom);
-  const [customDraftTo, setCustomDraftTo] = useState(customTo);
-  const [sales, setSales] = useState<SalesSummary | null>(null);
-  const [salesLoading, setSalesLoading] = useState(true);
-  const [salesError, setSalesError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
-      const [storeRes, prodRes, ordRes] = await Promise.all([
-        fetch("/api/ecommerce-store/session/store"),
-        fetch("/api/ecommerce-store/session/products"),
-        fetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP"),
-      ]);
-      const storeJ = await storeRes.json();
-      const prodJ = await prodRes.json();
-      const ordJ = await ordRes.json();
-      const products = (prodJ.products ?? []) as { stockBalance: number }[];
-      const threshold = prodJ.lowStockThreshold ?? 5;
-      setData({
-        store: storeJ.store,
-        pendingOrders: (ordJ.orders ?? []).length,
-        productCount: products.length,
-        lowStockCount: products.filter((p) => p.stockBalance <= threshold).length,
-      });
+      setLoading(true);
+      try {
+        const [storeRes, prodRes, ordRes, salesRes] = await Promise.all([
+          fetch("/api/ecommerce-store/session/store"),
+          fetch("/api/ecommerce-store/session/products"),
+          fetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP"),
+          fetch("/api/ecommerce-store/session/sales-summary?period=month"),
+        ]);
+        const storeJ = await storeRes.json();
+        const prodJ = await prodRes.json();
+        const ordJ = await ordRes.json();
+        const salesJ = (await salesRes.json()) as { totalBaht?: number; orderCount?: number };
+        const products = (prodJ.products ?? []) as { stockBalance: number }[];
+        const threshold = prodJ.lowStockThreshold ?? 5;
+        setData({
+          store: storeJ.store,
+          pendingOrders: (ordJ.orders ?? []).length,
+          productCount: products.length,
+          lowStockCount: products.filter((p) => p.stockBalance <= threshold).length,
+          monthRevenueBaht: salesJ.totalBaht ?? 0,
+          monthOrderCount: salesJ.orderCount ?? 0,
+        });
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
-
-  const loadSales = useCallback(async () => {
-    setSalesLoading(true);
-    setSalesError(null);
-    const params = new URLSearchParams({ period: salesPeriod });
-    if (salesPeriod === "custom") {
-      params.set("from", customFrom);
-      params.set("to", customTo);
-    }
-    try {
-      const res = await fetch(`/api/ecommerce-store/session/sales-summary?${params}`);
-      const j = (await res.json()) as SalesSummary & { error?: string };
-      if (!res.ok) {
-        setSales(null);
-        setSalesError(j.error ?? "โหลดยอดขายไม่สำเร็จ");
-        return;
-      }
-      setSales(j);
-    } catch {
-      setSales(null);
-      setSalesError("โหลดยอดขายไม่สำเร็จ");
-    } finally {
-      setSalesLoading(false);
-    }
-  }, [salesPeriod, customFrom, customTo]);
-
-  useEffect(() => {
-    void loadSales();
-  }, [loadSales]);
-
-  function applyCustomRange() {
-    setCustomFrom(customDraftFrom);
-    setCustomTo(customDraftTo);
-  }
-
-  const salesRangeHint =
-    sales?.from && sales?.to
-      ? sales.from === sales.to
-        ? sales.from
-        : `${sales.from} – ${sales.to}`
-      : null;
 
   const storeOpen = data ? !data.store.merchantPaused : null;
 
@@ -161,14 +97,21 @@ export function EcommerceDashboardClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h3 className={ecommerceStoreSectionHeadingClass}>ยอดขาย · สถานะร้าน</h3>
+          <h3 className={ecommerceStoreSectionHeadingClass}>สถานะร้าน</h3>
           <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
             {data?.store.storeName
               ? `${data.store.storeName} · เวลาไทย (กรุงเทพ)`
-              : "สรุปตามช่วงเวลา (เวลาไทย)"}
+              : "สรุปด่วน — ประวัติการเงินอยู่หน้าการเงิน"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <Link
+            href={ECOMMERCE_STORE_FINANCE_HREF}
+            className={ecommerceStoreOutlineButtonClass}
+            aria-label="ไปหน้าการเงิน"
+          >
+            การเงิน
+          </Link>
           <Link
             href="/dashboard/ecommerce-store?tab=orders"
             className={ecommerceStoreOutlineButtonClass}
@@ -186,69 +129,21 @@ export function EcommerceDashboardClient() {
         </div>
       </div>
 
-      <div className={ecommerceStoreFilterChipShellClass} role="group" aria-label="ช่วงยอดขาย">
-        {PERIOD_OPTIONS.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            className={periodChipClass(salesPeriod === p.key)}
-            aria-pressed={salesPeriod === p.key}
-            onClick={() => {
-              if (p.key === "custom") {
-                setCustomFrom(customDraftFrom);
-                setCustomTo(customDraftTo);
-                setSalesPeriod("custom");
-                return;
-              }
-              setSalesPeriod(p.key);
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {salesPeriod === "custom" ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold text-[#66638c]">
-            ตั้งแต่
-            <input
-              type="date"
-              value={customDraftFrom}
-              onChange={(e) => setCustomDraftFrom(e.target.value)}
-              className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e1b4b]"
-            />
-          </label>
-          <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold text-[#66638c]">
-            ถึง
-            <input
-              type="date"
-              value={customDraftTo}
-              onChange={(e) => setCustomDraftTo(e.target.value)}
-              className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e1b4b]"
-            />
-          </label>
-          <button type="button" onClick={() => void applyCustomRange()} className={ecommerceStorePrimaryButtonClass}>
-            ดูยอด
-          </button>
-        </div>
-      ) : null}
-
-      {salesError ? <p className="text-sm font-semibold text-rose-700">{salesError}</p> : null}
-
-      {salesRangeHint || storeOpen != null ? (
+      {storeOpen != null ? (
         <p className="text-xs font-semibold text-[#66638c]">
-          {sales?.label ? `${sales.label}` : null}
-          {salesRangeHint ? ` · ${salesRangeHint}` : null}
-          {storeOpen != null ? ` · ร้าน${storeOpen ? "เปิด" : "ปิดชั่วคราว"}` : null}
+          ร้าน{storeOpen ? "เปิด" : "ปิดชั่วคราว"}
           {data ? ` · สินค้า ${data.productCount.toLocaleString("th-TH")} รายการ` : null}
+          {" · "}
+          <Link href={ECOMMERCE_STORE_FINANCE_HREF} className="font-bold text-[#4d47b6] underline-offset-2 hover:underline">
+            ดูประวัติการเงิน
+          </Link>
         </p>
       ) : null}
 
       <div className={ecommerceStoreDashboardStatsGridClass}>
         <OverviewStat
-          title="รายรับ"
-          value={salesLoading ? "…" : `฿${formatEcommerceBaht(sales?.totalBaht ?? 0)}`}
+          title="รายรับเดือนนี้"
+          value={loading ? "…" : `฿${formatEcommerceBaht(data?.monthRevenueBaht ?? 0)}`}
           tone="emerald"
           icon={
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -258,8 +153,8 @@ export function EcommerceDashboardClient() {
           }
         />
         <OverviewStat
-          title="ออเดอร์"
-          value={salesLoading ? "—" : (sales?.orderCount ?? 0).toLocaleString("th-TH")}
+          title="ออเดอร์เดือนนี้"
+          value={loading ? "—" : (data?.monthOrderCount ?? 0).toLocaleString("th-TH")}
           tone="indigo"
           icon={
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>

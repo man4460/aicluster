@@ -10,6 +10,7 @@ import {
   type EcommerceStoreNavKey,
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
+  IconFinance,
   IconPackage,
   IconSettings,
   IconStore,
@@ -20,6 +21,8 @@ function navIcon(key: EcommerceStoreNavKey, className?: string) {
   switch (key) {
     case "dashboard":
       return <IconStore className={className} />;
+    case "finance":
+      return <IconFinance className={className} />;
     case "products":
       return <IconPackage className={className} />;
     case "crm":

@@ -151,6 +151,36 @@ export const ecommerceStoreDashboardStatsGridClass = "grid grid-cols-2 items-str
 export const ecommerceStoreFilterChipShellClass =
   "flex flex-wrap content-start items-center gap-1.5";
 
+export const ecommerceStoreChipIdleClass =
+  "rounded-full border border-[#0000BF]/25 bg-white/85 px-4 py-2 text-xs font-black text-[#2e2a58] shadow-sm";
+
+export const ecommerceStoreChipActiveClass = cn(
+  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
+  appDashboardBrandGradientFillClass,
+);
+
+/** ชิปช่วงเวลาการเงิน — pill ตามแม่แบบ finance */
+export function ecommerceStoreFinanceRangeChipClass(active = false): string {
+  return cn(
+    "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-black transition-all sm:px-4",
+    active
+      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
+      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+  );
+}
+
+export const ecommerceStoreFinanceStatsGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
+
+export const ecommerceStoreFinanceStatCardClass =
+  "relative flex min-h-[7.25rem] flex-col overflow-hidden rounded-xl border border-violet-200/60 bg-gradient-to-br from-white/90 via-[#0000BF]/10 to-violet-50/80 px-4 py-4 shadow-sm";
+
+export const ecommerceStoreFinanceStatTailClass = "col-span-2 sm:col-span-1";
+
+export const ecommerceStoreFinanceSubTabShellClass =
+  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export const ecommerceStoreContentStackClass = "space-y-4 sm:space-y-5";
+
 /* —— เว็บไซต์ลูกค้า (storefront) —— */
 
 export const ecommerceStorePortalShopNameClass =

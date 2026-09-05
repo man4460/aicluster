@@ -16,6 +16,7 @@ import {
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import { EcommerceStoreMobileBottomProvider } from "@/systems/ecommerce-store/components/EcommerceStoreMobileBottomChrome";
 import {
+  IconFinance,
   IconPackage,
   IconSettings,
   IconStore,
@@ -33,6 +34,7 @@ import {
 
 const navIcons = {
   dashboard: IconStore,
+  finance: IconFinance,
   products: IconPackage,
   crm: IconUsers,
   settings: IconSettings,
@@ -155,7 +157,7 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — ร้านออนไลน์"
-        subtitle="แดชบอร์ด · สินค้า · CRM · ตั้งค่า · เว็บลูกค้า"
+        subtitle="แดชบอร์ด · การเงิน · สินค้า · CRM · ตั้งค่า · เว็บลูกค้า"
         sections={[
           {
             title: "เริ่มต้น",
@@ -165,12 +167,17 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
           {
             title: "เมนูหลัก",
             content:
-              "แดชบอร์ด (ภาพรวม · ออเดอร์) · สินค้า · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+              "แดชบอร์ด (ภาพรวม · ออเดอร์) · การเงิน · สินค้า · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
           },
           {
             title: "แดชบอร์ด — ภาพรวม · ออเดอร์",
             content:
-              "ภาพรวมแสดงยอดขายและสถิติร้าน · ออเดอร์เป็นเมนูย่อยสำหรับตรวจสลิปและอัปเดตสถานะ",
+              "ภาพรวมแสดงสถิติร้านแบบย่อ · ประวัติการเงิน/กราฟ/รายจ่ายอยู่หน้าการเงิน · ออเดอร์สำหรับตรวจสลิปและอัปเดตสถานะ",
+          },
+          {
+            title: "การเงิน",
+            content:
+              "สรุปรายรับ · รายจ่าย · สุทธิ · กรองช่วงเวลา · กราฟ · แท็บประวัติออเดอร์และรายจ่าย (หมวด + สลิป) — ค่าเริ่มต้นเดือนนี้",
           },
           {
             title: "ตั้งค่าร้าน",

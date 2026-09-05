@@ -369,6 +369,8 @@ model User {
   ecommerceProducts                  EcommerceProduct[]
   ecommerceOrders                    EcommerceOrder[]
   ecommerceBuyerCustomers            EcommerceBuyerCustomer[]
+  ecommerceCostCategories            EcommerceCostCategory[]
+  ecommerceCostEntries               EcommerceCostEntry[]
   smartPoliceProfile                 SmartPoliceProfile?
   smartPoliceCases                   SmartPoliceCase[]
   smartPoliceTemplates               SmartPoliceTemplate[]
@@ -6637,6 +6639,41 @@ model EcommerceBuyerCustomer {
   @@unique([storeId, phone], map: "ecbuyer_store_phone_uidx")
   @@index([ownerUserId], map: "ecbuyer_owner_idx")
   @@map("ecommerce_buyer_customers")
+}
+
+/**
+ * หมวดรายจ่าย — หน้าการเงินร้านออนไลน์
+ */
+model EcommerceCostCategory {
+  id          String                @id @default(cuid())
+  ownerUserId String                @map("owner_user_id") @db.VarChar(191)
+  owner       User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String                @db.VarChar(120)
+  sortOrder   Int                   @default(0) @map("sort_order")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  entries     EcommerceCostEntry[]
+
+  @@index([ownerUserId, sortOrder], map: "ec_cost_cat_owner_sort_idx")
+  @@map("ecommerce_cost_categories")
+}
+
+model EcommerceCostEntry {
+  id             String                  @id @default(cuid())
+  ownerUserId    String                  @map("owner_user_id") @db.VarChar(191)
+  owner          User                    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId     String?                 @map("category_id") @db.VarChar(191)
+  category       EcommerceCostCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  label          String                  @db.VarChar(160)
+  amountBaht     Int                     @map("amount_baht")
+  spentAt        DateTime                @default(now()) @map("spent_at")
+  note           String?                 @db.VarChar(300)
+  paymentSlipUrl String?                 @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  @@index([ownerUserId, spentAt], map: "ec_cost_owner_spent_idx")
+  @@index([categoryId], map: "ec_cost_category_idx")
+  @@map("ecommerce_cost_entries")
 }
 
 // --- Smart Police (สำนวนคดี / พิมพ์หมาย / รายงาน — อิง SmartPolice desktop) ---

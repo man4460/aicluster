@@ -1,4 +1,5 @@
 export const ECOMMERCE_STORE_BASE = "/dashboard/ecommerce-store";
+export const ECOMMERCE_STORE_FINANCE_HREF = `${ECOMMERCE_STORE_BASE}/finance`;
 export const ECOMMERCE_STORE_SETTINGS_HREF = `${ECOMMERCE_STORE_BASE}/settings`;
 export const ECOMMERCE_STORE_SETTINGS_PORTAL_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=portal`;
 export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไลน์";
@@ -30,7 +31,7 @@ export function parseEcommerceStoreDashboardTab(
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_KEY = "mawell-ecommerce-store-module-header-collapsed";
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT = "mawell-ecommerce-store-header-collapse";
 
-export type EcommerceStoreNavKey = "dashboard" | "products" | "crm" | "settings";
+export type EcommerceStoreNavKey = "dashboard" | "finance" | "products" | "crm" | "settings";
 
 export type EcommerceStoreNavItem = {
   key: EcommerceStoreNavKey;
@@ -41,6 +42,7 @@ export type EcommerceStoreNavItem = {
 
 export const ECOMMERCE_STORE_NAV_ITEMS: EcommerceStoreNavItem[] = [
   { key: "dashboard", href: ECOMMERCE_STORE_BASE, label: "แดชบอร์ด", shortLabel: "แดช" },
+  { key: "finance", href: ECOMMERCE_STORE_FINANCE_HREF, label: "การเงิน", shortLabel: "เงิน" },
   { key: "products", href: `${ECOMMERCE_STORE_BASE}/products`, label: "สินค้า", shortLabel: "สินค้า" },
   { key: "crm", href: `${ECOMMERCE_STORE_BASE}/customers`, label: "CRM", shortLabel: "ลูกค้า" },
   { key: "settings", href: ECOMMERCE_STORE_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
@@ -57,13 +59,15 @@ export function ecommerceStorePathFlags(pathname: string) {
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/products`) || pathNorm.endsWith("/products");
   const isOrders =
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/orders`) || pathNorm.endsWith("/orders");
+  const isFinance =
+    pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/finance`) || pathNorm.endsWith("/finance");
   const isCrm =
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/customers`) || pathNorm.endsWith("/customers");
   const isSettings =
     pathNorm === ECOMMERCE_STORE_SETTINGS_HREF || pathNorm.endsWith("/settings");
   /** ออเดอร์ (`/orders`) นับเป็นแดชบอร์ด — เป็นเมนูย่อยไม่ใช่เมนูหลัก */
-  const isDashboard = onModule && !isProducts && !isCrm && !isSettings;
-  return { onModule, isDashboard, isProducts, isOrders, isCrm, isSettings };
+  const isDashboard = onModule && !isProducts && !isCrm && !isSettings && !isFinance;
+  return { onModule, isDashboard, isProducts, isOrders, isFinance, isCrm, isSettings };
 }
 
 export function isEcommerceStoreNavItemActive(pathname: string, key: EcommerceStoreNavKey): boolean {
@@ -71,6 +75,8 @@ export function isEcommerceStoreNavItemActive(pathname: string, key: EcommerceSt
   switch (key) {
     case "dashboard":
       return f.isDashboard;
+    case "finance":
+      return f.isFinance;
     case "products":
       return f.isProducts;
     case "crm":

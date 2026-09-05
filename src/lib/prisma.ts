@@ -43,7 +43,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 82: ClubEvent portal fields + submissions */
 /** 83: Lms* LMS online course module */
 /** 84: LmsCoursePurchase — learner buy + slip review */
-const PRISMA_SINGLETON_VERSION = 86;
+const PRISMA_SINGLETON_VERSION = 87;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -150,6 +150,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     ecommerceProduct?: { findMany?: unknown };
     ecommerceOrder?: { findMany?: unknown };
     ecommerceBuyerCustomer?: { findMany?: unknown };
+    ecommerceCostCategory?: { findMany?: unknown };
+    ecommerceCostEntry?: { findMany?: unknown };
     smartPoliceProfile?: { findUnique?: unknown };
     smartPoliceCase?: { findMany?: unknown };
     smartPoliceTemplate?: { findMany?: unknown };
@@ -277,6 +279,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.ecommerceProduct?.findMany === "function" &&
     typeof c.ecommerceOrder?.findMany === "function" &&
     typeof c.ecommerceBuyerCustomer?.findMany === "function" &&
+    typeof c.ecommerceCostCategory?.findMany === "function" &&
+    typeof c.ecommerceCostEntry?.findMany === "function" &&
     typeof c.smartPoliceProfile?.findUnique === "function" &&
     typeof c.smartPoliceCase?.findMany === "function" &&
     typeof c.smartPoliceTemplate?.findMany === "function" &&

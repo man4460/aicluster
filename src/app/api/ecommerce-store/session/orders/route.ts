@@ -60,3 +60,29 @@ export async function PATCH(req: Request) {
   });
   return NextResponse.json({ order: updated });
 }
+
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
+  const owner = await getEcommerceOwnerFromAuth(session.sub);
+  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let body: { id?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON ไม่ถูกต้อง" }, { status: 400 });
+  }
+  const id = typeof body.id === "string" ? body.id.trim() : "";
+  if (!id) return NextResponse.json({ error: "ระบุออเดอร์" }, { status: 400 });
+
+  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const order = await prisma.ecommerceOrder.findFirst({
+    where: { id, storeId: store.id },
+  });
+  if (!order) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
+
+  await prisma.ecommerceOrder.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}
