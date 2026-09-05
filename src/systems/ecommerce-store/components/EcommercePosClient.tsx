@@ -1,7 +1,14 @@
 "use client";
 
-import { Package, Plus, ShoppingBag, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ShoppingBag, Trash2 } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import {
   AppEmptyState,
   AppGalleryCameraFileInputs,
@@ -19,16 +26,17 @@ import {
   ecommerceFilterChipClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
-  ecommerceStoreCardIconTileClass,
-  ecommerceStoreTonedRowCardClass,
-} from "@/systems/ecommerce-store/lib/card-tones";
-import {
   ECOMMERCE_POS_PAYMENT_METHODS,
   ecommercePosPaymentMethodLabel,
   ecommercePosPaymentShowsSlip,
   type EcommercePosPaymentMethod,
 } from "@/systems/ecommerce-store/lib/sales-channel";
-import { ecommerceStoreInlineSubNavShellClass } from "@/systems/ecommerce-store/lib/ui-tokens";
+import {
+  ecommerceStorePosDraftPanelClass,
+  ecommerceStorePosProductCardClass,
+  ecommerceStorePosProductGridClass,
+  ecommerceStorePosPulseWashClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Product = {
   id: string;
@@ -47,6 +55,16 @@ type CartLine = {
   quantity: number;
   stockBalance: number;
 };
+
+function IconImagePlaceholder({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <circle cx="9" cy="10" r="1.2" fill="currentColor" />
+      <path d="M4 17l4-4 3 3 5-6 4 4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function EcommercePosClient() {
   const notice = useAppNoticePopup();
@@ -100,10 +118,17 @@ export function EcommercePosClient() {
     });
   }, [products, categoryId, keyword]);
 
+  const cartQtyById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const l of cart) m.set(l.productId, l.quantity);
+    return m;
+  }, [cart]);
+
   const cartTotal = useMemo(
     () => cart.reduce((s, l) => s + l.unitPrice * l.quantity, 0),
     [cart],
   );
+  const cartItemCount = useMemo(() => cart.reduce((s, l) => s + l.quantity, 0), [cart]);
 
   const showSlip = ecommercePosPaymentShowsSlip(paymentMethod, cartTotal);
 
@@ -169,7 +194,7 @@ export function EcommercePosClient() {
     }
   }
 
-  function onSlipInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function onSlipInputChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (f) void uploadSlip(f);
@@ -212,42 +237,187 @@ export function EcommercePosClient() {
     }
   }
 
+  const cartPanel = (
+    <aside className={cn(ecommerceStorePosDraftPanelClass, "space-y-3 lg:sticky lg:top-3")}>
+      <div className="flex items-center gap-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100/90 text-emerald-700 ring-1 ring-emerald-200/80">
+          <ShoppingBag className="h-4 w-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <h4 className="text-sm font-black text-[#1e1b4b]">ตะกร้า / ชำระ</h4>
+          <p className="text-[10px] font-semibold text-[#66638c]">
+            {cartItemCount} ชิ้น · ฿{cartTotal.toLocaleString("th-TH")}
+          </p>
+        </div>
+      </div>
+
+      {cart.length === 0 ? (
+        <p className="rounded-[1.25rem] border border-dashed border-white/70 bg-white/40 py-6 text-center text-xs font-semibold text-[#66638c]">
+          แตะเมนูเพื่อเพิ่มลงตะกร้า
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {cart.map((l) => (
+            <li
+              key={l.productId}
+              className="flex items-center gap-2 rounded-[1.25rem] border border-white/55 bg-white/55 p-2.5 text-sm shadow-sm"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-black text-[#1e1b4b] sm:text-sm">{l.name}</p>
+                <p className="text-[10px] font-semibold text-[#66638c]">
+                  ฿{l.unitPrice.toLocaleString("th-TH")} × {l.quantity}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-black text-[#4d47b6]"
+                  aria-label={`ลด ${l.name}`}
+                  onClick={() => setQty(l.productId, l.quantity - 1)}
+                >
+                  −
+                </button>
+                <span className="min-w-[1.5rem] text-center text-sm font-black tabular-nums text-[#1e1b4b]">
+                  {l.quantity}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-black text-[#4d47b6] disabled:opacity-40"
+                  aria-label={`เพิ่ม ${l.name}`}
+                  disabled={l.quantity >= l.stockBalance}
+                  onClick={() => setQty(l.productId, l.quantity + 1)}
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-rose-600"
+                  aria-label={`ลบ ${l.name}`}
+                  onClick={() => setQty(l.productId, 0)}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <label className="block text-xs font-bold text-[#4d47b6]">
+        ชื่อลูกค้า (ไม่บังคับ)
+        <input
+          className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="ลูกค้าหน้าร้าน"
+        />
+      </label>
+      <label className="block text-xs font-bold text-[#4d47b6]">
+        เบอร์โทร (ไม่บังคับ · บันทึก CRM)
+        <input
+          className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
+          value={customerPhone}
+          onChange={(e) => setCustomerPhone(e.target.value)}
+          placeholder="08x-xxx-xxxx"
+          inputMode="tel"
+        />
+      </label>
+
+      <div className="space-y-1.5" role="group" aria-label="วิธีชำระ">
+        <p className="text-xs font-bold text-[#4d47b6]">ชำระเงิน</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ECOMMERCE_POS_PAYMENT_METHODS.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={ecommerceFilterChipClass(paymentMethod === m)}
+              aria-pressed={paymentMethod === m}
+              onClick={() => {
+                setPaymentMethod(m);
+                if (!ecommercePosPaymentShowsSlip(m, cartTotal)) setSlipUrl(null);
+              }}
+            >
+              {ecommercePosPaymentMethodLabel(m)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {showSlip ? (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-[#4d47b6]">แนบสลิป (ถ้ามี)</p>
+          {slipUrl ? (
+            <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} className="h-16 w-16" />
+          ) : null}
+          <AppGalleryCameraFileInputs
+            galleryInputRef={galleryRef}
+            cameraInputRef={cameraInputRef}
+            onChange={onSlipInputChange}
+          />
+          <AppImagePickCameraButtons
+            busy={uploading}
+            onPickGallery={() => galleryRef.current?.click()}
+            onPickCamera={() => openCamera((file) => void uploadSlip(file))}
+            labels={{ gallery: "เลือกสลิป", camera: "ถ่ายสลิป", busy: "กำลังอัปโหลด…" }}
+            className="justify-start"
+          />
+        </div>
+      ) : null}
+
+      <div className="flex items-end justify-between gap-3 border-t border-white/60 pt-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-[#8b87b8]">ยอดรวม</p>
+          <p className="text-2xl font-black tabular-nums text-emerald-700">
+            ฿{cartTotal.toLocaleString("th-TH")}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-black disabled:opacity-50"
+          disabled={saving || cart.length === 0}
+          onClick={() => void checkout()}
+        >
+          {saving ? "กำลังบันทึก…" : "บันทึกขาย"}
+        </button>
+      </div>
+    </aside>
+  );
+
   return (
     <div className="space-y-3">
       {notice.popup}
       {cameraModal}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิป" />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-base font-black text-[#1e1b4b]">ขายหน้าร้าน</h3>
-          <p className="text-xs font-semibold text-[#66638c]">
-            POS · ตัดสต๊อกทันที · นับรายรับช่องทางหน้าร้าน
-          </p>
-        </div>
-        <div className={ecommerceStoreInlineSubNavShellClass}>
-          <span className="px-2 text-xs font-black tabular-nums text-[#4d47b6]">
-            ตะกร้า {cart.reduce((s, l) => s + l.quantity, 0)} · ฿{cartTotal.toLocaleString("th-TH")}
-          </span>
-        </div>
+      <div className="min-w-0">
+        <h3 className="text-base font-black text-[#1e1b4b]">ขายหน้าร้าน</h3>
+        <p className="text-xs font-semibold text-[#66638c]">
+          POS แบบร้านอาหาร · ตัดสต๊อกทันที · นับรายรับช่องทางหน้าร้าน
+        </p>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,20rem)] lg:items-start">
-        <section className="min-w-0 space-y-2.5" aria-label="เลือกสินค้า">
+      <div className="grid gap-3 lg:grid-cols-[minmax(260px,22rem)_minmax(0,1fr)] lg:items-start">
+        <div className="order-2 lg:order-1">{cartPanel}</div>
+
+        <section className="order-1 min-w-0 space-y-2.5 lg:order-2" aria-label="เลือกสินค้า">
           <input
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="ค้นหาสินค้า"
-            className={cn(ecommerceFieldClass, "min-h-[44px]")}
+            className={cn(ecommerceFieldClass, "min-h-[40px] sm:min-h-[44px]")}
             aria-label="ค้นหาสินค้าหน้าร้าน"
           />
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="หมวดสินค้า">
+          <div
+            className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 pb-0.5 [-webkit-overflow-scrolling:touch]"
+            role="tablist"
+            aria-label="หมวดสินค้า"
+          >
             <button
               type="button"
               role="tab"
               aria-selected={!categoryId}
-              className={ecommerceFilterChipClass(!categoryId)}
+              className={cn(ecommerceFilterChipClass(!categoryId), "shrink-0")}
               onClick={() => setCategoryId("")}
             >
               ทั้งหมด
@@ -258,7 +428,7 @@ export function EcommercePosClient() {
                 type="button"
                 role="tab"
                 aria-selected={categoryId === c.id}
-                className={ecommerceFilterChipClass(categoryId === c.id)}
+                className={cn(ecommerceFilterChipClass(categoryId === c.id), "shrink-0")}
                 onClick={() => setCategoryId(c.id)}
               >
                 {c.name}
@@ -267,48 +437,75 @@ export function EcommercePosClient() {
           </div>
 
           {loading ? (
-            <p className="py-8 text-center text-sm font-semibold text-[#66638c]">กำลังโหลดสินค้า…</p>
+            <div className={cn("h-40 animate-pulse rounded-xl", ecommerceStorePosPulseWashClass)} aria-hidden />
           ) : visibleProducts.length === 0 ? (
-            <AppEmptyState tone="slate">ไม่มีสินค้าที่ขายได้</AppEmptyState>
+            <AppEmptyState tone="violet">ไม่มีสินค้าที่ขายได้</AppEmptyState>
           ) : (
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+            <ul className={ecommerceStorePosProductGridClass}>
               {visibleProducts.map((p) => {
                 const low = p.stockBalance <= 0;
+                const inCartQty = cartQtyById.get(p.id) ?? 0;
+                const price = Number(p.priceBaht);
                 return (
-                  <li key={p.id}>
+                  <li
+                    key={p.id}
+                    className={cn(
+                      ecommerceStorePosProductCardClass,
+                      "min-w-0 max-w-full",
+                      low && "opacity-55",
+                    )}
+                  >
                     <button
                       type="button"
                       disabled={low}
                       onClick={() => addToCart(p)}
                       className={cn(
-                        ecommerceStoreTonedRowCardClass(low ? "slate" : "violet"),
-                        "h-full w-full flex-col items-stretch gap-2 p-2.5 text-left disabled:opacity-50",
+                        "flex w-full min-w-0 max-w-full flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35",
+                        inCartQty > 0 && "ring-2 ring-[#5b61ff]/35 ring-offset-1",
                       )}
-                      aria-label={`เพิ่ม ${p.name}`}
+                      aria-label={`${p.name} ราคา ${price.toLocaleString("th-TH")} บาท`}
                     >
-                      {p.imageUrl ? (
-                        <AppImageThumb
-                          src={p.imageUrl}
-                          alt={p.name}
-                          onOpen={() => lb.open(p.imageUrl!)}
-                          className="h-20 w-20"
-                        />
-                      ) : (
-                        <span className={ecommerceStoreCardIconTileClass("violet", "lg")} aria-hidden>
-                          <Package className="h-6 w-6" />
-                        </span>
-                      )}
-                      <div className="min-w-0">
-                        <p className="line-clamp-2 text-xs font-black text-[#1e1b4b] sm:text-sm">{p.name}</p>
-                        <p className="mt-1 text-sm font-black tabular-nums text-emerald-700">
-                          ฿{Number(p.priceBaht).toLocaleString("th-TH")}
-                        </p>
-                        <p className="text-[10px] font-semibold text-[#66638c]">คงเหลือ {p.stockBalance}</p>
+                      <div
+                        className={cn(
+                          "relative aspect-square w-full max-w-full overflow-hidden",
+                          ecommerceStorePosPulseWashClass,
+                        )}
+                      >
+                        {p.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.imageUrl}
+                            alt=""
+                            className="h-full w-full max-h-full max-w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#66638c]">
+                            <IconImagePlaceholder className="h-5 w-5 opacity-40 sm:h-8 sm:w-8" />
+                          </div>
+                        )}
+                        {inCartQty > 0 ? (
+                          <span className="absolute right-1 top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-gradient-to-r from-[#5b61ff] via-[#8b5cf6] to-[#ec4899] px-1 text-[9px] font-black text-white shadow-md sm:right-1.5 sm:top-1.5 sm:h-6 sm:min-w-[1.5rem] sm:px-1.5 sm:text-[10px]">
+                            ×{inCartQty}
+                          </span>
+                        ) : null}
+                        {low ? (
+                          <span className="absolute left-1 top-1 rounded-full bg-slate-800/80 px-1.5 py-0.5 text-[7px] font-black text-white sm:left-1.5 sm:top-1.5 sm:text-[8px]">
+                            หมด
+                          </span>
+                        ) : p.stockBalance <= 5 ? (
+                          <span className="absolute left-1 top-1 rounded-full bg-amber-50/95 px-1 py-0.5 text-[7px] font-black text-amber-800 sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[8px]">
+                            ใกล้หมด
+                          </span>
+                        ) : null}
                       </div>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-[#4d47b6]">
-                        <Plus className="h-3 w-3" aria-hidden />
-                        เพิ่ม
-                      </span>
+                      <div className="space-y-0 p-1.5 sm:p-2">
+                        <p className="line-clamp-2 text-[10px] font-black leading-tight text-[#1e1b4b] sm:text-xs">
+                          {p.name}
+                        </p>
+                        <p className="mt-0.5 text-[10px] font-black tabular-nums text-[#4d47b6] sm:text-xs">
+                          ฿{price.toLocaleString("th-TH")}
+                        </p>
+                      </div>
                     </button>
                   </li>
                 );
@@ -316,129 +513,6 @@ export function EcommercePosClient() {
             </ul>
           )}
         </section>
-
-        <aside className="space-y-3 rounded-[1.25rem] border border-slate-200/80 bg-white/70 p-3 shadow-sm sm:p-4 lg:sticky lg:top-3">
-          <div className="flex items-center gap-2">
-            <span className={ecommerceStoreCardIconTileClass("emerald")} aria-hidden>
-              <ShoppingBag className="h-4 w-4" />
-            </span>
-            <h4 className="text-sm font-black text-[#1e1b4b]">ตะกร้า / ชำระ</h4>
-          </div>
-
-          {cart.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-xs font-semibold text-[#66638c]">
-              แตะสินค้าเพื่อเพิ่มลงตะกร้า
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {cart.map((l) => (
-                <li key={l.productId} className="flex items-center gap-2 rounded-xl bg-slate-50/80 p-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-black text-[#1e1b4b]">{l.name}</p>
-                    <p className="text-[10px] font-semibold text-[#66638c]">
-                      ฿{l.unitPrice.toLocaleString("th-TH")} × {l.quantity}
-                    </p>
-                  </div>
-                  <input
-                    type="number"
-                    min={1}
-                    max={l.stockBalance}
-                    value={l.quantity}
-                    onChange={(e) => setQty(l.productId, Number(e.target.value))}
-                    className="w-14 rounded-lg border border-slate-200 px-1 py-1 text-center text-sm font-bold"
-                    aria-label={`จำนวน ${l.name}`}
-                  />
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg text-rose-600"
-                    aria-label={`ลบ ${l.name}`}
-                    onClick={() => setQty(l.productId, 0)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <label className="block text-xs font-bold text-[#4d47b6]">
-            ชื่อลูกค้า (ไม่บังคับ)
-            <input
-              className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="ลูกค้าหน้าร้าน"
-            />
-          </label>
-          <label className="block text-xs font-bold text-[#4d47b6]">
-            เบอร์โทร (ไม่บังคับ · บันทึก CRM)
-            <input
-              className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="08x-xxx-xxxx"
-              inputMode="tel"
-            />
-          </label>
-
-          <div className="space-y-1.5" role="group" aria-label="วิธีชำระ">
-            <p className="text-xs font-bold text-[#4d47b6]">ชำระเงิน</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ECOMMERCE_POS_PAYMENT_METHODS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={ecommerceFilterChipClass(paymentMethod === m)}
-                  aria-pressed={paymentMethod === m}
-                  onClick={() => {
-                    setPaymentMethod(m);
-                    if (!ecommercePosPaymentShowsSlip(m, cartTotal)) setSlipUrl(null);
-                  }}
-                >
-                  {ecommercePosPaymentMethodLabel(m)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {showSlip ? (
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-[#4d47b6]">แนบสลิป (ถ้ามี)</p>
-              {slipUrl ? (
-                <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} className="h-16 w-16" />
-              ) : null}
-              <AppGalleryCameraFileInputs
-                galleryInputRef={galleryRef}
-                cameraInputRef={cameraInputRef}
-                onChange={onSlipInputChange}
-              />
-              <AppImagePickCameraButtons
-                busy={uploading}
-                onPickGallery={() => galleryRef.current?.click()}
-                onPickCamera={() => openCamera((file) => void uploadSlip(file))}
-                labels={{ gallery: "เลือกสลิป", camera: "ถ่ายสลิป", busy: "กำลังอัปโหลด…" }}
-                className="justify-start"
-              />
-            </div>
-          ) : null}
-
-          <div className="flex items-end justify-between border-t border-slate-200/80 pt-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[#8b87b8]">ยอดรวม</p>
-              <p className="text-2xl font-black tabular-nums text-emerald-700">
-                ฿{cartTotal.toLocaleString("th-TH")}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-black disabled:opacity-50"
-              disabled={saving || cart.length === 0}
-              onClick={() => void checkout()}
-            >
-              {saving ? "กำลังบันทึก…" : "บันทึกขาย"}
-            </button>
-          </div>
-        </aside>
       </div>
     </div>
   );
