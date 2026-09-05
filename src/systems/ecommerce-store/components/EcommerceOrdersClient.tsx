@@ -29,6 +29,7 @@ import {
   ecommerceStoreInlineSubNavShellClass,
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { useEcommerceDashboardSse } from "@/systems/ecommerce-store/lib/use-ecommerce-dashboard-sse";
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
 
@@ -74,7 +75,21 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean }) {
+export type EcommerceOrdersEmbeddedToolbarApi = {
+  filterOpen: boolean;
+  hasActiveFilters: boolean;
+  toggleFilter: () => void;
+  reload: () => void;
+  loading: boolean;
+};
+
+export function EcommerceOrdersClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: {
+  embedded?: boolean;
+  onEmbeddedToolbar?: (api: EcommerceOrdersEmbeddedToolbarApi | null) => void;
+} = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [keyword, setKeyword] = useState("");
@@ -82,20 +97,44 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
   const [loading, setLoading] = useState(true);
   const lb = useAppImageLightbox();
 
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const res = await fetch("/api/ecommerce-store/session/orders?channel=ONLINE");
       const j = await res.json();
       setOrders(j.orders ?? []);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEcommerceDashboardSse(() => {
+    void reload({ silent: true });
+  }, true);
+
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((o) => !o);
+  }, []);
+
+  const hasActiveFilter = filter !== "all" || keyword.trim() !== "";
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      filterOpen,
+      hasActiveFilters: hasActiveFilter,
+      toggleFilter,
+      reload: () => {
+        void reload();
+      },
+      loading,
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, filterOpen, hasActiveFilter, toggleFilter, reload, loading]);
 
   const counts = useMemo(() => {
     const map: Record<FilterKey, number> = {
@@ -119,8 +158,6 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
     });
   }, [orders, filter, keyword]);
 
-  const hasActiveFilter = filter !== "all" || keyword.trim() !== "";
-
   async function advance(id: string, status: string) {
     await fetch("/api/ecommerce-store/session/orders", {
       method: "PATCH",
@@ -134,7 +171,7 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
     <div className={ecommerceStoreInlineSubNavShellClass}>
       <button
         type="button"
-        onClick={() => setFilterOpen((o) => !o)}
+        onClick={toggleFilter}
         aria-expanded={filterOpen}
         aria-controls="ecommerce-orders-filter-panel"
         aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
@@ -179,12 +216,7 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={toolbar}
         />
-      ) : (
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-[#66638c]">ตรวจสลิป · อัปเดตสถานะจัดส่ง</p>
-          {toolbar}
-        </div>
-      )}
+      ) : null}
 
       <div className="min-w-0 space-y-2.5">
         <p className="text-sm font-black tabular-nums text-[#2e2a58]">
@@ -197,17 +229,14 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
           id="ecommerce-orders-filter-panel"
           className={cn("space-y-3", filterOpen ? "block" : "hidden")}
         >
-          <div className="relative">
-            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b87b8]" />
-            <input
-              type="search"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="ค้นหารหัส · ชื่อ · เบอร์"
-              className={cn(ecommerceFieldClass, "min-h-[44px] pl-9")}
-              aria-label="ค้นหาออเดอร์ออนไลน์"
-            />
-          </div>
+          <input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="ค้นหารหัส · ชื่อ · เบอร์"
+            className={cn(ecommerceFieldClass, "min-h-[44px]")}
+            aria-label="ค้นหาออเดอร์ออนไลน์"
+          />
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะออเดอร์">
             {FILTERS.map((f) => {
               const active = filter === f.key;
@@ -351,15 +380,6 @@ function IconFilter({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconSearch({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3-3" strokeLinecap="round" />
     </svg>
   );
 }

@@ -15,6 +15,7 @@ import {
   isEcommercePosPaymentMethod,
   type EcommerceSalesChannel,
 } from "@/systems/ecommerce-store/lib/sales-channel";
+import { notifyEcommerceDashboard } from "@/systems/ecommerce-store/lib/dashboard-sse";
 
 const STATUSES: EcommerceOrderStatus[] = ["PENDING_SLIP", "VERIFYING", "PREPARING", "SHIPPED"];
 
@@ -190,6 +191,8 @@ export async function POST(req: Request) {
     return created;
   });
 
+  notifyEcommerceDashboard(owner.ownerUserId);
+
   return NextResponse.json({
     order: {
       ...order,
@@ -223,6 +226,7 @@ export async function PATCH(req: Request) {
     data: { status: status as EcommerceOrderStatus },
     include: { items: true },
   });
+  notifyEcommerceDashboard(owner.ownerUserId);
   return NextResponse.json({ order: updated });
 }
 
@@ -249,5 +253,6 @@ export async function DELETE(req: Request) {
   if (!order) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
 
   await prisma.ecommerceOrder.delete({ where: { id } });
+  notifyEcommerceDashboard(owner.ownerUserId);
   return NextResponse.json({ ok: true });
 }

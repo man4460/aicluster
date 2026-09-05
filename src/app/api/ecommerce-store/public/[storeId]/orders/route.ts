@@ -7,6 +7,7 @@ import {
   generateEcommerceTrackingCode,
 } from "@/lib/ecommerce/order-codes";
 import { normalizeEcommercePhone } from "@/lib/ecommerce/phone";
+import { notifyEcommerceDashboard } from "@/systems/ecommerce-store/lib/dashboard-sse";
 
 type CartLine = { productId: string; quantity: number };
 
@@ -141,6 +142,8 @@ export async function POST(
 
     return created;
   });
+
+  notifyEcommerceDashboard(store.ownerUserId);
 
   return NextResponse.json({
     order: {
