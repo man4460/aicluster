@@ -5,15 +5,13 @@ import { requireModulePage } from "@/lib/modules/guard";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { getEcommerceOwnerFromAuth, getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
 import { prisma } from "@/lib/prisma";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request) {
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
   const products = await prisma.ecommerceProduct.findMany({
     where: { storeId: store.id },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],

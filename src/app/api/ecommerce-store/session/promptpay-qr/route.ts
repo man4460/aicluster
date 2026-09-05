@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
-import { withEcommerceStoreOwnerContext } from "@/systems/ecommerce-store/lib/api-auth";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
 const bodySchema = z.object({
   amount: z.number().finite().positive().max(9_999_999.99).optional(),
@@ -10,7 +10,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const auth = await withEcommerceStoreOwnerContext();
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
   if (!auth.ok) return auth.res;
 
   let json: unknown;

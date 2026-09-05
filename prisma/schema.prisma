@@ -371,6 +371,7 @@ model User {
   ecommerceBuyerCustomers            EcommerceBuyerCustomer[]
   ecommerceCostCategories            EcommerceCostCategory[]
   ecommerceCostEntries               EcommerceCostEntry[]
+  ecommerceStaffLinks                EcommerceStaffLink[]
   smartPoliceProfile                 SmartPoliceProfile?
   smartPoliceCases                   SmartPoliceCase[]
   smartPoliceTemplates               SmartPoliceTemplate[]
@@ -6698,6 +6699,24 @@ model EcommerceCostEntry {
   @@index([ownerUserId, spentAt], map: "ec_cost_owner_spent_idx")
   @@index([categoryId], map: "ec_cost_category_idx")
   @@map("ecommerce_cost_entries")
+}
+
+/**
+ * ลิงก์พนักงานร้านออนไลน์ — โทเค็นถาวร (เมนูแดชบอร์ด + เว็บร้าน)
+ */
+model EcommerceStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "ec_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "ec_staff_link_owner_idx")
+  @@map("ecommerce_staff_links")
 }
 
 // --- Smart Police (สำนวนคดี / พิมพ์หมาย / รายงาน — อิง SmartPolice desktop) ---

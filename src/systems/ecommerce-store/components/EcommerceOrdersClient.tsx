@@ -30,6 +30,10 @@ import {
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { useEcommerceDashboardSse } from "@/systems/ecommerce-store/lib/use-ecommerce-dashboard-sse";
+import {
+  useEcommerceApiFetch,
+  useEcommerceStaffAuth,
+} from "@/systems/ecommerce-store/lib/staff-api-fetch";
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
 
@@ -90,6 +94,8 @@ export function EcommerceOrdersClient({
   embedded?: boolean;
   onEmbeddedToolbar?: (api: EcommerceOrdersEmbeddedToolbarApi | null) => void;
 } = {}) {
+  const apiFetch = useEcommerceApiFetch();
+  const staffAuth = useEcommerceStaffAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [keyword, setKeyword] = useState("");
@@ -100,13 +106,13 @@ export function EcommerceOrdersClient({
   const reload = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const res = await fetch("/api/ecommerce-store/session/orders?channel=ONLINE");
+      const res = await apiFetch("/api/ecommerce-store/session/orders?channel=ONLINE");
       const j = await res.json();
       setOrders(j.orders ?? []);
     } finally {
       if (!opts?.silent) setLoading(false);
     }
-  }, []);
+  }, [apiFetch]);
 
   useEffect(() => {
     void reload();
@@ -114,7 +120,7 @@ export function EcommerceOrdersClient({
 
   useEcommerceDashboardSse(() => {
     void reload({ silent: true });
-  }, true);
+  }, !staffAuth);
 
   const toggleFilter = useCallback(() => {
     setFilterOpen((o) => !o);
@@ -159,7 +165,7 @@ export function EcommerceOrdersClient({
   }, [orders, filter, keyword]);
 
   async function advance(id: string, status: string) {
-    await fetch("/api/ecommerce-store/session/orders", {
+    await apiFetch("/api/ecommerce-store/session/orders", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),

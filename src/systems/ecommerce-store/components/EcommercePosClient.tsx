@@ -23,6 +23,7 @@ import {
   ecommerceStoreRowIconButtonClass,
   ecommerceStoreRowIconDangerClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { useEcommerceApiFetch } from "@/systems/ecommerce-store/lib/staff-api-fetch";
 
 type Product = {
   id: string;
@@ -54,6 +55,7 @@ function IconImagePlaceholder({ className }: { className?: string }) {
 
 export function EcommercePosClient() {
   const notice = useAppNoticePopup();
+  const apiFetch = useEcommerceApiFetch();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,13 +71,13 @@ export function EcommercePosClient() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/ecommerce-store/session/products");
+      const res = await apiFetch("/api/ecommerce-store/session/products");
       const j = await res.json();
       setProducts((j.products ?? []) as Product[]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiFetch]);
 
   useEffect(() => {
     void reload();
@@ -159,7 +161,7 @@ export function EcommercePosClient() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/ecommerce-store/session/orders", {
+      const res = await apiFetch("/api/ecommerce-store/session/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

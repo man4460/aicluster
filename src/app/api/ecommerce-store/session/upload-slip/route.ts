@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { saveEcommerceUploadImage } from "@/lib/ecommerce/upload-image";
-import { withEcommerceStoreOwnerContext } from "@/systems/ecommerce-store/lib/api-auth";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
 export async function POST(req: Request) {
-  const auth = await withEcommerceStoreOwnerContext();
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
   if (!auth.ok) return auth.res;
 
   const form = await req.formData();

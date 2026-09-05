@@ -26,6 +26,10 @@ import {
   ecommerceStoreStatInlineClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { ECOMMERCE_STORE_MANAGE_HREF } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
+import {
+  useEcommerceApiFetch,
+  useEcommerceStaffAuth,
+} from "@/systems/ecommerce-store/lib/staff-api-fetch";
 
 type TopProduct = {
   rank: number;
@@ -92,6 +96,8 @@ function OverviewStat({
 }
 
 export function EcommerceDashboardClient() {
+  const apiFetch = useEcommerceApiFetch();
+  const staffAuth = useEcommerceStaffAuth();
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const lb = useAppImageLightbox();
@@ -101,16 +107,10 @@ export function EcommerceDashboardClient() {
       setLoading(true);
       try {
         const [storeRes, prodRes, ordRes, salesRes] = await Promise.all([
-          fetch("/api/ecommerce-store/session/store", { credentials: "include", cache: "no-store" }),
-          fetch("/api/ecommerce-store/session/products", { credentials: "include", cache: "no-store" }),
-          fetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/ecommerce-store/session/sales-summary?period=month", {
-            credentials: "include",
-            cache: "no-store",
-          }),
+          apiFetch("/api/ecommerce-store/session/store", { cache: "no-store" }),
+          apiFetch("/api/ecommerce-store/session/products", { cache: "no-store" }),
+          apiFetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP", { cache: "no-store" }),
+          apiFetch("/api/ecommerce-store/session/sales-summary?period=month", { cache: "no-store" }),
         ]);
         const storeJ = await storeRes.json();
         const prodJ = await prodRes.json();
@@ -137,7 +137,7 @@ export function EcommerceDashboardClient() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [apiFetch]);
 
   const storeOpen = data ? !data.store.merchantPaused : null;
 
@@ -213,12 +213,14 @@ export function EcommerceDashboardClient() {
               เรียงตามจำนวนชิ้นที่ขาย · {data?.salesLabel ?? "เดือนนี้"}
             </p>
           </div>
-          <Link
-            href={ECOMMERCE_STORE_MANAGE_HREF}
-            className="text-xs font-bold text-[#4d47b6] underline-offset-2 hover:underline"
-          >
-            จัดการสินค้า
-          </Link>
+          {!staffAuth ? (
+            <Link
+              href={ECOMMERCE_STORE_MANAGE_HREF}
+              className="text-xs font-bold text-[#4d47b6] underline-offset-2 hover:underline"
+            >
+              จัดการสินค้า
+            </Link>
+          ) : null}
         </div>
 
         {loading ? (

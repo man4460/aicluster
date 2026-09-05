@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import type { EcommerceOrderStatus } from "@/generated/prisma/enums";
-import { getSession } from "@/lib/auth/session";
-import { requireModulePage } from "@/lib/modules/guard";
-import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
-import { getEcommerceOwnerFromAuth, getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
+import { getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
 import {
   generateEcommerceReferenceCode,
   generateEcommerceTrackingCode,
@@ -16,15 +13,13 @@ import {
   type EcommerceSalesChannel,
 } from "@/systems/ecommerce-store/lib/sales-channel";
 import { notifyEcommerceDashboard } from "@/systems/ecommerce-store/lib/dashboard-sse";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
 const STATUSES: EcommerceOrderStatus[] = ["PENDING_SLIP", "VERIFYING", "PREPARING", "SHIPPED"];
 
 export async function GET(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
@@ -33,7 +28,7 @@ export async function GET(req: Request) {
     channelRaw === "ONLINE" || channelRaw === "IN_STORE"
       ? (channelRaw as EcommerceSalesChannel)
       : null;
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
 
   const orders = await prisma.ecommerceOrder.findMany({
     where: {
@@ -51,11 +46,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
+  const ownerUserId = auth.ctx.ownerUserId;
 
   let body: Record<string, unknown>;
   try {
@@ -89,7 +82,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่มีสินค้าในตะกร้า" }, { status: 400 });
   }
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(ownerUserId);
   const productIds = lines.map((l) => String(l.productId ?? "")).filter(Boolean);
   const products = await prisma.ecommerceProduct.findMany({
     where: { storeId: store.id, id: { in: productIds }, isActive: true },
@@ -191,7 +184,7 @@ export async function POST(req: Request) {
     return created;
   });
 
-  notifyEcommerceDashboard(owner.ownerUserId);
+  notifyEcommerceDashboard(ownerUserId);
 
   return NextResponse.json({
     order: {
@@ -202,11 +195,9 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
+  const ownerUserId = auth.ctx.ownerUserId;
 
   const body = (await req.json()) as Record<string, unknown>;
   const id = typeof body.id === "string" ? body.id : "";
@@ -215,7 +206,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "ข้อมูลไม่ครบ" }, { status: 400 });
   }
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(ownerUserId);
   const order = await prisma.ecommerceOrder.findFirst({
     where: { id, storeId: store.id },
   });
@@ -226,16 +217,17 @@ export async function PATCH(req: Request) {
     data: { status: status as EcommerceOrderStatus },
     include: { items: true },
   });
-  notifyEcommerceDashboard(owner.ownerUserId);
+  notifyEcommerceDashboard(ownerUserId);
   return NextResponse.json({ order: updated });
 }
 
 export async function DELETE(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
+  if (auth.ctx.viaStaff) {
+    return NextResponse.json({ error: "พนักงานลบออเดอร์ไม่ได้" }, { status: 403 });
+  }
+  const ownerUserId = auth.ctx.ownerUserId;
 
   let body: { id?: string };
   try {
@@ -246,13 +238,13 @@ export async function DELETE(req: Request) {
   const id = typeof body.id === "string" ? body.id.trim() : "";
   if (!id) return NextResponse.json({ error: "ระบุออเดอร์" }, { status: 400 });
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(ownerUserId);
   const order = await prisma.ecommerceOrder.findFirst({
     where: { id, storeId: store.id },
   });
   if (!order) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
 
   await prisma.ecommerceOrder.delete({ where: { id } });
-  notifyEcommerceDashboard(owner.ownerUserId);
+  notifyEcommerceDashboard(ownerUserId);
   return NextResponse.json({ ok: true });
 }

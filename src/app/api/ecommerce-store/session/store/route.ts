@@ -16,6 +16,7 @@ import {
   validateEcommerceCustomDomainInput,
 } from "@/lib/ecommerce/custom-domain";
 import { normalizePromptPayPhone } from "@/lib/module-shop/payment";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
 function mapStore(store: {
   id: string;
@@ -50,14 +51,11 @@ function mapStore(store: {
   };
 }
 
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request) {
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
   return NextResponse.json({
     store: mapStore(store),
     cnameTarget: getEcommerceCnameTargetHost(),

@@ -1,22 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { requireModulePage } from "@/lib/modules/guard";
-import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
-import { getEcommerceOwnerFromAuth, getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
+import { getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
 import {
   ecommerceDecimalToBahtNumber,
   resolveEcommerceSalesRange,
 } from "@/lib/ecommerce/sales-period";
 import { prisma } from "@/lib/prisma";
+import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
 
 const TOP_PRODUCTS_LIMIT = 10;
 
 export async function GET(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
-  const owner = await getEcommerceOwnerFromAuth(session.sub);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withEcommerceStoreOwnerOrStaff(req);
+  if (!auth.ok) return auth.res;
 
   const url = new URL(req.url);
   const range = resolveEcommerceSalesRange({
@@ -28,7 +23,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: range.error }, { status: 400 });
   }
 
-  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
   const orderWhere = {
     storeId: store.id,
     createdAt: { gte: range.start, lt: range.end },

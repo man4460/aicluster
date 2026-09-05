@@ -25,6 +25,7 @@ import {
   ecommerceStorePaymentCtaClass,
   ecommerceStoreOutlineButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { useEcommerceApiFetch } from "@/systems/ecommerce-store/lib/staff-api-fetch";
 
 type PayInfo = {
   qrDataUrl: string | null;
@@ -46,21 +47,6 @@ export type EcommercePaymentPanelProps = {
   className?: string;
 };
 
-async function uploadEcommerceSlip(file: File): Promise<string> {
-  const prepared = await prepareImageFileForUpload(file);
-  const fd = new FormData();
-  fd.set("file", prepared);
-  const res = await fetch("/api/ecommerce-store/session/upload-slip", {
-    method: "POST",
-    body: fd,
-  });
-  const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
-  if (!res.ok || typeof j.imageUrl !== "string") {
-    throw new Error(typeof j.error === "string" ? j.error : "อัปโหลดสลิปไม่สำเร็จ");
-  }
-  return j.imageUrl;
-}
-
 export function EcommercePaymentPanel({
   amountBaht,
   method,
@@ -70,6 +56,7 @@ export function EcommercePaymentPanel({
   disabled,
   className,
 }: EcommercePaymentPanelProps) {
+  const apiFetch = useEcommerceApiFetch();
   const galleryRef = useRef<HTMLInputElement>(null);
   const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
   const lb = useAppImageLightbox();
@@ -85,6 +72,21 @@ export function EcommercePaymentPanel({
   const needsSlip = ecommercePosPaymentShowsSlipUpload(method, amountBaht);
   const showPromptPay = needsPayUi && method === "PROMPTPAY";
   const showTransfer = needsPayUi && method === "TRANSFER";
+
+  const uploadEcommerceSlip = async (file: File): Promise<string> => {
+    const prepared = await prepareImageFileForUpload(file);
+    const fd = new FormData();
+    fd.set("file", prepared);
+    const res = await apiFetch("/api/ecommerce-store/session/upload-slip", {
+      method: "POST",
+      body: fd,
+    });
+    const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+    if (!res.ok || typeof j.imageUrl !== "string") {
+      throw new Error(typeof j.error === "string" ? j.error : "อัปโหลดสลิปไม่สำเร็จ");
+    }
+    return j.imageUrl;
+  };
 
   useEffect(() => {
     if (!showPromptPay) setCustomerQrOpen(false);
@@ -115,10 +117,9 @@ export function EcommercePaymentPanel({
     setQrErr(null);
     void (async () => {
       try {
-        const res = await fetch("/api/ecommerce-store/session/promptpay-qr", {
+        const res = await apiFetch("/api/ecommerce-store/session/promptpay-qr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({ amountBaht }),
         });
         const j = (await res.json().catch(() => ({}))) as Partial<PayInfo> & { error?: string };
@@ -149,7 +150,7 @@ export function EcommercePaymentPanel({
     return () => {
       cancelled = true;
     };
-  }, [amountBaht, method, needsPayUi]);
+  }, [amountBaht, method, needsPayUi, apiFetch]);
 
   async function uploadSlip(file: File | null) {
     if (!file || disabled) return;
