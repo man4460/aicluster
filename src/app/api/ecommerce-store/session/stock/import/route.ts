@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     const owner = await getEcommerceOwnerFromAuth(session.sub);
     if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+    const ownerUserId = owner.ownerUserId;
+    const store = await getOrCreateEcommerceStore(ownerUserId);
 
     let form: FormData;
     try {
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
       const createdCat = await prisma.ecommerceCategory.create({
         data: {
           storeId: store.id,
-          ownerUserId: owner.ownerUserId,
+          ownerUserId,
           name: key.slice(0, 120),
           sortOrder: (maxSort._max.sortOrder ?? 0) + 1,
           isActive: true,

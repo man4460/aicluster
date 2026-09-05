@@ -170,22 +170,19 @@ export const ecommerceStoreDashboardStatsGridClass = "grid grid-cols-2 items-str
 export const ecommerceStoreFilterChipShellClass =
   "flex flex-wrap content-start items-center gap-1.5";
 
-export const ecommerceStoreChipIdleClass =
-  "rounded-full border border-[#0000BF]/25 bg-white/85 px-4 py-2 text-xs font-black text-[#2e2a58] shadow-sm";
+/** ชิปกรอง / หมวด — ปุ่ม template ชุดเดียว (primary / outline · h-9 · rounded-lg) */
+export function ecommerceStoreFilterChipClass(active = false): string {
+  return active ? ecommerceStorePrimaryButtonClass : ecommerceStoreOutlineButtonClass;
+}
 
-export const ecommerceStoreChipActiveClass = cn(
-  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
-  appDashboardBrandGradientFillClass,
-);
+/** @deprecated ใช้ ecommerceStoreFilterChipClass */
+export const ecommerceStoreChipIdleClass = ecommerceStoreOutlineButtonClass;
+/** @deprecated ใช้ ecommerceStoreFilterChipClass */
+export const ecommerceStoreChipActiveClass = ecommerceStorePrimaryButtonClass;
 
-/** ชิปช่วงเวลาการเงิน — pill เล็ก (แม่แบบซักผ้า · h-9) */
+/** ชิปช่วงเวลาการเงิน — ปุ่ม template ชุดเดียวกับกรองอื่นในโมดูล */
 export function ecommerceStoreFinanceRangeChipClass(active = false): string {
-  return cn(
-    "inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-[11px] font-bold transition-all sm:text-xs",
-    active
-      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
-      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
-  );
+  return ecommerceStoreFilterChipClass(active);
 }
 
 /** สรุปการเงิน — กริด 2 คอลัมน์มือถือ · 4 การ์ดบน sm */

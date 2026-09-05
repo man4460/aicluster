@@ -57,7 +57,7 @@ alwaysApply: false
 | **แถวรายรับ/รายจ่าย** | `rounded-lg` · ขอบ slate · พื้นขาว | `laundry` list row / `ecommerceStoreFinanceListRowClass` |
 | **กรอบกราฟ** | `rounded-lg` · `border-slate-200/90` · `bg-slate-50/50` | `ecommerceStoreFinanceChartPanelClass` |
 | **ปุ่มหัว / กรอง / รีเฟรช / แท็บ** | **`h-9` · `rounded-lg`** · ชุด `*InlineSubNavBtnClass` / `*OutlineButtonClass` | ห้าม `rounded-2xl` / `rounded-full` บนปุ่มเครื่องมือ |
-| **ชิปช่วงเวลา** | `rounded-full` · **`h-9`** · pill ตามความยาวข้อความ | `*FinanceRangeChipClass` |
+| **ชิปช่วงเวลา · ชิปหมวดรายจ่าย** | **ชุดปุ่ม template เดียวกัน** (`*PrimaryButtonClass` / `*OutlineButtonClass` · **`h-9` · `rounded-lg`**) | `*FinanceRangeChipClass` / `*FilterChipClass` — ห้าม pill glass `px-4 py-2` คนละชุด |
 
 **หัวแผง (ลำดับขวา):** แท็บรายรับ|รายจ่าย → CTA ตามแท็บ (รายจ่ายเพิ่ม / หมวด / ลิงก์ออเดอร์) → เส้นแบ่ง → **ซ่อนกรอง · ซ่อนกราฟ · รีเฟรช** ใน `*InlineSubNavShellClass` เดียวกัน
 
@@ -114,9 +114,9 @@ alwaysApply: false
 | `CUSTOM` | กำหนดเอง |
 
 - คอนเทนเนอร์: `flex flex-wrap gap-2` · `role="group"` · `aria-label`
-- ปุ่ม: **pill ตามความยาวข้อความ** · **`h-9`** · `shrink-0` · `rounded-full` · `px-3` · `aria-pressed`
+- ปุ่ม: **ชุดปุ่ม template โมดูล** (`*FilterChipClass` / primary·outline · **`h-9` · `rounded-lg`**) · ความกว้างตามข้อความ · `aria-pressed`
 - **ห้าม** `grid-cols-2 sm:grid-cols-4` + `w-full` บนชิป (ไม่เต็มจอ / ไม่บังคับกว้างเท่ากัน)
-- **ห้าม** `h-10` / `h-11` บนชิปถ้าปุ่มโมดูลเป็น `h-9` — ให้สูงชุดเดียวกับซักผ้า
+- **ห้าม** `h-10` / `h-11` หรือ pill glass คนละชุดกับปุ่มโมดูล
 
 ### ช่องพิมพ์
 

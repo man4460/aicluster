@@ -35,13 +35,8 @@ export {
   appMobileDockItemIdleClass as ecommerceDockItemIdleClass,
 } from "@/components/app-templates/mobile-dock-tokens";
 
-/** ชิป / แท็บกรอง — มนเท่าปุ่ม template */
-export function ecommerceFilterChipClass(active: boolean) {
-  return cn(
-    active ? ecommerceStorePrimaryButtonClass : ecommerceStoreOutlineButtonClass,
-    "px-3",
-  );
-}
+/** ชิป / แท็บกรอง — ปุ่ม template ชุดเดียวกับ lib/ui-tokens */
+export { ecommerceStoreFilterChipClass as ecommerceFilterChipClass } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 /** การ์ดแถวรายการ */
 export const ecommerceListRowCardClass =

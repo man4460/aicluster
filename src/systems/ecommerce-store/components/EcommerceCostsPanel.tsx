@@ -30,9 +30,9 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { EcommerceStoreButton } from "@/systems/ecommerce-store/components/EcommerceStoreButton";
 import {
-  ecommerceStoreChipActiveClass,
-  ecommerceStoreChipIdleClass,
   ecommerceStoreFieldClass,
+  ecommerceStoreFilterChipClass,
+  ecommerceStoreFilterChipShellClass,
   ecommerceStoreFinanceListRowClass,
   ecommerceStoreOutlineButtonClass,
   ecommerceStorePrimaryButtonClass,
@@ -381,40 +381,29 @@ export const EcommerceCostsPanel = forwardRef<
       )}
 
       <div
-        className={cn(
-          "min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]",
-          hideToolbar ? "mt-3" : "mt-4",
-        )}
+        className={cn(ecommerceStoreFilterChipShellClass, hideToolbar ? "mt-3" : "mt-4")}
         role="group"
-        aria-label="กรองตามหมวดหมู่ — เลื่อนซ้ายขวาได้"
+        aria-label="กรองตามหมวดหมู่"
       >
-        <div className="flex w-max touch-pan-x gap-2 pr-1 sm:flex-wrap sm:pr-0">
+        <button
+          type="button"
+          onClick={() => setFilterCat("all")}
+          className={ecommerceStoreFilterChipClass(filterCat === "all")}
+          aria-pressed={filterCat === "all"}
+        >
+          ทั้งหมด
+        </button>
+        {sortedCategories.map((c) => (
           <button
+            key={c.id}
             type="button"
-            onClick={() => setFilterCat("all")}
-            className={cn(
-              "shrink-0 snap-start transition",
-              filterCat === "all" ? ecommerceStoreChipActiveClass : ecommerceStoreChipIdleClass,
-            )}
-            aria-pressed={filterCat === "all"}
+            onClick={() => setFilterCat(c.id)}
+            className={ecommerceStoreFilterChipClass(filterCat === c.id)}
+            aria-pressed={filterCat === c.id}
           >
-            ทั้งหมด
+            {c.name}
           </button>
-          {sortedCategories.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setFilterCat(c.id)}
-              className={cn(
-                "shrink-0 snap-start transition",
-                filterCat === c.id ? ecommerceStoreChipActiveClass : ecommerceStoreChipIdleClass,
-              )}
-              aria-pressed={filterCat === c.id}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
       {sortedCategories.length === 0 ? (
