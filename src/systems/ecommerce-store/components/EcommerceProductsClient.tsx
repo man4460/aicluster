@@ -127,6 +127,7 @@ export function EcommerceProductsClient({
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [newGalleryUrls, setNewGalleryUrls] = useState<string[]>([]);
   const [newDescription, setNewDescription] = useState("");
+  const [newIsActive, setNewIsActive] = useState(true);
   const [newRecommended, setNewRecommended] = useState(false);
   const [newBestseller, setNewBestseller] = useState(false);
 
@@ -168,6 +169,7 @@ export function EcommerceProductsClient({
     setNewImageUrl(null);
     setNewGalleryUrls([]);
     setNewDescription("");
+    setNewIsActive(true);
     setNewRecommended(false);
     setNewBestseller(false);
     setProductErr(null);
@@ -386,6 +388,7 @@ export function EcommerceProductsClient({
           imageUrl: newImageUrl,
           galleryImageUrls: newGalleryUrls,
           description: newDescription.trim() || null,
+          isActive: newIsActive,
           categoryId: newCategoryId || null,
           isRecommended: newRecommended,
           isBestseller: newBestseller,
@@ -621,7 +624,6 @@ export function EcommerceProductsClient({
       anglesInputRef?: RefObject<HTMLInputElement | null>;
       galleryInputRef: RefObject<HTMLInputElement | null>;
       cameraInputRef: RefObject<HTMLInputElement | null>;
-      showActive?: boolean;
       isActive?: boolean;
       setIsActive?: (v: boolean) => void;
       showFeatured?: boolean;
@@ -702,15 +704,20 @@ export function EcommerceProductsClient({
           />
         </label>
       ) : null}
-      {opts.showActive && opts.setIsActive ? (
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
+      {opts.setIsActive ? (
+        <label className="flex min-h-[44px] cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
+            className="mt-0.5 h-4 w-4 rounded border-slate-300"
             checked={opts.isActive ?? true}
             onChange={(e) => opts.setIsActive?.(e.target.checked)}
           />
-          เปิดขายบนหน้าร้าน
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-[#1e1b4b]">แสดงบนเว็บไซต์</span>
+            <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+              ติ๊กไว้ = ลูกค้าเห็นสินค้านี้บนหน้าร้าน · เอาออก = ซ่อนจากเว็บ (ยังจัดการในแดชบอร์ดได้)
+            </span>
+          </span>
         </label>
       ) : null}
       {opts.showFeatured && opts.setFeatured ? (
@@ -947,7 +954,7 @@ export function EcommerceProductsClient({
                   { key: "all" as const, label: "ทั้งหมด" },
                   { key: "low" as const, label: "ใกล้หมด" },
                   { key: "out" as const, label: "หมดสต๊อก" },
-                  { key: "inactive" as const, label: "ปิดขาย" },
+                  { key: "inactive" as const, label: "ซ่อนเว็บ" },
                 ] as const
               ).map((f) => (
                 <button
@@ -1063,7 +1070,7 @@ export function EcommerceProductsClient({
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex flex-wrap items-center gap-1">
                     <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">{p.name}</p>
-                    {!p.isActive ? <span className={ecommerceProductTagClass("slate")}>ปิดขาย</span> : null}
+                    {!p.isActive ? <span className={ecommerceProductTagClass("slate")}>ซ่อนเว็บ</span> : null}
                     {out ? <span className={ecommerceProductTagClass("rose")}>หมด</span> : null}
                     {low ? <span className={ecommerceProductTagClass("amber")}>ใกล้หมด</span> : null}
                     {p.isRecommended ? <span className={ecommerceProductTagClass("rose")}>แนะนำ</span> : null}
@@ -1113,6 +1120,24 @@ export function EcommerceProductsClient({
                   </button>
                 </div>
                 <div className="flex items-center gap-1">
+                  <label
+                    className={cn(
+                      "inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-lg border px-2 text-[11px] font-bold",
+                      p.isActive
+                        ? "border-emerald-200/90 bg-emerald-50/90 text-emerald-800"
+                        : "border-slate-200/90 bg-slate-50 text-slate-500",
+                    )}
+                    title={p.isActive ? "แสดงบนเว็บไซต์" : "ซ่อนจากเว็บไซต์"}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-slate-300"
+                      checked={p.isActive}
+                      onChange={() => void toggleActive(p.id, p.isActive)}
+                      aria-label={`${p.isActive ? "ซ่อน" : "แสดง"} ${p.name} บนเว็บไซต์`}
+                    />
+                    <span className="hidden sm:inline">เว็บไซต์</span>
+                  </label>
                   <button
                     type="button"
                     className={assetRowEditIconButtonClass}
@@ -1121,22 +1146,6 @@ export function EcommerceProductsClient({
                     onClick={() => openEditProduct(p)}
                   >
                     <IconRowEdit className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      assetRowEditIconButtonClass,
-                      !p.isActive && "border-slate-200 bg-slate-50 text-slate-500",
-                    )}
-                    aria-label={`${p.isActive ? "ปิด" : "เปิด"}ขาย ${p.name}`}
-                    title={p.isActive ? "ปิดขาย" : "เปิดขาย"}
-                    onClick={() => void toggleActive(p.id, p.isActive)}
-                  >
-                    {p.isActive ? (
-                      <IconEyeOff className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <IconEye className="h-4 w-4" aria-hidden />
-                    )}
                   </button>
                   <button
                     type="button"
@@ -1233,6 +1242,8 @@ export function EcommerceProductsClient({
           anglesInputRef: newAnglesRef,
           galleryInputRef: galleryRef,
           cameraInputRef: cameraRef,
+          isActive: newIsActive,
+          setIsActive: setNewIsActive,
           recommended: newRecommended,
           setRecommended: setNewRecommended,
           bestseller: newBestseller,
@@ -1283,7 +1294,6 @@ export function EcommerceProductsClient({
           anglesInputRef: editAnglesRef,
           galleryInputRef: editGalleryRef,
           cameraInputRef: editCameraRef,
-          showActive: true,
           isActive: editIsActive,
           setIsActive: setEditIsActive,
           showFeatured: true,
@@ -1359,24 +1369,6 @@ function IconFilter({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
       <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconEye({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" strokeLinejoin="round" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconEyeOff({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <path d="M3 3l18 18M10.6 6.1A9 9 0 0122 12a13 13 0 01-2.6 3.5M6.6 6.6A13 13 0 002 12s3.5 7 10 7c1.7 0 3.3-.4 4.7-1.1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9.9 9.9a3 3 0 004.2 4.2" />
     </svg>
   );
 }
