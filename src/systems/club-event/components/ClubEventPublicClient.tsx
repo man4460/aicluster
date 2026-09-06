@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Users } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
@@ -10,12 +10,12 @@ import {
 import { cn } from "@/lib/cn";
 import type { ClubPublicPortalPayload } from "@/lib/club-event/load-public-portal";
 import { ClubEventCommitteePopup } from "@/systems/club-event/components/ClubEventCommitteePopup";
+import { ClubEventMemberSearchPopup } from "@/systems/club-event/components/ClubEventMemberSearchPopup";
 import {
   ClubEventPortalEventCardGrid,
   ClubEventPortalStandaloneLinks,
 } from "@/systems/club-event/components/ClubEventPortalEventCardGrid";
 import { ClubEventPortalGallery } from "@/systems/club-event/components/ClubEventPortalGallery";
-import { ClubEventPortalMemberSearch } from "@/systems/club-event/components/ClubEventPortalMemberSearch";
 import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEventPortalSection";
 import { CLUB_EVENT_PORTAL_SAMPLE_BANNER, CLUB_EVENT_PORTAL_GALLERY_MAX } from "@/systems/club-event/lib/portal-media";
 import {
@@ -46,6 +46,7 @@ export function ClubEventPublicClient({
   const links = initialData.links;
   const standaloneLinks = initialData.standaloneLinks;
   const [committeeOpen, setCommitteeOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const title = profile.displayName.trim() || "ชมรม";
   const gallery = useMemo(() => {
@@ -126,9 +127,13 @@ export function ClubEventPublicClient({
               </button>
             ) : null}
             {showMembers ? (
-              <a href="#members" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("members")}>
+              <button
+                type="button"
+                className={clubEventPortalHeaderNavOnLightLinkClass()}
+                onClick={() => setMembersOpen(true)}
+              >
                 สมาชิก
-              </a>
+              </button>
             ) : null}
             <a href="#contact" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("contact")}>
               ติดต่อ
@@ -186,6 +191,16 @@ export function ClubEventPublicClient({
                   คณะกรรมการ
                 </button>
               ) : null}
+              {showMembers ? (
+                <button
+                  type="button"
+                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                  onClick={() => setMembersOpen(true)}
+                >
+                  <Search className="h-4 w-4" aria-hidden />
+                  ค้นหาสมาชิก
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -217,16 +232,6 @@ export function ClubEventPublicClient({
         ) : null}
 
         <ClubEventPortalGallery urls={gallery} onOpenAt={(index) => lb.openGallery(gallery, index)} />
-
-        {showMembers ? (
-          <ClubEventPortalSection
-            id="members"
-            title="ค้นหาสมาชิก"
-            subtitle="พิมพ์ชื่อ ชื่อเล่น หรือรหัสสมาชิก เพื่อค้นหา"
-          >
-            <ClubEventPortalMemberSearch slug={slug} trialParam={trialParam} />
-          </ClubEventPortalSection>
-        ) : null}
 
         {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
           <ClubEventPortalSection id="rules" title="กฎระเบียบ">
@@ -301,6 +306,13 @@ export function ClubEventPublicClient({
         open={committeeOpen}
         onClose={() => setCommitteeOpen(false)}
         committee={committee}
+        clubName={title}
+      />
+      <ClubEventMemberSearchPopup
+        open={membersOpen}
+        onClose={() => setMembersOpen(false)}
+        slug={slug}
+        trialParam={trialParam}
         clubName={title}
       />
       <AppImageLightbox
