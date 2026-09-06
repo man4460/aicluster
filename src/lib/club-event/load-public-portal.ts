@@ -37,6 +37,20 @@ export type ClubPublicPortalPayload = {
   standaloneLinks: ClubPublicPortalLink[];
 };
 
+export type ClubPublicEventGalleryItem = {
+  id: string;
+  imageUrl: string;
+  fileName: string;
+  sortOrder: number;
+};
+
+export type ClubPublicEventDetailPayload = {
+  profile: Pick<ClubEventProfileDto, "displayName" | "logoUrl" | "slug" | "tagline">;
+  event: ClubEventRecordDto;
+  gallery: ClubPublicEventGalleryItem[];
+  links: ClubPublicPortalLink[];
+};
+
 function mapPortalEvent(
   e: Parameters<typeof mapClubEventRecord>[0] & {
     gallery?: { id: string; imageUrl: string; fileName: string }[];
@@ -51,6 +65,19 @@ function mapPortalEvent(
     ...mapClubEventRecord(e),
     coverImageUrl: galleryPreview[0]?.imageUrl ?? null,
     galleryPreview,
+  };
+}
+
+function mapPortalLink(
+  slug: string,
+  l: { id: string; type: ClubEventDynamicLinkDto["type"]; title: string; configJson: string },
+): ClubPublicPortalLink {
+  return {
+    id: l.id,
+    type: l.type,
+    title: l.title,
+    config: parseDynamicLinkConfig(l.configJson),
+    publicPath: `/club/${slug}/link/${l.id}`,
   };
 }
 
@@ -87,13 +114,7 @@ export async function loadClubEventPublicPortal(
     }),
   ]);
 
-  const mappedLinks: ClubPublicPortalLink[] = links.map((l) => ({
-    id: l.id,
-    type: l.type,
-    title: l.title,
-    config: parseDynamicLinkConfig(l.configJson),
-    publicPath: `/club/${slug}/link/${l.id}`,
-  }));
+  const mappedLinks: ClubPublicPortalLink[] = links.map((l) => mapPortalLink(slug, l));
 
   const pastEvents = past.map(mapPortalEvent);
   const pastEventGalleryUrls: string[] = [];
@@ -115,5 +136,51 @@ export async function loadClubEventPublicPortal(
     pastEventGalleryUrls,
     links: mappedLinks,
     standaloneLinks: mappedLinks.filter((l) => !l.config.eventId?.trim()),
+  };
+}
+
+/** รายละเอียดกิจกรรมสาธารณะ — คลิกการ์ดพอร์ทัล */
+export async function loadClubEventPublicEventDetail(
+  slug: string,
+  eventId: string,
+  trialParam: string | null = null,
+): Promise<ClubPublicEventDetailPayload | null> {
+  const profile = await findClubEventPublicProfile(slug, trialParam);
+  if (!profile) return null;
+
+  const event = await prisma.clubEventRecord.findFirst({
+    where: { id: eventId, profileId: profile.id },
+    include: {
+      gallery: { orderBy: { sortOrder: "asc" } },
+      _count: { select: { gallery: true } },
+    },
+  });
+  if (!event) return null;
+
+  const links = await prisma.clubEventDynamicLink.findMany({
+    where: { profileId: profile.id, isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const mappedLinks = links.map((l) => mapPortalLink(slug, l));
+  const eventLinks = mappedLinks.filter((l) => l.config.eventId?.trim() === eventId);
+
+  const mappedProfile = mapClubEventProfile(profile);
+
+  return {
+    profile: {
+      displayName: mappedProfile.displayName,
+      logoUrl: mappedProfile.logoUrl,
+      slug: mappedProfile.slug,
+      tagline: mappedProfile.tagline,
+    },
+    event: mapClubEventRecord(event),
+    gallery: event.gallery.map((g) => ({
+      id: g.id,
+      imageUrl: g.imageUrl,
+      fileName: g.fileName,
+      sortOrder: g.sortOrder,
+    })),
+    links: eventLinks,
   };
 }
