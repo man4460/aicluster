@@ -19,6 +19,7 @@ import {
   clubEventPortalLinkTileClass,
   clubEventPortalLinkTypeAriaLabel,
 } from "@/systems/club-event/lib/portal-link-icons";
+import { ClubEventPortalSectionTitleIcon } from "@/systems/club-event/lib/portal-section-icons";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventGalleryCardGridClass,
@@ -180,8 +181,12 @@ export function ClubEventPublicEventDetailClient({
         </section>
 
         <section className={clubEventPortalPageBodyClass} aria-labelledby="event-detail-heading">
-          <h2 id="event-detail-heading" className="text-base font-black text-[#1e1b4b] sm:text-lg">
-            รายละเอียด
+          <h2
+            id="event-detail-heading"
+            className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
+          >
+            <ClubEventPortalSectionTitleIcon name="detail" />
+            <span>รายละเอียด</span>
           </h2>
           {event.description.trim() ? (
             <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#3f3a6a]">
@@ -194,8 +199,12 @@ export function ClubEventPublicEventDetailClient({
 
         {videos.length > 0 ? (
           <section className="space-y-3" aria-labelledby="event-youtube-heading">
-            <h2 id="event-youtube-heading" className="text-base font-black text-[#1e1b4b] sm:text-lg">
-              วิดีโอ
+            <h2
+              id="event-youtube-heading"
+              className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
+            >
+              <ClubEventPortalSectionTitleIcon name="youtube" />
+              <span>วิดีโอ</span>
             </h2>
             <ul className={clubEventYoutubeCardGridClass}>
               {videos.map((v) => (
@@ -211,8 +220,12 @@ export function ClubEventPublicEventDetailClient({
 
         {gallery.length > 0 ? (
           <section className="space-y-3" aria-labelledby="event-gallery-heading">
-            <h2 id="event-gallery-heading" className="text-base font-black text-[#1e1b4b] sm:text-lg">
-              แกลเลอรี
+            <h2
+              id="event-gallery-heading"
+              className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
+            >
+              <ClubEventPortalSectionTitleIcon name="gallery" />
+              <span>แกลเลอรี</span>
             </h2>
             <ul className={cn(clubEventGalleryCardGridClass, "list-none p-0")}>
               {gallery.map((g, index) => (

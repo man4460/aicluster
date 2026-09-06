@@ -60,7 +60,7 @@ export function ClubEventPortalGallery({
   if (urls.length === 0) return null;
 
   return (
-    <ClubEventPortalSection id="gallery" title="แกลเลอรี">
+    <ClubEventPortalSection id="gallery" title="แกลเลอรี" titleIcon="gallery">
       <ul className={cn(clubEventGalleryCardGridClass, "list-none p-0")}>
         {slice.map(({ url, index }) => (
           <li key={`${url}-${index}`} className="min-w-0">

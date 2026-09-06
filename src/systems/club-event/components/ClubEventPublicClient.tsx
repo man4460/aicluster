@@ -207,7 +207,7 @@ export function ClubEventPublicClient({
       </section>
 
       <main className="relative z-10 mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-2 sm:space-y-14 sm:px-6">
-        <ClubEventPortalSection id="schedule" title="กำหนดการ">
+        <ClubEventPortalSection id="schedule" title="กำหนดการ" titleIcon="schedule">
           <ClubEventPortalEventCardGrid
             events={upcoming}
             eventHref={eventHref}
@@ -219,7 +219,7 @@ export function ClubEventPublicClient({
         </ClubEventPortalSection>
 
         {past.length > 0 ? (
-          <ClubEventPortalSection id="past" title="กิจกรรมย้อนหลัง">
+          <ClubEventPortalSection id="past" title="กิจกรรมย้อนหลัง" titleIcon="past">
             <ClubEventPortalEventCardGrid
               events={past}
               eventHref={eventHref}
@@ -234,7 +234,7 @@ export function ClubEventPublicClient({
         <ClubEventPortalGallery urls={gallery} onOpenAt={(index) => lb.openGallery(gallery, index)} />
 
         {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
-          <ClubEventPortalSection id="rules" title="กฎระเบียบ">
+          <ClubEventPortalSection id="rules" title="กฎระเบียบ" titleIcon="rules">
             {profile.rulesMarkdown?.trim() ? (
               <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#1e1b4b]">
                 {profile.rulesMarkdown}
@@ -244,7 +244,7 @@ export function ClubEventPublicClient({
           </ClubEventPortalSection>
         ) : null}
 
-        <ClubEventPortalSection id="contact" title="ติดต่อ">
+        <ClubEventPortalSection id="contact" title="ติดต่อ" titleIcon="contact">
           <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-8 sm:space-y-0">
             <div className="space-y-2 text-sm font-semibold text-[#66638c]">
               <p className={cn("text-lg", clubEventPortalShopNameClass)}>{title}</p>
