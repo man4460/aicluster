@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  Building2,
-  Calendar,
   CalendarDays,
   ClipboardList,
   FileText,
@@ -9,6 +7,7 @@ import {
   History,
   Images,
   Link2,
+  MessageSquareText,
   Package,
   Play,
   Settings,
@@ -16,6 +15,8 @@ import {
   UserRound,
   Wallet,
   Youtube,
+  Building2,
+  Calendar,
 } from "lucide-react";
 import type {
   ClubEventDashboardTabKey,
@@ -28,7 +29,9 @@ import type { ClubEventCardTone } from "@/systems/club-event/lib/card-tones";
 const iconClass = "h-4 w-4";
 
 /** ไอคอนหัวข้อหน้าหลัก (คู่กับ ClubEventPageSubNav.titleIcon) */
-export function clubEventPageTitleIcon(key: ClubEventModuleNavKey | "eventDetail" | "eventEdit"): ReactNode {
+export function clubEventPageTitleIcon(
+  key: ClubEventModuleNavKey | "eventDetail" | "eventEdit" | "eventSubmissions",
+): ReactNode {
   switch (key) {
     case "dashboard":
       return <CalendarDays className={iconClass} strokeWidth={2.25} aria-hidden />;
@@ -42,13 +45,15 @@ export function clubEventPageTitleIcon(key: ClubEventModuleNavKey | "eventDetail
       return <Calendar className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "eventEdit":
       return <FileText className={iconClass} strokeWidth={2.25} aria-hidden />;
+    case "eventSubmissions":
+      return <MessageSquareText className={iconClass} strokeWidth={2.25} aria-hidden />;
     default:
       return <CalendarDays className={iconClass} strokeWidth={2.25} aria-hidden />;
   }
 }
 
 export function clubEventPageTitleTone(
-  key: ClubEventModuleNavKey | "eventDetail" | "eventEdit",
+  key: ClubEventModuleNavKey | "eventDetail" | "eventEdit" | "eventSubmissions",
 ): ClubEventCardTone {
   switch (key) {
     case "dashboard":
@@ -63,6 +68,8 @@ export function clubEventPageTitleTone(
       return "sky";
     case "eventEdit":
       return "amber";
+    case "eventSubmissions":
+      return "violet";
     default:
       return "slate";
   }

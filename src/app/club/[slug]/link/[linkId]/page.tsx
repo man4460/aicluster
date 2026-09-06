@@ -38,6 +38,10 @@ export default async function ClubPublicLinkPage({ params, searchParams }: Props
       initialData={{
         ownerId: profile.ownerUserId,
         clubName: profile.displayName,
+        logoUrl: profile.logoUrl ?? null,
+        bannerUrl: profile.portalBannerUrl ?? null,
+        slug: profile.slug,
+        tagline: profile.tagline ?? null,
         paymentRulesNote: profile.paymentRulesNote ?? "",
         link: {
           id: link.id,
