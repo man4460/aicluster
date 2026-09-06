@@ -23,6 +23,7 @@ alwaysApply: false
 |-----|------|
 | รายการสินค้าแดชบอร์ด | `EcommerceProductsClient.tsx` |
 | หน้าร้านสาธารณะ | `EcommerceStorefrontClient.tsx` · `EcommerceProductCard.tsx` |
+| ตะกร้า / ชำระเงิน | `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx` |
 | โมดัลดูสินค้า | `EcommerceProductDetailModal.tsx` |
 | รีวิวลูกค้า | `EcommerceStorefrontReviewPanel.tsx` · API `public/[storeId]/reviews` |
 | รูปปก + มุมอื่น | `galleryImagesJson` · `lib/ecommerce/product-images.ts` |
@@ -69,6 +70,20 @@ alwaysApply: false
 ### แถบหมวด
 
 ดู **`ecommerce-storefront-category-scroll.mdc`** — แถวเดียวเลื่อนแนวนอน ห้าม wrap
+
+### ตะกร้า / ชำระเงิน (`/cart` · `/checkout`)
+
+| ชั้น | ค่า |
+|------|-----|
+| ความกว้าง | `max-w-6xl` · `px-4 sm:px-6` (`ecommerceStorePortalPageInnerClass`) |
+| พื้น | `#faf9ff` · หัว sticky ขาว (`ecommerceStorePortal*`) |
+| มือถือ | เนื้อหา 1 คอลัมน์ · **dock ล่าง** ยอดรวม + CTA (`ecommerceStorePortalBottomDockClass` · `lg:hidden`) |
+| คอม (`lg+`) | **2 คอลัมน์** — รายการ/ฟอร์มซ้าย · สรุป(+QR) ขวาสติ๊กกี้ · ซ่อน dock |
+
+- แผง: `ecommerceStorePanelClass` · หัวส่วน: `EcommercePortalSection`  
+- ช่องกรอก checkout: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
+- ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
+- อ้างอิง: `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx`
 
 ---
 
@@ -130,6 +145,7 @@ alwaysApply: false
 ## 5) ห้าม
 
 - กริดหน้าร้านเป็น 2/4 คอลัมน์แบบเก่าโดยไม่ตั้งใจ  
+- ห่อ cart/checkout ด้วย `max-w-lg` ทั้งหน้า (ให้ใช้ `max-w-6xl` เท่าหน้าร้าน)  
 - การ์ดสูงไม่เท่ากันเพราะไม่มีช่องรายละเอียดคงที่  
 - โมดัลดูสินค้าเป็น `appearance="glass"`  
 - ฟอร์มสินค้ากระจาย checkbox/ปุ่ม ad-hoc ไม่ใช้แผง + โทเค็น `h-9`  

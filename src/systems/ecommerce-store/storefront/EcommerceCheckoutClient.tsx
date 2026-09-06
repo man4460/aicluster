@@ -13,7 +13,19 @@ import {
 import { cn } from "@/lib/cn";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
-import { ecommerceStorePrimaryButtonClass } from "@/systems/ecommerce-store/lib/ui-tokens";
+import {
+  ecommerceStoreFieldClass,
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePanelClass,
+  ecommerceStorePortalBottomDockClass,
+  ecommerceStorePortalPageInnerClass,
+  ecommerceStorePortalPageShellClass,
+  ecommerceStorePortalPageTitleClass,
+  ecommerceStorePortalStickyHeaderClass,
+  ecommerceStorePrimaryButtonClass,
+  ecommerceStoreTextareaClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
+import { EcommercePortalSection } from "@/systems/ecommerce-store/storefront/EcommercePortalSection";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
 
@@ -26,6 +38,83 @@ type StorePay = {
   bankAccountNumber: string | null;
   paymentNote: string | null;
 };
+
+const formLabelClass = "block text-xs font-semibold text-[#4d47b6]";
+
+function CheckoutAside({
+  store,
+  lines,
+  totalBaht,
+  qrUrl,
+  qrError,
+}: {
+  store: StorePay;
+  lines: { productId: string; name: string; quantity: number; priceBaht: number }[];
+  totalBaht: number;
+  qrUrl: string | null;
+  qrError: string | null;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
+        <p className="text-xs font-bold tracking-wide text-[#1e1b4b]">สรุปยอด</p>
+        <ul className="space-y-2 text-sm">
+          {lines.map((l) => (
+            <li key={l.productId} className="flex justify-between gap-2">
+              <span className="min-w-0 flex-1 truncate font-medium text-[#66638c]">
+                {l.name} × {l.quantity}
+              </span>
+              <span className="shrink-0 font-bold tabular-nums text-[#1e1b4b]">
+                ฿{(l.priceBaht * l.quantity).toLocaleString("th-TH")}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="border-t border-slate-200/80 pt-3 text-right">
+          <p className="text-[10px] font-semibold text-[#66638c]">ยอดรวม</p>
+          <p className="text-xl font-black tabular-nums text-emerald-700">
+            ฿{totalBaht.toLocaleString("th-TH")}
+          </p>
+        </div>
+      </div>
+
+      <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
+        <p className="text-xs font-bold tracking-wide text-[#1e1b4b]">โอนชำระ</p>
+        {qrUrl ? (
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrUrl}
+              alt="QR PromptPay"
+              className="h-44 w-44 rounded-xl border border-slate-200/90 bg-white p-2 shadow-sm sm:h-48 sm:w-48"
+            />
+          </div>
+        ) : qrError ? (
+          <p className="text-sm font-semibold text-rose-600">{qrError}</p>
+        ) : store.promptPayPhone?.trim() ? (
+          <p className="text-sm font-medium text-[#66638c]">กำลังสร้าง QR…</p>
+        ) : (
+          <p className="text-sm font-medium text-[#66638c]">โอนตามบัญชีด้านล่าง แล้วแนบสลิป</p>
+        )}
+        {store.promptPayPhone ? (
+          <p className="text-sm font-semibold text-[#1e1b4b]">
+            พร้อมเพย์: <span className="font-black">{store.promptPayPhone}</span>
+          </p>
+        ) : null}
+        {store.bankAccountNumber ? (
+          <p className="text-sm font-medium leading-relaxed text-[#66638c]">
+            {store.bankName} · {store.bankAccountName}
+            <br />
+            {store.bankAccountNumber}
+          </p>
+        ) : null}
+        {store.paymentNote ? (
+          <p className="text-xs font-medium text-[#8b87b8]">{store.paymentNote}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
   const mounted = useMounted();
@@ -64,10 +153,10 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white pb-32" aria-hidden>
-        <div className="mx-auto max-w-lg space-y-4 px-4 py-8">
-          <div className="app-surface h-40 animate-pulse rounded-2xl bg-[#ecebff]/30" />
-          <div className="app-surface h-56 animate-pulse rounded-2xl bg-[#ecebff]/30" />
+      <div className={ecommerceStorePortalPageShellClass} aria-hidden>
+        <div className={cn(ecommerceStorePortalPageInnerClass, "space-y-4 py-8")}>
+          <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-56 animate-pulse rounded-xl bg-slate-100" />
         </div>
       </div>
     );
@@ -122,135 +211,189 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
 
   if (cart.lines.length === 0) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-[#66638c]">ตะกร้าว่าง</p>
-        <Link href={`/shop/${store.id}`} className={cn(ecommerceStorePrimaryButtonClass, "mt-4 px-6")}>
-          เลือกสินค้า
-        </Link>
+      <div className={cn(ecommerceStorePortalPageShellClass, "flex flex-col")}>
+        <header className={ecommerceStorePortalStickyHeaderClass}>
+          <div className={cn(ecommerceStorePortalPageInnerClass, "flex items-center justify-between gap-3 py-3")}>
+            <h1 className={cn(ecommerceStorePortalPageTitleClass, "!text-xl sm:!text-2xl")}>ชำระเงิน</h1>
+            <Link href={`/shop/${store.id}`} className={ecommerceStoreOutlineButtonClass}>
+              กลับร้าน
+            </Link>
+          </div>
+        </header>
+        <div className={cn(ecommerceStorePortalPageInnerClass, "flex flex-1 flex-col items-center justify-center py-16 text-center")}>
+          <div className={cn(ecommerceStorePanelClass, "w-full max-w-md space-y-4 p-6")}>
+            <p className="text-lg font-black text-[#1e1b4b]">ตะกร้าว่าง</p>
+            <Link href={`/shop/${store.id}`} className={cn(ecommerceStorePrimaryButtonClass, "w-full")}>
+              เลือกสินค้า
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const aside = (
+    <CheckoutAside
+      store={store}
+      lines={cart.lines}
+      totalBaht={cart.totalBaht}
+      qrUrl={qrUrl}
+      qrError={qrError}
+    />
+  );
+
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white pb-32">
-      <header className="border-b border-white/60 px-4 py-4">
-        <h1 className="font-black text-xl text-[#1e1b4b]">ชำระเงิน</h1>
-        <p className="text-sm text-[#66638c]">{store.storeName}</p>
+    <div className={ecommerceStorePortalPageShellClass}>
+      <header className={ecommerceStorePortalStickyHeaderClass}>
+        <div className={cn(ecommerceStorePortalPageInnerClass, "flex items-center justify-between gap-3 py-3")}>
+          <div className="min-w-0">
+            <h1 className={cn(ecommerceStorePortalPageTitleClass, "!text-xl sm:!text-2xl")}>ชำระเงิน</h1>
+            <p className="truncate text-xs font-semibold text-[#66638c] sm:text-sm">{store.storeName}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href={`/shop/${store.id}/cart`} className={ecommerceStoreOutlineButtonClass}>
+              ตะกร้า
+            </Link>
+            <Link
+              href={`/shop/${store.id}`}
+              className={cn(ecommerceStoreOutlineButtonClass, "hidden sm:inline-flex")}
+            >
+              กลับร้าน
+            </Link>
+          </div>
+        </div>
       </header>
 
-      <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
-        <section className="app-surface rounded-2xl p-4">
-          <h2 className="font-bold text-[#1e1b4b]">สรุปยอด</h2>
-          <ul className="mt-2 space-y-2 text-sm">
-            {cart.lines.map((l) => (
-              <li key={l.productId} className="flex justify-between gap-2">
-                <span className="text-[#66638c]">
-                  {l.name} × {l.quantity}
-                </span>
-                <span className="font-semibold">฿{(l.priceBaht * l.quantity).toLocaleString("th-TH")}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-right font-black text-lg text-[#4d47b6]">
-            รวม ฿{cart.totalBaht.toLocaleString("th-TH")}
-          </p>
-        </section>
+      <main
+        className={cn(
+          ecommerceStorePortalPageInnerClass,
+          "grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8",
+        )}
+      >
+        <div className="space-y-10 sm:space-y-12">
+          <div className="lg:hidden">{aside}</div>
 
-        <section className="app-surface rounded-2xl p-4">
-          <h2 className="font-bold text-[#1e1b4b]">โอนชำระ</h2>
-          {qrUrl ? (
-            <div className="mt-3 flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrUrl} alt="QR PromptPay" className="h-48 w-48 rounded-2xl ring-2 ring-white" />
+          <EcommercePortalSection id="shipping" title="ข้อมูลจัดส่ง">
+            <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
+              <label className={formLabelClass}>
+                ชื่อ-นามสกุล
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1.5")}
+                  placeholder="ชื่อผู้รับ"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </label>
+              <label className={formLabelClass}>
+                เบอร์โทร
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1.5")}
+                  placeholder="08x-xxx-xxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </label>
+              <label className={formLabelClass}>
+                ที่อยู่จัดส่ง
+                <textarea
+                  className={cn(ecommerceStoreTextareaClass, "mt-1.5 min-h-[5rem]")}
+                  placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={3}
+                />
+              </label>
             </div>
-          ) : qrError ? (
-            <p className="mt-2 text-sm text-rose-600">{qrError}</p>
-          ) : null}
-          {store.promptPayPhone ? (
-            <p className="mt-2 text-sm">
-              พร้อมเพย์: <span className="font-bold">{store.promptPayPhone}</span>
+          </EcommercePortalSection>
+
+          <EcommercePortalSection id="slip" title="แนบสลิป" subtitle="บังคับก่อนยืนยันออเดอร์">
+            <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
+              <div className="flex flex-wrap items-center gap-3">
+                {slipUrl ? (
+                  <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-[#8b87b8]">
+                    ไม่มีสลิป
+                  </div>
+                )}
+                <input
+                  ref={galleryRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onSlipFile(f);
+                    e.target.value = "";
+                  }}
+                />
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onSlipFile(f);
+                    e.target.value = "";
+                  }}
+                />
+                <AppImagePickCameraButtons
+                  onPickGallery={() => galleryRef.current?.click()}
+                  onPickCamera={() => cameraRef.current?.click()}
+                  busy={busy}
+                  className="justify-start"
+                  buttonClassName={ecommerceStoreOutlineButtonClass}
+                  labels={{ gallery: "เลือกสลิป", camera: "ถ่ายสลิป" }}
+                />
+              </div>
+            </div>
+          </EcommercePortalSection>
+
+          {err ? (
+            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+              {err}
             </p>
           ) : null}
-          {store.bankAccountNumber ? (
-            <p className="mt-1 text-sm text-[#66638c]">
-              {store.bankName} · {store.bankAccountName} · {store.bankAccountNumber}
-            </p>
-          ) : null}
-          {store.paymentNote ? <p className="mt-2 text-xs text-[#8b87b8]">{store.paymentNote}</p> : null}
-        </section>
 
-        <section className="app-surface space-y-3 rounded-2xl p-4">
-          <h2 className="font-bold text-[#1e1b4b]">ข้อมูลจัดส่ง</h2>
-          <input
-            className="app-input w-full rounded-xl"
-            placeholder="ชื่อ-นามสกุล"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className="app-input w-full rounded-xl"
-            placeholder="เบอร์โทร"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <textarea
-            className="app-input min-h-[80px] w-full rounded-xl"
-            placeholder="ที่อยู่จัดส่ง"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-        </section>
-
-        <section className="app-surface rounded-2xl p-4">
-          <h2 className="font-bold text-[#1e1b4b]">แนบสลิป (บังคับ)</h2>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            {slipUrl ? (
-              <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
-            ) : null}
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onSlipFile(f);
-                e.target.value = "";
-              }}
-            />
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onSlipFile(f);
-                e.target.value = "";
-              }}
-            />
-            <AppImagePickCameraButtons
-              onPickGallery={() => galleryRef.current?.click()}
-              onPickCamera={() => cameraRef.current?.click()}
-              busy={busy}
-            />
+          <div className="hidden lg:block">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void submit()}
+              className={cn(ecommerceStorePrimaryButtonClass, "w-full sm:w-auto sm:min-w-[12rem]")}
+            >
+              {busy ? "กำลังส่ง…" : "ยืนยันออเดอร์"}
+            </button>
           </div>
-        </section>
+        </div>
 
-        {err ? <p className="text-sm text-rose-600">{err}</p> : null}
+        <aside className="hidden lg:sticky lg:top-24 lg:block">{aside}</aside>
+      </main>
+
+      <div className={ecommerceStorePortalBottomDockClass}>
+        <div className={cn(ecommerceStorePortalPageInnerClass, "flex items-center gap-3")}>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold text-[#66638c]">ยอดรวม</p>
+            <p className="text-lg font-black tabular-nums text-emerald-700">
+              ฿{cart.totalBaht.toLocaleString("th-TH")}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void submit()}
+            className={cn(ecommerceStorePrimaryButtonClass, "shrink-0 px-5")}
+          >
+            {busy ? "กำลังส่ง…" : "ยืนยันออเดอร์"}
+          </button>
+        </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/50 bg-white/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void submit()}
-          className={cn(ecommerceStorePrimaryButtonClass, "mx-auto w-full max-w-lg")}
-        >
-          {busy ? "กำลังส่ง..." : "ยืนยันออเดอร์"}
-        </button>
-      </div>
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปชำระเงิน" />
     </div>
   );

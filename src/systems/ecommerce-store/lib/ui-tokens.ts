@@ -241,6 +241,19 @@ export const ecommerceStorePortalPageBodyClass = cn(
   "mt-3 space-y-4 pt-4 sm:mt-4 sm:pt-5",
 );
 
+/** เปลือกหน้า cart / checkout / track — กว้างเท่าหน้าร้าน */
+export const ecommerceStorePortalPageShellClass =
+  "min-h-dvh bg-[#faf9ff] pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-10";
+
+export const ecommerceStorePortalPageInnerClass = "mx-auto max-w-6xl px-4 sm:px-6";
+
+export const ecommerceStorePortalStickyHeaderClass =
+  "sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md";
+
+/** แถบสรุปล่างมือถือ (cart / checkout) */
+export const ecommerceStorePortalBottomDockClass =
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden";
+
 export const ecommerceStorePortalHeaderNavShellClass =
   "hidden items-center gap-0.5 rounded-lg border border-white/35 bg-white/15 p-0.5 backdrop-blur-md md:inline-flex";
 
