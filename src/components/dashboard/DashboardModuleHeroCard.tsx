@@ -7,18 +7,18 @@ import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
 import type { ModuleUsageBadge } from "@/lib/modules/module-usage-badge";
 import { cn } from "@/lib/cn";
 
-/** แกนรูปแบบปุ่มหลัก — เปิดแผนผังระบบ / เข้าใช้งาน */
+/** แกนรูปแบบปุ่มหลัก — เปิดแผนผังระบบ / เข้าใช้งาน (สูง/มนตาม laundry template) */
 export const dashboardModulePrimaryButtonCore = cn(
-  "inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-fuchsia-500/25 transition active:scale-[0.99] disabled:opacity-50",
+  "inline-flex h-9 min-h-9 max-h-9 items-center justify-center rounded-lg px-2.5 text-[11px] font-bold leading-none text-white shadow-sm transition active:scale-[0.99] disabled:opacity-50 sm:text-xs",
   appDashboardBrandGradientFillClass,
 );
 
 /** ปุ่มเต็มความกว้าง (การ์ดแดชบอร์ด) */
 export const dashboardModulePrimaryCtaClass = cn(dashboardModulePrimaryButtonCore, "w-full");
 
-/** ปุ่ม Subscribe — ไล่สีเดียวกับปุ่ม «เปิดแผนผังระบบ» ขนาดคอมแพ็กต์ในแถวปุ่ม */
+/** ปุ่ม Subscribe — ไล่สีเดียวกับปุ่มหลัก · ขนาดเท่า laundry h-9 */
 export const dashboardModuleSubscribeButtonClass = cn(
-  "inline-flex min-h-[44px] flex-1 min-w-[6.5rem] items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-md shadow-fuchsia-500/25 transition active:scale-[0.99] disabled:opacity-50",
+  "inline-flex h-9 min-h-9 max-h-9 flex-1 min-w-[6.5rem] items-center justify-center rounded-lg px-2.5 text-[11px] font-bold leading-none text-white shadow-sm transition active:scale-[0.99] disabled:opacity-50 sm:text-xs",
   appDashboardBrandGradientFillClass,
 );
 
@@ -129,9 +129,8 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   const hasFooter = "footer" in props && props.footer != null;
 
   const shellClass = cn(
-    "group relative flex flex-col overflow-hidden rounded-[1.35rem] border border-white/55 bg-white/75 shadow-[0_22px_55px_-30px_rgba(30,27,75,0.35)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition duration-500",
-    "hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-[0_28px_64px_-26px_rgba(91,97,255,0.38)]",
-    "sm:rounded-[1.75rem]",
+    "group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition duration-300",
+    "hover:-translate-y-0.5 hover:border-[#5b61ff]/35 hover:shadow-md",
     variant === "systemMap" &&
       "border-2 border-dashed border-[#c8c4ff]/65 ring-2 ring-[#ddd6fe]/35 ring-offset-2 ring-offset-[#fbfaff]",
     !hasFooter && "focus-within:outline-none focus-within:ring-2 focus-within:ring-[#5b61ff]/50 focus-within:ring-offset-2 focus-within:ring-offset-[#f4f4ff]",
@@ -180,13 +179,13 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   );
 
   const body = (
-    <div className={cn("border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20", tall ? "px-4 py-3.5 sm:px-5 sm:py-4" : "px-4 py-3")}>
+    <div className={cn("border-t border-slate-100 bg-white", tall ? "px-4 py-3.5 sm:px-5 sm:py-4" : "px-3.5 py-3 sm:px-4")}>
       <p
         title={description}
         className={cn(
           "text-xs font-semibold leading-relaxed text-[#5f5a8a] sm:text-sm",
           // การ์ด «แนะนำ» (tall=false): แถวเดียวเสมอ — ความสูงการ์ดเท่ากัน
-          tall ? "text-pretty line-clamp-4 whitespace-pre-line" : "truncate",
+          tall ? "text-pretty line-clamp-4 whitespace-pre-line" : "line-clamp-2 min-h-[2.5rem]",
         )}
       >
         {description}

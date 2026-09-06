@@ -182,7 +182,7 @@ function ModuleThumb({
 }) {
   const safe = url && isSafeModuleCardDisplayUrl(url) ? url : null;
   return (
-    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50 shadow-sm">
       {safe ? <Image src={safe} alt="" fill sizes="44px" className="object-cover" unoptimized /> : null}
       {!safe ? <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">{fallback}</div> : null}
     </div>
@@ -495,11 +495,127 @@ export function ModuleSubscriptionBrowser({
   }
 
   const unsubscribeButtonClass =
-    "app-tap-feedback rounded-xl border border-rose-200 bg-rose-50 font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50";
+    "app-tap-feedback inline-flex h-9 min-h-9 w-full items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 sm:text-xs";
+
+  const outlineSoftButtonClass =
+    "app-tap-feedback inline-flex h-9 min-h-9 w-full items-center justify-center rounded-lg border border-slate-200/90 bg-white px-2.5 text-[11px] font-bold text-[#1e1b4b] transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 sm:text-xs";
+
+  function renderModuleHeroCard(m: ModuleCardDTO, keyPrefix: string) {
+    const subscribed = savedSubscribedIds.has(m.id);
+    const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
+    const tokenFree = getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
+    const hasAccess = subscribed || legacyTrialAccess || Boolean(tokenFree);
+    const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
+    const cooldownIso = activeCooldownUnlockIso(m.id);
+    const lockedByCooldown = !subscribed && cooldownIso !== null;
+    const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
+    const showCooldownLock = lockedByCooldown;
+    const showDailyLock = lockedByDailyLimit;
+    const free = isFreeModule(m);
+
+    return (
+      <div key={`${keyPrefix}-${m.id}`} className="h-full min-h-0">
+        <DashboardModuleHeroCard
+          tall={false}
+          imageUrl={m.cardImageUrl}
+          groupId={m.groupId}
+          title={m.title}
+          description={catalogModuleDescription(m)}
+          usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
+          footer={
+            <div className="space-y-1.5">
+              {hasAccess ? (
+                <>
+                  <Link href={dashboardModuleHref(m.slug)} className={dashboardModulePrimaryCtaClass}>
+                    เข้าใช้งาน
+                  </Link>
+                  {subscribed ? (
+                    <button
+                      type="button"
+                      suppressHydrationWarning
+                      disabled={busyId === m.id}
+                      onClick={() => void requestUnsubscribe(m.id, m.title)}
+                      className={unsubscribeButtonClass}
+                    >
+                      {busyId === m.id ? "กำลังยกเลิก..." : "ยกเลิกสมัคร"}
+                    </button>
+                  ) : null}
+                  {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !free && monthly199Slugs.has(m.slug) ? (
+                    <p className="text-center text-[11px] font-bold text-emerald-800">แพ็ก 199 / เดือน</p>
+                  ) : null}
+                  {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !free && !monthly199Slugs.has(m.slug) ? (
+                    <button
+                      type="button"
+                      suppressHydrationWarning
+                      disabled={busyId === m.id || !unlocked}
+                      onClick={() => void requestSubscribe(m.id, "monthly199")}
+                      className={outlineSoftButtonClass}
+                    >
+                      {busyId === m.id ? "กำลังสมัคร 199..." : "แพ็ก 199 / เดือน"}
+                    </button>
+                  ) : null}
+                </>
+              ) : showCooldownLock || showDailyLock ? (
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() =>
+                    setErr(
+                      showCooldownLock
+                        ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
+                        : upgradeMessage,
+                    )
+                  }
+                  className="app-tap-feedback inline-flex h-9 min-h-9 w-full items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100 sm:text-xs"
+                >
+                  Locked
+                </button>
+              ) : (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    disabled={busyId === m.id || !unlocked}
+                    onClick={() => void requestSubscribe(m.id, free ? "daily" : "daily")}
+                    className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !w-full")}
+                  >
+                    {busyId === m.id ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
+                        <span>กำลังสมัคร...</span>
+                      </span>
+                    ) : free ? (
+                      <span>เปิดใช้ฟรี</span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center gap-1.5">
+                        <span className="text-sm">+</span>
+                        <span>Subscribe · 1 บาท/วัน</span>
+                      </span>
+                    )}
+                  </button>
+                  {SHOW_MODULE_MONTHLY_199_CTA && !free ? (
+                    <button
+                      type="button"
+                      suppressHydrationWarning
+                      disabled={busyId === m.id || !unlocked}
+                      onClick={() => void requestSubscribe(m.id, "monthly199")}
+                      className={outlineSoftButtonClass}
+                    >
+                      แพ็ก 199 / เดือน
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
-      <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+      <section className="app-surface min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm sm:p-5">
         <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
         {showCatalogHeader ? (
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -509,7 +625,7 @@ export function ModuleSubscriptionBrowser({
             </div>
             <Link
               href={backHref}
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-4 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-white px-3 text-[11px] font-bold text-[#1e1b4b] shadow-sm transition hover:bg-slate-50 active:scale-[0.99] sm:text-xs"
               aria-label="กลับ"
             >
               <svg className="mr-1.5 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -618,131 +734,21 @@ export function ModuleSubscriptionBrowser({
         ) : null}
       </section>
 
-      {q.trim().length === 0 && featuredModules.length > 0 ? (
-        <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+      {q.trim().length === 0 && catalogTab !== "free" && featuredModules.length > 0 ? (
+        <section className="app-surface min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">แนะนำ</p>
-            <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
+            <span className="rounded-lg border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
               {featuredModules.length}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-            {featuredModules.map((m) => {
-              const subscribed = savedSubscribedIds.has(m.id);
-              const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
-              const tokenFree = getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
-              const hasAccess = subscribed || legacyTrialAccess || Boolean(tokenFree);
-              const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
-              const cooldownIso = activeCooldownUnlockIso(m.id);
-              const lockedByCooldown = !subscribed && cooldownIso !== null;
-              const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
-              const showCooldownLock = lockedByCooldown;
-              const showDailyLock = lockedByDailyLimit;
-
-              return (
-                <DashboardModuleHeroCard
-                  key={`featured-${m.id}`}
-                  tall={false}
-                  imageUrl={m.cardImageUrl}
-                  groupId={m.groupId}
-                  title={m.title}
-                  description={catalogModuleDescription(m)}
-                  usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
-                  footer={
-                    <div className="space-y-2">
-                      {hasAccess ? (
-                        <>
-                          <Link
-                            href={dashboardModuleHref(m.slug)}
-                            className={cn(dashboardModulePrimaryCtaClass, "!min-h-[40px] !rounded-xl !text-sm")}
-                          >
-                            เข้าใช้งาน
-                          </Link>
-                          {subscribed ? (
-                            <button
-                              type="button"
-                              suppressHydrationWarning
-                              disabled={busyId === m.id}
-                              onClick={() => void requestUnsubscribe(m.id, m.title)}
-                              className={cn(unsubscribeButtonClass, "w-full px-3 py-2 text-xs")}
-                            >
-                              {busyId === m.id ? "กำลังยกเลิก..." : "ยกเลิกสมัคร"}
-                            </button>
-                          ) : null}
-                          {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
-                            <p className="text-center text-[11px] font-bold text-emerald-800">แพ็ก 199 / เดือน</p>
-                          ) : null}
-                          {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
-                            <button
-                              type="button"
-                              suppressHydrationWarning
-                              disabled={busyId === m.id || !unlocked}
-                              onClick={() => void requestSubscribe(m.id, "monthly199")}
-                              className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
-                            >
-                              {busyId === m.id ? "กำลังสมัคร 199..." : "แพ็ก 199 / เดือน"}
-                            </button>
-                          ) : null}
-                        </>
-                      ) : showCooldownLock || showDailyLock ? (
-                        <button
-                          type="button"
-                          suppressHydrationWarning
-                          onClick={() =>
-                            setErr(
-                              showCooldownLock
-                                ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
-                                : upgradeMessage,
-                            )
-                          }
-                          className="app-tap-feedback w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
-                        >
-                          Locked
-                        </button>
-                      ) : (
-                        <div className="space-y-2">
-                          <button
-                            type="button"
-                            suppressHydrationWarning
-                            disabled={busyId === m.id || !unlocked}
-                            onClick={() => void requestSubscribe(m.id, "daily")}
-                            className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !min-h-[40px] !rounded-xl !py-2")}
-                          >
-                            {busyId === m.id ? (
-                              <span className="inline-flex items-center gap-2">
-                                <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
-                                <span>กำลังสมัคร...</span>
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 justify-center">
-                                <span className="text-sm">+</span>
-                                <span>Subscribe · 1 บาท/วัน</span>
-                              </span>
-                            )}
-                          </button>
-                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) ? (
-                            <button
-                              type="button"
-                              suppressHydrationWarning
-                              disabled={busyId === m.id || !unlocked}
-                              onClick={() => void requestSubscribe(m.id, "monthly199")}
-                              className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
-                            >
-                              แพ็ก 199 / เดือน
-                            </button>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                  }
-                />
-              );
-            })}
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+            {featuredModules.map((m) => renderModuleHeroCard(m, "featured"))}
           </div>
         </section>
       ) : null}
 
-      <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+      <section className="app-surface min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 truncate text-[10px] font-black tracking-[0.12em] text-[#66638c]">
             {catalogTab === "free" ? (
@@ -771,11 +777,15 @@ export function ModuleSubscriptionBrowser({
         </div>
 
         {tabModules.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-xs font-semibold text-[#66638c]">
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-3 py-8 text-center text-xs font-semibold text-[#66638c]">
             {q.trim() ? "ไม่พบระบบตามคำค้น" : "ยังไม่มีโมดูลในหมวดนี้"}
           </p>
+        ) : catalogTab === "free" ? (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+            {tabModules.map((m) => renderModuleHeroCard(m, "free"))}
+          </div>
         ) : (
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
             {tabModules.map((m) => {
               const subscribed = savedSubscribedIds.has(m.id);
               const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
@@ -785,33 +795,19 @@ export function ModuleSubscriptionBrowser({
               const cooldownIso = activeCooldownUnlockIso(m.id);
               const lockedByCooldown = !subscribed && cooldownIso !== null;
               const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
-              const rowClass =
-                "group flex w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]";
+              const cardClass =
+                "flex h-full min-w-0 flex-col gap-2 rounded-xl border border-slate-200/90 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#5b61ff]/35 hover:shadow-md";
               const subtitle = catalogModuleDescription(m);
+              const free = isFreeModule(m);
 
-              const body = (
-                <>
+              const thumbRow = (
+                <div className="flex items-start justify-between gap-2">
                   <ModuleThumb
                     url={m.cardImageUrl}
                     fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
                   />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
-                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{subtitle}</p>
-                  </div>
-                  <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
-                    →
-                  </span>
-                </>
-              );
-
-              if (hasAccess) {
-                return (
-                  <div key={m.id} className="flex min-w-0 items-stretch gap-2">
-                    <Link href={dashboardModuleHref(m.slug)} className={cn(rowClass, "flex-1")}>
-                      {body}
-                    </Link>
-                    {subscribed ? (
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    {hasAccess && subscribed ? (
                       <button
                         type="button"
                         suppressHydrationWarning
@@ -819,24 +815,45 @@ export function ModuleSubscriptionBrowser({
                         aria-label={`ยกเลิกสมัคร ${m.title}`}
                         title="ยกเลิกสมัคร"
                         onClick={() => void requestUnsubscribe(m.id, m.title)}
-                        className={cn(unsubscribeButtonClass, "min-h-[44px] shrink-0 px-2.5 text-[11px]")}
+                        className={cn(unsubscribeButtonClass, "!w-auto px-2.5")}
                       >
                         {busyId === m.id ? "..." : "ยกเลิก"}
                       </button>
                     ) : null}
-                    {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                    {SHOW_MODULE_MONTHLY_199_CTA &&
+                    ((hasAccess && subscribed && !free && !monthly199Slugs.has(m.slug)) ||
+                      (!hasAccess && !lockedByCooldown && !lockedByDailyLimit && !free)) ? (
                       <button
                         type="button"
                         suppressHydrationWarning
-                        disabled={busyId === m.id}
+                        disabled={busyId === m.id || !unlocked}
                         aria-label={`สมัครแพ็ก 199 ${m.title}`}
                         title="แพ็ก 199 / เดือน"
                         onClick={() => void requestSubscribe(m.id, "monthly199")}
-                        className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
+                        className={cn(outlineSoftButtonClass, "!w-auto px-2.5")}
                       >
                         199
                       </button>
                     ) : null}
+                  </div>
+                </div>
+              );
+
+              const textBlock = (
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                  <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">{subtitle}</p>
+                </div>
+              );
+
+              if (hasAccess) {
+                return (
+                  <div key={m.id} className={cardClass}>
+                    {thumbRow}
+                    {textBlock}
+                    <Link href={dashboardModuleHref(m.slug)} className={cn(dashboardModulePrimaryCtaClass, "mt-auto")}>
+                      เข้าใช้งาน
+                    </Link>
                   </div>
                 );
               }
@@ -847,7 +864,7 @@ export function ModuleSubscriptionBrowser({
                     key={m.id}
                     type="button"
                     suppressHydrationWarning
-                    className={rowClass}
+                    className={cn(cardClass, "w-full active:scale-[0.99]")}
                     onClick={() =>
                       setErr(
                         lockedByCooldown
@@ -856,35 +873,28 @@ export function ModuleSubscriptionBrowser({
                       )
                     }
                   >
-                    {body}
+                    {thumbRow}
+                    {textBlock}
+                    <span className="mt-auto inline-flex h-9 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-700">
+                      Locked
+                    </span>
                   </button>
                 );
               }
 
               return (
-                <div key={m.id} className="flex min-w-0 items-stretch gap-2">
+                <div key={m.id} className={cardClass}>
+                  {thumbRow}
+                  {textBlock}
                   <button
                     type="button"
                     suppressHydrationWarning
                     disabled={busyId === m.id || !unlocked}
-                    className={cn(rowClass, "flex-1 disabled:opacity-50")}
+                    className={cn(dashboardModuleSubscribeButtonClass, "mt-auto !w-full")}
                     onClick={() => void requestSubscribe(m.id, "daily")}
                   >
-                    {body}
+                    {busyId === m.id ? "กำลังสมัคร..." : "Subscribe · 1 บาท/วัน"}
                   </button>
-                  {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) ? (
-                    <button
-                      type="button"
-                      suppressHydrationWarning
-                      disabled={busyId === m.id || !unlocked}
-                      aria-label={`สมัครแพ็ก 199 ${m.title}`}
-                      title="แพ็ก 199 / เดือน"
-                      onClick={() => void requestSubscribe(m.id, "monthly199")}
-                      className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
-                    >
-                      199
-                    </button>
-                  ) : null}
                 </div>
               );
             })}

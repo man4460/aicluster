@@ -23,6 +23,7 @@ import {
   schoolBankMainPaddingBottomClass,
   schoolBankNavActiveClass,
   schoolBankNavIdleClass,
+  schoolBankOutlineButtonClass,
 } from "@/systems/school-bank/lib/ui-tokens";
 import {
   IconModuleShopSettings,
@@ -163,11 +164,11 @@ export function SchoolBankShell({
             <div className="flex min-w-0 items-start gap-3">
               <div
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-fuchsia-500/20",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm",
                   appDashboardBrandGradientFillClass,
                 )}
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4" />
                   <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
                   <path d="M18 12a2 2 0 00-2 2c0 1.1.9 2 2 2h4v-4h-4z" />
@@ -180,11 +181,11 @@ export function SchoolBankShell({
                 </h1>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setUsageGuideOpen(true)}
-                className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+                className={cn(schoolBankOutlineButtonClass, "w-9 px-0 sm:w-auto sm:px-2.5")}
                 aria-label="คู่มือการใช้งาน"
                 aria-haspopup="dialog"
                 aria-expanded={usageGuideOpen}
@@ -195,12 +196,12 @@ export function SchoolBankShell({
                   <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
                   <circle cx="12" cy="17" r="1" />
                 </svg>
-                <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+                <span className="hidden sm:inline">คู่มือ</span>
               </button>
               <button
                 type="button"
                 onClick={toggleHeaderCollapse}
-                className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+                className={cn(schoolBankOutlineButtonClass, "w-9 px-0")}
                 aria-pressed={headerCollapsed}
                 aria-label="ซ่อนส่วนหัวโมดูล"
                 title="ซ่อนส่วนหัวโมดูล"
