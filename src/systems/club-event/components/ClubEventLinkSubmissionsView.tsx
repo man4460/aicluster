@@ -1,6 +1,6 @@
 "use client";
 
-import { AppCompareBarList, AppEmptyState, AppImageThumb, useAppImageLightbox, AppImageLightbox } from "@/components/app-templates";
+import { AppEmptyState, AppImageThumb, useAppImageLightbox, AppImageLightbox } from "@/components/app-templates";
 import type { ClubDynamicLinkField } from "@/systems/club-event/lib/mappers";
 import {
   formatClubSubmissionAnswer,
@@ -34,85 +34,106 @@ export function ClubEventLinkSubmissionsView({
   return (
     <>
       {tab === "summary" ? (
-        <div className="space-y-4" role="tabpanel">
+        <div className="space-y-3" role="tabpanel">
           {summary.questions.length === 0 ? (
             <AppEmptyState>ไม่มีคำถามในแบบฟอร์มนี้ — ดูแท็บรายการรายคน</AppEmptyState>
           ) : (
-            summary.questions.map((q) =>
-              q.kind === "choice" ? (
-                <AppCompareBarList
-                  key={q.key}
-                  title={q.label}
-                  subtitle={`ตอบ ${q.answered}/${summary.total} คน · ตัวเลือก`}
-                  emptyText="ยังไม่มีใครตอบคำถามนี้"
-                  variant="brand"
-                  formatAmount={(n) => `${n} คน`}
-                  rows={
-                    q.answered === 0
-                      ? []
-                      : q.options.map((o) => ({
-                          key: o.value,
-                          label: `${o.value} (${o.pct}%)`,
-                          amount: o.count,
-                          pct: o.pct,
-                        }))
-                  }
-                />
-              ) : q.kind === "qty" ? (
-                <AppCompareBarList
-                  key={q.key}
-                  title={q.label}
-                  subtitle={`ตอบ ${q.answered}/${summary.total} คน · จำนวนรวม`}
-                  emptyText="ยังไม่มีใครตอบคำถามนี้"
-                  variant="brand"
-                  formatAmount={(n) => `${n} ชิ้น`}
-                  rows={
-                    q.answered === 0
-                      ? []
-                      : q.items.map((o) => ({
-                          key: o.label,
-                          label: `${o.label} (${o.pct}%)`,
-                          amount: o.totalQty,
-                          pct: o.pct,
-                        }))
-                  }
-                />
-              ) : (
-                <section
-                  key={q.key}
-                  className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/50 p-3"
-                >
-                  <div>
-                    <h3 className="text-sm font-semibold text-[#1e1b4b]">{q.label}</h3>
-                    <p className="mt-0.5 text-xs text-[#66638c]">
-                      ตอบ {q.answered}/{summary.total} คน · ข้อความ
-                    </p>
-                  </div>
-                  {q.samples.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-slate-200 bg-white py-6 text-center text-sm text-[#66638c]">
-                      ยังไม่มีใครตอบคำถามนี้
-                    </p>
+            summary.questions.map((q) => (
+              <section
+                key={q.key}
+                className="rounded-xl border border-[#d8d6ec]/80 bg-[#faf9ff]/60 p-3 sm:p-3.5"
+              >
+                <div className="mb-2">
+                  <h3 className="text-sm font-black text-[#1e1b4b]">{q.label}</h3>
+                  <p className="mt-0.5 text-[11px] font-semibold text-[#66638c]">
+                    {q.kind === "qty"
+                      ? `สั่ง ${q.answered}/${summary.total} คน · รวม ${q.totalUnits.toLocaleString("th-TH")} ชิ้น/ห้อง`
+                      : q.kind === "choice"
+                        ? `ตอบ ${q.answered}/${summary.total} คน · ตัวเลือก`
+                        : `ตอบ ${q.answered}/${summary.total} คน · ข้อความ`}
+                  </p>
+                </div>
+
+                {q.kind === "choice" ? (
+                  q.answered === 0 || q.options.every((o) => o.count === 0) ? (
+                    <p className="text-sm font-semibold text-[#8b87b8]">ยังไม่มีใครตอบคำถามนี้</p>
                   ) : (
-                    <ul className="max-h-56 space-y-2 overflow-y-auto">
-                      {q.samples.map((s, i) => (
-                        <li
-                          key={`${q.key}-${i}-${s.createdAt}`}
-                          className="rounded-lg border border-slate-200/90 bg-white px-3 py-2 text-sm"
-                        >
-                          <p className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">{s.value}</p>
-                          <p className="mt-0.5 text-[10px] font-semibold text-[#9490c0]">
-                            {s.name} ·{" "}
-                            {new Date(s.createdAt).toLocaleString("th-TH", {
-                              timeZone: "Asia/Bangkok",
-                            })}
-                          </p>
-                        </li>
-                      ))}
+                    <ul className="space-y-1">
+                      {q.options
+                        .filter((o) => o.count > 0)
+                        .map((o) => (
+                          <li
+                            key={o.value}
+                            className="flex items-baseline justify-between gap-3 text-sm"
+                          >
+                            <span className="min-w-0 font-semibold text-[#1e1b4b]">{o.value}</span>
+                            <span className="shrink-0 tabular-nums font-black text-[#4d47b6]">
+                              {o.count.toLocaleString("th-TH")} คน
+                              <span className="ml-1 font-semibold text-[#9490c0]">({o.pct}%)</span>
+                            </span>
+                          </li>
+                        ))}
                     </ul>
-                  )}
-                </section>
-              ),
-            )
+                  )
+                ) : q.kind === "qty" ? (
+                  q.items.length === 0 ? (
+                    <p className="text-sm font-semibold text-[#8b87b8]">ยังไม่มีคำสั่งซื้อตามขนาด</p>
+                  ) : (
+                    <>
+                      <ul className="space-y-1.5">
+                        {q.items.map((item) => (
+                          <li
+                            key={item.key}
+                            className="flex items-baseline justify-between gap-3 rounded-lg border border-white/80 bg-white/90 px-2.5 py-1.5 text-sm"
+                          >
+                            <span className="min-w-0 font-bold text-[#1e1b4b]">{item.label}</span>
+                            <span className="shrink-0 text-right">
+                              <span className="tabular-nums font-black text-[#4d47b6]">
+                                {item.count.toLocaleString("th-TH")}
+                              </span>
+                              <span className="ml-1 text-[11px] font-semibold text-[#66638c]">ชิ้น</span>
+                              {item.amountBaht > 0 ? (
+                                <span className="mt-0.5 block text-[11px] font-semibold tabular-nums text-[#8b87b8]">
+                                  ฿{item.amountBaht.toLocaleString("th-TH")}
+                                </span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 border-t border-[#e4e0f5] pt-2 text-xs font-bold text-[#1e1b4b]">
+                        รวมทั้งสิ้น {q.totalUnits.toLocaleString("th-TH")} ชิ้น/ห้อง
+                        {q.items.some((i) => i.amountBaht > 0) ? (
+                          <span className="ml-1 font-semibold text-[#4d47b6]">
+                            · ฿
+                            {q.items.reduce((s, i) => s + i.amountBaht, 0).toLocaleString("th-TH")}
+                          </span>
+                        ) : null}
+                      </p>
+                    </>
+                  )
+                ) : q.samples.length === 0 ? (
+                  <p className="text-sm font-semibold text-[#8b87b8]">ยังไม่มีใครตอบคำถามนี้</p>
+                ) : (
+                  <ul className="max-h-48 space-y-1 overflow-y-auto text-sm">
+                    {q.samples.map((s, i) => (
+                      <li
+                        key={`${q.key}-${i}-${s.createdAt}`}
+                        className="border-b border-[#eceaf8] py-1.5 last:border-0"
+                      >
+                        <p className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">{s.value}</p>
+                        <p className="mt-0.5 text-[10px] font-semibold text-[#9490c0]">
+                          {s.name} ·{" "}
+                          {new Date(s.createdAt).toLocaleString("th-TH", {
+                            timeZone: "Asia/Bangkok",
+                          })}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))
           )}
         </div>
       ) : (

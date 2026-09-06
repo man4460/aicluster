@@ -25,7 +25,9 @@ export type ClubQuestionSummary =
       label: string;
       kind: "qty";
       answered: number;
-      items: { label: string; totalQty: number; pct: number }[];
+      /** รวมชิ้น/ห้องทุกขนาด */
+      totalUnits: number;
+      items: { key: string; label: string; count: number; amountBaht: number }[];
     }
   | {
       key: string;
@@ -78,7 +80,7 @@ export function formatClubSubmissionAnswer(
   return value;
 }
 
-/** สรุปคำตอบแบบสอบถาม — แยกตามคำถาม (choice = นับตัวเลือก · qty = รวมจำนวน · text = ตัวอย่างคำตอบ) */
+/** สรุปคำตอบแบบสอบถาม — ข้อความสั้น (choice นับตัวเลือก · qty รวมต่อขนาด · text ตัวอย่าง) */
 export function summarizeClubLinkSubmissions(
   rows: ClubSubmissionRow[],
   linkFields: ClubDynamicLinkField[] = [],
@@ -97,8 +99,9 @@ export function summarizeClubLinkSubmissions(
     }
 
     if (field.type === "choice") {
+      const optLabels = field.choiceOptions?.map((o) => o.label) ?? field.options ?? [];
       const counts = new Map<string, number>();
-      for (const opt of field.options ?? []) counts.set(opt, 0);
+      for (const opt of optLabels) counts.set(opt, 0);
       for (const { value } of values) {
         counts.set(value, (counts.get(value) ?? 0) + 1);
       }
@@ -109,6 +112,7 @@ export function summarizeClubLinkSubmissions(
           count,
           pct: answered > 0 ? Math.round((count / answered) * 100) : 0,
         }))
+        .filter((o) => o.count > 0 || optLabels.includes(o.value))
         .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "th"));
       return {
         key: field.key,
@@ -120,36 +124,43 @@ export function summarizeClubLinkSubmissions(
     }
 
     if (field.type === "qty") {
-      const totals = new Map<string, { label: string; totalQty: number }>();
-      for (const item of field.qtyItems ?? []) {
-        totals.set(item.key, { label: item.label, totalQty: 0 });
-      }
+      const itemsDef = field.qtyItems ?? [];
+      const totals = new Map<string, number>();
+      for (const item of itemsDef) totals.set(item.key, 0);
       let answered = 0;
       for (const { value } of values) {
-        const map = parseClubLinkQtyAnswer(value);
-        let any = false;
-        for (const [k, q] of Object.entries(map)) {
-          if (q <= 0) continue;
-          any = true;
-          const cur = totals.get(k) ?? { label: k, totalQty: 0 };
-          cur.totalQty += q;
-          totals.set(k, cur);
+        const qtyMap = parseClubLinkQtyAnswer(value);
+        const hasAny = Object.values(qtyMap).some((n) => n > 0);
+        if (!hasAny) continue;
+        answered += 1;
+        for (const [k, n] of Object.entries(qtyMap)) {
+          totals.set(k, (totals.get(k) ?? 0) + n);
         }
-        if (any) answered += 1;
       }
-      const listed = [...totals.values()].filter((t) => t.totalQty > 0);
-      const grand = listed.reduce((n, t) => n + t.totalQty, 0);
+      const items = itemsDef.map((item) => {
+        const count = totals.get(item.key) ?? 0;
+        return {
+          key: item.key,
+          label: item.label,
+          count,
+          amountBaht: item.amountBaht > 0 ? count * item.amountBaht : 0,
+        };
+      });
+      for (const [k, count] of totals.entries()) {
+        if (itemsDef.some((i) => i.key === k)) continue;
+        if (count <= 0) continue;
+        items.push({ key: k, label: k, count, amountBaht: 0 });
+      }
+      const totalUnits = items.reduce((s, i) => s + i.count, 0);
       return {
         key: field.key,
         label: field.label,
         kind: "qty",
         answered,
-        items: listed
-          .sort((a, b) => b.totalQty - a.totalQty || a.label.localeCompare(b.label, "th"))
-          .map((t) => ({
-            ...t,
-            pct: grand > 0 ? Math.round((t.totalQty / grand) * 100) : 0,
-          })),
+        totalUnits,
+        items: items
+          .filter((i) => i.count > 0)
+          .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "th")),
       };
     }
 
@@ -158,7 +169,7 @@ export function summarizeClubLinkSubmissions(
       label: field.label,
       kind: "text",
       answered: values.length,
-      samples: values.slice(0, 30),
+      samples: values.slice(0, 40),
     };
   });
 
