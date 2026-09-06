@@ -138,6 +138,10 @@ export const clubEventFinanceStatsGridClass =
 
 export const clubEventFinanceStatTailClass = "col-span-2 sm:col-span-1";
 
+/** กริดการ์ดคำตอบ: มือถือ 1 · sm 2 · lg 3 คอลัมน์ */
+export const clubEventSubmissionsCardGridClass =
+  "grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3";
+
 export const clubEventStatInlineClass =
   "flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center gap-0.5 rounded-lg bg-slate-50/90 px-3 py-2.5";
 

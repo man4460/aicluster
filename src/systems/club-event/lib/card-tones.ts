@@ -111,6 +111,17 @@ export function clubEventTonedRowCardClass(tone: ClubEventCardTone): string {
   );
 }
 
+/** การ์ดในกริด (คำตอบ · สรุปคำถาม · รายคน) — คอลัมน์กระชับ */
+export function clubEventTonedGridCardClass(tone: ClubEventCardTone): string {
+  const t = clubEventCardToneClasses(tone);
+  return cn(
+    "flex h-full min-w-0 flex-col gap-2 rounded-lg border border-slate-200/70 border-l-[3px] p-3 shadow-sm transition",
+    t.leftBorder,
+    t.bg,
+    t.hoverShadow,
+  );
+}
+
 /** กล่องไอคอนมุมซ้ายการ์ด */
 export function clubEventCardIconTileClass(tone: ClubEventCardTone, size: "md" | "lg" = "md"): string {
   const t = clubEventCardToneClasses(tone);
