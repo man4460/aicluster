@@ -8,6 +8,8 @@ import { cn } from "@/lib/cn";
 import type { ClubPublicPortalEvent } from "@/lib/club-event/load-public-portal";
 import {
   ClubEventPortalLinkTypeIcon,
+  clubEventPortalLinkChipClass,
+  clubEventPortalLinkTileClass,
   clubEventPortalLinkTypeAriaLabel,
 } from "@/systems/club-event/lib/portal-link-icons";
 import {
@@ -18,9 +20,7 @@ import {
 } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
-  clubEventPortalCardLinkChipClass,
   clubEventPortalEventCardGridClass,
-  clubEventPortalRulesLinkIconClass,
   clubEventPortalRulesLinkRowClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
@@ -137,7 +137,7 @@ export function ClubEventPortalEventCardGrid({
                         <Link
                           key={c.id}
                           href={linkHref(c.publicPath)}
-                          className={clubEventPortalCardLinkChipClass}
+                          className={clubEventPortalLinkChipClass(c.type)}
                           aria-label={label}
                           title={label}
                           onClick={(e) => e.stopPropagation()}
@@ -197,12 +197,12 @@ export function ClubEventPortalStandaloneLinks({
           <li key={l.id} className="min-w-0">
             <Link
               href={linkHref(l.publicPath)}
-              className={clubEventPortalRulesLinkIconClass}
+              className={clubEventPortalLinkTileClass(l.type)}
               aria-label={label}
               title={label}
             >
               <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
-              <span className="max-w-[4.5rem] truncate text-[9px] font-bold leading-tight">{l.title}</span>
+              <span className="max-w-[4.75rem] truncate text-[9px] font-bold leading-tight">{l.title}</span>
             </Link>
           </li>
         );

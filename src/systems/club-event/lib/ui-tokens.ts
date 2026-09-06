@@ -235,16 +235,17 @@ export const clubEventPortalInsetPanelClass = cn(
   "space-y-3 bg-slate-50/50 pt-4",
 );
 
-/** ชิปลิงก์ในการ์ดกิจกรรม — ไอคอน + ข้อความ */
+/** @deprecated ใช้ clubEventPortalLinkChipClass(type) จาก portal-link-icons */
 export const clubEventPortalCardLinkChipClass = cn(
-  "inline-flex max-w-full items-center gap-1 rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15",
+  "inline-flex max-w-full items-center gap-1 rounded-lg border border-violet-200/90 bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-800",
 );
 
 /** แถวลิงก์ไอคอนใต้กฎระเบียบ */
 export const clubEventPortalRulesLinkRowClass = "mt-3 flex flex-wrap items-stretch gap-2";
 
+/** @deprecated ใช้ clubEventPortalLinkTileClass(type) จาก portal-link-icons */
 export const clubEventPortalRulesLinkIconClass = cn(
-  "inline-flex min-h-[2.75rem] min-w-[2.75rem] flex-col items-center justify-center gap-0.5 rounded-xl border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-2 py-1.5 text-[#4d47b6] transition hover:bg-[#5b61ff]/15",
+  "inline-flex min-h-[3rem] min-w-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl border border-violet-200/90 bg-violet-50 px-2.5 py-2 text-violet-800",
 );
 
 /** @deprecated ใช้ clubEventPrimaryButtonClass */

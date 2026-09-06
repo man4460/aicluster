@@ -28,6 +28,10 @@ import {
 } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_PORTAL_SAMPLE_BANNER } from "@/systems/club-event/lib/portal-media";
 import {
+  ClubEventPortalLinkTypeIcon,
+  clubEventPortalLinkTypeBadgeClass,
+} from "@/systems/club-event/lib/portal-link-icons";
+import {
   clubEventOutlineButtonClass,
   clubEventPortalFlatBlockClass,
   clubEventPortalHeaderNavOnLightLinkClass,
@@ -250,10 +254,16 @@ export function ClubEventPublicLinkClient({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
         <div className="relative z-10 mx-auto flex min-h-[42vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[50vh] sm:px-6 sm:pb-10">
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5f5a8a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+            <p
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]",
+                clubEventPortalLinkTypeBadgeClass(link.type),
+              )}
+            >
+              <ClubEventPortalLinkTypeIcon type={link.type} className="h-3.5 w-3.5" />
               {CLUB_EVENT_LINK_TYPE_LABELS[link.type]}
             </p>
-            <h1 className={cn("mt-1 text-3xl sm:text-4xl", clubEventPortalShopNameHeroClass)}>{link.title}</h1>
+            <h1 className={cn("mt-2 text-3xl sm:text-4xl", clubEventPortalShopNameHeroClass)}>{link.title}</h1>
             {link.eventTitle ? (
               <p className="mt-2 text-sm font-semibold text-[#3f3a6a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)] sm:text-base">
                 {link.eventTitle}

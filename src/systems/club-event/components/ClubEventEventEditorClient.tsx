@@ -40,6 +40,10 @@ import {
 } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
+import {
+  ClubEventPortalLinkTypeIcon,
+  clubEventPortalLinkTypeBadgeClass,
+} from "@/systems/club-event/lib/portal-link-icons";
 import type {
   ClubEventDynamicLinkDto,
   ClubEventRecordDto,
@@ -944,16 +948,29 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           ) : (
             <ul className="space-y-2">
               {links.map((l) => (
-                <li key={l.id} className={clubEventRowCardClass}>
+                <li key={l.id} className={cn(clubEventRowCardClass, "items-start sm:items-center")}>
+                  <span
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset",
+                      clubEventPortalLinkTypeBadgeClass(l.type),
+                    )}
+                    aria-hidden
+                  >
+                    <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{l.title}</p>
-                    <p className="text-sm text-[#66638c]">
-                      {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
-                      {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-[#66638c]">
+                      <span className={clubEventPortalLinkTypeBadgeClass(l.type)}>
+                        {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
+                      </span>
+                      {typeof l.submissionsCount === "number" ? (
+                        <span>· คำตอบ {l.submissionsCount}</span>
+                      ) : null}
                     </p>
                     <a
                       href={l.publicPath}
-                      className="text-xs text-[#0000BF] underline"
+                      className="mt-1 inline-block text-xs text-[#0000BF] underline"
                       target="_blank"
                       rel="noreferrer"
                     >

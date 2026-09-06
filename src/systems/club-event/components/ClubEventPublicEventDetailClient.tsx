@@ -16,17 +16,16 @@ import { extractYoutubeVideoId, youtubeThumbUrl } from "@/lib/youtube-url";
 import type { ClubPublicEventDetailPayload } from "@/lib/club-event/load-public-portal";
 import {
   ClubEventPortalLinkTypeIcon,
+  clubEventPortalLinkTileClass,
   clubEventPortalLinkTypeAriaLabel,
 } from "@/systems/club-event/lib/portal-link-icons";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventGalleryCardGridClass,
   clubEventOutlineButtonClass,
-  clubEventPortalCardLinkChipClass,
   clubEventPortalPageBodyClass,
   clubEventPortalPageSubtitleClass,
   clubEventPortalPageTitleClass,
-  clubEventPortalRulesLinkIconClass,
   clubEventPortalRulesLinkRowClass,
   clubEventPortalShopNameClass,
   clubEventYoutubeCardGridClass,
@@ -166,7 +165,7 @@ export function ClubEventPublicEventDetailClient({
                   <li key={l.id} className="min-w-0">
                     <Link
                       href={linkHref(l.publicPath)}
-                      className={cn(clubEventPortalRulesLinkIconClass, clubEventPortalCardLinkChipClass, "min-h-11 min-w-11")}
+                      className={clubEventPortalLinkTileClass(l.type)}
                       aria-label={label}
                       title={label}
                     >
