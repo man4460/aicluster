@@ -4,6 +4,7 @@ import {
   generateEcommerceReferenceCode,
   generateEcommerceTrackingCode,
 } from "@/lib/ecommerce/order-codes";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 
 /** รูปที่ตรวจ HEAD 200 แล้ว — ห้ามใช้ picsum (ลิงก์ไม่เสถียร) */
 const U = (id: string, w = 800) =>
@@ -23,6 +24,7 @@ const CATEGORY_DEFS = [
   "ของใช้ในบ้าน",
   "Gadget",
   "แฟชั่น",
+  "สุขภาพ / กีฬา",
 ] as const;
 
 type ProductDef = {
@@ -250,6 +252,100 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     bestseller: true,
   },
   {
+    name: "หมวกแก๊ปผ้าคอตตอน",
+    description: "ปรับขนาดได้ ปักโลโก้เรียบ",
+    price: 249,
+    stock: 44,
+    sku: "FS-CAP-05",
+    category: "แฟชั่น",
+    imageId: "photo-1588850561407-ed78c282e89b",
+  },
+  {
+    name: "เข็มขัดหนังแท้",
+    description: "หัวโลหะเงา สายปรับได้",
+    price: 590,
+    stock: 17,
+    sku: "FS-BELT-06",
+    category: "แฟชั่น",
+    imageId: "photo-1624222247344-550fb60583fd",
+  },
+  {
+    name: "โยคะแมท TPE 6mm",
+    description: "กันลื่น สองหน้า พกพาง่าย",
+    price: 690,
+    stock: 26,
+    sku: "SP-MAT-01",
+    category: "สุขภาพ / กีฬา",
+    imageId: "photo-1601925260368-ae2f83cf8b7f",
+    recommended: true,
+  },
+  {
+    name: "ดัมเบลล์ปรับน้ำหนัก 2–20kg",
+    description: "ชุดคู่ เปลี่ยนแผ่นเร็ว",
+    price: 1890,
+    stock: 11,
+    sku: "SP-DUMB-02",
+    category: "สุขภาพ / กีฬา",
+    imageId: "photo-1517836357463-d25dfeac3438",
+  },
+  {
+    name: "ขวดเชคเกอร์โปรตีน 700ml",
+    description: "ฝาเกลียว ไม่รั่ว มีตะแกรง",
+    price: 189,
+    stock: 70,
+    sku: "SP-SHAKE-03",
+    category: "สุขภาพ / กีฬา",
+    imageId: "photo-1593095948071-474c5cc2989d",
+    bestseller: true,
+  },
+  {
+    name: "สายแรงต้าน Resistance Band",
+    description: "ชุด 5 ระดับ ความต้านทานต่างกัน",
+    price: 320,
+    stock: 38,
+    sku: "SP-BAND-04",
+    category: "สุขภาพ / กีฬา",
+    imageId: "photo-1599058945522-28d584b6f14f",
+  },
+  {
+    name: "โฟมโรลเลอร์นวดกล้ามเนื้อ",
+    description: "ความหนาแน่นสูง คลายปวดหลัง",
+    price: 450,
+    stock: 20,
+    sku: "SP-ROLL-05",
+    category: "สุขภาพ / กีฬา",
+    imageId: "photo-1571019614242-c5c5dee9f50b",
+  },
+  {
+    name: "ครีมบำรุงกลางคืน Retinol",
+    description: "ลดริ้วรอย ใช้ตอนกลางคืน",
+    price: 520,
+    stock: 29,
+    sku: "SK-NIGHT-06",
+    category: "สกินแคร์",
+    imageId: "photo-1571781926291-c77df809f0b2",
+    recommended: true,
+  },
+  {
+    name: "บลัชออนเนื้อฝุ่น",
+    description: "สีธรรมชาติ เกลี่ยง่าย",
+    price: 289,
+    stock: 33,
+    sku: "MK-BLUSH-05",
+    category: "เมคอัพ",
+    imageId: "photo-1596462502278-27bfdc403348",
+  },
+  {
+    name: "พาวเวอร์แบงก์ 20000mAh",
+    description: "ชาร์จเร็ว PD 22.5W จอแสดง %",
+    price: 790,
+    stock: 25,
+    sku: "GD-PWR-06",
+    category: "Gadget",
+    imageId: "photo-1609091839311-b34812546dfe",
+    bestseller: true,
+  },
+  {
     name: "น้ำหอมมินิ 15ml (เลิกผลิต)",
     description: "สินค้าตัวอย่างสถานะปิดขาย",
     price: 450,
@@ -272,15 +368,21 @@ const BUYER_DEFS: readonly BuyerDef[] = [
   { name: "คุณพิมพ์ใจ แสงทอง", phone: "0832223333", address: "ลาดพร้าว กทม. 10230" },
   { name: "คุณธนพล มีสุข", phone: "0984445555", address: "อ.เมือง นครราชสีมา 30000" },
   { name: "คุณมานี รุ่งเรือง", phone: "0876667788", address: "อ.เมือง ภูเก็ต 83000" },
+  { name: "คุณสุภาพร ใจเย็น", phone: "0847778899", address: "อ.เมือง อุดรธานี 41000" },
+  { name: "คุณอภิชาติ เจริญ", phone: "0921112233", address: "บางนา กทม. 10260" },
+  { name: "คุณวรรณา สว่าง", phone: "0883334455", address: "อ.เมือง สุราษฎร์ธานี 84000" },
+  { name: "คุณปิยะ วงศ์ทอง", phone: "0615556677", address: "อ.เมือง เชียงราย 57000" },
 ];
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
 
+/** วันนับถอยหลังตามปฏิทินไทย (Asia/Bangkok) — เที่ยงวันนั้น */
 function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() - n);
-  return d;
+  const key = bangkokDateKey();
+  const base = new Date(`${key}T12:00:00+07:00`);
+  base.setTime(base.getTime() - n * 24 * 60 * 60 * 1000);
+  const ymd = bangkokDateKey(base);
+  return new Date(`${ymd}T12:00:00+07:00`);
 }
 
 /**
@@ -417,6 +519,35 @@ export async function seedEcommerceStoreProdDemoForOwner(
     lines: SeedOrderLine[];
   };
 
+  const activeProductCount = products.length; // รวม inactive ท้าย — ตัดออกตอนสุ่ม
+  const lastActiveIndex = PRODUCT_DEFS.findIndex((p) => p.active === false);
+  const maxActive = lastActiveIndex >= 0 ? lastActiveIndex : activeProductCount;
+
+  /**
+   * ยอดขายวันนี้ (SHIPPED) — เรียง qty ต่างกันเพื่อเติม “สินค้าขายดี 10 อันดับ”
+   * productIndex อ้าง PRODUCT_DEFS (สินค้า active เท่านั้น)
+   */
+  const TODAY_TOP_SALES: Array<{ productIndex: number; qty: number }> = [
+    { productIndex: 0, qty: 18 }, // เซรั่มวิตามินซี
+    { productIndex: 13, qty: 15 }, // หูฟัง
+    { productIndex: 31, qty: 14 }, // พาวเวอร์แบงก์
+    { productIndex: 1, qty: 12 }, // กันแดด
+    { productIndex: 5, qty: 11 }, // ลิป
+    { productIndex: 26, qty: 10 }, // เชคเกอร์
+    { productIndex: 14, qty: 9 }, // สายชาร์จ
+    { productIndex: 6, qty: 8 }, // อายแชโดว์
+    { productIndex: 3, qty: 7 }, // มาส์ก
+    { productIndex: 9, qty: 6 }, // ถุงผ้า
+    { productIndex: 16, qty: 5 }, // สมาร์ทวอทช์
+    { productIndex: 18, qty: 4 }, // แว่น
+    { productIndex: 27, qty: 4 }, // resistance band
+    { productIndex: 2, qty: 3 }, // โฟมล้างหน้า
+    { productIndex: 24, qty: 3 }, // โยคะแมท
+  ];
+
+  const payments = ["PROMPTPAY", "TRANSFER", "CASH", "CREDIT_CARD", "PROMPTPAY"] as const;
+  const channels = ["ONLINE", "IN_STORE"] as const;
+
   const orderSeeds: SeedOrder[] = [
     {
       dayOffset: 0,
@@ -425,7 +556,10 @@ export async function seedEcommerceStoreProdDemoForOwner(
       channel: "ONLINE",
       paymentMethod: null,
       withSlip: false,
-      lines: [{ productIndex: 5, qty: 1 }, { productIndex: 9, qty: 2 }],
+      lines: [
+        { productIndex: 5, qty: 1 },
+        { productIndex: 9, qty: 2 },
+      ],
     },
     {
       dayOffset: 0,
@@ -434,138 +568,112 @@ export async function seedEcommerceStoreProdDemoForOwner(
       channel: "ONLINE",
       paymentMethod: "PROMPTPAY",
       withSlip: true,
-      lines: [{ productIndex: 0, qty: 1 }, { productIndex: 1, qty: 1 }],
+      lines: [
+        { productIndex: 7, qty: 1 },
+        { productIndex: 29, qty: 1 },
+      ],
     },
     {
-      dayOffset: 1,
-      buyerIndex: 2,
+      dayOffset: 0,
+      buyerIndex: 8,
       status: "PREPARING",
       channel: "ONLINE",
       paymentMethod: "TRANSFER",
       withSlip: true,
-      lines: [{ productIndex: 13, qty: 1 }],
-    },
-    {
-      dayOffset: 1,
-      buyerIndex: 5,
-      status: "SHIPPED",
-      channel: "IN_STORE",
-      paymentMethod: "CASH",
-      withSlip: false,
-      lines: [{ productIndex: 14, qty: 2 }, { productIndex: 2, qty: 1 }],
-    },
-    {
-      dayOffset: 2,
-      buyerIndex: 3,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "PROMPTPAY",
-      withSlip: true,
-      lines: [{ productIndex: 6, qty: 1 }, { productIndex: 7, qty: 1 }],
-    },
-    {
-      dayOffset: 3,
-      buyerIndex: 4,
-      status: "SHIPPED",
-      channel: "IN_STORE",
-      paymentMethod: "CREDIT_CARD",
-      withSlip: false,
-      lines: [{ productIndex: 16, qty: 1 }],
-    },
-    {
-      dayOffset: 4,
-      buyerIndex: 6,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "TRANSFER",
-      withSlip: true,
       lines: [
-        { productIndex: 18, qty: 1 },
-        { productIndex: 10, qty: 1 },
-        { productIndex: 11, qty: 1 },
+        { productIndex: 21, qty: 1 },
+        { productIndex: 22, qty: 1 },
       ],
-    },
-    {
-      dayOffset: 5,
-      buyerIndex: 7,
-      status: "SHIPPED",
-      channel: "IN_STORE",
-      paymentMethod: "PROMPTPAY",
-      withSlip: true,
-      lines: [{ productIndex: 21, qty: 1 }, { productIndex: 20, qty: 2 }],
-    },
-    {
-      dayOffset: 7,
-      buyerIndex: 0,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "PROMPTPAY",
-      withSlip: true,
-      lines: [{ productIndex: 3, qty: 2 }, { productIndex: 4, qty: 1 }],
-    },
-    {
-      dayOffset: 9,
-      buyerIndex: 1,
-      status: "SHIPPED",
-      channel: "IN_STORE",
-      paymentMethod: "CASH",
-      withSlip: false,
-      lines: [{ productIndex: 15, qty: 1 }],
-    },
-    {
-      dayOffset: 12,
-      buyerIndex: 2,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "TRANSFER",
-      withSlip: true,
-      lines: [{ productIndex: 8, qty: 1 }, { productIndex: 12, qty: 1 }],
-    },
-    {
-      dayOffset: 14,
-      buyerIndex: 3,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "PROMPTPAY",
-      withSlip: true,
-      lines: [{ productIndex: 17, qty: 1 }, { productIndex: 19, qty: 1 }],
-    },
-    {
-      dayOffset: 18,
-      buyerIndex: 4,
-      status: "SHIPPED",
-      channel: "IN_STORE",
-      paymentMethod: "CASH",
-      withSlip: false,
-      lines: [{ productIndex: 0, qty: 2 }, { productIndex: 9, qty: 3 }],
-    },
-    {
-      dayOffset: 21,
-      buyerIndex: 5,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "CREDIT_CARD",
-      withSlip: false,
-      lines: [{ productIndex: 13, qty: 1 }, { productIndex: 14, qty: 1 }],
-    },
-    {
-      dayOffset: 25,
-      buyerIndex: 6,
-      status: "SHIPPED",
-      channel: "ONLINE",
-      paymentMethod: "PROMPTPAY",
-      withSlip: true,
-      lines: [{ productIndex: 1, qty: 3 }],
     },
   ];
 
+  // ออเดอร์ SHIPPED วันนี้ — แยกชิ้นต่อออเดอร์ให้ยอดรวมตรง TODAY_TOP_SALES
+  let todayBuyer = 0;
+  for (const sale of TODAY_TOP_SALES) {
+    if (sale.productIndex >= maxActive) continue;
+    let left = sale.qty;
+    while (left > 0) {
+      const chunk = Math.min(left, 1 + (left % 3));
+      orderSeeds.push({
+        dayOffset: 0,
+        buyerIndex: todayBuyer % BUYER_DEFS.length,
+        status: "SHIPPED",
+        channel: channels[todayBuyer % 2]!,
+        paymentMethod: payments[todayBuyer % payments.length]!,
+        withSlip: todayBuyer % 3 !== 0,
+        lines: [{ productIndex: sale.productIndex, qty: chunk }],
+      });
+      left -= chunk;
+      todayBuyer += 1;
+    }
+  }
+
+  // ออเดอร์รวมหลายชิ้นวันนี้ (เพิ่มความสมจริง)
+  const todayBundles: SeedOrderLine[][] = [
+    [
+      { productIndex: 0, qty: 1 },
+      { productIndex: 1, qty: 2 },
+      { productIndex: 4, qty: 1 },
+    ],
+    [
+      { productIndex: 13, qty: 1 },
+      { productIndex: 17, qty: 2 },
+      { productIndex: 31, qty: 1 },
+    ],
+    [
+      { productIndex: 25, qty: 1 },
+      { productIndex: 26, qty: 2 },
+      { productIndex: 27, qty: 1 },
+    ],
+    [
+      { productIndex: 10, qty: 1 },
+      { productIndex: 11, qty: 1 },
+      { productIndex: 12, qty: 2 },
+    ],
+  ];
+  for (let i = 0; i < todayBundles.length; i++) {
+    orderSeeds.push({
+      dayOffset: 0,
+      buyerIndex: (i + 3) % BUYER_DEFS.length,
+      status: "SHIPPED",
+      channel: i % 2 === 0 ? "ONLINE" : "IN_STORE",
+      paymentMethod: payments[i % payments.length]!,
+      withSlip: true,
+      lines: todayBundles[i]!,
+    });
+  }
+
+  // ประวัติย้อนหลัง (เดือนนี้) — กระจายสินค้าให้หน้าการเงิน/รายงานมีข้อมูล
+  const historyOffsets = [1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 15, 18, 20, 22, 25, 27];
+  for (let hi = 0; hi < historyOffsets.length; hi++) {
+    const a = (hi * 3) % maxActive;
+    const b = (hi * 5 + 2) % maxActive;
+    const c = (hi * 7 + 4) % maxActive;
+    const lines: SeedOrderLine[] = [{ productIndex: a, qty: 1 + (hi % 3) }];
+    if (b !== a) lines.push({ productIndex: b, qty: 1 + (hi % 2) });
+    if (c !== a && c !== b && hi % 2 === 0) lines.push({ productIndex: c, qty: 1 });
+    orderSeeds.push({
+      dayOffset: historyOffsets[hi]!,
+      buyerIndex: hi % BUYER_DEFS.length,
+      status: "SHIPPED",
+      channel: channels[hi % 2]!,
+      paymentMethod: payments[hi % payments.length]!,
+      withSlip: hi % 4 !== 0,
+      lines,
+    });
+  }
   const buyerSpend = new Map<string, { total: Prisma.Decimal; count: number; last: Date }>();
 
   for (let oi = 0; oi < orderSeeds.length; oi++) {
     const od = orderSeeds[oi]!;
     const buyer = buyers[od.buyerIndex]!;
     const createdAt = daysAgo(od.dayOffset);
-    createdAt.setHours(10 + (oi % 8), (oi * 7) % 60, 0, 0);
+    const ymd = bangkokDateKey(createdAt);
+    const hour = 9 + (oi % 10);
+    const minute = (oi * 7) % 60;
+    const createdAtBkk = new Date(
+      `${ymd}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+07:00`,
+    );
 
     const itemCreates = od.lines.map((line) => {
       const p = products[line.productIndex]!;
@@ -598,8 +706,8 @@ export async function seedEcommerceStoreProdDemoForOwner(
         paymentMethod: od.paymentMethod,
         status: od.status,
         buyerCustomerId: buyer.id,
-        createdAt,
-        updatedAt: createdAt,
+        createdAt: createdAtBkk,
+        updatedAt: createdAtBkk,
         items: { create: itemCreates },
       },
     });
@@ -607,12 +715,12 @@ export async function seedEcommerceStoreProdDemoForOwner(
     const prev = buyerSpend.get(buyer.id) ?? {
       total: new Prisma.Decimal(0),
       count: 0,
-      last: createdAt,
+      last: createdAtBkk,
     };
     buyerSpend.set(buyer.id, {
       total: prev.total.add(totalAmount),
       count: prev.count + 1,
-      last: createdAt > prev.last ? createdAt : prev.last,
+      last: createdAtBkk > prev.last ? createdAtBkk : prev.last,
     });
   }
 
