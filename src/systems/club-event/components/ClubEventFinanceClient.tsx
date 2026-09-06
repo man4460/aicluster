@@ -7,14 +7,20 @@ import {
   AppImageLightbox,
   AppImageThumb,
   AppPickGalleryImageButton,
+  AppRevenueCostColumnChart,
   AppTakePhotoButton,
   prepareImageFileForUpload,
   useAppImageLightbox,
   useAppNoticePopup,
+  type AppRevenueCostBucket,
 } from "@/components/app-templates";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
+import {
+  barberFinanceRangeBounds,
+  type BarberFinanceRange,
+} from "@/lib/barber/finance-range";
+import { bangkokDateKey, formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -40,18 +46,38 @@ import {
   clubEventFieldClass,
   clubEventFilterChipClass,
   clubEventFilterChipShellClass,
+  clubEventFinanceChartPanelClass,
+  clubEventFinanceRangeChipClass,
   clubEventFinanceStatsGridClass,
   clubEventFinanceStatTailClass,
   clubEventFixedBottomActionClass,
+  clubEventIconButtonClass,
   clubEventInlineSubNavBtnClass,
   clubEventInlineSubNavShellClass,
   clubEventNavDividerClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
+  clubEventSectionHeadingClass,
   clubEventStatInlineClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
-import { ArrowDownLeft, ArrowUpRight, Scale, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BarChart3, RefreshCw, Scale, Wallet } from "lucide-react";
+
+type FinanceRange = BarberFinanceRange;
+
+function inFinanceRange(iso: string, start: Date, end: Date): boolean {
+  const t = new Date(iso).getTime();
+  return t >= start.getTime() && t < end.getTime();
+}
+
+function financeRangeLabelTh(range: FinanceRange, from: string, to: string): string {
+  if (range === "TODAY") return "วันนี้";
+  if (range === "MONTH") return "เดือนนี้";
+  if (range === "YEAR") return "ปีนี้";
+  if (from && to && from !== to) return `${from} ถึง ${to}`;
+  if (from || to) return `วันที่ ${from || to}`;
+  return "กำหนดเอง";
+}
 
 function IconPlus({ className }: { className?: string }) {
   return (
@@ -86,8 +112,14 @@ export function ClubEventFinanceClient() {
   const lb = useAppImageLightbox();
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [listTab, setListTab] = useState<"INCOME" | "EXPENSE">("INCOME");
-  const [filterOpen, setFilterOpen] = useState(true);
-  const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(false);
+  const todayKey = bangkokDateKey();
+  const [financeRange, setFinanceRange] = useState<FinanceRange>("MONTH");
+  const [dateFrom, setDateFrom] = useState(`${todayKey.slice(0, 7)}-01`);
+  const [dateTo, setDateTo] = useState(todayKey);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [rows, setRows] = useState<ClubEventFinanceDto[]>([]);
   const [categories, setCategories] = useState<ClubFinanceCategory[]>(DEFAULT_CLUB_EVENT_FINANCE_CATEGORIES);
   const [loading, setLoading] = useState(true);
@@ -115,7 +147,6 @@ export function ClubEventFinanceClient() {
         fetch("/api/club-event/session/profile"),
       ]);
       const fin = (await finRes.json()) as {
-        summary?: { income: number; expense: number; balance: number };
         transactions?: ClubEventFinanceDto[];
         error?: string;
       };
@@ -124,7 +155,6 @@ export function ClubEventFinanceClient() {
         error?: string;
       };
       if (!finRes.ok) throw new Error(fin.error ?? "โหลดไม่สำเร็จ");
-      setSummary(fin.summary ?? { income: 0, expense: 0, balance: 0 });
       setRows(fin.transactions ?? []);
       if (prof.profile?.financeCategories?.length) {
         setCategories(prof.profile.financeCategories);
@@ -140,15 +170,93 @@ export function ClubEventFinanceClient() {
     void load();
   }, [load]);
 
+  const rangeBounds = useMemo(
+    () => barberFinanceRangeBounds(financeRange, dateFrom, dateTo),
+    [financeRange, dateFrom, dateTo],
+  );
+
+  const rangeLabel = useMemo(
+    () =>
+      financeRange === "CUSTOM"
+        ? financeRangeLabelTh(financeRange, dateFrom, dateTo)
+        : rangeBounds.label,
+    [financeRange, dateFrom, dateTo, rangeBounds.label],
+  );
+
+  const filtersActive =
+    financeRange !== "MONTH" || search.trim().length > 0 || categoryFilter !== "all";
+
+  const resetFilters = () => {
+    setFinanceRange("MONTH");
+    setDateFrom(`${bangkokDateKey().slice(0, 7)}-01`);
+    setDateTo(bangkokDateKey());
+    setSearch("");
+    setCategoryFilter("all");
+  };
+
+  const selectFinanceRange = (next: FinanceRange) => {
+    setFinanceRange(next);
+    if (next === "CUSTOM") {
+      const today = bangkokDateKey();
+      setDateFrom((prev) => prev || `${today.slice(0, 7)}-01`);
+      setDateTo((prev) => prev || today);
+    }
+  };
+
   const catsForTab = useMemo(
     () => categories.filter((c) => c.type === listTab),
     [categories, listTab],
   );
 
-  const visibleRows = useMemo(
-    () => rows.filter((r) => r.type === listTab),
-    [rows, listTab],
+  const periodRows = useMemo(
+    () => rows.filter((r) => inFinanceRange(r.transactedAt, rangeBounds.start, rangeBounds.end)),
+    [rows, rangeBounds.start, rangeBounds.end],
   );
+
+  const summary = useMemo(() => {
+    const income = periodRows.filter((r) => r.type === "INCOME").reduce((s, r) => s + r.amountBaht, 0);
+    const expense = periodRows.filter((r) => r.type === "EXPENSE").reduce((s, r) => s + r.amountBaht, 0);
+    return { income, expense, balance: income - expense };
+  }, [periodRows]);
+
+  const visibleRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return periodRows.filter((r) => {
+      if (r.type !== listTab) return false;
+      if (categoryFilter !== "all" && r.category !== categoryFilter) return false;
+      if (!q) return true;
+      return (
+        r.category.toLowerCase().includes(q) ||
+        (r.note ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [periodRows, listTab, categoryFilter, search]);
+
+  const revenueCostBuckets = useMemo((): AppRevenueCostBucket[] => {
+    const map = new Map<string, { revenue: number; cost: number }>();
+    for (const r of periodRows) {
+      const day = bangkokDateKey(new Date(r.transactedAt));
+      const cur = map.get(day) ?? { revenue: 0, cost: 0 };
+      if (r.type === "INCOME") cur.revenue += r.amountBaht;
+      else cur.cost += r.amountBaht;
+      map.set(day, cur);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, v]) => {
+        const parts = day.split("-").map(Number);
+        return {
+          key: day,
+          label: `${parts[2] ?? 0}/${parts[1] ?? 0}`,
+          revenue: v.revenue,
+          cost: v.cost,
+        };
+      });
+  }, [periodRows]);
+
+  useEffect(() => {
+    setCategoryFilter("all");
+  }, [listTab]);
 
   const openCreate = (type: "INCOME" | "EXPENSE") => {
     const cats = categories.filter((c) => c.type === type);
@@ -355,18 +463,52 @@ export function ClubEventFinanceClient() {
                 type="button"
                 onClick={() => setFilterOpen((o) => !o)}
                 aria-expanded={filterOpen}
+                aria-controls="club-event-finance-filter-panel"
                 aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
                 title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={clubEventInlineSubNavBtnClass(filterOpen)}
+                className={cn(
+                  clubEventInlineSubNavBtnClass(filterOpen),
+                  "relative",
+                  filtersActive && !filterOpen && "ring-1 ring-amber-300/80",
+                )}
               >
                 <IconFilter className="h-3.5 w-3.5 shrink-0" />
                 <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {filtersActive ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartsOpen((o) => !o)}
+                aria-expanded={chartsOpen}
+                aria-controls="club-event-finance-charts"
+                aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                className={clubEventInlineSubNavBtnClass(chartsOpen)}
+              >
+                <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}</span>
+              </button>
+              <button
+                type="button"
+                className={clubEventIconButtonClass}
+                aria-label="รีเฟรชข้อมูลรายงาน"
+                title="รีเฟรช"
+                disabled={loading}
+                aria-busy={loading}
+                onClick={() => void load()}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} aria-hidden />
               </button>
             </div>
           </div>
         }
       >
-        <ul className={clubEventFinanceStatsGridClass} aria-label="สรุปการเงิน">
+        <ul className={cn(clubEventFinanceStatsGridClass, "mt-4")} aria-label={`สรุปการเงิน ${rangeLabel}`}>
           <li
             className={cn(
               clubEventStatInlineClass,
@@ -425,29 +567,132 @@ export function ClubEventFinanceClient() {
           </li>
         </ul>
 
-        {filterOpen ? (
-          <div className={cn(clubEventFilterChipShellClass, "mt-4")} role="tablist" aria-label="กรองหมวด">
+        <div
+          id="club-event-finance-filter-panel"
+          className={cn("mt-4 space-y-3", filterOpen ? "block" : "hidden")}
+        >
+          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการเงิน">
+            {(
+              [
+                ["TODAY", "วันนี้"],
+                ["MONTH", "เดือนนี้"],
+                ["YEAR", "ปีนี้"],
+                ["CUSTOM", "กำหนดเอง"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => selectFinanceRange(key)}
+                className={clubEventFinanceRangeChipClass(financeRange === key)}
+                aria-pressed={financeRange === key}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            {financeRange === "CUSTOM" ? (
+              <>
+                <label className="min-w-0 sm:w-[11rem]">
+                  <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    aria-label="ตั้งแต่วันที่ กรุงเทพ"
+                    className={cn(clubEventFieldClass, "mt-1")}
+                  />
+                </label>
+                <label className="min-w-0 sm:w-[11rem]">
+                  <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    aria-label="ถึงวันที่ กรุงเทพ"
+                    className={cn(clubEventFieldClass, "mt-1")}
+                  />
+                </label>
+              </>
+            ) : null}
+            <label className="min-w-0 flex-1 sm:min-w-[14rem]">
+              <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="หมวด หรือ หมายเหตุ…"
+                aria-label="ค้นหาหมวดหรือหมายเหตุ"
+                inputMode="search"
+                className={cn(clubEventFieldClass, "mt-1")}
+              />
+            </label>
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className={clubEventOutlineButtonClass}
+                aria-label="รีเซ็ตตัวกรองเป็นเดือนนี้"
+              >
+                รีเซ็ต · เดือนนี้
+              </button>
+            ) : null}
+          </div>
+          <div className={clubEventFilterChipShellClass} role="tablist" aria-label="กรองหมวด">
             <button
               type="button"
               role="tab"
-              aria-selected
-              className={clubEventFilterChipClass(true)}
+              aria-selected={categoryFilter === "all"}
+              className={clubEventFilterChipClass(categoryFilter === "all")}
+              onClick={() => setCategoryFilter("all")}
             >
-              {CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]} · {visibleRows.length} รายการ
+              ทั้งหมด · {visibleRows.length}/{periodRows.filter((r) => r.type === listTab).length}
             </button>
             {catsForTab.map((c) => (
-              <span key={c.id} className={clubEventFilterChipClass(false)}>
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={categoryFilter === c.name}
+                className={clubEventFilterChipClass(categoryFilter === c.name)}
+                onClick={() => setCategoryFilter(c.name)}
+              >
                 {c.name}
-              </span>
+              </button>
             ))}
+          </div>
+          <p className="text-xs font-semibold text-[#66638c]">กำลังดู: {rangeLabel}</p>
+        </div>
+
+        {chartsOpen ? (
+          <div id="club-event-finance-charts" className="mt-4 space-y-3">
+            <div className={clubEventFinanceChartPanelClass}>
+              <h3 className={cn(clubEventSectionHeadingClass, "mb-2")}>
+                รายรับเทียบรายจ่าย · {rangeLabel}
+              </h3>
+              <AppRevenueCostColumnChart
+                className="flex min-h-0 flex-1 flex-col"
+                compact
+                buckets={revenueCostBuckets}
+                title=""
+                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                formatTitle={(b) =>
+                  `${b.label}: รายรับ ฿${b.revenue.toLocaleString("th-TH")} · รายจ่าย ฿${b.cost.toLocaleString("th-TH")}`
+                }
+              />
+            </div>
           </div>
         ) : null}
 
-        <div className="mt-4">
+        <div className="mt-4 border-t border-slate-200/80 pt-4">
           {loading ? (
             <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
           ) : visibleRows.length === 0 ? (
-            <AppEmptyState>ยังไม่มี{CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]} — กดปุ่มเพิ่มด้านบน</AppEmptyState>
+            <AppEmptyState>
+              {periodRows.filter((r) => r.type === listTab).length === 0
+                ? `ยังไม่มี${CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]}ในช่วงนี้ — กดปุ่มเพิ่มด้านบน`
+                : "ไม่พบรายการที่ตรงการกรอง"}
+            </AppEmptyState>
           ) : (
             <ul className="space-y-2">
               {visibleRows.map((row) => {

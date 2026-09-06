@@ -121,6 +121,14 @@ export function clubEventFilterChipClass(active = false): string {
   );
 }
 
+/** ชิปช่วงเวลาการเงิน — ชุดปุ่ม h-9 · rounded-lg ตามแม่แบบ finance */
+export function clubEventFinanceRangeChipClass(active = false): string {
+  return active ? clubEventPrimaryButtonClass : clubEventOutlineButtonClass;
+}
+
+export const clubEventFinanceChartPanelClass =
+  "rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:p-4";
+
 /** กริดการ์ดกิจกรรมพอร์ทัล: มือถือ 2 · แท็บเล็ต 3 · เดสก์ท็อป 6 */
 export const clubEventPortalEventCardGridClass =
   "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6";
