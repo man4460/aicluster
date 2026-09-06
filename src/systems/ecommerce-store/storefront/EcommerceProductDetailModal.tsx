@@ -104,8 +104,7 @@ export function EcommerceProductDetailModal({
         open={open}
         onClose={onClose}
         size="lg"
-        appearance="glass"
-        glassTint="violet"
+        appearance="default"
         mobileCentered
         title={product.name}
         footer={
@@ -127,10 +126,10 @@ export function EcommerceProductDetailModal({
         }
       >
         <div className="space-y-4 text-left">
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-sm sm:p-2.5">
             <button
               type="button"
-              className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-100"
+              className="relative aspect-square w-full overflow-hidden rounded-[1.25rem] bg-slate-50"
               onClick={() => current && lb.openGallery(images, slide)}
               aria-label="ดูรูปสินค้าเต็มจอ"
             >
@@ -144,20 +143,20 @@ export function EcommerceProductDetailModal({
                 }
               />
               {images.length > 1 ? (
-                <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
+                <span className="absolute bottom-2 right-2 rounded-lg bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
                   {slide + 1}/{images.length} · แตะดูเต็มจอ
                 </span>
               ) : null}
             </button>
             {images.length > 1 ? (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-0.5">
                 {images.map((src, i) => (
                   <button
                     key={`${src}-${i}`}
                     type="button"
                     onClick={() => setSlide(i)}
                     className={cn(
-                      "h-14 w-14 shrink-0 overflow-hidden rounded-lg ring-2",
+                      "h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200/90 bg-white ring-2",
                       i === slide ? "ring-[#5b61ff]" : "ring-transparent",
                     )}
                     aria-label={`มุมที่ ${i + 1}`}
@@ -169,7 +168,7 @@ export function EcommerceProductDetailModal({
             ) : null}
           </div>
 
-          <div>
+          <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-3.5">
             <p className="text-2xl font-black tabular-nums text-emerald-700">
               ฿{price.toLocaleString("th-TH")}
             </p>
@@ -180,14 +179,15 @@ export function EcommerceProductDetailModal({
                 {product.reviewAvg.toFixed(1)} · {product.reviewCount} รีวิว
               </p>
             ) : null}
+            {product.description?.trim() ? (
+              <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-[#5f5a8a]">
+                {product.description}
+              </p>
+            ) : null}
           </div>
 
-          {product.description?.trim() ? (
-            <p className="whitespace-pre-wrap text-sm font-medium text-[#5f5a8a]">{product.description}</p>
-          ) : null}
-
           {maxQty > 0 ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
               <span className="text-xs font-bold text-[#4d47b6]">จำนวน</span>
               <div className="flex items-center rounded-lg border border-slate-200/90 bg-white">
                 <button
@@ -211,17 +211,22 @@ export function EcommerceProductDetailModal({
               ) : null}
             </div>
           ) : (
-            <p className="text-sm font-bold text-rose-600">สินค้าหมดชั่วคราว</p>
+            <p className="rounded-xl border border-rose-200/80 bg-white p-3 text-sm font-bold text-rose-600 shadow-sm">
+              สินค้าหมดชั่วคราว
+            </p>
           )}
 
-          <div className="space-y-2 border-t border-slate-200/80 pt-3">
+          <div className="space-y-2 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-3.5">
             <p className="text-xs font-bold text-[#4d47b6]">รีวิวสินค้า</p>
             {reviews.length === 0 ? (
               <p className="text-sm text-[#66638c]">ยังไม่มีรีวิว</p>
             ) : (
               <ul className="max-h-48 space-y-2 overflow-y-auto">
                 {reviews.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-slate-200/80 bg-slate-50/80 p-2.5">
+                  <li
+                    key={r.id}
+                    className="rounded-lg border border-slate-200/90 bg-white p-2.5 shadow-sm"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-bold text-[#1e1b4b]">{r.customerName}</p>
                       <Stars n={r.rating} />
