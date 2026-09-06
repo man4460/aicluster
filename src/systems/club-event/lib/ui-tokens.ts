@@ -229,6 +229,18 @@ export const clubEventPortalInsetPanelClass = cn(
   "space-y-3 bg-slate-50/50 pt-4",
 );
 
+/** ชิปลิงก์ในการ์ดกิจกรรม — ไอคอน + ข้อความ */
+export const clubEventPortalCardLinkChipClass = cn(
+  "inline-flex max-w-full items-center gap-1 rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15",
+);
+
+/** แถวลิงก์ไอคอนใต้กฎระเบียบ */
+export const clubEventPortalRulesLinkRowClass = "mt-3 flex flex-wrap items-stretch gap-2";
+
+export const clubEventPortalRulesLinkIconClass = cn(
+  "inline-flex min-h-[2.75rem] min-w-[2.75rem] flex-col items-center justify-center gap-0.5 rounded-xl border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-2 py-1.5 text-[#4d47b6] transition hover:bg-[#5b61ff]/15",
+);
+
 /** @deprecated ใช้ clubEventPrimaryButtonClass */
 export const clubEventNavActiveClass = clubEventPrimaryButtonClass;
 /** @deprecated ใช้ clubEventOutlineButtonClass */

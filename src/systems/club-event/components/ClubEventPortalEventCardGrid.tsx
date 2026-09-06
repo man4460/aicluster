@@ -7,6 +7,10 @@ import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { ClubPublicPortalEvent } from "@/lib/club-event/load-public-portal";
 import {
+  ClubEventPortalLinkTypeIcon,
+  clubEventPortalLinkTypeAriaLabel,
+} from "@/systems/club-event/lib/portal-link-icons";
+import {
   CLUB_EVENT_PORTAL_EVENT_COLS_DESKTOP,
   CLUB_EVENT_PORTAL_EVENT_COLS_MOBILE,
   CLUB_EVENT_PORTAL_EVENT_COLS_TABLET,
@@ -14,7 +18,10 @@ import {
 } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
+  clubEventPortalCardLinkChipClass,
   clubEventPortalEventCardGridClass,
+  clubEventPortalRulesLinkIconClass,
+  clubEventPortalRulesLinkRowClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
 export type ClubPortalLinkChip = {
@@ -124,16 +131,22 @@ export function ClubEventPortalEventCardGrid({
                     className="flex flex-wrap gap-1 border-t border-slate-100 px-2 py-1.5"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {chips.map((c) => (
-                      <Link
-                        key={c.id}
-                        href={linkHref(c.publicPath)}
-                        className="rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {c.title}
-                      </Link>
-                    ))}
+                    {chips.map((c) => {
+                      const label = clubEventPortalLinkTypeAriaLabel(c.type, c.title);
+                      return (
+                        <Link
+                          key={c.id}
+                          href={linkHref(c.publicPath)}
+                          className={clubEventPortalCardLinkChipClass}
+                          aria-label={label}
+                          title={label}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ClubEventPortalLinkTypeIcon type={c.type} className="h-3 w-3" />
+                          <span className="min-w-0 truncate">{c.title}</span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 ) : null}
               </article>
@@ -177,14 +190,23 @@ export function ClubEventPortalStandaloneLinks({
 }) {
   if (links.length === 0) return null;
   return (
-    <ul className="mt-3 space-y-2">
-      {links.map((l) => (
-        <li key={l.id}>
-          <Link href={linkHref(l.publicPath)} className="text-sm font-bold text-[#4d47b6] underline">
-            {l.title}
-          </Link>
-        </li>
-      ))}
+    <ul className={clubEventPortalRulesLinkRowClass} aria-label="ลิงก์กฎระเบียบ">
+      {links.map((l) => {
+        const label = clubEventPortalLinkTypeAriaLabel(l.type, l.title);
+        return (
+          <li key={l.id} className="min-w-0">
+            <Link
+              href={linkHref(l.publicPath)}
+              className={clubEventPortalRulesLinkIconClass}
+              aria-label={label}
+              title={label}
+            >
+              <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
+              <span className="max-w-[4.5rem] truncate text-[9px] font-bold leading-tight">{l.title}</span>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }
