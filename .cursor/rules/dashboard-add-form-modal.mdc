@@ -12,10 +12,12 @@ alwaysApply: false
 
 1. **ห้าม** วางฟอร์มกรอกเต็มแถว/กล่อง dashed ถาวรใต้หัวการ์ด — ให้เหลือ **รายการ + สรุป** บนหน้าหลัก
 2. ปุ่มเพิ่มใน `AppSectionHeader` `action` (หรือปุ่มรองในส่วนหมวด) → **`setShowAddModal(true)`** เปิด **`FormModal`** เท่านั้น
-3. ใช้ **`FormModal`** + **`FormModalFooterActions`** จาก `@/components/ui/FormModal`
+3. ใช้ **`FormModal`** จาก `@/components/ui/FormModal`
    - `mobileCentered` (ค่าเริ่มของ component)
    - `size="md"` สำหรับฟอร์มสั้น · `size="lg"` ถ้ามีหลายช่อง/อัปโหลดรูป
-   - `footer` = ยกเลิก + บันทึก/เพิ่ม (ไม่ส่งฟอร์มจากปุ่ม header โดยตรง)
+   - `footer` = ยกเลิก + บันทึก/เพิ่ม
+   - ค่าเริ่ม: **`FormModalFooterActions`**
+   - **ข้อยกเว้นโมดูลที่มีปุ่ม template `h-9`:** ใช้ footer คู่ outline/primary ของโมดูล (เช่น ร้านออนไลน์ `ProductFormModalFooter` + `ecommerceStoreOutlineButtonClass` / `ecommerceStorePrimaryButtonClass`) — ดู **`ecommerce-store-module-dashboard-template.mdc`**
 4. ปิดโมดัล (`onClose` / ยกเลิก) → **รีเซ็ต state ฟอร์ม** เพื่อไม่ให้ค่าค้างรอบถัดไป
 5. หลังบันทึกสำเร็จ → ปิดโมดัล → `reload()` รายการ
 
@@ -57,9 +59,10 @@ const [showAddModal, setShowAddModal] = useState(false);
 
 - **แก้ไขแถว** (inline select / +/- สต๊อก / ไอคอนแถว) ไม่ต้องเป็นโมดัล — เฉพาะ **การสร้างรายการใหม่** หรือ **สร้างหมวดใหม่**
 - ฟิลเตอร์/ค้นหาบนหน้ารายการ — แสดง inline หรือ sheet ตาม `dashboard-mobile-filter-icon.mdc`
+- **ร้านออนไลน์ — ฟอร์มสินค้า:** แบ่งแผง plain (`ecommerceStorePanelClass`) · ติ๊กแสดงบนเว็บไซต์ · รูปปก+มุมอื่น · footer ปุ่มโมดูล — **`ecommerce-store-module-dashboard-template.mdc`**
 
 ## อ้างอิง
 
 - `src/components/ui/FormModal.tsx`
-- `src/systems/ecommerce-store/components/EcommerceProductsClient.tsx` (สินค้า + หมวด)
+- `src/systems/ecommerce-store/components/EcommerceProductsClient.tsx` (สินค้า + หมวด · footer template โมดูล)
 - คาร์แคร์: `CarWashDashboard.tsx` (โมดัลฟอร์มหลายจุด)

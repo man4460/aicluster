@@ -10,7 +10,8 @@ alwaysApply: false
 
 # ร้านออนไลน์ — ตั้งค่าเว็บไซต์ vs ลิงก์
 
-ยึดกฎกลาง: **`dashboard-module-shop-settings-tabs.mdc`** · **`shop-qr-hub-popup-pattern.mdc`**
+ยึดกฎกลาง: **`dashboard-module-shop-settings-tabs.mdc`** · **`shop-qr-hub-popup-pattern.mdc`**  
+แม่แบบสินค้า/หน้าร้าน/ฟอร์ม: **`ecommerce-store-module-dashboard-template.mdc`**
 
 ## แท็บตั้งค่า (`EcommerceSettingsClient`)
 

@@ -39,6 +39,7 @@ alwaysApply: true
 | เว็บลูกค้า | `LaundryPortalPublicClient.tsx` · `LaundryPickupPublicClient.tsx` · **`laundry-module-portal-website-template.mdc`** |
 | คู่มือ | `LaundryUsageGuideModal.tsx` |
 | QR hub | `LaundryQrHubClient.tsx` (แท็บตั้งค่า `link` — บล็อกสายรายวันทีเดียว · อย่าใส่ลิงก์ในแท็บตั้งค่าเว็บไซต์) |
+| **ร้านออนไลน์ (สินค้า · หน้าร้าน · ฟอร์ม)** | **`ecommerce-store-module-dashboard-template.mdc`** · `EcommerceProductsClient` · `EcommerceStorefrontClient` |
 
 ## หลังออกแบบ
 
@@ -51,7 +52,8 @@ alwaysApply: true
 
 - ออกแบบ UI โมดูล ใหม่โดยไม่อ่าน `laundry-module-dashboard-template.mdc`  
 - ทำพอร์ทัลลูกค้าโดยไม่อ่าน **`laundry-module-portal-website-template.mdc`**
+- ทำหน้าร้านขายสินค้า / กริดแคตตาล็อก โดยไม่อ่าน **`ecommerce-store-module-dashboard-template.mdc`** (เมื่อโดเมนเป็นร้านออนไลน์หรือเทียบเท่า)
 - สร้างกราฟ/กรอง/lightbox/พิมพ์เอง ทั้งที่ `app-templates` มีแล้ว  
 - ใช้ `window.confirm` / inline error banner ใน flow ใหม่ ขณะที่แม่แบบใช้ `useAppNoticePopup` แล้ว  
 
-**แม่แบบรอง (โครงสร้างเทียบ):** คาร์แคร์/บาร์เบอร์ `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` — ใช้เมื่อโดเมนต่าง แต่ **UX ชุดล่าสุด (กรอง · popup · finance page แยก)** ให้ยึด **ซักผ้า** เป็นหลัก
+**แม่แบบรอง (โครงสร้างเทียบ):** คาร์แคร์/บาร์เบอร์ `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` · **ร้านออนไลน์** `ecommerce-store-module-dashboard-template.mdc` — ใช้เมื่อโดเมนต่าง แต่ **UX ชุดล่าสุด (กรอง · popup · finance page แยก)** ให้ยึด **ซักผ้า** เป็นหลัก

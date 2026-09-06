@@ -1,41 +1,46 @@
 ---
-description: หน้าร้อง E-Commerce — แถบหมวดหมู่เลือกสินค้าใส่ตะกร้า ต้องเลื่อนแนวนอน (scroll)
+description: หน้าร้าน E-Commerce — แถบหมวดเลื่อนแนวนอน + กริด 3/8 · การ์ดสูงเท่า · รายละเอียด
 globs: "**/ecommerce-store/storefront/**,**/shop/**/page.tsx,**/shop/**/layout.tsx"
 alwaysApply: false
 ---
 
-# หน้าลูกค้า (ร้านค้า) — แถบหมวดหมู่แบบเลื่อนแนวนอน
+# หน้าลูกค้า (ร้านค้า) — หมวดเลื่อน + กริดสินค้า
 
-ใช้กับ `/shop/[storeId]` และคอมโพเนนต์ใน `src/systems/ecommerce-store/storefront/` ที่ให้ลูกค้า **เลือกหมวด → ดูสินค้า → ใส่ตะกร้า**
+ใช้กับ `/shop/[storeId]` และ `src/systems/ecommerce-store/storefront/`  
+กฎเต็มโมดูล: **`ecommerce-store-module-dashboard-template.mdc`**
 
-## บังคับ
+---
 
-1. **ห้าม** ให้ chip หมวด (`ทั้งหมด`, `แนะนำ`, `ขายดี`, ชื่อหมวดจากร้าน, `อื่นๆ`) **ขึ้นหลายบรรทัด** (`flex-wrap`) หรือย่อลงเป็น dropdown / select บนมือถือ
-2. แถบหมวดต้องเป็น **แถวเดียวเลื่อนแนวนอน** (`overflow-x-auto`) ใต้ช่องค้นหา (หรือตำแหน่งเดียวกันใน header ร้าน)
-3. ปุ่มแต่ละหมวด: **`shrink-0`** · **`min-h-[40px]`** · `role="tab"` + `aria-selected` · `aria-label` ที่ `tablist` ชัด (เช่น `หมวดหมู่สินค้า`)
-4. คอนเทนเนอร์เลื่อน:
-   - `flex flex-nowrap gap-2 overflow-x-auto`
-   - ซ่อน scrollbar ถ้าต้องการ UI สะอาด: `[scrollbar-width:none] [&::-webkit-scrollbar]:hidden` (ไม่บังคับ snap)
-   - แนะนำ `pb-1` เผื่อ shadow/ขอบล่าง
-5. กดหมวดแล้ว **กรองกริดสินค้า** ด้านล่าง (ไม่เปลี่ยนหน้า) — ยังใส่ตะกร้าจากการ์ดสินค้าเหมือนเดิม
-6. แถว **สินค้าแนะนำ / ขายดี** (horizontal product scroll) แยกจากแถบหมวด — อย่าแทนที่แถบหมวด
+## แถบหมวดหมู่ (บังคับ)
 
-## แพทเทิร์นอ้างอิง
+1. **ห้าม** ให้ chip หมวด (`ทั้งหมด`, `แนะนำ`, `ขายดี`, ชื่อหมวด, `อื่นๆ`) **ขึ้นหลายบรรทัด** (`flex-wrap`) หรือย่อเป็น dropdown บนมือถือ  
+2. แถบหมวด = **แถวเดียวเลื่อนแนวนอน** (`overflow-x-auto`) ใต้ช่องค้นหา  
+3. ปุ่มหมวด: **`shrink-0`** · **`min-h-[40px]`** · `role="tab"` / `aria-selected` · `tablist` มี `aria-label`  
+4. คอนเทนเนอร์: `flex flex-nowrap gap-2 overflow-x-auto` + ซ่อน scrollbar ตามต้องการ · `pb-1`  
+5. กดหมวดแล้ว **กรองกริด** ด้านล่าง (ไม่เปลี่ยนหน้า)  
+6. แถวแนะนำ/ขายดี (scroll แนวนอน) แยกจากแถบหมวด — อย่าแทนที่แถบหมวด  
 
-`src/systems/ecommerce-store/storefront/EcommerceStorefrontClient.tsx` — `CategoryChip` + แถบ `overflow-x-auto`
+อ้างอิง: `EcommerceStorefrontClient.tsx` — `CategoryChip`
 
-```tsx
-<div
-  className="mx-auto mt-3 flex max-w-lg flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-  role="tablist"
-  aria-label="หมวดหมู่สินค้า"
->
-  <CategoryChip /* shrink-0, min-h-[40px] */ />
-</div>
-```
+---
+
+## กริด + การ์ด (บังคับ)
+
+| Viewport | คอลัมน์ |
+|----------|---------|
+| มือถือ | **3** |
+| `lg+` | **8** |
+
+- โทเค็น: `ecommerceStorePortalProductGridClass`  
+- การ์ด **สูงเท่ากัน** (`h-full` · รายละเอียด `line-clamp-2` คงที่ · ราคา `mt-auto`)  
+- พื้นขาว · `rounded-xl` · คลิกเปิด `EcommerceProductDetailModal` (default ขาว ไม่ glass)  
+- แสดงรายละเอียดสินค้าบนการ์ดเมื่อมีค่า  
+
+---
 
 ## ห้ามพลาด
 
-- ใช้ `flex-wrap` บนแถบหมวด → chip หล่นบรรทัดบนจอแคบ
-- ย้ายหมวดไป sidebar หรือ `<select>` แทน chip บนหน้าร้องสาธารณะ
-- ลบ `overflow-x-auto` แล้วพึ่ง `flex-wrap` ให้ “พอดีจอ”
+- `flex-wrap` บนแถบหมวด  
+- กริด 2/4 คอลัมน์แบบเก่า  
+- การ์ดสูงไม่เท่ากันเพราะไม่มีช่องรายละเอียด  
+- โมดัลดูสินค้าเป็น glass  
