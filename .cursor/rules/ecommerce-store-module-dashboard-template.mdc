@@ -80,8 +80,9 @@ alwaysApply: false
 | มือถือ | เนื้อหา 1 คอลัมน์ · **dock ล่าง** ยอดรวม + CTA (`ecommerceStorePortalBottomDockClass` · `lg:hidden`) |
 | คอม (`lg+`) | **2 คอลัมน์** — รายการ/ฟอร์มซ้าย · สรุป(+QR) ขวาสติ๊กกี้ · ซ่อน dock |
 
-- แผง: `ecommerceStorePanelClass` · หัวส่วน: `EcommercePortalSection`  
-- ช่องกรอก checkout: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
+- แผง: `ecommerceStorePanelClass`  
+- **checkout:** การ์ดเดียว — ที่อยู่จัดส่ง + แนบสลิป (ห้ามหัวข้อซ้ำ «ข้อมูลจัดส่ง» / «แนบสลิป» เมื่อมีหัวหน้า «ชำระเงิน» แล้ว)  
+- ช่องกรอก: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
 - ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
 - อ้างอิง: `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx`
 

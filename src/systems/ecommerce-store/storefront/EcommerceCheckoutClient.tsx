@@ -25,7 +25,6 @@ import {
   ecommerceStorePrimaryButtonClass,
   ecommerceStoreTextareaClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
-import { EcommercePortalSection } from "@/systems/ecommerce-store/storefront/EcommercePortalSection";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
 
@@ -270,48 +269,48 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
           "grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8",
         )}
       >
-        <div className="space-y-10 sm:space-y-12">
+        <div className="space-y-6 sm:space-y-8">
           <div className="lg:hidden">{aside}</div>
 
-          <EcommercePortalSection id="shipping" title="ข้อมูลจัดส่ง">
-            <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
-              <label className={formLabelClass}>
-                ชื่อ-นามสกุล
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1.5")}
-                  placeholder="ชื่อผู้รับ"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                />
-              </label>
-              <label className={formLabelClass}>
-                เบอร์โทร
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1.5")}
-                  placeholder="08x-xxx-xxxx"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-              </label>
-              <label className={formLabelClass}>
-                ที่อยู่จัดส่ง
-                <textarea
-                  className={cn(ecommerceStoreTextareaClass, "mt-1.5 min-h-[5rem]")}
-                  placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={3}
-                />
-              </label>
-            </div>
-          </EcommercePortalSection>
+          <div
+            id="checkout-form"
+            className={cn(ecommerceStorePanelClass, "space-y-4 p-4 sm:p-5")}
+          >
+            <label className={formLabelClass}>
+              ชื่อ-นามสกุล
+              <input
+                className={cn(ecommerceStoreFieldClass, "mt-1.5")}
+                placeholder="ชื่อผู้รับ"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+              />
+            </label>
+            <label className={formLabelClass}>
+              เบอร์โทร
+              <input
+                className={cn(ecommerceStoreFieldClass, "mt-1.5")}
+                placeholder="08x-xxx-xxxx"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                autoComplete="tel"
+              />
+            </label>
+            <label className={formLabelClass}>
+              ที่อยู่จัดส่ง
+              <textarea
+                className={cn(ecommerceStoreTextareaClass, "mt-1.5 min-h-[5rem]")}
+                placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={3}
+              />
+            </label>
 
-          <EcommercePortalSection id="slip" title="แนบสลิป" subtitle="บังคับก่อนยืนยันออเดอร์">
-            <div className={cn(ecommerceStorePanelClass, "space-y-3 p-4 sm:p-5")}>
-              <div className="flex flex-wrap items-center gap-3">
+            <div className="border-t border-slate-200/80 pt-4">
+              <p className={formLabelClass}>สลิปชำระเงิน</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-3">
                 {slipUrl ? (
                   <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
                 ) : (
@@ -352,7 +351,7 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
                 />
               </div>
             </div>
-          </EcommercePortalSection>
+          </div>
 
           {err ? (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
