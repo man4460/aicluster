@@ -4,7 +4,6 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
-import { EcommercePortalSection } from "@/systems/ecommerce-store/storefront/EcommercePortalSection";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import {
   ecommerceStoreOutlineButtonClass,
