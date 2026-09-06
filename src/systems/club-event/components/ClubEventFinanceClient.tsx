@@ -241,17 +241,19 @@ export function ClubEventFinanceClient() {
       else cur.cost += r.amountBaht;
       map.set(day, cur);
     }
-    return [...map.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, v]) => {
-        const parts = day.split("-").map(Number);
-        return {
-          key: day,
-          label: `${parts[2] ?? 0}/${parts[1] ?? 0}`,
-          revenue: v.revenue,
-          cost: v.cost,
-        };
-      });
+    const entries = [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const maxVal = Math.max(1, ...entries.flatMap(([, v]) => [v.revenue, v.cost]));
+    return entries.map(([day, v]) => {
+      const parts = day.split("-").map(Number);
+      return {
+        key: day,
+        label: `${parts[2] ?? 0}/${parts[1] ?? 0}`,
+        revenue: v.revenue,
+        cost: v.cost,
+        revenuePct: Math.round((v.revenue / maxVal) * 100),
+        costPct: Math.round((v.cost / maxVal) * 100),
+      };
+    });
   }, [periodRows]);
 
   useEffect(() => {
