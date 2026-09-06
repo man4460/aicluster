@@ -55,6 +55,7 @@ type Product = {
   stockBalance: number;
   sku: string | null;
   imageUrl: string | null;
+  description?: string | null;
   galleryImagesJson?: string;
   imageUrls?: string[];
   isActive: boolean;
@@ -125,6 +126,7 @@ export function EcommerceProductsClient({
   const [newCategoryId, setNewCategoryId] = useState("");
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [newGalleryUrls, setNewGalleryUrls] = useState<string[]>([]);
+  const [newDescription, setNewDescription] = useState("");
   const [newRecommended, setNewRecommended] = useState(false);
   const [newBestseller, setNewBestseller] = useState(false);
 
@@ -136,6 +138,7 @@ export function EcommerceProductsClient({
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
   const [editGalleryUrls, setEditGalleryUrls] = useState<string[]>([]);
+  const [editDescription, setEditDescription] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [editFeatured, setEditFeatured] = useState(false);
   const [editRecommended, setEditRecommended] = useState(false);
@@ -164,6 +167,7 @@ export function EcommerceProductsClient({
     setNewCategoryId("");
     setNewImageUrl(null);
     setNewGalleryUrls([]);
+    setNewDescription("");
     setNewRecommended(false);
     setNewBestseller(false);
     setProductErr(null);
@@ -178,6 +182,7 @@ export function EcommerceProductsClient({
     setEditCategoryId("");
     setEditImageUrl(null);
     setEditGalleryUrls([]);
+    setEditDescription("");
     setEditIsActive(true);
     setEditFeatured(false);
     setEditRecommended(false);
@@ -199,6 +204,7 @@ export function EcommerceProductsClient({
     setEditCategoryId(p.categoryId ?? "");
     setEditImageUrl(p.imageUrl);
     setEditGalleryUrls(productGalleryExtras(p));
+    setEditDescription(p.description?.trim() ?? "");
     setEditIsActive(p.isActive);
     setEditFeatured(false);
     setEditRecommended(p.isRecommended);
@@ -379,6 +385,7 @@ export function EcommerceProductsClient({
           stockBalance: Number(stock),
           imageUrl: newImageUrl,
           galleryImageUrls: newGalleryUrls,
+          description: newDescription.trim() || null,
           categoryId: newCategoryId || null,
           isRecommended: newRecommended,
           isBestseller: newBestseller,
@@ -419,6 +426,7 @@ export function EcommerceProductsClient({
           sku: editSku.trim() || null,
           imageUrl: editImageUrl,
           galleryImageUrls: editGalleryUrls,
+          description: editDescription.trim() || null,
           categoryId: editCategoryId || null,
           isActive: editIsActive,
           isRecommended: editRecommended,
@@ -604,6 +612,8 @@ export function EcommerceProductsClient({
       setSkuVal?: (v: string) => void;
       categoryVal: string;
       setCategoryVal: (v: string) => void;
+      descriptionVal?: string;
+      setDescriptionVal?: (v: string) => void;
       imageVal: string | null;
       onImage: (url: string) => void;
       galleryUrls?: string[];
@@ -679,6 +689,19 @@ export function EcommerceProductsClient({
           ))}
         </select>
       </label>
+      {opts.setDescriptionVal ? (
+        <label className="block text-sm font-semibold text-[#1e1b4b]">
+          รายละเอียดสินค้า
+          <textarea
+            className={cn(ecommerceFieldClass, "mt-1.5 min-h-[5.5rem] resize-y py-2")}
+            value={opts.descriptionVal ?? ""}
+            onChange={(e) => opts.setDescriptionVal?.(e.target.value)}
+            placeholder="สรุปสั้น ๆ แสดงบนการ์ดหน้าร้าน · รายละเอียดเต็มในหน้าดูสินค้า"
+            maxLength={2000}
+            rows={4}
+          />
+        </label>
+      ) : null}
       {opts.showActive && opts.setIsActive ? (
         <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
           <input
@@ -1201,6 +1224,8 @@ export function EcommerceProductsClient({
           setStockVal: setStock,
           categoryVal: newCategoryId,
           setCategoryVal: setNewCategoryId,
+          descriptionVal: newDescription,
+          setDescriptionVal: setNewDescription,
           imageVal: newImageUrl,
           onImage: setNewImageUrl,
           galleryUrls: newGalleryUrls,
@@ -1223,7 +1248,7 @@ export function EcommerceProductsClient({
           resetEditForm();
         }}
         title="แก้ไขสินค้า"
-        description="ชื่อ ราคา สต๊อก หมวด และรูป"
+        description="ชื่อ ราคา สต๊อก หมวด รายละเอียด และรูป"
         size="lg"
         footer={
           <FormModalFooterActions
@@ -1249,6 +1274,8 @@ export function EcommerceProductsClient({
           setSkuVal: setEditSku,
           categoryVal: editCategoryId,
           setCategoryVal: setEditCategoryId,
+          descriptionVal: editDescription,
+          setDescriptionVal: setEditDescription,
           imageVal: editImageUrl,
           onImage: setEditImageUrl,
           galleryUrls: editGalleryUrls,

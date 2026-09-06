@@ -36,6 +36,12 @@ function ProductImageFallback() {
   );
 }
 
+function meaningfulDescription(raw: string | null | undefined): string | null {
+  const t = raw?.trim() ?? "";
+  if (!t || t === "-" || /^n\/?a$/i.test(t)) return null;
+  return t;
+}
+
 export function EcommerceProductCard({
   product,
   categoryName,
@@ -47,19 +53,20 @@ export function EcommerceProductCard({
   const maxQty = Math.max(0, product.stockBalance);
   const soldOut = maxQty <= 0;
   const multi = (product.imageUrls?.length ?? 0) > 1;
+  const detail = meaningfulDescription(product.description);
 
   return (
     <button
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex w-full flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white text-left shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40",
+        "flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white text-left shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40",
         soldOut && "opacity-70",
-        compact && "rounded-md",
+        compact && "rounded-lg",
       )}
       aria-label={`ดูรายละเอียด ${product.name}`}
     >
-      <div className="relative aspect-square bg-slate-100">
+      <div className="relative aspect-square shrink-0 bg-slate-100">
         <EcommerceRemoteImg
           src={product.imageUrl}
           className={cn(
@@ -91,33 +98,56 @@ export function EcommerceProductCard({
           </span>
         ) : null}
       </div>
-      <div className={cn("flex flex-1 flex-col", compact ? "p-1.5" : "p-2 sm:p-2.5")}>
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          compact ? "p-1.5" : "p-2 sm:p-2.5",
+        )}
+      >
         <h3
           className={cn(
-            "font-bold leading-snug text-[#1e1b4b]",
+            "min-h-[2.4em] font-bold leading-snug text-[#1e1b4b]",
             compact ? "line-clamp-2 text-[10px]" : "line-clamp-2 text-[11px] sm:text-xs",
           )}
         >
           {product.name}
         </h3>
-        {!compact && categoryName ? (
-          <p className="mt-0.5 line-clamp-1 text-[9px] font-semibold text-[#8b87b8]">{categoryName}</p>
+        {!compact ? (
+          <>
+            {categoryName ? (
+              <p className="mt-0.5 line-clamp-1 text-[9px] font-semibold text-[#8b87b8]">{categoryName}</p>
+            ) : (
+              <p className="mt-0.5 h-[13px]" aria-hidden />
+            )}
+            <p
+              className={cn(
+                "mt-1 line-clamp-2 min-h-[2.4em] text-[9px] font-medium leading-snug text-[#66638c] sm:text-[10px]",
+                !detail && "text-[#b0acc8]",
+              )}
+            >
+              {detail ?? "—"}
+            </p>
+          </>
         ) : null}
-        <p
-          className={cn(
-            "mt-0.5 font-black tabular-nums text-emerald-700",
-            compact ? "text-[11px]" : "text-xs sm:text-sm",
-          )}
-        >
-          ฿{price.toLocaleString("th-TH")}
-        </p>
-        {soldOut ? (
-          <p className="mt-0.5 text-[9px] font-semibold text-rose-600">หมด</p>
-        ) : product.reviewCount && product.reviewCount > 0 && product.reviewAvg != null ? (
-          <p className="mt-0.5 text-[9px] font-semibold text-amber-600">
-            ★ {product.reviewAvg.toFixed(1)}
+        <div className="mt-auto pt-1.5">
+          <p
+            className={cn(
+              "font-black tabular-nums text-emerald-700",
+              compact ? "text-[11px]" : "text-xs sm:text-sm",
+            )}
+          >
+            ฿{price.toLocaleString("th-TH")}
           </p>
-        ) : null}
+          {soldOut ? (
+            <p className="mt-0.5 text-[9px] font-semibold text-rose-600">หมด</p>
+          ) : product.reviewCount && product.reviewCount > 0 && product.reviewAvg != null ? (
+            <p className="mt-0.5 text-[9px] font-semibold text-amber-600">
+              ★ {product.reviewAvg.toFixed(1)}
+            </p>
+          ) : (
+            <p className="mt-0.5 h-[13px]" aria-hidden />
+          )}
+        </div>
       </div>
     </button>
   );

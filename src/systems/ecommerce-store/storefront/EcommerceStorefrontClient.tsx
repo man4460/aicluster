@@ -117,12 +117,16 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
     );
     if (compact) {
       return (
-        <div key={p.id} className="w-[28%] max-w-[7.5rem] shrink-0 snap-start sm:w-[18%] sm:max-w-[9rem] lg:w-[11%] lg:max-w-[8.5rem]">
+        <div key={p.id} className="flex h-full w-[28%] max-w-[7.5rem] shrink-0 snap-start sm:w-[18%] sm:max-w-[9rem] lg:w-[11%] lg:max-w-[8.5rem]">
           {card}
         </div>
       );
     }
-    return <div key={p.id}>{card}</div>;
+    return (
+      <div key={p.id} className="h-full min-h-0">
+        {card}
+      </div>
+    );
   }
 
   if (!mounted) {
