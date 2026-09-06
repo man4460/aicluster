@@ -94,8 +94,14 @@ export function EcommerceProductDetailModal({
       return;
     }
     const ok = onAdd(safeQty);
-    setFlash(ok ? "ok" : "fail");
-    setTimeout(() => setFlash(null), ok ? 1400 : 2000);
+    if (ok) {
+      setFlash("ok");
+      // ปิดโมดัลหลังใส่ตะกร้าสำเร็จ — ให้เห็นป้ายสั้น ๆ ก่อนปิด
+      window.setTimeout(() => onClose(), 450);
+      return;
+    }
+    setFlash("fail");
+    window.setTimeout(() => setFlash(null), 2000);
   }
 
   return (
