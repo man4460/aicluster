@@ -90,46 +90,53 @@ export function ClubEventPortalEventCardGrid({
           const chips = links.filter((l) => l.config?.eventId === ev.id);
           const cover = ev.coverImageUrl?.trim() || null;
           return (
-            <li key={ev.id} className="flex min-w-0 flex-col gap-1.5">
-              <Link
-                href={eventHref(ev.id)}
-                className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:border-[#5b61ff]/35 hover:shadow-md"
-              >
-                <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100">
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cover}
-                      alt=""
-                      className="h-full w-full object-cover object-center"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-50 to-sky-50">
-                      <CalendarDays className="h-8 w-8 text-[#8b87b8]" strokeWidth={1.75} aria-hidden />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col gap-0.5 p-2 sm:p-2.5">
-                  <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
-                    {ev.title}
-                  </p>
-                  <p className="text-[10px] font-semibold text-[#66638c]">{formatEventWhen(ev.eventDate)}</p>
-                </div>
-              </Link>
-              {chips.length > 0 ? (
-                <div className="flex flex-wrap gap-1 px-0.5">
-                  {chips.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={linkHref(c.publicPath)}
-                      className="rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15"
-                    >
-                      {c.title}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
+            <li key={ev.id} className="min-w-0">
+              <article className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:border-[#5b61ff]/35 hover:shadow-md">
+                <Link
+                  href={eventHref(ev.id)}
+                  className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#5b61ff]/40"
+                  aria-label={`ดูรายละเอียด ${ev.title}`}
+                >
+                  <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100">
+                    {cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cover}
+                        alt=""
+                        className="h-full w-full object-cover object-center"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-50 to-sky-50">
+                        <CalendarDays className="h-8 w-8 text-[#8b87b8]" strokeWidth={1.75} aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-0.5 p-2 sm:p-2.5">
+                    <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
+                      {ev.title}
+                    </p>
+                    <p className="text-[10px] font-semibold text-[#66638c]">{formatEventWhen(ev.eventDate)}</p>
+                  </div>
+                </Link>
+                {chips.length > 0 ? (
+                  <div
+                    className="flex flex-wrap gap-1 border-t border-slate-100 px-2 py-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {chips.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={linkHref(c.publicPath)}
+                        className="rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {c.title}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
             </li>
           );
         })}
