@@ -84,7 +84,8 @@ alwaysApply: false
 - **checkout:** การ์ดเดียว — ที่อยู่จัดส่ง + แนบสลิป (ห้ามหัวข้อซ้ำ «ข้อมูลจัดส่ง» / «แนบสลิป» เมื่อมีหัวหน้า «ชำระเงิน» แล้ว)  
 - ช่องกรอก: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
 - ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
-- อ้างอิง: `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx`
+- **หลังยืนยันออเดอร์:** `router.push(/shop/{storeId}/order/{trackingCode})` — หน้าสรุปรายการ (`EcommerceOrderSummaryClient`) ห้ามค้างที่ checkout  
+- อ้างอิง: `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx` · `EcommerceOrderSummaryClient.tsx`
 
 ---
 

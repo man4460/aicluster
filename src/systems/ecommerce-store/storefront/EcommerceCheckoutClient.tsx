@@ -202,7 +202,12 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
       }
       cart.clear();
       buyerPhone.setPhone(phone);
-      router.push(`/shop/${store.id}/track?code=${encodeURIComponent(j.order?.trackingCode ?? "")}`);
+      const code = j.order?.trackingCode?.trim() ?? "";
+      if (code) {
+        router.push(`/shop/${store.id}/order/${encodeURIComponent(code)}`);
+      } else {
+        router.push(`/shop/${store.id}/track`);
+      }
     } finally {
       setBusy(false);
     }

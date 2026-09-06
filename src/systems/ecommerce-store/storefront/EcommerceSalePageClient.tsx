@@ -138,10 +138,10 @@ export function EcommerceSalePageClient({
         <h1 className="font-black text-2xl text-[#1e1b4b]">สั่งซื้อสำเร็จ</h1>
         <p className="mt-2 text-sm text-[#66638c]">รหัสติดตาม: {tracking}</p>
         <Link
-          href={`/shop/${store.id}/track?code=${encodeURIComponent(tracking)}`}
+          href={`/shop/${store.id}/order/${encodeURIComponent(tracking)}`}
           className={cn(ecommerceStorePrimaryButtonClass, "mt-6 px-6")}
         >
-          ดูสถานะ
+          ดูสรุปรายการ
         </Link>
       </div>
     );

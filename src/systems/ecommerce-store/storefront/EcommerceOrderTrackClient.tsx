@@ -58,6 +58,34 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
   }, [mounted, sp]);
 
   useEffect(() => {
+    if (!mounted) return;
+    const qCode = sp.get("code")?.trim();
+    if (!qCode) return;
+    let cancelled = false;
+    void (async () => {
+      setBusy(true);
+      setErr(null);
+      try {
+        const res = await fetch(
+          `/api/ecommerce-store/public/track?code=${encodeURIComponent(qCode)}`,
+        );
+        const j = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setErr(j.error ?? "ไม่พบออเดอร์");
+          return;
+        }
+        setResult(j.order);
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted, sp]);
+
+  useEffect(() => {
     if (savedPhone.ready && savedPhone.phone) setPhone(savedPhone.phone);
   }, [savedPhone.ready, savedPhone.phone]);
 
@@ -193,7 +221,7 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
               </button>
             </div>
             {result ? (
-              <div className="mt-6 space-y-2 rounded-2xl bg-[#f8f7ff] p-4 text-sm">
+              <div className="mt-6 space-y-3 rounded-2xl bg-[#f8f7ff] p-4 text-sm">
                 <p>
                   <span className="text-[#66638c]">ร้าน:</span> {result.store.storeName}
                 </p>
@@ -205,13 +233,22 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
                   <span className="font-bold text-[#4d47b6]">{result.statusLabel}</span>
                 </p>
                 <p>
-                  <span className="text-[#66638c]">ยอด:</span> ฿{Number(result.totalAmount).toLocaleString("th-TH")}
+                  <span className="text-[#66638c]">ยอด:</span> ฿
+                  {Number(result.totalAmount).toLocaleString("th-TH")}
                 </p>
                 {result.courierTrackingNo ? (
                   <p>
                     <span className="text-[#66638c]">เลขพัสดุ:</span>{" "}
                     <span className="font-bold text-[#1e1b4b]">{result.courierTrackingNo}</span>
                   </p>
+                ) : null}
+                {result.trackingCode ? (
+                  <Link
+                    href={`/shop/${storeId}/order/${encodeURIComponent(result.trackingCode)}`}
+                    className="inline-flex text-sm font-bold text-[#4d47b6]"
+                  >
+                    ดูสรุปรายการเต็ม →
+                  </Link>
                 ) : null}
               </div>
             ) : null}
