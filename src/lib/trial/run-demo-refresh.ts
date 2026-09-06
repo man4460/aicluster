@@ -6,6 +6,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
@@ -18,6 +19,7 @@ import {
   HOTEL_RESORT_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
@@ -38,6 +40,7 @@ import { seedAttendanceProdDemoForOwner } from "@/lib/trial/seed-attendance";
 import { fillBarberPortalDemoMedia, seedBarberProdDemoForOwner } from "@/lib/trial/seed-barber";
 import { seedBuildingPosProdDemoForOwner } from "@/lib/trial/seed-building-pos";
 import { seedCarWashProdDemoForOwner } from "@/lib/trial/seed-car-wash";
+import { seedClubEventProdDemoForOwner } from "@/lib/trial/seed-club-event";
 import { seedCommunityCoopProdDemoForOwner } from "@/lib/trial/seed-community-coop";
 import { seedDocTransmissionProdDemoForOwner } from "@/lib/trial/seed-doc-transmission";
 import { seedDormitoryProdDemoForOwner } from "@/lib/trial/seed-dorm";
@@ -49,6 +52,7 @@ import { seedGeneralStorePosProdDemoForOwner } from "@/lib/trial/seed-general-st
 import { seedHomeFinanceProdDemoForOwner } from "@/lib/trial/seed-home-finance";
 import { seedHotelResortProdDemoForOwner } from "@/lib/trial/seed-hotel-resort";
 import { seedInventoryProdDemoForOwner } from "@/lib/trial/seed-inventory";
+import { seedLmsProdDemoForOwner } from "@/lib/trial/seed-lms";
 import { seedLoyaltyStampProdDemoForOwner } from "@/lib/trial/seed-loyalty-stamp";
 import { seedMassageProdDemoForOwner } from "@/lib/trial/seed-massage";
 import { seedMediaRegistryProdDemoForOwner } from "@/lib/trial/seed-media-registry";
@@ -98,6 +102,8 @@ const SUBSCRIBE_SLUGS = [
   DRINK_POS_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
 ] as const;
 
@@ -166,7 +172,9 @@ export async function runDemoRefreshForOwners(
       () => seedHotelResortProdDemoForOwner(prisma, id, { refreshDaily: true }),
       log,
     );
-    await trySeed(lines, "ecommerce-store", () => seedEcommerceStoreProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "ecommerce-store (daily)", () => seedEcommerceStoreProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "club-event (daily)", () => seedClubEventProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "lms (daily)", () => seedLmsProdDemoForOwner(prisma, id), log);
 
     await trySeed(lines, "car-wash (daily)", () => seedCarWashProdDemoForOwner(prisma, id, { refreshDaily: true }), log);
     await trySeed(lines, "wait-queue (daily)", () => seedWaitQueueProdDemoForOwner(prisma, id, { refreshDaily: true }), log);
@@ -200,7 +208,7 @@ export async function runDemoRefreshForOwners(
     await trySeed(lines, "home-finance", () => seedHomeFinanceProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "mqtt", () => seedMqttProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "laundry", () => seedLaundryProdDemoForOwner(prisma, id), log);
-    await trySeed(lines, "pro-resume", () => seedProResumeProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "pro-resume (daily)", () => seedProResumeProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "vault", () => seedVaultProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "inventory", () => seedInventoryProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "smart-police", () => seedSmartPoliceProdDemoForOwner(prisma, id), log);

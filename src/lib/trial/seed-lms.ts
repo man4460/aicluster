@@ -11,22 +11,47 @@ import { ensureLmsProfile } from "@/systems/lms/lib/ensure-lms-profile";
 import { stringifyChoices } from "@/systems/lms/lib/mappers";
 import { lmsYoutubeEmbedUrl } from "@/systems/lms/lib/youtube";
 
-const DEMO_MARKER = "seed:lms-demo-v2";
+const DEMO_MARKER = "seed:lms-demo-v3";
 
+async function wipeLmsDemoScope(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  const where = { ownerUserId, trialSessionId };
+  await prisma.lmsCertificate.deleteMany({ where });
+  await prisma.lmsLessonProgress.deleteMany({ where });
+  await prisma.lmsEnrollment.deleteMany({ where });
+  await prisma.lmsCoursePurchase.deleteMany({ where });
+  await prisma.lmsQuestion.deleteMany({ where });
+  await prisma.lmsExam.deleteMany({ where });
+  await prisma.lmsLesson.deleteMany({ where });
+  await prisma.lmsCourse.deleteMany({ where });
+  await prisma.lmsFinanceTransaction.deleteMany({ where });
+  await prisma.lmsLearner.deleteMany({ where });
+}
+
+function bangkokOffsetDays(days: number, hour = 10): Date {
+  const key = bangkokDateKey();
+  const base = new Date(`${key}T12:00:00+07:00`);
+  base.setTime(base.getTime() + days * 24 * 60 * 60 * 1000);
+  const ymd = bangkokDateKey(base);
+  const h = String(hour).padStart(2, "0");
+  return new Date(`${ymd}T${h}:00:00+07:00`);
+}
+
+/** ล้างแล้วใส่ชุด LMS ใหม่ตามวันนี้ (Asia/Bangkok) — ให้ทดลองใช้สมจริงทุกวัน */
 export async function seedLmsProdDemoForOwner(prisma: PrismaClient, ownerUserId: string) {
   const trialSessionId = TRIAL_PROD_SCOPE;
-  const profile = await ensureLmsProfile(prisma, ownerUserId, trialSessionId);
+  await wipeLmsDemoScope(prisma, ownerUserId, trialSessionId);
 
-  const already = await prisma.lmsCourse.count({
-    where: { profileId: profile.id, ownerUserId, trialSessionId, description: { contains: DEMO_MARKER } },
-  });
-  if (already > 0) return;
+  const profile = await ensureLmsProfile(prisma, ownerUserId, trialSessionId);
 
   await prisma.lmsProfile.update({
     where: { id: profile.id },
     data: {
       displayName: "สถาบันตัวอย่าง MAWELL LMS",
-      tagline: "คอร์สออนไลน์ตัวอย่าง",
+      tagline: "คอร์สออนไลน์ตัวอย่าง · อัปเดตรายวัน",
       logoUrl: DEMO_MODULE_LOGO_URL,
       contactPhone: DEMO_MODULE_CONTACT.contactPhone,
       contactLine: DEMO_MODULE_CONTACT.lineId,
@@ -34,6 +59,8 @@ export async function seedLmsProdDemoForOwner(prisma: PrismaClient, ownerUserId:
       bankName: DEMO_MODULE_PAYMENT.bankName,
       bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
       bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
+      certSignerName: "อ.สมชาย วิทยากร",
+      certTemplateNote: "ใบประกาศตัวอย่างสำหรับทดลองพิมพ์",
     },
   });
 
@@ -177,12 +204,35 @@ export async function seedLmsProdDemoForOwner(prisma: PrismaClient, ownerUserId:
         progressPercent: 100,
         status: "COMPLETED",
         examScorePercent: 85,
-        completedAt: new Date(),
+        completedAt: bangkokOffsetDays(0, 11),
       },
     ],
   });
 
-  const today = bangkokDateKey();
+  await prisma.lmsCertificate.create({
+    data: {
+      ownerUserId,
+      trialSessionId,
+      learnerId: learner2.id,
+      courseId: course.id,
+      issueDate: bangkokOffsetDays(0, 12),
+      certCode: `LMS-${bangkokDateKey().replace(/-/g, "")}-DEMO`,
+    },
+  });
+
+  await prisma.lmsCoursePurchase.create({
+    data: {
+      ownerUserId,
+      trialSessionId,
+      profileId: profile.id,
+      learnerId: learner1.id,
+      courseId: courseBuy.id,
+      amountBaht: 990,
+      payMethod: "PROMPTPAY",
+      status: "PENDING_REVIEW",
+    },
+  });
+
   await prisma.lmsFinanceTransaction.createMany({
     data: [
       {
@@ -192,7 +242,17 @@ export async function seedLmsProdDemoForOwner(prisma: PrismaClient, ownerUserId:
         type: "INCOME",
         category: "ค่าคอร์ส",
         amountBaht: 1490,
-        transactedAt: new Date(`${today}T10:00:00+07:00`),
+        transactedAt: bangkokOffsetDays(0, 10),
+        note: DEMO_MARKER,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        profileId: profile.id,
+        type: "INCOME",
+        category: "ค่าคอร์ส",
+        amountBaht: 990,
+        transactedAt: bangkokOffsetDays(-1, 15),
         note: DEMO_MARKER,
       },
       {
@@ -202,7 +262,17 @@ export async function seedLmsProdDemoForOwner(prisma: PrismaClient, ownerUserId:
         type: "EXPENSE",
         category: "ค่าโฆษณา",
         amountBaht: 350,
-        transactedAt: new Date(`${today}T14:00:00+07:00`),
+        transactedAt: bangkokOffsetDays(0, 14),
+        note: DEMO_MARKER,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        profileId: profile.id,
+        type: "EXPENSE",
+        category: "ค่าแพลตฟอร์ม",
+        amountBaht: 199,
+        transactedAt: bangkokOffsetDays(-2, 9),
         note: DEMO_MARKER,
       },
     ],

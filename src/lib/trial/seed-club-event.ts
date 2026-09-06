@@ -107,6 +107,7 @@ async function wipeClubEventDemoScope(
       where: { linkId: { in: links.map((l) => l.id) } },
     });
   }
+  await prisma.clubEventCheckIn.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.clubEventDuesPayment.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.clubEventDynamicLink.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.clubEventFinanceTransaction.deleteMany({ where: { ownerUserId, trialSessionId } });
