@@ -7,6 +7,7 @@ import {
   generateEcommerceTrackingCode,
 } from "@/lib/ecommerce/order-codes";
 import { normalizeEcommercePhone } from "@/lib/ecommerce/phone";
+import { resolveActiveEcommerceProductsForCart } from "@/lib/ecommerce/resolve-cart-products";
 import { notifyEcommerceDashboard } from "@/systems/ecommerce-store/lib/dashboard-sse";
 
 type CartLine = { productId: string; quantity: number };
@@ -49,11 +50,10 @@ export async function POST(
   });
   if (!store) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const productIds = lines.map((l) => l.productId).filter(Boolean);
-  const products = await prisma.ecommerceProduct.findMany({
-    where: { storeId: id, id: { in: productIds }, isActive: true },
-  });
-  const productMap = new Map(products.map((p) => [p.id, p]));
+  const resolved = await resolveActiveEcommerceProductsForCart(prisma, id, lines);
+  if (!resolved.ok) {
+    return NextResponse.json({ error: resolved.error }, { status: 400 });
+  }
 
   let total = new Prisma.Decimal(0);
   const orderItems: {
@@ -64,19 +64,14 @@ export async function POST(
     lineTotalBaht: Prisma.Decimal;
   }[] = [];
 
-  for (const line of lines) {
-    const qty = Math.max(1, Math.floor(Number(line.quantity) || 0));
-    const product = productMap.get(line.productId);
-    if (!product || product.stockBalance < qty) {
-      return NextResponse.json({ error: `สต๊อกไม่พอ: ${product?.name ?? line.productId}` }, { status: 400 });
-    }
+  for (const { line, product } of resolved.resolved) {
     const unit = product.priceBaht;
-    const lineTotal = unit.mul(qty);
+    const lineTotal = unit.mul(line.quantity);
     total = total.add(lineTotal);
     orderItems.push({
       productId: product.id,
       productName: product.name,
-      quantity: qty,
+      quantity: line.quantity,
       unitPriceBaht: unit,
       lineTotalBaht: lineTotal,
     });
