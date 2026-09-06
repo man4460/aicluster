@@ -8,7 +8,16 @@ import {
   clubEventPublicPayBlocked,
   type ClubEventPublicPayMethod,
 } from "@/systems/club-event/components/ClubEventPublicPaymentPanel";
-import { CLUB_EVENT_LINK_TYPE_LABELS, normalizeClubDynamicLinkFields } from "@/systems/club-event/lib/mappers";
+import {
+  computeClubLinkAnswersAmountBaht,
+  parseClubLinkQtyAnswer,
+  serializeClubLinkQtyAnswer,
+} from "@/systems/club-event/lib/link-field-amount";
+import {
+  CLUB_EVENT_LINK_TYPE_LABELS,
+  normalizeClubDynamicLinkFields,
+  type ClubDynamicLinkField,
+} from "@/systems/club-event/lib/mappers";
 import type { ClubDynamicLinkConfig, ClubEventDynamicLinkDto } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
@@ -32,6 +41,71 @@ export type ClubPublicLinkPayload = {
 
 const labelClass = "block space-y-1";
 const labelText = "text-xs font-bold text-[#4d47b6]";
+
+function defaultQtyAnswerJson(f: ClubDynamicLinkField): string {
+  const map: Record<string, number> = {};
+  for (const item of f.qtyItems ?? []) {
+    const q = item.defaultQty ?? 0;
+    if (q > 0) map[item.key] = q;
+  }
+  return serializeClubLinkQtyAnswer(map);
+}
+
+function ClubEventQtyFieldInputs({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: ClubDynamicLinkField;
+  value: string;
+  disabled?: boolean;
+  onChange: (next: string) => void;
+}) {
+  const map = parseClubLinkQtyAnswer(value);
+  const items = field.qtyItems ?? [];
+  const showPrice = items.some((i) => i.amountBaht > 0);
+  const lineTotal = items.reduce((sum, item) => {
+    const q = map[item.key] ?? 0;
+    return sum + q * Math.max(0, item.amountBaht);
+  }, 0);
+
+  return (
+    <div className="mt-1 space-y-2">
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const qty = map[item.key] ?? 0;
+          return (
+            <li key={item.key} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 text-sm font-bold text-[#1e1b4b]">{item.label}</span>
+              {showPrice ? (
+                <span className="shrink-0 text-xs font-semibold text-[#66638c]">
+                  ฿{item.amountBaht.toLocaleString("th-TH")}
+                </span>
+              ) : null}
+              <input
+                className={cn(clubEventFieldClass, "w-[4.5rem] shrink-0 text-center")}
+                inputMode="numeric"
+                value={qty === 0 ? "" : String(qty)}
+                placeholder="0"
+                disabled={disabled}
+                aria-label={`จำนวน ${item.label}`}
+                onChange={(e) => {
+                  const raw = e.target.value.trim();
+                  const n = raw === "" ? 0 : Math.max(0, Math.min(999, Math.floor(Number(raw)) || 0));
+                  onChange(serializeClubLinkQtyAnswer({ ...map, [item.key]: n }));
+                }}
+              />
+            </li>
+          );
+        })}
+      </ul>
+      {showPrice && lineTotal > 0 ? (
+        <p className="text-xs font-bold text-[#4d47b6]">รวม ฿{lineTotal.toLocaleString("th-TH")}</p>
+      ) : null}
+    </div>
+  );
+}
 
 function ClubEventExternalRedirect({ url }: { url: string }) {
   useEffect(() => {
@@ -70,15 +144,22 @@ export function ClubEventPublicLinkClient({
   const [done, setDone] = useState(false);
 
   const { link, clubName, ownerId, paymentRulesNote } = data;
-  const amountBaht = link.type === "PAYMENT" ? Number(link.config.amountBaht) || 0 : 0;
   const fields = useMemo(
     () => normalizeClubDynamicLinkFields(link.config.fields ?? []),
     [link.config.fields],
   );
+  const computedAmount = useMemo(() => {
+    if (link.type !== "PAYMENT") return 0;
+    return computeClubLinkAnswersAmountBaht(fields, answers, {
+      baseAmountBaht: Number(link.config.amountBaht) || 0,
+    });
+  }, [answers, fields, link.config.amountBaht, link.type]);
 
   useEffect(() => {
     const init: Record<string, string> = {};
-    for (const f of fields) init[f.key] = "";
+    for (const f of fields) {
+      init[f.key] = f.type === "qty" ? defaultQtyAnswerJson(f) : "";
+    }
     setAnswers(init);
   }, [fields]);
 
@@ -104,16 +185,27 @@ export function ClubEventPublicLinkClient({
     }
     for (const f of fields) {
       const val = (answers[f.key] ?? "").trim();
+      if (f.type === "qty") {
+        const map = parseClubLinkQtyAnswer(answers[f.key]);
+        const total = Object.values(map).reduce((n, q) => n + q, 0);
+        if (f.required && total <= 0) {
+          notice.error(`กรอกจำนวน: ${f.label}`);
+          return;
+        }
+        continue;
+      }
       if (f.required && !val) {
         notice.error(`กรอก/เลือก: ${f.label}`);
         return;
       }
-      if (f.type === "choice" && val && f.options && !f.options.includes(val)) {
+      const choiceLabels = (f.choiceOptions ?? []).map((o) => o.label);
+      const allowed = choiceLabels.length > 0 ? choiceLabels : f.options;
+      if (f.type === "choice" && val && allowed && !allowed.includes(val)) {
         notice.error(`ตัวเลือกไม่ถูกต้อง: ${f.label}`);
         return;
       }
     }
-    if (link.type === "PAYMENT" && clubEventPublicPayBlocked(method, amountBaht, slipUrl)) {
+    if (link.type === "PAYMENT" && clubEventPublicPayBlocked(method, computedAmount, slipUrl)) {
       notice.error("แนบสลิปหลังชำระด้วยพร้อมเพย์หรือโอน");
       return;
     }
@@ -137,7 +229,7 @@ export function ClubEventPublicLinkClient({
             answer: trimmedAnswers[fields[0]?.key ?? "answer"] ?? "",
             paymentMethod: link.type === "PAYMENT" ? method : undefined,
             slipUrl: link.type === "PAYMENT" ? slipUrl : undefined,
-            amountBaht: link.type === "PAYMENT" ? amountBaht : undefined,
+            amountBaht: link.type === "PAYMENT" ? computedAmount : undefined,
           }),
         },
       );
@@ -190,41 +282,65 @@ export function ClubEventPublicLinkClient({
           />
         </label>
 
-        {fields.map((f) => (
-          <label key={f.key} className={labelClass}>
-            <span className={labelText}>
-              {f.label}
-              {f.required ? <span className="text-rose-500"> *</span> : null}
-            </span>
-            {f.type === "choice" ? (
-              <select
-                className={cn(clubEventFieldClass, "mt-1")}
+        {fields.map((f) =>
+          f.type === "qty" ? (
+            <div key={f.key} className={labelClass}>
+              <span className={labelText}>
+                {f.label}
+                {f.required ? <span className="text-rose-500"> *</span> : null}
+              </span>
+              <ClubEventQtyFieldInputs
+                field={f}
                 value={answers[f.key] ?? ""}
-                onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
                 disabled={submitting}
-              >
-                <option value="">— เลือก —</option>
-                {(f.options ?? []).map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <textarea
-                className={cn(clubEventTextareaClass, "mt-1")}
-                value={answers[f.key] ?? ""}
-                onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
-                disabled={submitting}
+                onChange={(next) => setAnswers((a) => ({ ...a, [f.key]: next }))}
               />
-            )}
-          </label>
-        ))}
+            </div>
+          ) : (
+            <label key={f.key} className={labelClass}>
+              <span className={labelText}>
+                {f.label}
+                {f.required ? <span className="text-rose-500"> *</span> : null}
+              </span>
+              {f.type === "choice" ? (
+                <select
+                  className={cn(clubEventFieldClass, "mt-1")}
+                  value={answers[f.key] ?? ""}
+                  onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
+                  disabled={submitting}
+                >
+                  <option value="">— เลือก —</option>
+                  {(f.choiceOptions && f.choiceOptions.length > 0
+                    ? f.choiceOptions.map((opt) => ({
+                        value: opt.label,
+                        label:
+                          opt.amountBaht > 0
+                            ? `${opt.label} · ฿${opt.amountBaht.toLocaleString("th-TH")}`
+                            : opt.label,
+                      }))
+                    : (f.options ?? []).map((opt) => ({ value: opt, label: opt }))
+                  ).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <textarea
+                  className={cn(clubEventTextareaClass, "mt-1")}
+                  value={answers[f.key] ?? ""}
+                  onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
+                  disabled={submitting}
+                />
+              )}
+            </label>
+          ),
+        )}
 
         {link.type === "PAYMENT" ? (
           <ClubEventPublicPaymentPanel
             ownerId={ownerId}
-            amountBaht={amountBaht}
+            amountBaht={computedAmount}
             method={method}
             slipUrl={slipUrl}
             onMethodChange={setMethod}

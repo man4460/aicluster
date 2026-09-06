@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { AppCompareBarList, AppEmptyState, AppImageThumb, useAppImageLightbox, AppImageLightbox } from "@/components/app-templates";
 import { FormModal } from "@/components/ui/FormModal";
-import { cn } from "@/lib/cn";
 import type { ClubDynamicLinkField } from "@/systems/club-event/lib/mappers";
 import {
+  formatClubSubmissionAnswer,
   summarizeClubLinkSubmissions,
   type ClubSubmissionRow,
 } from "@/systems/club-event/lib/submission-summary";
@@ -95,6 +95,25 @@ export function ClubEventLinkSubmissionsModal({
                               }))
                         }
                       />
+                    ) : q.kind === "qty" ? (
+                      <AppCompareBarList
+                        key={q.key}
+                        title={q.label}
+                        subtitle={`ตอบ ${q.answered}/${summary.total} คน · จำนวนรวม`}
+                        emptyText="ยังไม่มีใครตอบคำถามนี้"
+                        variant="brand"
+                        formatAmount={(n) => `${n} ชิ้น`}
+                        rows={
+                          q.answered === 0
+                            ? []
+                            : q.items.map((o) => ({
+                                key: o.label,
+                                label: `${o.label} (${o.pct}%)`,
+                                amount: o.totalQty,
+                                pct: o.pct,
+                              }))
+                        }
+                      />
                     ) : (
                       <section
                         key={q.key}
@@ -141,10 +160,11 @@ export function ClubEventLinkSubmissionsModal({
                       ? (s.payload.answers as Record<string, string>)
                       : null;
                   const fieldMeta = Array.isArray(s.payload.fields)
-                    ? (s.payload.fields as { key?: string; label?: string }[])
-                    : fields.map((f) => ({ key: f.key, label: f.label }));
+                    ? (s.payload.fields as { key?: string; label?: string; type?: string; qtyItems?: ClubDynamicLinkField["qtyItems"] }[])
+                    : fields.map((f) => ({ key: f.key, label: f.label, type: f.type, qtyItems: f.qtyItems }));
                   const labelOf = (key: string) =>
                     fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
+                  const fieldOf = (key: string) => fieldMeta.find((f) => f.key === key);
                   const legacyAnswer =
                     typeof s.payload.answer === "string" ? s.payload.answer : "";
                   return (
@@ -167,7 +187,9 @@ export function ClubEventLinkSubmissionsModal({
                                 <span className="font-semibold text-[#4d47b6]">
                                   {idx + 1}. {labelOf(k)}
                                 </span>
-                                <span className="mt-0.5 block whitespace-pre-wrap text-[#1e1b4b]">{v}</span>
+                                <span className="mt-0.5 block whitespace-pre-wrap text-[#1e1b4b]">
+                                  {formatClubSubmissionAnswer(v, fieldOf(k))}
+                                </span>
                               </li>
                             ) : null,
                           )}

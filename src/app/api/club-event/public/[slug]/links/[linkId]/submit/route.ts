@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
+import {
+  computeClubLinkAnswersAmountBaht,
+  parseClubLinkQtyAnswer,
+  serializeClubLinkQtyAnswer,
+} from "@/systems/club-event/lib/link-field-amount";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 
 type Ctx = { params: Promise<{ slug: string; linkId: string }> };
@@ -41,10 +46,25 @@ export async function POST(req: Request, ctx: Ctx) {
     for (const f of fields) {
       const fromMap = answersRaw && typeof answersRaw[f.key] === "string" ? String(answersRaw[f.key]) : "";
       answers[f.key] = fromMap.trim().slice(0, 2000);
+      if (f.type === "qty") {
+        const map = parseClubLinkQtyAnswer(answers[f.key]);
+        const allowed = new Set((f.qtyItems ?? []).map((item) => item.key));
+        const clean: Record<string, number> = {};
+        for (const [k, n] of Object.entries(map)) {
+          if (allowed.has(k) && n > 0) clean[k] = n;
+        }
+        answers[f.key] = serializeClubLinkQtyAnswer(clean);
+        if (f.required && Object.keys(clean).length === 0) {
+          return NextResponse.json({ error: `กรอกจำนวน: ${f.label}` }, { status: 400 });
+        }
+        continue;
+      }
       if (f.required && !answers[f.key]) {
         return NextResponse.json({ error: `กรอก/เลือก: ${f.label}` }, { status: 400 });
       }
-      if (f.type === "choice" && answers[f.key] && f.options && !f.options.includes(answers[f.key])) {
+      const choiceLabels = (f.choiceOptions ?? []).map((o) => o.label);
+      const allowed = choiceLabels.length > 0 ? choiceLabels : f.options;
+      if (f.type === "choice" && answers[f.key] && allowed && !allowed.includes(answers[f.key])) {
         return NextResponse.json({ error: `ตัวเลือกไม่ถูกต้อง: ${f.label}` }, { status: 400 });
       }
     }
@@ -60,7 +80,9 @@ export async function POST(req: Request, ctx: Ctx) {
 
     let amountBaht: number | null = null;
     if (link.type === "PAYMENT") {
-      amountBaht = Number(config.amountBaht) || 0;
+      amountBaht = computeClubLinkAnswersAmountBaht(fields, answers, {
+        baseAmountBaht: Number(config.amountBaht) || 0,
+      });
       if (amountBaht > 0 && (paymentMethod === "PROMPTPAY" || paymentMethod === "TRANSFER") && !slipUrl) {
         return NextResponse.json({ error: "แนบสลิปหลังชำระ" }, { status: 400 });
       }

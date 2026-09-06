@@ -1,4 +1,5 @@
-import type { ClubDynamicLinkField } from "@/systems/club-event/lib/mappers";
+import { formatClubLinkQtyAnswerDisplay, parseClubLinkQtyAnswer } from "@/systems/club-event/lib/link-field-amount";
+import { normalizeClubDynamicLinkFields, type ClubDynamicLinkField } from "@/systems/club-event/lib/mappers";
 
 export type ClubSubmissionRow = {
   id: string;
@@ -18,6 +19,13 @@ export type ClubQuestionSummary =
       kind: "choice";
       answered: number;
       options: { value: string; count: number; pct: number }[];
+    }
+  | {
+      key: string;
+      label: string;
+      kind: "qty";
+      answered: number;
+      items: { label: string; totalQty: number; pct: number }[];
     }
   | {
       key: string;
@@ -43,18 +51,7 @@ function answersOf(row: ClubSubmissionRow): Record<string, string> {
 function fieldsFromRows(rows: ClubSubmissionRow[], fallback: ClubDynamicLinkField[]): ClubDynamicLinkField[] {
   for (const row of rows) {
     if (Array.isArray(row.payload.fields) && row.payload.fields.length > 0) {
-      const parsed: ClubDynamicLinkField[] = [];
-      for (const f of row.payload.fields as { key?: string; label?: string; type?: string; options?: string[] }[]) {
-        if (typeof f?.key !== "string" || !f.key.trim()) continue;
-        const type = f.type === "choice" ? "choice" : "text";
-        parsed.push({
-          key: f.key.trim(),
-          label: typeof f.label === "string" && f.label.trim() ? f.label.trim() : f.key,
-          type,
-          options: type === "choice" && Array.isArray(f.options) ? f.options.filter((o) => typeof o === "string") : undefined,
-          required: false,
-        });
-      }
+      const parsed = normalizeClubDynamicLinkFields(row.payload.fields);
       if (parsed.length > 0) return parsed;
     }
   }
@@ -71,7 +68,17 @@ function fieldsFromRows(rows: ClubSubmissionRow[], fallback: ClubDynamicLinkFiel
   }));
 }
 
-/** สรุปคำตอบแบบสอบถาม — แยกตามคำถาม (choice = นับตัวเลือก · text = ตัวอย่างคำตอบ) */
+export function formatClubSubmissionAnswer(
+  value: string,
+  field?: { type?: string; qtyItems?: ClubDynamicLinkField["qtyItems"] },
+): string {
+  if (field?.type === "qty") {
+    return formatClubLinkQtyAnswerDisplay(value, field.qtyItems) || value;
+  }
+  return value;
+}
+
+/** สรุปคำตอบแบบสอบถาม — แยกตามคำถาม (choice = นับตัวเลือก · qty = รวมจำนวน · text = ตัวอย่างคำตอบ) */
 export function summarizeClubLinkSubmissions(
   rows: ClubSubmissionRow[],
   linkFields: ClubDynamicLinkField[] = [],
@@ -109,6 +116,40 @@ export function summarizeClubLinkSubmissions(
         kind: "choice",
         answered,
         options,
+      };
+    }
+
+    if (field.type === "qty") {
+      const totals = new Map<string, { label: string; totalQty: number }>();
+      for (const item of field.qtyItems ?? []) {
+        totals.set(item.key, { label: item.label, totalQty: 0 });
+      }
+      let answered = 0;
+      for (const { value } of values) {
+        const map = parseClubLinkQtyAnswer(value);
+        let any = false;
+        for (const [k, q] of Object.entries(map)) {
+          if (q <= 0) continue;
+          any = true;
+          const cur = totals.get(k) ?? { label: k, totalQty: 0 };
+          cur.totalQty += q;
+          totals.set(k, cur);
+        }
+        if (any) answered += 1;
+      }
+      const listed = [...totals.values()].filter((t) => t.totalQty > 0);
+      const grand = listed.reduce((n, t) => n + t.totalQty, 0);
+      return {
+        key: field.key,
+        label: field.label,
+        kind: "qty",
+        answered,
+        items: listed
+          .sort((a, b) => b.totalQty - a.totalQty || a.label.localeCompare(b.label, "th"))
+          .map((t) => ({
+            ...t,
+            pct: grand > 0 ? Math.round((t.totalQty / grand) * 100) : 0,
+          })),
       };
     }
 
