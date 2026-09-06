@@ -1,86 +1,111 @@
 ---
-description: หน้าตั้งค่าร้านโมดูล — แยกแถบเมนูพื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า · เวลาเปิดร้าน (คาร์แคร์/บาร์เบอร์)
+description: หน้าตั้งค่าร้านโมดูล — พื้นฐาน · การเงิน · ตั้งค่าเว็บไซต์ (เฉพาะตั้งค่า) · ลิงก์ (เว็บ+พนักงาน บล็อกสายรายวันทีเดียว) · เวลาเปิดร้าน
 globs:
   - "**/systems/**/*Settings*.tsx"
   - "**/systems/**/**Settings*.tsx"
   - "**/dashboard/**/settings/**"
   - "**/systems/car-wash/CarWashSettings*.tsx"
   - "**/systems/barber/**/BarberShopSettings*.tsx"
+  - "**/systems/laundry/**/LaundrySettings*.tsx"
+  - "**/systems/ecommerce-store/**/*Settings*.tsx"
+  - "**/systems/**/*QrHub*.tsx"
 alwaysApply: false
 ---
 
 # เมนูตั้งค่าร้าน — แถบหมวดมาตรฐาน
 
-ใช้เมื่อทำหรือปรับ **หน้าตั้งค่าร้าน** ของโมดูลบริการ (คิว / จอง / พอร์ทัลลูกค้า) เช่น คาร์แคร์ · ร้านตัดผม
+ใช้เมื่อทำหรือปรับ **หน้าตั้งค่าร้าน** ของโมดูลบริการ (คิว / จอง / พอร์ทัลลูกค้า / ร้านออนไลน์)
 
-**เลย์เอาต์มือถือ/เดสก์ท็อป (dropdown vs pill):** `dashboard-module-settings-single-row-tabs.mdc` · `dashboard-primary-secondary-menu-tabs.mdc`
+**เลย์เอาต์มือถือ/เดสก์ท็อป (dropdown vs pill):** `dashboard-module-settings-single-row-tabs.mdc` · `dashboard-primary-secondary-menu-tabs.mdc`  
+**Hub ลิงก์/QR:** `shop-qr-hub-popup-pattern.mdc`
 
 ---
 
 ## 1) แถบเมนูบังคับ (เมื่อมีครบโดเมน)
 
-| ลำดับ | แท็บ (ข้อความ UI) | เนื้อหา |
-|------|-------------------|--------|
-| 1 | **ตั้งค่าพื้นฐาน** | ชื่อร้าน · โลโก้ · คำโปรย/สโลแกน · เบอร์ · ที่อยู่ (ถ้ามี) |
-| 2 | **ตั้งค่าเกี่ยวกับการเงิน** | ช่องทางชำระ · ขนาดสลิป · ปุ่มลัดยอด/PIN พนักงาน (ถ้ามี) |
-| 3 | **ตั้งค่าเว็ปลิงค์ลูกค้า** | ลิงก์สาธารณะ (คัดลอก/เปิด) · แบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ |
-| 4 | **ตั้งค่าเวลาเปิดร้าน** | เวลาเริ่ม/สิ้นสุด · วันเปิดประจำ · สล็อต · override รายวัน (ถ้ามี) |
+| ลำดับ | แท็บ (ข้อความ UI) | `?tab=` | เนื้อหา |
+|------|-------------------|---------|--------|
+| 1 | **ตั้งค่าพื้นฐาน** | `basic` | ชื่อร้าน · โลโก้ · คำโปรย/สโลแกน · เบอร์ · ที่อยู่ (ถ้ามี) |
+| 2 | **ตั้งค่าเกี่ยวกับการเงิน** | `finance` | ช่องทางชำระ · ขนาดสลิป · ปุ่มลัดยอด/PIN พนักงาน (ถ้ามี) |
+| 3 | **ตั้งค่าเว็บไซต์** | `portal` | **เฉพาะตั้งค่า** — แบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ · โดเมน · Sale Page / โหมดพอร์ทัล |
+| 4 | **ลิงก์** | `link` | **ลิงก์เว็บไซต์ + พนักงาน** (การ์ดคู่) — ห่อ **`ModuleQrMonthlyGate` ครั้งเดียว** |
+| 5 | **ตั้งค่าเวลาเปิดร้าน** | `hours` | เวลาเริ่ม/สิ้นสุด · วันเปิดประจำ · สล็อต (ถ้ามีโดเมน) |
 
-- อยู่ใน **`AppDashboardSection` การ์ดเดียว** — หัวข้อ «ตั้งค่าร้าน» → แถบเมนู → แผงตามแท็บ  
+### บังคับแยก — ตั้งค่าเว็บ ≠ ลิงก์
+
+| แท็บ | ใส่ได้ | ห้าม |
+|------|--------|------|
+| **ตั้งค่าเว็บไซต์ (`portal`)** | ฟิลด์ตั้งค่าเนื้อหา/โดเมน/สื่อ | คัดลอก/เปิดลิงก์สาธารณะ · QR ลูกค้า · QR/ลิงก์พนักงาน · `ModuleQrMonthlyGate` |
+| **ลิงก์ (`link`)** | การ์ดคู่ลิงก์เว็บไซต์ + พนักงาน · โมดัลคัดลอก/QR | ฟอร์มตั้งค่า LINE/โดเมน/แบนเนอร์ยาว |
+
+เหตุผล: สายรายวันต้อง **บล็อกที่เดียว** ที่แท็บลิงก์ — อย่ากระจายเกตไปแท็บตั้งค่าเว็บหรือแท็บพนักงานแยก
+
+- อยู่ใน **`AppDashboardSection` / การ์ดเดียว** — หัวข้อ «ตั้งค่าร้าน» → แถบเมนู → แผงตามแท็บ  
 - **มือถือ:** `<select>` + ป้าย «กรุณาเลือกหมวดตั้งค่า» · **ซ่อน** แถบ pill (`hidden sm:block` ที่ wrapper)  
 - **`sm+`:** แถบหลัก pill · `role="tablist"` / `tab` / `tabpanel` · `aria-selected` / `aria-controls`  
-- รองรับ deep-link `?tab=basic|finance|portal|hours` เมื่อเหมาะสม
+- Deep-link: `?tab=basic|finance|portal|link|hours` — map ค่าเก่า `staff` → `link` เมื่อมี
 
-โมดูลที่**ไม่มี**พอร์ทัล/ชั่วโมง (เช่น นวดบางหน้า) — เหลือแท็บที่มีจริงเท่านั้น (**พื้นฐาน** + **การเงิน**) อย่าสร้างแท็บว่าง
+โมดูลที่**ไม่มี**พอร์ทัล/ชั่วโมง — เหลือแท็บที่มีจริงเท่านั้น (**พื้นฐาน** + **การเงิน**) อย่าสร้างแท็บว่าง  
+โมดูลที่มีพอร์ทัลแต่ยังไม่มี staff link — แท็บลิงก์เหลือการ์ดเว็บไซต์อย่างเดียวได้ แต่ยังห่อ `ModuleQrMonthlyGate`
 
 ---
 
-## 2) โทเค็น UI
+## 2) แท็บลิงก์ — Hub การ์ดคู่
 
-สร้างคู่ใน `*-ui-tokens` ของโมดูล (ห้ามคัดลอกสตริงซ้ำหลายหน้า):
+1. ห่อทั้งแผงด้วย **`ModuleQrMonthlyGate`** **หนึ่งครั้ง** (อย่าเกตทีละการ์ด/ทีละโมดัลซ้ำ)  
+2. UI ตาม **`shop-qr-hub-popup-pattern.mdc`** — การ์ดคู่ → `FormModal` (เว็บไซต์ `violet` · พนักงาน `amber` + `size="full"`)  
+3. เนื้อหาพนักงานในโมดัล = **`ModuleStaffTokenQrPanel`** / `ShopStaffQrPanel` + `planGateAllowed` (เกตอยู่ข้างนอกแล้ว)  
+4. **ห้าม** แยกแท็บ «พนักงาน» เป็นเมนูตั้งค่าหลักคู่กับ «ลิงก์เว็บ» อีกชั้น
+
+ต้นแบบร้านออนไลน์: `EcommerceQrHubClient` · ซักผ้า: `LaundryQrHubClient` (แท็บ `link`)
+
+---
+
+## 3) โทเค็น UI
+
+สร้างคู่ใน `*-ui-tokens` ของโมดูล (ห้ามคัดลอกสตริง Tailwind ซ้ำหลายหน้า):
 
 | บทบาท | ตัวอย่าง |
 |-------|---------|
-| Shell pill | `carWashPrimaryTabShellClass` · `barberPrimaryTabShellClass` |
-| Pill active/idle | `*PrimaryTabPillClass(active)` |
+| Shell pill | `carWashPrimaryTabShellClass` · `ecommerceStoreSettingsHeaderTabShellClass` |
+| Pill active/idle | `*PrimaryTabPillClass(active)` / `*SettingsTabPillClass` |
 | Dropdown มือถือ | `*MobileSelectClass` |
 
 ---
 
-## 3) การบันทึกข้อมูล
+## 4) การบันทึกข้อมูล
 
 | แท็บ | แนวทาง |
 |------|--------|
-| พื้นฐาน / การเงิน | `ModuleShop` branding **หรือ** shop-profile ของโมดูล — แยกแผงฟิลด์ด้วย `showBasicFields` / `showPaymentFields` เมื่อใช้ `AppModuleShopSettingsClient` |
-| เว็ปลิงค์ลูกค้า | ฟิลด์บน **shop profile โมดูล** (`portalBannerUrl` · `portalGalleryJson` · `contactLine` · `facebookUrl` · `mapUrl` · `address`) — **ห้าม** ยัดลง `ModuleShopBranding` กลางถ้ายังไม่มีคอลัมน์ |
-| เวลาเปิดร้าน | shop profile hours / day-schedule API ของโมดูล |
-
-- พอร์ทัลสาธารณะ: อ่านค่าจาก DB · **fallback ตัวอย่าง** เมื่อยังว่าง  
-- อัปโหลดรูป: endpoint โมดูลเอง (เช่น `/api/.../images/upload`) + `prepareImageFileForUpload` / `AppImagePickCameraButtons`
+| พื้นฐาน / การเงิน | `ModuleShop` branding **หรือ** shop-profile ของโมดูล |
+| ตั้งค่าเว็บไซต์ | ฟิลด์บน **shop profile** (`portalBannerUrl` · `contactLine` · `facebookUrl` · `mapUrl` · โดเมน · Sale Page) — **ห้าม** ยัดลิงก์คัดลอกลงแท็บนี้ |
+| ลิงก์ | ไม่บันทึกฟอร์มร้าน — แค่สร้าง/แสดงลิงก์+QR (ซ่อนปุ่มบันทึกหัวการ์ดได้) |
+| เวลาเปิดร้าน | shop profile hours / day-schedule API |
 
 ---
 
-## 4) ห้าม
+## 5) ห้าม
 
-- ยัดทุกหมวดในหน้าเดียวยาวเมื่อมี ≥ 3 หมวด โดยไม่มีแถบ/dropdown  
+- ยัดลิงก์คัดลอก/QR ลงแท็บตั้งค่าเว็บไซต์  
+- แยกแท็บพนักงานออกจากแท็บลิงก์ (ทำให้เกตสายรายวันสองจุด)  
 - โชว์ pill + dropdown พร้อมกันบนมือถือ  
-- วางแถบเมนูตั้งค่านอกการ์ดหลัก  
-- คัดลอก UI สื่อพอร์ทัลใหม่ทั้งก้อน — เลียนแบบ `BarberPortalMediaSettings` / `CarWashPortalMediaSettings`
+- คัดลอก UI สื่อพอร์ทัลใหม่ทั้งก้อน — เลียนแบบ `*PortalMediaSettings`
 
 ---
 
-## 5) อ้างอิงที่ทำแล้ว
+## 6) อ้างอิงที่ทำแล้ว
 
 | โมดูล | ไฟล์ |
 |-------|------|
-| คาร์แคร์ | `CarWashSettingsClient.tsx` · `CarWashPortalMediaSettings.tsx` · `CarWashShopHoursPanel.tsx` |
-| ซักผ้า | `LaundrySettingsClient.tsx` · `LaundryPortalMediaSettings.tsx` |
-| UX พอร์ทัลลูกค้า | `module-customer-booking-website-portal.mdc` · `shop-customer-qr-portal.mdc` |
+| ร้านออนไลน์ | `EcommerceSettingsClient` · `EcommerceQrHubClient` · `EcommercePortalMediaSettings` |
+| ซักผ้า | `LaundrySettingsClient` · `LaundryQrHubClient` · `LaundryPortalMediaSettings` |
+| คาร์แคร์ / บาร์เบอร์ | Settings + QrHub ตามโดเมน |
+| UX พอร์ทัลลูกค้า | `module-customer-booking-website-portal.mdc` · `laundry-module-portal-website-template.mdc` |
 
 ## เช็กลิสต์
 
-- [ ] 4 แท็บ (หรือชุดย่อยตามโดเมน) ข้อความตรงตารางด้านบน  
+- [ ] แท็บตั้งค่าเว็บไซต์ไม่มีปุ่มคัดลอกลิงก์/QR  
+- [ ] แท็บลิงก์ = การ์ดคู่ + `ModuleQrMonthlyGate` ครั้งเดียว  
+- [ ] ไม่มีแท็บ `staff` แยก (หรือ map → `link`)  
 - [ ] มือถือ dropdown · `sm+` pill · ไม่โชว์คู่  
-- [ ] สื่อพอร์ทัล + ลิงก์สาธารณะอยู่แท็บเว็ปลิงค์  
-- [ ] ชั่วโมงเปิดร้านไม่อยู่หน้าภาพรวมถ้ามีแท็บตั้งค่าเวลาแล้ว  
 - [ ] โทเค็นอยู่ใน `*-ui-tokens` ของโมดูล  

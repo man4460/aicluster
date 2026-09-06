@@ -13,8 +13,6 @@ import {
 } from "@/components/app-templates";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { cn } from "@/lib/cn";
-import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
-import { LAUNDRY_MODULE_SLUG } from "@/lib/modules/config";
 import { LaundryPortalMediaSettings } from "@/systems/laundry/components/LaundryPortalMediaSettings";
 import { LaundryQrHubClient } from "@/systems/laundry/components/LaundryQrHubClient";
 import {
@@ -54,17 +52,17 @@ const LOGO_UPLOAD_URL = "/api/laundry/session/images/upload";
 const SETTINGS_TABS: { id: LaundrySettingsTab; label: string; shortLabel: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
-  { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า", shortLabel: "ลิงก์ลูกค้า" },
+  { id: "portal", label: "ตั้งค่าเว็บไซต์", shortLabel: "เว็บไซต์" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน", shortLabel: "เวลาเปิด" },
-  { id: "link", label: "ลิงก์ QR", shortLabel: "QR" },
+  { id: "link", label: "ลิงก์", shortLabel: "ลิงก์" },
 ];
 
 const SETTINGS_TAB_DESCRIPTIONS: Record<LaundrySettingsTab, string> = {
   basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่",
   finance: "ชำระเงิน · พร้อมเพย์ · รหัสพนักงาน · ขนาดสลิป · ปุ่มลัดยอดรับชำระ",
-  portal: "ลิงก์รับผ้าที่บ้าน · แบนเนอร์ · แกลเลอรี · LINE · แผนที่",
+  portal: "แบนเนอร์ · แกลเลอรี · LINE · แผนที่ · พิกัด — ลิงก์/QR อยู่แท็บลิงก์",
   hours: "เวลาเปิด–ปิดร้าน (เวลาไทย)",
-  link: "QR ให้ลูกค้าสแกน · ดาวน์โหลด · พิมพ์",
+  link: "ลิงก์เว็บไซต์ลูกค้า + พนักงาน — บล็อกสายรายวันทีเดียว",
 };
 
 const SETTINGS_TAB_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.id));
@@ -115,81 +113,6 @@ function IconSave({ className }: { className?: string }) {
       <polyline points="17 21 17 13 7 13 7 21" />
       <polyline points="7 3 7 8 15 8" />
     </svg>
-  );
-}
-
-function laundryPublicPortalPath(ownerId: string, trialSessionId: string): string {
-  const q = trialSessionId !== "prod" ? `?t=${encodeURIComponent(trialSessionId)}` : "";
-  return `/laundry/${ownerId}${q}`;
-}
-
-function laundryPublicPickupPath(ownerId: string, trialSessionId: string): string {
-  const q = trialSessionId !== "prod" ? `?t=${encodeURIComponent(trialSessionId)}` : "";
-  return `/laundry/pickup/${ownerId}${q}`;
-}
-
-function LaundryPortalLinkPanel({
-  portalPath,
-  onGoToQr,
-}: {
-  portalPath: string;
-  onGoToQr?: () => void;
-}) {
-  const [copyMsg, setCopyMsg] = useState<string | null>(null);
-
-  const absoluteUrl = (path: string) => {
-    if (typeof window === "undefined") return path;
-    return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
-  };
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(absoluteUrl(portalPath));
-      setCopyMsg("คัดลอกลิงก์รับผ้าแล้ว");
-    } catch {
-      setCopyMsg("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  };
-
-  return (
-    <ModuleQrMonthlyGate moduleSlug={LAUNDRY_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
-    <div className="space-y-3 text-left">
-      <p className="text-sm text-[#5f5a8a]">
-        ลิงก์สาธารณะให้ลูกค้าขอบริการรับ-ส่งที่บ้าน — ตั้งแบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ด้านล่าง
-      </p>
-      {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
-      <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-        <p className="text-xs font-bold text-[#4d47b6]">ลิงก์รับผ้าที่บ้าน</p>
-        <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={portalPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={laundryCompactOutlineButtonClass}
-          >
-            เปิดลิงก์
-          </a>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className={cn(laundryDashboardSegmentBtnClass(true), "min-h-8 px-3")}
-          >
-            คัดลอกลิงก์
-          </button>
-          {onGoToQr ? (
-            <button
-              type="button"
-              className={laundryCompactOutlineButtonClass}
-              onClick={onGoToQr}
-            >
-              ไปหน้า QR
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-    </ModuleQrMonthlyGate>
   );
 }
 
@@ -376,8 +299,6 @@ function LaundrySettingsClientInner({
       setBusy(false);
     }
   };
-
-  const portalPath = laundryPublicPortalPath(ownerUserId, trialSessionId);
 
   return (
     <div className={laundryPanelClass}>
@@ -675,7 +596,16 @@ function LaundrySettingsClientInner({
               aria-labelledby="laundry-settings-tab-portal"
               className="space-y-4"
             >
-              <LaundryPortalLinkPanel portalPath={portalPath} onGoToQr={() => selectTab("link")} />
+              <p className="text-sm text-[#5f5a8a]">
+                ตั้งค่าเนื้อหาเว็บไซต์ลูกค้า — ลิงก์คัดลอก/QR อยู่แท็บ «ลิงก์»
+              </p>
+              <button
+                type="button"
+                className={laundryCompactOutlineButtonClass}
+                onClick={() => selectTab("link")}
+              >
+                ไปแท็บลิงก์
+              </button>
               <LaundryPortalMediaSettings
                 bannerUrl={form.portalBannerUrl ?? ""}
                 gallery={form.portalGallery ?? []}

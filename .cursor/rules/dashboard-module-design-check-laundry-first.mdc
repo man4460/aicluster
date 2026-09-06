@@ -38,7 +38,7 @@ alwaysApply: true
 | Popup แจ้งเตือน | `useAppNoticePopup` ใน portal/pickup/finance |
 | เว็บลูกค้า | `LaundryPortalPublicClient.tsx` · `LaundryPickupPublicClient.tsx` · **`laundry-module-portal-website-template.mdc`** |
 | คู่มือ | `LaundryUsageGuideModal.tsx` |
-| QR hub | `LaundryQrHubClient.tsx` |
+| QR hub | `LaundryQrHubClient.tsx` (แท็บตั้งค่า `link` — บล็อกสายรายวันทีเดียว · อย่าใส่ลิงก์ในแท็บตั้งค่าเว็บไซต์) |
 
 ## หลังออกแบบ
 

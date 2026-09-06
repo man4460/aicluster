@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   AppModuleShopPaymentFields,
@@ -9,15 +8,12 @@ import {
   parseAppSlipPaperSize,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
-import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
-import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { cn } from "@/lib/cn";
-import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
 import { validateEcommerceCustomDomainInput } from "@/lib/ecommerce/custom-domain";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { EcommercePortalMediaSettings } from "@/systems/ecommerce-store/components/EcommercePortalMediaSettings";
-import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
+import { EcommerceQrHubClient } from "@/systems/ecommerce-store/components/EcommerceQrHubClient";
 import type { EcommerceStoreSettingsTab } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
   ecommerceStoreCompactOutlineButtonClass,
@@ -69,20 +65,22 @@ const LOGO_UPLOAD_URL = "/api/ecommerce-store/session/upload-logo";
 const SETTINGS_TABS: { id: EcommerceStoreSettingsTab; label: string; shortLabel: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
-  { id: "portal", label: "ลิงก์เว็บ", shortLabel: "ลิงก์เว็บ" },
-  { id: "staff", label: "พนักงาน", shortLabel: "พนักงาน" },
+  { id: "portal", label: "ตั้งค่าเว็บไซต์", shortLabel: "เว็บไซต์" },
+  { id: "link", label: "ลิงก์", shortLabel: "ลิงก์" },
 ];
 
 const SETTINGS_TAB_DESCRIPTIONS: Record<EcommerceStoreSettingsTab, string> = {
   basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่ · สต๊อก",
   finance: "ชำระเงิน · พร้อมเพย์ · ขนาดสลิป · หมายเหตุชำระ",
-  portal: "ลิงก์ร้านลูกค้า · LINE · Facebook · แผนที่ · โดเมน · Sale Page",
-  staff: "ลิงก์ / QR พนักงาน — แดชบอร์ด + เว็บร้าน (ไม่เปิดการเงิน/จัดการ/ตั้งค่า)",
+  portal: "LINE · Facebook · แผนที่ · โดเมน · Sale Page — ไม่มีลิงก์คัดลอก (อยู่แท็บลิงก์)",
+  link: "ลิงก์เว็บไซต์ + พนักงาน — บล็อกสายรายวันทีเดียว",
 };
 
 const SETTINGS_TAB_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.id));
 
 function parseSettingsTab(raw: string | null): EcommerceStoreSettingsTab {
+  /** `staff` เดิมรวมเข้าแท็บลิงก์ */
+  if (raw === "staff") return "link";
   if (raw && SETTINGS_TAB_KEYS.has(raw)) return raw as EcommerceStoreSettingsTab;
   return "basic";
 }
@@ -103,99 +101,6 @@ function IconSave({ className }: { className?: string }) {
       <polyline points="17 21 17 13 7 13 7 21" />
       <polyline points="7 3 7 8 15 8" />
     </svg>
-  );
-}
-
-function EcommerceShopWebLinkPanel({
-  shopUrl,
-  storeId,
-  salePageEnabled,
-  featuredProductId,
-}: {
-  shopUrl: string;
-  storeId: string;
-  salePageEnabled: boolean;
-  featuredProductId: string | null;
-}) {
-  const [copyMsg, setCopyMsg] = useState<string | null>(null);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(shopUrl);
-      setCopyMsg("คัดลอกลิงก์ร้านแล้ว");
-    } catch {
-      setCopyMsg("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  };
-
-  return (
-    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="ลิงก์เว็บ">
-      <div className="space-y-3 text-left">
-        <p className="text-sm text-[#5f5a8a]">ลิงก์ร้านออนไลน์ให้ลูกค้าสั่งซื้อ · ตั้ง LINE / โดเมน / Sale Page ด้านล่าง</p>
-        {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
-
-        <div className="rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/70 via-white/50 to-indigo-50/50 p-4 text-left shadow-md backdrop-blur-xl sm:rounded-[2rem] sm:p-5">
-          <p className="text-xs font-bold text-[#4d47b6]">ลิงก์ร้านออนไลน์ (ลูกค้า)</p>
-          <p className="mt-2 break-all text-sm font-semibold text-[#1e1b4b]">{shopUrl}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <a
-              href={ecommercePublicShopUrl(storeId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={ecommerceStoreCompactOutlineButtonClass}
-            >
-              เปิดลิงก์
-            </a>
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
-            >
-              <IconCopy className="h-3.5 w-3.5" aria-hidden />
-              คัดลอกลิงก์
-            </button>
-            {salePageEnabled && featuredProductId ? (
-              <Link
-                href={`/shop/${storeId}/sale`}
-                target="_blank"
-                className={ecommerceStoreCompactOutlineButtonClass}
-              >
-                Sale Page
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </ModuleQrMonthlyGate>
-  );
-}
-
-function EcommerceStaffLinkPanel({
-  storeName,
-  logoUrl,
-}: {
-  storeName: string;
-  logoUrl: string | null;
-}) {
-  return (
-    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="พนักงาน">
-      <div className="space-y-3 text-left">
-        <p className="text-sm text-[#5f5a8a]">
-          สร้างลิงก์ / QR ให้พนักงาน — ใช้ได้เฉพาะภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน · เว็บร้าน
-          (ไม่เปิดการเงิน / การจัดการ / ตั้งค่า)
-        </p>
-        <ModuleStaffTokenQrPanel
-          moduleSlug={ECOMMERCE_STORE_MODULE_SLUG}
-          planGateAllowed
-          staffLinkApiPath="/api/ecommerce-store/session/staff-link"
-          shopLabel={storeName || "ร้านออนไลน์"}
-          logoUrl={logoUrl}
-          tagline="สแกนเข้าหน้าพนักงาน — เมนูแดชบอร์ด + เว็บร้าน"
-          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน"
-          openPrimaryLabel="เปิดหน้าพนักงาน"
-        />
-      </div>
-    </ModuleQrMonthlyGate>
   );
 }
 
@@ -408,7 +313,7 @@ export function EcommerceSettingsClient() {
               </nav>
             </div>
             <div className={ecommerceStoreHeaderActionShellClass} role="group" aria-label="บันทึกการตั้งค่า">
-              {tab !== "staff" ? (
+              {tab !== "link" ? (
                 <button
                   type="button"
                   disabled={saving}
@@ -628,12 +533,9 @@ export function EcommerceSettingsClient() {
               aria-labelledby="ecommerce-settings-tab-portal"
               className="space-y-4"
             >
-              <EcommerceShopWebLinkPanel
-                shopUrl={shopUrl}
-                storeId={store.id}
-                salePageEnabled={store.salePageEnabled}
-                featuredProductId={store.featuredProductId}
-              />
+              <p className="text-sm text-[#5f5a8a]">
+                ตั้งค่าเนื้อหาเว็บไซต์ร้าน — ลิงก์คัดลอก/QR อยู่แท็บ «ลิงก์»
+              </p>
               <EcommercePortalMediaSettings
                 contactLine={store.contactLine ?? ""}
                 facebookUrl={store.facebookUrl ?? ""}
@@ -677,7 +579,7 @@ export function EcommerceSettingsClient() {
                     บันทึกโดเมนในช่องแล้ว — กด «ยืนยันโดเมน» เมื่อตั้ง CNAME แล้ว
                   </p>
                 ) : (
-                  <p className="text-xs text-amber-700">ยังไม่ใส่โดเมน — ใช้ลิงก์ MAWELL ด้านบนได้</p>
+                  <p className="text-xs text-amber-700">ยังไม่ใส่โดเมน — ใช้ลิงก์ MAWELL ที่แท็บลิงก์ได้</p>
                 )}
                 <button
                   type="button"
@@ -721,14 +623,21 @@ export function EcommerceSettingsClient() {
             </div>
           ) : null}
 
-          {tab === "staff" ? (
+          {tab === "link" ? (
             <div
-              id="ecommerce-settings-panel-staff"
+              id="ecommerce-settings-panel-link"
               role="tabpanel"
-              aria-labelledby="ecommerce-settings-tab-staff"
+              aria-labelledby="ecommerce-settings-tab-link"
               className="space-y-4"
             >
-              <EcommerceStaffLinkPanel storeName={store.storeName} logoUrl={store.logoUrl} />
+              <EcommerceQrHubClient
+                shopUrl={shopUrl}
+                storeId={store.id}
+                storeName={store.storeName}
+                logoUrl={store.logoUrl}
+                salePageEnabled={store.salePageEnabled}
+                featuredProductId={store.featuredProductId}
+              />
             </div>
           ) : null}
         </div>

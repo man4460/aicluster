@@ -51,7 +51,7 @@ alwaysApply: false
 | การเงิน | `LaundryFinancePageClient` · `LaundryFinancePanel` · `LaundryRevenuePanel` · `LaundryCostPanel` |
 | จัดการ | `LaundryManageHubClient` · `LaundryPackagesClient` · `LaundryPurchasesClient` |
 | ตั้งค่า | `LaundrySettingsClient` · `LaundryPortalMediaSettings` |
-| QR hub | `LaundryQrHubClient` |
+| QR / ลิงก์ hub | `LaundryQrHubClient` (แท็บ `link` — บล็อกสายรายวันทีเดียว) |
 | คู่มือ | `LaundryUsageGuideModal.tsx` |
 | พอร์ทัลลูกค้า | `/laundry/[ownerId]` · `LaundryPortalPublicClient` · `LaundryPortalPackageDetailModal` |
 | รับ–ส่ง | `LaundryPickupPublicClient` · `/laundry/pickup/[ownerId]` |
@@ -72,7 +72,7 @@ alwaysApply: false
 | `dashboard` | แดชบอร์ด | `/dashboard/laundry` | ภาพรวม · ออเดอร์ · คิวออนไลน์ |
 | `finance` | การเงิน | `/dashboard/laundry/finance` | — |
 | `manage` | การจัดการ | `/dashboard/laundry/manage` | แพ็กเกจ · สมาชิก |
-| `settings` | ตั้งค่า | `/dashboard/laundry/settings` | พื้นฐาน · การเงิน · เว็บลูกค้า · เวลา · QR |
+| `settings` | ตั้งค่า | `/dashboard/laundry/settings` | พื้นฐาน · การเงิน · ตั้งค่าเว็บไซต์ · เวลา · ลิงก์ (QR) |
 
 - **มือถือ:** dock ล่าง 4 คอลัมน์ · `rounded-[2.5rem]` · safe-area · `pb-24` เนื้อหา  
 - **เดสก์ท็อป:** แท็บในการ์ดหัว (`laundryPrimaryTabShellClass` / pills)  
@@ -201,7 +201,7 @@ alwaysApply: false
 ### คู่มือ
 
 - ปุ่ม **`?`** มุมขวาบนการ์ดหัว · `LaundryUsageGuideModal` · `AppUsageGuideModal`  
-- เนื้อหาครบ: เริ่มต้น · เมนู 4 รายการ · แดชบอร์ด · การเงิน · จัดการ · ชำระ/พิมพ์ · ตั้งค่า · เว็บลูกค้า · QR/staff · popup  
+- เนื้อหาครบ: เริ่มต้น · เมนู 4 รายการ · แดชบอร์ด · การเงิน · จัดการ · ชำระ/พิมพ์ · ตั้งค่า (เว็บไซต์ vs ลิงก์) · QR hub · popup  
 
 ---
 

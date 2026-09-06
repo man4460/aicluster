@@ -1,31 +1,41 @@
 ---
-description: แพทเทิร์นมาตรฐานหน้า Hub QR (การ์ดคู่ + FormModal กระจก) — ใช้ซ้ำคาร์แคร์ บาร์เบอร์ และโมดูล QR อื่น
+description: แพทเทิร์นมาตรฐาน Hub ลิงก์/QR (การ์ดคู่ + FormModal) — บล็อกสายรายวันทีเดียวที่แท็บลิงก์
 globs:
   - "**/systems/car-wash/**"
   - "**/systems/barber/**"
   - "**/systems/laundry/**"
+  - "**/systems/ecommerce-store/**"
   - "**/components/qr/**"
   - "**/components/ui/FormModal.tsx"
+  - "**/systems/**/*QrHub*.tsx"
 ---
 
-# Hub QR — การ์ดคู่ + ป๊อปอัป (`FormModal`)
+# Hub ลิงก์ / QR — การ์ดคู่ + ป๊อปอัป (`FormModal`)
 
-เมื่อมีหน้าแดชบอร์ดที่รวม **QR ลูกค้า** และ **QR พนักงาน** (หรือบทบาทคู่ที่คล้ายกัน) ให้ทำแบบเดียวกันทุกระบบ เพื่อไม่ต้องแก้ทีละโมดูล
+เมื่อมี **ลิงก์เว็บไซต์ลูกค้า** และ **ลิงก์/QR พนักงาน** (หรือบทบาทคู่ที่คล้ายกัน) ให้ทำแบบเดียวกันทุกระบบ
+
+**คู่กับ:** `dashboard-module-shop-settings-tabs.mdc` — แท็บตั้งค่าเว็บไซต์ = ตั้งค่าอย่างเดียว · **แท็บลิงก์ (`?tab=link`)** = hub นี้
+
+## ตำแหน่งในตั้งค่า
+
+1. วาง Hub ในแท็บ **`link`** ของหน้าตั้งค่า (หรือหน้า hub แยกที่เข้าถึงจากเมนูเดียวกัน)
+2. ห่อทั้ง Hub ด้วย **`ModuleQrMonthlyGate` ครั้งเดียว** — บล็อกสายรายวันทั้งลิงก์เว็บและพนักงานพร้อมกัน
+3. **ห้าม** ใส่คัดลอกลิงก์/QR ลงแท็บ `portal` (ตั้งค่าเว็บไซต์) หรือแยกแท็บ `staff` แล้วเกตซ้ำ
 
 ## UX มาตรฐาน
 
-1. **การ์ดใหญ่คู่** (`rounded-[2.5rem]`, glass gradient, hover lift) — การ์ดหนึ่งต่อหนึ่งบทบาท
+1. **การ์ดใหญ่คู่** (`rounded-[2.5rem]` เมื่อ standalone · `rounded-[1.25rem]` เมื่อ `embedded` ในตั้งค่า) — การ์ดหนึ่งต่อหนึ่งบทบาท
 2. **คลิกการ์ด** → เปิด **`FormModal`** เท่านั้น — **ไม่** แสดงแผงเนื้อหายาวใต้การ์ด (inline tab panel)
 3. เปิดการ์ดหนึ่งแล้วเปิดอีกการ์ด → **ปิดโมดัลอื่นก่อน** (`setShowOther(false)` แล้วค่อย `setShow(true)`)
 4. **`FormModal`**
-   - **QR พนักงาน / สร้างลิงก์พนักงาน** → **`size="full"`** (ขยายเต็มจอเกือบทั้ง viewport) — บังคับเมื่อสร้างโมดัลลิงก์พนักงานใหม่
-   - **QR ลูกค้า / โมดัลอื่นใน hub** → `size="lg"` (ยกเว้นมีเหตุผลเฉพาะ)
+   - **QR พนักงาน / สร้างลิงก์พนักงาน** → **`size="full"`**
+   - **ลิงก์/QR ลูกค้า · เว็บไซต์** → `size="lg"`
    - `appearance="glass"`
-   - `glassTint="violet"` สำหรับลูกค้า / พอร์ทัลลูกค้า
-   - `glassTint="amber"` สำหรับพนักงาน / สตาฟ
-   - **`mobileCentered`** — บนมือถือให้แผงอยู่กึ่งกลางจอ (ไม่ชิดขอบล่าง); โมดูลที่มีฟอร์ม/กรองหลายจุดใช้ครบทุกโมดัล — เทียบ **`laundry-dashboard-ui.mdc`** / **`building-pos-dashboard-template.mdc`**
-5. **`footer`** — ปุ่มหลัก **ปิด** (ไอคอน X + ข้อความ) ชิดขวา; มีปุ่ม X มุมขวาบนของโมดัลอยู่แล้วจาก `FormModal`
-6. **เนื้อหาในโมดัล** — ใช้คอมโพเนนต์เดิมที่เรนเดอร์ QR / โปสเตอร์ / ดาวน์โหลด อย่าเขียน UI ซ้ำใน Hub — **โมดัล QR พนักงาน** ให้ใช้ **`ShopStaffQrPanel`** (ดู `.cursor/rules/shop-staff-qr-panel.mdc`)
+   - `glassTint="violet"` สำหรับลูกค้า / เว็บไซต์
+   - `glassTint="amber"` สำหรับพนักงาน
+   - **`mobileCentered`**
+5. **`footer`** — ปุ่มหลัก **ปิด** ชิดขวา
+6. **เนื้อหาในโมดัลพนักงาน** — **`ModuleStaffTokenQrPanel`** / **`ShopStaffQrPanel`** + `planGateAllowed` (เพราะเกตอยู่ข้างนอก Hub แล้ว)
 
 ## แสดง/ซ่อนลิงก์ในโมดัล
 
@@ -34,37 +44,29 @@ globs:
 - ปุ่ม **แสดงลิงก์ / ซ่อนลิงก์** คู่กับ **คัดลอกลิงก์**
 - เมื่อซ่อน: ข้อความ dashed box แจ้งว่าลิงก์ถูกซ่อน (ผู้ใช้ยังคัดลอกได้)
 
-Implement ด้วย prop เช่น **`compactForModal`** บนคอมโพเนนต์โปสเตอร์/QR ของโมดูลนั้น:
-
-- ซ่อนหัวการ์ดซ้ำกับ `title` ของโมดัล (เหลือแค่บรรทัดชื่อร้าน/shop label ถ้าจำเป็น)
-- เปิดใช้ปุ่มแสดง/ซ่อนลิงก์ + บล็อกแสดง URL
+Implement ด้วย prop เช่น **`compactForModal`** บนคอมโพเนนต์โปสเตอร์/QR ของโมดูลนั้น
 
 ## แถบปุ่มในโมดัล (เทียบคาร์แคร์)
 
-- **QR ลูกค้า / พอร์ทัลลูกค้า** — ใช้คลาส **`cw-btn`** + **`cw-btn-icon`** + **`cw-btn-label`** จาก `src/app/globals.css` — บนมือถือ (`max-width: 639px`) แสดง**เฉพาะไอคอน** บน `sm+` แสดงไอคอน + ข้อความ
-- จำนวน **4 ปุ่ม** ต่อโมดัล: คัดลอกลิงก์ · แสดง/ซ่อนลิงก์ · ดาวน์โหลด PDF (A4) · ดาวน์โหลด PNG (ไม่ใส่ A5 ในโมดัล **ลูกค้า**)
-- **QR พนักงาน** — ไม่เขียนแถบปุ่มเอง — ใช้ **`ShopStaffQrPanel`** (มือถือ / เดสก์ท็อป / `<details>` / PDF A5 ตามโมดูล) ตาม `.cursor/rules/shop-staff-qr-panel.mdc`
-- หลังคัดลอกสำเร็จ: แถบข้อความสั้น (เช่น "คัดลอกลิงก์แล้ว") แบบคาร์แคร์ — สำคัญเมื่อมือถือซ่อนป้ายบนปุ่ม
+- **QR / ลิงก์ลูกค้า** — ใช้คลาส **`cw-btn`** + **`cw-btn-icon`** + **`cw-btn-label`** เมื่อมีโปสเตอร์เต็มรูปแบบ
+- **QR พนักงาน** — ใช้ **`ShopStaffQrPanel`** ตาม `.cursor/rules/shop-staff-qr-panel.mdc`
 
 ## โค้ดอ้างอิงใน repo
 
 | ส่วน | ไฟล์ |
 |------|------|
-| คาร์แคร์ Hub + modal | `src/systems/car-wash/CarWashDashboard.tsx` (แท็บ `qr`, `showQrModal` / `showStaffQrModal`) |
-| บาร์เบอร์ Hub + modal | `src/systems/barber/components/BarberQrHubClient.tsx` |
-| **ซักผ้า Hub + modal** | **`src/systems/laundry/components/LaundryQrHubClient.tsx`** |
-| **เทียบโครงสร้างโมดูลทั้งก้อน** | **`.cursor/rules/dashboard-module-car-wash-barber-reference.mdc`** |
-| โปสเตอร์ลูกค้า + `compactForModal` | `src/systems/barber/components/BarberQrPosterClient.tsx` |
-| พนักงาน + `compactForModal` | `src/systems/barber/components/BarberStaffQrDashboardSection.tsx` (ภายในใช้ `ShopStaffQrPanel`) |
-| **QR พนักงานมาตรฐาน (คาร์แคร์ UX)** | `src/components/qr/shop-staff-qr-panel.tsx` — `.cursor/rules/shop-staff-qr-panel.mdc` |
-| เทมเพลตวาดโปสเตอร์/QR | `src/components/qr/shop-qr-template.ts` |
-| โมดัล | `src/components/ui/FormModal.tsx` |
+| ร้านออนไลน์ Hub (แท็บลิงก์) | `EcommerceQrHubClient.tsx` |
+| ซักผ้า Hub | `LaundryQrHubClient.tsx` |
+| คาร์แคร์ Hub + modal | `CarWashDashboard.tsx` (แท็บ `qr`) |
+| บาร์เบอร์ Hub | `BarberQrHubClient.tsx` |
+| QR พนักงานมาตรฐาน | `module-staff-token-qr-panel.tsx` · `shop-staff-qr-panel.tsx` |
+| กฎแท็บตั้งค่า | `dashboard-module-shop-settings-tabs.mdc` |
 
-## เช็กลิสต์โมดูล QR ใหม่
+## เช็กลิสต์โมดูลใหม่
 
+- [ ] Hub อยู่แท็บ `link` (หรือเทียบเท่า) ไม่ปนกับตั้งค่าเว็บไซต์
+- [ ] `ModuleQrMonthlyGate` ห่อ Hub **ครั้งเดียว**
 - [ ] หน้า Hub = แค่การ์ดคู่ + state โมดัลสองตัว
 - [ ] ไม่มีแผง `tabpanel` ใต้การ์ด
-- [ ] คอนเทนต์ QR **พนักงาน** ในโมดัล = **`ShopStaffQrPanel`** (ไม่คัดลอก JSX ชุดใหม่)
-- [ ] คอนเทนต์ QR **ลูกค้า** อยู่ใน `FormModal` พร้อม `compactForModal` (หรือเทียบเท่า)
+- [ ] โมดัลพนักงาน = `ModuleStaffTokenQrPanel` / `ShopStaffQrPanel` + `planGateAllowed`
 - [ ] ทดสอบ ESC, คลิก overlay, ปุ่มปิด footer
-- [ ] แถบเครื่องมือโมดัล **ลูกค้า** = `cw-btn` สี่ปุ่ม (A4 เท่านั้น) + แจ้งเตือนหลังคัดลอก

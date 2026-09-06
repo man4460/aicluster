@@ -3,11 +3,14 @@ export const ECOMMERCE_STORE_FINANCE_HREF = `${ECOMMERCE_STORE_BASE}/finance`;
 export const ECOMMERCE_STORE_MANAGE_HREF = `${ECOMMERCE_STORE_BASE}/manage`;
 export const ECOMMERCE_STORE_SETTINGS_HREF = `${ECOMMERCE_STORE_BASE}/settings`;
 export const ECOMMERCE_STORE_SETTINGS_PORTAL_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=portal`;
-export const ECOMMERCE_STORE_SETTINGS_STAFF_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=staff`;
+export const ECOMMERCE_STORE_SETTINGS_LINK_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=link`;
 export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไลน์";
 
-/** พื้นฐาน · การเงิน · ลิงก์เว็บ · พนักงาน */
-export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal" | "staff";
+/**
+ * พื้นฐาน · การเงิน · ตั้งค่าเว็บไซต์ (เฉพาะตั้งค่า) · ลิงก์ (เว็บไซต์+พนักงาน — บล็อกสายรายวันทีเดียว)
+ * `staff` เดิม map → `link`
+ */
+export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal" | "link";
 
 /** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน */
 export type EcommerceStoreDashboardTabKey = "overview" | "orders" | "pos";

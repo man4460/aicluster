@@ -1,0 +1,37 @@
+---
+description: ร้านออนไลน์ (ecommerce-store) — ตั้งค่าเว็บไซต์ vs แท็บลิงก์ (เว็บ+พนักงาน) บล็อกสายรายวันทีเดียว
+globs:
+  - "**/systems/ecommerce-store/**"
+  - "**/app/**/dashboard/ecommerce-store/**"
+  - "**/app/api/ecommerce-store/**"
+  - "**/app/shop/**"
+alwaysApply: false
+---
+
+# ร้านออนไลน์ — ตั้งค่าเว็บไซต์ vs ลิงก์
+
+ยึดกฎกลาง: **`dashboard-module-shop-settings-tabs.mdc`** · **`shop-qr-hub-popup-pattern.mdc`**
+
+## แท็บตั้งค่า (`EcommerceSettingsClient`)
+
+| `?tab=` | ชื่อ UI | เนื้อหา |
+|---------|---------|--------|
+| `basic` | ตั้งค่าพื้นฐาน | ชื่อ · โลโก้ · สโลแกน · เบอร์ · ที่อยู่ · สต๊อก |
+| `finance` | ตั้งค่าเกี่ยวกับการเงิน | พร้อมเพย์ · โอน · สลิป · หมายเหตุ |
+| `portal` | **ตั้งค่าเว็บไซต์** | LINE · Facebook · แผนที่ · โดเมน · Sale Page — **ไม่มี** คัดลอกลิงก์/QR |
+| `link` | **ลิงก์** | `EcommerceQrHubClient` — การ์ด **ลิงก์เว็บไซต์** + **พนักงาน** |
+
+- `?tab=staff` เดิม → map เป็น `link`
+- แท็บ `link` ซ่อนปุ่มบันทึกหัวการ์ดได้ (ไม่มีฟอร์มร้าน)
+
+## Hub ลิงก์
+
+- ไฟล์: `EcommerceQrHubClient.tsx`
+- ห่อ **`ModuleQrMonthlyGate` ครั้งเดียว**
+- การ์ดคู่ → `FormModal` (เว็บไซต์ violet/`lg` · พนักงาน amber/`full` + `ModuleStaffTokenQrPanel` + `planGateAllowed`)
+
+## ห้าม
+
+- ใส่ลิงก์คัดลอกในแท็บตั้งค่าเว็บไซต์
+- แยกแท็บพนักงาน + เกตสายรายวันซ้ำ
+- เกต `ModuleQrMonthlyGate` ในแท็บ `portal`
