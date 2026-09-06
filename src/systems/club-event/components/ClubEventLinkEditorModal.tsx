@@ -370,6 +370,9 @@ export function ClubEventLinkEditorModal({
                 </option>
               ))}
             </select>
+            <span className="mt-1 block text-[11px] font-semibold text-[#8b87b8]">
+              จำเป็น — กำหนดพฤติกรรมลิงก์ (ลงทะเบียน / สำรวจ / เก็บเงิน / ลิงก์นอก)
+            </span>
           </label>
 
           <label className={labelClass}>
@@ -449,19 +452,25 @@ export function ClubEventLinkEditorModal({
           ) : null}
 
           {form.type === "PAYMENT" ? (
-            <label className={labelClass}>
-              <span className={labelTextClass}>ยอดตั้งต้น (บาท)</span>
-              <input
-                className={cn(clubEventFieldClass, "mt-1")}
-                value={form.amountBaht}
-                onChange={(e) => setForm({ ...form, amountBaht: e.target.value })}
-                placeholder="0"
-                inputMode="decimal"
-              />
-              <span className="block text-[11px] font-semibold text-[#8b87b8]">
-                ใส่ 0 ได้ถ้าคิดเงินจากคำถาม (ตัวเลือกมีราคา / จำนวน × ราคา)
-              </span>
-            </label>
+            clubLinkFieldsHavePrices(form.fields) ? (
+              <p className="rounded-lg border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-xs font-semibold text-emerald-800">
+                ยอดชำระคำนวณอัตโนมัติจากราคาในคำถาม (ตัวเลือก / จำนวน × ราคา) — ไม่ต้องกรอกยอดตั้งต้น
+              </p>
+            ) : (
+              <label className={labelClass}>
+                <span className={labelTextClass}>ยอดตั้งต้น (บาท) — ไม่บังคับถ้าใส่ราคาในคำถาม</span>
+                <input
+                  className={cn(clubEventFieldClass, "mt-1")}
+                  value={form.amountBaht}
+                  onChange={(e) => setForm({ ...form, amountBaht: e.target.value })}
+                  placeholder="เว้นว่างหรือ 0 ได้"
+                  inputMode="decimal"
+                />
+                <span className="mt-1 block text-[11px] font-semibold text-[#8b87b8]">
+                  ใช้เมื่อเก็บเงินคงที่ · ถ้าคิดจากคำถาม ให้ใส่ราคาที่ตัวเลือก/ขนาดเสื้อแทน
+                </span>
+              </label>
+            )
           ) : null}
 
           {showFields ? (
