@@ -77,7 +77,7 @@ AppPublicCheckInGlassPage
 
 - โทน**สว่าง** (กลางแจ้ง / คนยิ้ม) — ค่าเริ่ม `CLUB_EVENT_PORTAL_SAMPLE_BANNER`  
 - Overlay อ่อนขาว ไม่ทับมืดม่วงทั้งจอ · **ชื่อชมรมในแบนเนอร์ไม่มีกล่อง** (ข้อความโปร่งทับภาพ + drop-shadow อ่านง่าย)  
-- หัวเมนู: พื้นขาวโปร่ง · ตัวอักษรโทน `#3f3a6a`
+- หัวเมนู: **พื้นขาวชัด** (`bg-white/95` · เงา · ขอบ slate) · ตัวอักษรโทน `#3f3a6a` (`clubEventPortalHeaderNavOnLight*`) · เม็ดชื่อชมรม `clubEventPortalHeaderBrandPillClass`
 
 ---
 

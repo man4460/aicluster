@@ -20,8 +20,9 @@ import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEven
 import { CLUB_EVENT_PORTAL_SAMPLE_BANNER, CLUB_EVENT_PORTAL_GALLERY_MAX } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
-  clubEventPortalHeaderNavLinkClass,
-  clubEventPortalHeaderNavShellClass,
+  clubEventPortalHeaderBrandPillClass,
+  clubEventPortalHeaderNavOnLightLinkClass,
+  clubEventPortalHeaderNavOnLightShellClass,
   clubEventPortalHeroCompactShellClass,
   clubEventPortalPrimaryBtnClass,
   clubEventPortalShopNameClass,
@@ -85,7 +86,7 @@ export function ClubEventPublicClient({
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3 rounded-full border border-white/70 bg-white/85 py-1.5 pl-1.5 pr-3 shadow-sm backdrop-blur-md">
+          <div className={clubEventPortalHeaderBrandPillClass}>
             {profile.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profile.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
@@ -96,40 +97,40 @@ export function ClubEventPublicClient({
             )}
             <p className={cn("truncate text-sm sm:text-base", clubEventPortalShopNameClass)}>{title}</p>
           </div>
-          <nav className={clubEventPortalHeaderNavShellClass} aria-label="เมนู">
-            <a href="#schedule" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("schedule")}>
+          <nav className={clubEventPortalHeaderNavOnLightShellClass} aria-label="เมนู">
+            <a href="#schedule" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("schedule")}>
               กำหนดการ
             </a>
             {past.length > 0 ? (
-              <a href="#past" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("past")}>
+              <a href="#past" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("past")}>
                 ย้อนหลัง
               </a>
             ) : null}
             {gallery.length > 0 ? (
-              <a href="#gallery" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("gallery")}>
+              <a href="#gallery" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("gallery")}>
                 แกลเลอรี
               </a>
             ) : null}
             {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
-              <a href="#rules" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("rules")}>
+              <a href="#rules" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("rules")}>
                 กฎระเบียบ
               </a>
             ) : null}
             {showCommittee ? (
               <button
                 type="button"
-                className={clubEventPortalHeaderNavLinkClass()}
+                className={clubEventPortalHeaderNavOnLightLinkClass()}
                 onClick={() => setCommitteeOpen(true)}
               >
                 คณะกรรมการ
               </button>
             ) : null}
             {showMembers ? (
-              <a href="#members" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("members")}>
+              <a href="#members" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("members")}>
                 สมาชิก
               </a>
             ) : null}
-            <a href="#contact" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("contact")}>
+            <a href="#contact" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("contact")}>
               ติดต่อ
             </a>
           </nav>

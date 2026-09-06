@@ -200,12 +200,13 @@ export const clubEventPortalPublicTextareaClass = cn(
 export const clubEventPortalQtyRowClass =
   "grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_4.5rem]";
 
+/** แถบเมนูบนแบนเนอร์โทนมืด (legacy) — โปร่งมาก · ตัวอักษรขาว */
 export const clubEventPortalHeaderNavShellClass =
   "hidden items-center gap-0.5 rounded-lg border border-white/45 bg-white/20 p-0.5 backdrop-blur-md md:inline-flex";
 
-/** แถบเมนูบนแบนเนอร์โทนสว่าง — ตัวอักษรเข้มตามแม่แบบพอร์ทัลชมรม */
+/** แถบเมนูบนแบนเนอร์โทนสว่าง — พื้นขาวชัด · ตัวอักษรเข้ม */
 export const clubEventPortalHeaderNavOnLightShellClass =
-  "hidden items-center gap-0.5 rounded-lg border border-white/70 bg-white/70 p-0.5 backdrop-blur-md md:inline-flex";
+  "hidden items-center gap-0.5 rounded-xl border border-slate-200/90 bg-white/95 p-1 shadow-md backdrop-blur-md md:inline-flex";
 
 export function clubEventPortalHeaderNavLinkClass(): string {
   return cn(
@@ -215,9 +216,14 @@ export function clubEventPortalHeaderNavLinkClass(): string {
 
 export function clubEventPortalHeaderNavOnLightLinkClass(): string {
   return cn(
-    "inline-flex min-h-9 items-center justify-center rounded-md px-3 text-xs font-semibold text-[#3f3a6a] transition hover:bg-white/80 sm:px-3.5 sm:text-sm",
+    "inline-flex min-h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold text-[#3f3a6a] transition hover:bg-slate-100/90 sm:px-3.5 sm:text-sm",
   );
 }
+
+/** เม็ดชื่อชมรมในหัวพอร์ทัล — พื้นขาวชัด */
+export const clubEventPortalHeaderBrandPillClass =
+  "flex min-w-0 items-center gap-3 rounded-full border border-slate-200/90 bg-white/95 py-1.5 pl-1.5 pr-3 shadow-md backdrop-blur-md";
+
 
 export const clubEventPortalHeroCompactShellClass =
   "mt-8 grid w-full gap-3 border-t border-white/40 pt-5 text-[#1e1b4b] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-3 sm:rounded-xl sm:border sm:border-slate-200/90 sm:bg-white/95 sm:p-5 sm:pt-5 sm:shadow-sm";
