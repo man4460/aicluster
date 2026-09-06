@@ -141,7 +141,9 @@ export function EcommerceProductDetailModal({
                 aria-label="ดูรูปสินค้าเต็มจอ"
               >
                 <EcommerceRemoteImg
+                  key={current ?? "empty"}
                   src={current}
+                  loading="eager"
                   className="absolute inset-0 h-full w-full object-cover"
                   fallback={
                     <div className="flex h-full items-center justify-center text-sm font-bold text-[#8b87b8]">
