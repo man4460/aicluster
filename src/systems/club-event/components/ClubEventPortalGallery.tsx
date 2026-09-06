@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AppImageThumb } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEventPortalSection";
 import {
@@ -10,6 +9,7 @@ import {
   CLUB_EVENT_PORTAL_GALLERY_PAGE_SIZE_TABLET,
 } from "@/systems/club-event/lib/portal-media";
 import {
+  clubEventGalleryCardGridClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
 } from "@/systems/club-event/lib/ui-tokens";
@@ -61,15 +61,18 @@ export function ClubEventPortalGallery({
 
   return (
     <ClubEventPortalSection id="gallery" title="แกลเลอรี">
-      <ul className="grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className={cn(clubEventGalleryCardGridClass, "list-none p-0")}>
         {slice.map(({ url, index }) => (
-          <li key={`${url}-${index}`}>
-            <AppImageThumb
-              src={url}
-              alt={`ภาพชมรม ${index + 1}`}
-              onOpen={() => onOpenAt(index)}
-              className="h-36 w-full sm:h-40"
-            />
+          <li key={`${url}-${index}`} className="min-w-0">
+            <button
+              type="button"
+              onClick={() => onOpenAt(index)}
+              className="relative block aspect-square w-full overflow-hidden rounded-lg ring-2 ring-slate-100 transition hover:ring-[#0000BF]/30"
+              aria-label={`ดูภาพชมรม ${index + 1}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
+            </button>
           </li>
         ))}
       </ul>

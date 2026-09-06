@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CalendarDays } from "lucide-react";
 import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import type { ClubPublicPortalEvent } from "@/lib/club-event/load-public-portal";
 import {
   CLUB_EVENT_PORTAL_EVENT_COLS_DESKTOP,
   CLUB_EVENT_PORTAL_EVENT_COLS_MOBILE,
   CLUB_EVENT_PORTAL_EVENT_COLS_TABLET,
   CLUB_EVENT_PORTAL_EVENT_ROWS,
 } from "@/systems/club-event/lib/portal-media";
-import type { ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
 import {
   clubEventOutlineButtonClass,
   clubEventPortalEventCardGridClass,
@@ -51,7 +52,7 @@ export function ClubEventPortalEventCardGrid({
   emptyLabel,
   ariaLabel,
 }: {
-  events: ClubEventRecordDto[];
+  events: ClubPublicPortalEvent[];
   eventHref: (eventId: string) => string;
   linkHref: (path: string) => string;
   links?: ClubPortalLinkChip[];
@@ -63,8 +64,7 @@ export function ClubEventPortalEventCardGrid({
     () => CLUB_EVENT_PORTAL_EVENT_COLS_MOBILE * CLUB_EVENT_PORTAL_EVENT_ROWS,
   );
 
-  useMemo(() => {
-    if (typeof window === "undefined") return;
+  useEffect(() => {
     const sync = () => setPageSize(pageSizeForWidth(window.innerWidth));
     sync();
     window.addEventListener("resize", sync);
@@ -75,6 +75,10 @@ export function ClubEventPortalEventCardGrid({
   const safePage = Math.min(page, totalPages - 1);
   const slice = events.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
+  useEffect(() => {
+    setPage((p) => Math.min(p, Math.max(0, totalPages - 1)));
+  }, [totalPages, pageSize]);
+
   if (events.length === 0) {
     return <AppEmptyState tone="violet">{emptyLabel}</AppEmptyState>;
   }
@@ -84,36 +88,42 @@ export function ClubEventPortalEventCardGrid({
       <ul className={clubEventPortalEventCardGridClass}>
         {slice.map((ev) => {
           const chips = links.filter((l) => l.config?.eventId === ev.id);
+          const cover = ev.coverImageUrl?.trim() || null;
           return (
-            <li key={ev.id} className="min-w-0">
+            <li key={ev.id} className="flex min-w-0 flex-col gap-1.5">
               <Link
                 href={eventHref(ev.id)}
-                className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 shadow-sm transition hover:border-[#5b61ff]/35 hover:shadow-md"
+                className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:border-[#5b61ff]/35 hover:shadow-md"
               >
-                <div className="flex flex-1 flex-col gap-1.5 p-3">
-                  <p className="line-clamp-2 text-sm font-black leading-snug text-[#1e1b4b]">{ev.title}</p>
-                  <p className="text-[11px] font-semibold text-[#66638c]">{formatEventWhen(ev.eventDate)}</p>
-                  {chips.length > 0 ? (
-                    <div className="mt-auto flex flex-wrap gap-1 pt-1">
-                      {chips.map((c) => (
-                        <span
-                          key={c.id}
-                          className="rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6]"
-                        >
-                          {c.title}
-                        </span>
-                      ))}
+                <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100">
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cover}
+                      alt=""
+                      className="h-full w-full object-cover object-center"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-50 to-sky-50">
+                      <CalendarDays className="h-8 w-8 text-[#8b87b8]" strokeWidth={1.75} aria-hidden />
                     </div>
-                  ) : null}
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col gap-0.5 p-2 sm:p-2.5">
+                  <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
+                    {ev.title}
+                  </p>
+                  <p className="text-[10px] font-semibold text-[#66638c]">{formatEventWhen(ev.eventDate)}</p>
                 </div>
               </Link>
               {chips.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 px-0.5">
                   {chips.map((c) => (
                     <Link
-                      key={`${c.id}-a`}
+                      key={c.id}
                       href={linkHref(c.publicPath)}
-                      className="text-[10px] font-bold text-[#4d47b6] underline"
+                      className="rounded-md border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-1.5 py-0.5 text-[10px] font-bold text-[#4d47b6] transition hover:bg-[#5b61ff]/15"
                     >
                       {c.title}
                     </Link>

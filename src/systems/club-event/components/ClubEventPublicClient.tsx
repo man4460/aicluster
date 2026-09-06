@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Users } from "lucide-react";
 import {
   AppImageLightbox,
@@ -17,7 +17,7 @@ import {
 import { ClubEventPortalGallery } from "@/systems/club-event/components/ClubEventPortalGallery";
 import { ClubEventPortalMemberSearch } from "@/systems/club-event/components/ClubEventPortalMemberSearch";
 import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEventPortalSection";
-import { CLUB_EVENT_PORTAL_SAMPLE_BANNER } from "@/systems/club-event/lib/portal-media";
+import { CLUB_EVENT_PORTAL_SAMPLE_BANNER, CLUB_EVENT_PORTAL_GALLERY_MAX } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
   clubEventPortalHeaderNavLinkClass,
@@ -47,7 +47,19 @@ export function ClubEventPublicClient({
   const [committeeOpen, setCommitteeOpen] = useState(false);
 
   const title = profile.displayName.trim() || "ชมรม";
-  const gallery = profile.portalGallery?.length ? profile.portalGallery : [];
+  const gallery = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const push = (url: string) => {
+      const u = url.trim();
+      if (!u || seen.has(u)) return;
+      seen.add(u);
+      out.push(u);
+    };
+    for (const u of profile.portalGallery ?? []) push(u);
+    for (const u of initialData.pastEventGalleryUrls ?? []) push(u);
+    return out.slice(0, CLUB_EVENT_PORTAL_GALLERY_MAX);
+  }, [profile.portalGallery, initialData.pastEventGalleryUrls]);
   const banner = profile.portalBannerUrl?.trim() || CLUB_EVENT_PORTAL_SAMPLE_BANNER;
   const showCommittee = profile.portalShowCommittee && committee.length > 0;
   const showMembers = Boolean(profile.portalShowMembers);

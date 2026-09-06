@@ -19,19 +19,40 @@ export type ClubPublicPortalLink = {
   publicPath: string;
 };
 
+export type ClubPublicPortalEvent = ClubEventRecordDto & {
+  /** รูปปกจากแกลเลอรีกิจกรรม (ใบแรก) */
+  coverImageUrl: string | null;
+  galleryPreview: { id: string; imageUrl: string; fileName: string }[];
+};
+
 export type ClubPublicPortalPayload = {
   profile: ClubEventProfileDto;
   committee: ClubCommitteeMember[];
-  upcomingEvents: ClubEventRecordDto[];
-  pastEvents: Array<
-    ClubEventRecordDto & {
-      galleryPreview: { id: string; imageUrl: string; fileName: string }[];
-    }
-  >;
+  upcomingEvents: ClubPublicPortalEvent[];
+  pastEvents: ClubPublicPortalEvent[];
+  /** รูปจากแกลเลอรีกิจกรรมย้อนหลัง — รวมเข้าแกลเลอรีพอร์ทัล */
+  pastEventGalleryUrls: string[];
   links: ClubPublicPortalLink[];
   /** ลิงก์ที่ไม่มี eventId — แสดงใต้กฎระเบียบ */
   standaloneLinks: ClubPublicPortalLink[];
 };
+
+function mapPortalEvent(
+  e: Parameters<typeof mapClubEventRecord>[0] & {
+    gallery?: { id: string; imageUrl: string; fileName: string }[];
+  },
+): ClubPublicPortalEvent {
+  const galleryPreview = (e.gallery ?? []).map((g) => ({
+    id: g.id,
+    imageUrl: g.imageUrl,
+    fileName: g.fileName,
+  }));
+  return {
+    ...mapClubEventRecord(e),
+    coverImageUrl: galleryPreview[0]?.imageUrl ?? null,
+    galleryPreview,
+  };
+}
 
 /** โหลดพอร์ทัลสาธารณะชมรม — ใช้ทั้งหน้า SSR และ API */
 export async function loadClubEventPublicPortal(
@@ -45,7 +66,10 @@ export async function loadClubEventPublicPortal(
     prisma.clubEventRecord.findMany({
       where: { profileId: profile.id, status: "UPCOMING" },
       orderBy: { eventDate: "asc" },
-      include: { _count: { select: { gallery: true } } },
+      include: {
+        _count: { select: { gallery: true } },
+        gallery: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
       take: 20,
     }),
     prisma.clubEventRecord.findMany({
@@ -53,7 +77,7 @@ export async function loadClubEventPublicPortal(
       orderBy: { eventDate: "desc" },
       include: {
         _count: { select: { gallery: true } },
-        gallery: { orderBy: { sortOrder: "asc" }, take: 6 },
+        gallery: { orderBy: { sortOrder: "asc" }, take: 8 },
       },
       take: 12,
     }),
@@ -71,18 +95,24 @@ export async function loadClubEventPublicPortal(
     publicPath: `/club/${slug}/link/${l.id}`,
   }));
 
+  const pastEvents = past.map(mapPortalEvent);
+  const pastEventGalleryUrls: string[] = [];
+  const seen = new Set<string>();
+  for (const ev of pastEvents) {
+    for (const g of ev.galleryPreview) {
+      const url = g.imageUrl.trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      pastEventGalleryUrls.push(url);
+    }
+  }
+
   return {
     profile: mapClubEventProfile(profile),
     committee: parseCommitteeJson(profile.committeeJson),
-    upcomingEvents: upcoming.map(mapClubEventRecord),
-    pastEvents: past.map((e) => ({
-      ...mapClubEventRecord(e),
-      galleryPreview: e.gallery.map((g) => ({
-        id: g.id,
-        imageUrl: g.imageUrl,
-        fileName: g.fileName,
-      })),
-    })),
+    upcomingEvents: upcoming.map(mapPortalEvent),
+    pastEvents,
+    pastEventGalleryUrls,
     links: mappedLinks,
     standaloneLinks: mappedLinks.filter((l) => !l.config.eventId?.trim()),
   };
