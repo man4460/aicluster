@@ -22,6 +22,8 @@ import {
 import {
   CLUB_EVENT_MANAGE_TAB_ITEMS,
   clubEventManageHref,
+  clubEventSettingsHref,
+  isClubEventManageDuesLegacyTab,
   parseClubEventManageTab,
   type ClubEventManageTabKey,
 } from "@/systems/club-event/club-event-module-nav";
@@ -120,7 +122,8 @@ function emptyMemberForm(): MemberFormState {
 export function ClubEventManageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = parseClubEventManageTab(searchParams.get("tab"));
+  const rawTab = searchParams.get("tab");
+  const tab = parseClubEventManageTab(rawTab);
   const notice = useAppNoticePopup();
   const lb = useAppImageLightbox();
   const excelInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +145,11 @@ export function ClubEventManageClient() {
     note: "",
     imageUrl: "" as string | null,
   });
+
+  useEffect(() => {
+    if (!isClubEventManageDuesLegacyTab(rawTab)) return;
+    router.replace(clubEventSettingsHref("dues"), { scroll: false });
+  }, [rawTab, router]);
 
   const setTab = useCallback(
     (next: string) => {

@@ -40,8 +40,8 @@ export type ClubEventModuleNavKey = "dashboard" | "finance" | "manage" | "settin
 /** แท็บย่อยแดชบอร์ด: กำหนดการ · ย้อนหลัง · โครงสร้าง */
 export type ClubEventDashboardTabKey = "upcoming" | "past" | "committee";
 
-/** แท็บย่อยการจัดการ: สมาชิก · ค่าบำรุง · ทรัพย์สิน */
-export type ClubEventManageTabKey = "members" | "dues" | "assets";
+/** แท็บย่อยการจัดการ: สมาชิก · ทรัพย์สิน */
+export type ClubEventManageTabKey = "members" | "assets";
 
 /** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · ค่าบำรุง · เว็ปลิงค์ลูกค้า */
 export type ClubEventSettingsTab = "basic" | "finance" | "dues" | "portal";
@@ -81,7 +81,6 @@ export const CLUB_EVENT_MANAGE_TAB_ITEMS: {
   shortLabel?: string;
 }[] = [
   { key: "members", label: "สมาชิก" },
-  { key: "dues", label: "ค่าบำรุงประจำปี", shortLabel: "บำรุง" },
   { key: "assets", label: "ทรัพย์สิน", shortLabel: "ทรัพย์" },
 ];
 
@@ -134,8 +133,12 @@ export function clubEventDashboardTabHref(tab: ClubEventDashboardTabKey): string
 
 export function parseClubEventManageTab(raw: string | null | undefined): ClubEventManageTabKey {
   if (raw === "assets") return "assets";
-  if (raw === "dues") return "dues";
   return "members";
+}
+
+/** URL เก่า manage?tab=dues → ตั้งค่าค่าบำรุง (ไม่ซ้ำเมนูจัดการ) */
+export function isClubEventManageDuesLegacyTab(raw: string | null | undefined): boolean {
+  return raw === "dues";
 }
 
 export function clubEventManageHref(tab?: ClubEventManageTabKey): string {
