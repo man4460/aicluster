@@ -242,6 +242,31 @@ async function main() {
 
   let created = 0;
   let updated = 0;
+  let deactivatedDupes = 0;
+
+  // ปิด DEMO ที่ซ้ำชื่อกับสินค้าเดิม (กันรายการซ้ำบนหน้าร้าน)
+  const demoRows = await prisma.ecommerceProduct.findMany({
+    where: { storeId: store.id, sku: { startsWith: "DEMO-" }, isActive: true },
+    select: { id: true, name: true },
+  });
+  for (const demo of demoRows) {
+    const original = await prisma.ecommerceProduct.findFirst({
+      where: {
+        storeId: store.id,
+        isActive: true,
+        id: { not: demo.id },
+        NOT: { sku: { startsWith: "DEMO-" } },
+        name: demo.name,
+      },
+      select: { id: true },
+    });
+    if (!original) continue;
+    await prisma.ecommerceProduct.update({
+      where: { id: demo.id },
+      data: { isActive: false },
+    });
+    deactivatedDupes += 1;
+  }
 
   for (let i = 0; i < PRODUCTS.length; i++) {
     const p = PRODUCTS[i]!;
@@ -261,13 +286,33 @@ async function main() {
       categoryId: categoryIds.get(p.category) ?? null,
     };
 
+    // 1) ชื่อเดียวกัน (สินค้าเดิมที่ไม่ใช่ DEMO) 2) SKU DEMO 3) สร้างใหม่
+    const byName = await prisma.ecommerceProduct.findFirst({
+      where: {
+        storeId: store.id,
+        name: p.name,
+        NOT: { sku: { startsWith: "DEMO-" } },
+      },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    });
     const bySku = await prisma.ecommerceProduct.findFirst({
       where: { storeId: store.id, sku: p.sku },
       select: { id: true },
     });
-    if (bySku) {
-      await prisma.ecommerceProduct.update({ where: { id: bySku.id }, data });
+    const targetId = byName?.id ?? bySku?.id;
+
+    if (targetId) {
+      await prisma.ecommerceProduct.update({ where: { id: targetId }, data });
       updated += 1;
+      // ถ้าอัปเดตของเดิมแล้ว ปิดแถว DEMO ซ้ำชื่อ
+      if (byName && bySku && bySku.id !== byName.id) {
+        await prisma.ecommerceProduct.update({
+          where: { id: bySku.id },
+          data: { isActive: false },
+        });
+        deactivatedDupes += 1;
+      }
       continue;
     }
 
@@ -313,6 +358,7 @@ async function main() {
         storeName: store.storeName,
         created,
         updated,
+        deactivatedDupes,
         filledBlankDescriptions: blank.length,
         activeWithStock: activeCount,
         shopUrl: `http://localhost:3000/shop/${store.id}`,

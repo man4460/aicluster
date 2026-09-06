@@ -133,27 +133,53 @@ export function EcommerceProductDetailModal({
       >
         <div className="space-y-4 text-left">
           <div className="space-y-2 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-sm sm:p-2.5">
-            <button
-              type="button"
-              className="relative aspect-square w-full overflow-hidden rounded-[1.25rem] bg-slate-50"
-              onClick={() => current && lb.openGallery(images, slide)}
-              aria-label="ดูรูปสินค้าเต็มจอ"
-            >
-              <EcommerceRemoteImg
-                src={current}
-                className="absolute inset-0 h-full w-full object-cover"
-                fallback={
-                  <div className="flex h-full items-center justify-center text-sm font-bold text-[#8b87b8]">
-                    ไม่มีรูป
-                  </div>
-                }
-              />
+            <div className="relative aspect-square w-full overflow-hidden rounded-[1.25rem] bg-slate-50">
+              <button
+                type="button"
+                className="absolute inset-0"
+                onClick={() => current && lb.openGallery(images, slide)}
+                aria-label="ดูรูปสินค้าเต็มจอ"
+              >
+                <EcommerceRemoteImg
+                  src={current}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  fallback={
+                    <div className="flex h-full items-center justify-center text-sm font-bold text-[#8b87b8]">
+                      ไม่มีรูป
+                    </div>
+                  }
+                />
+              </button>
               {images.length > 1 ? (
-                <span className="absolute bottom-2 right-2 rounded-lg bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
-                  {slide + 1}/{images.length} · แตะดูเต็มจอ
-                </span>
+                <>
+                  <button
+                    type="button"
+                    className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm hover:bg-white"
+                    aria-label="รูปก่อนหน้า"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSlide((s) => (s - 1 + images.length) % images.length);
+                    }}
+                  >
+                    <IconChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm hover:bg-white"
+                    aria-label="รูปถัดไป"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSlide((s) => (s + 1) % images.length);
+                    }}
+                  >
+                    <IconChevronRight className="h-4 w-4" />
+                  </button>
+                  <span className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-lg bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
+                    {slide + 1}/{images.length} · แตะดูเต็มจอ
+                  </span>
+                </>
               ) : null}
-            </button>
+            </div>
             {images.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto pb-0.5">
                 {images.map((src, i) => (
@@ -263,5 +289,21 @@ export function EcommerceProductDetailModal({
         alt={product.name}
       />
     </>
+  );
+}
+
+function IconChevronLeft({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevronRight({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
