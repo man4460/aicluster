@@ -76,7 +76,7 @@ type DeskPayload = {
   }>;
 };
 
-type DeskFilter = "all" | "checkedIn" | "registered" | "pendingFulfill" | "pendingSign";
+type DeskFilter = "all" | "checkedIn" | "registered" | "pendingFulfill";
 
 type DeskRegistered = DeskPayload["registered"][number];
 type DeskMember = DeskPayload["members"][number];
@@ -320,7 +320,6 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
     for (const c of data.checkIns) {
       if (filter === "registered") continue;
       if (filter === "pendingFulfill" && !checkInNeedsFulfill(c)) continue;
-      if (filter === "pendingSign" && !checkInNeedsSign(c)) continue;
       rows.push({
         key: `ci-${c.id}`,
         sortAt: new Date(c.checkedInAt).getTime(),
@@ -410,9 +409,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
         ? "แสดงเฉพาะลงทะเบียนล่วงหน้าที่ยังไม่เช็กอิน"
         : filter === "pendingFulfill"
           ? "แสดงเฉพาะรายการรอรับของ"
-          : filter === "pendingSign"
-            ? "แสดงเฉพาะรายการรอเซ็นรับ"
-            : null;
+          : null;
 
   return (
     <>
@@ -474,7 +471,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(
                 [
                   {
@@ -500,14 +497,6 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     border: "border-l-amber-500",
                     tone: "text-amber-800",
                     num: "text-amber-900",
-                  },
-                  {
-                    key: "pendingSign" as const,
-                    label: "รอเซ็นรับ",
-                    value: data.summary.pendingSign,
-                    border: "border-l-rose-500",
-                    tone: "text-rose-700",
-                    num: "text-rose-800",
                     span: true,
                   },
                 ] as const
@@ -743,7 +732,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                   )}
                 </section>
 
-                <section className="space-y-2 rounded-xl border border-dashed border-[#d8d6ec] bg-white/80 p-3">
+                <section className="space-y-2 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
                   <h3 className="text-sm font-black text-[#4d47b6]">
                     Walk-in — มาหน้างาน (ยังไม่ลงทะเบียน)
                   </h3>
@@ -787,7 +776,6 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
         title="QR ให้สมาชิกสแกน"
         description="เช็กอินวันงาน · อัปเดตสดบนแดชบอร์ด"
         size="sm"
-        appearance="glass"
       >
         <div className="space-y-3 text-center">
           {qrDataUrl ? (
@@ -845,7 +833,6 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
             : undefined
         }
         size="md"
-        appearance="glass"
       >
         {selected ? (
           <div className="space-y-3">
