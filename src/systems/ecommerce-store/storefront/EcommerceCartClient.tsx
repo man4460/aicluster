@@ -119,9 +119,8 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
           "grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8",
         )}
       >
-        <EcommercePortalSection id="cart-items" title="รายการในตะกร้า" bodyClassName="!space-y-3">
-          <ul className="space-y-3">
-            {cart.lines.map((line) => (
+        <ul className="space-y-3" aria-label="รายการในตะกร้า">
+          {cart.lines.map((line) => (
               <li
                 key={line.productId}
                 className={cn(ecommerceStorePanelClass, "flex gap-3 p-3 sm:gap-4 sm:p-4")}
@@ -175,8 +174,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
                 </div>
               </li>
             ))}
-          </ul>
-        </EcommercePortalSection>
+        </ul>
 
         <aside className="hidden lg:block lg:sticky lg:top-24">
           <CartSummary totalBaht={cart.totalBaht} itemCount={cart.itemCount} storeId={storeId} />
