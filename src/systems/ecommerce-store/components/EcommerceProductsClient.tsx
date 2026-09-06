@@ -14,7 +14,7 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { parseEcommerceProductImageUrls } from "@/lib/ecommerce/product-images";
-import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { FormModal } from "@/components/ui/FormModal";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -39,8 +39,52 @@ import {
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
   ecommerceStoreNavDividerClass,
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePanelClass,
+  ecommerceStorePrimaryButtonClass,
   ecommerceStoreRowIconButtonClass,
+  ecommerceStoreTextareaClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+
+const formLabelClass = "block text-xs font-semibold text-[#4d47b6]";
+const formCheckRowClass =
+  "flex min-h-9 cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2.5";
+const formSectionTitleClass = "text-xs font-bold tracking-wide text-[#1e1b4b]";
+
+function ProductFormModalFooter({
+  onCancel,
+  onSubmit,
+  submitLabel,
+  submitDisabled,
+  loading,
+}: {
+  onCancel: () => void;
+  onSubmit: () => void;
+  submitLabel: string;
+  submitDisabled?: boolean;
+  loading?: boolean;
+}) {
+  return (
+    <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={loading}
+        className={cn(ecommerceStoreOutlineButtonClass, "w-full sm:w-auto sm:min-w-[6.5rem]")}
+      >
+        ยกเลิก
+      </button>
+      <button
+        type="button"
+        disabled={submitDisabled || loading}
+        onClick={onSubmit}
+        className={cn(ecommerceStorePrimaryButtonClass, "w-full sm:w-auto sm:min-w-[7.5rem]")}
+      >
+        {loading ? "กำลังบันทึก…" : submitLabel}
+      </button>
+    </div>
+  );
+}
 
 type Category = {
   id: string;
@@ -635,130 +679,162 @@ export function EcommerceProductsClient({
       setBestseller?: (v: boolean) => void;
     },
   ) => (
-    <div className="space-y-3 p-1">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <label className="block text-sm font-semibold text-[#1e1b4b] sm:col-span-2">
-          ชื่อสินค้า
-          <input
-            className={cn(ecommerceFieldClass, "mt-1.5")}
-            value={opts.nameVal}
-            onChange={(e) => opts.setNameVal(e.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-semibold text-[#1e1b4b]">
-          ราคา (บาท)
-          <input
-            className={cn(ecommerceFieldClass, "mt-1.5")}
-            type="number"
-            min={0}
-            value={opts.priceVal}
-            onChange={(e) => opts.setPriceVal(e.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-semibold text-[#1e1b4b]">
-          สต๊อก
-          <input
-            className={cn(ecommerceFieldClass, "mt-1.5")}
-            type="number"
-            min={0}
-            value={opts.stockVal}
-            onChange={(e) => opts.setStockVal(e.target.value)}
-          />
-        </label>
-        {opts.setSkuVal ? (
-          <label className="block text-sm font-semibold text-[#1e1b4b] sm:col-span-2">
-            SKU (ถ้ามี)
+    <div className="max-h-[min(60vh,560px)] space-y-3 overflow-y-auto pr-0.5">
+      <section className={cn(ecommerceStorePanelClass, "space-y-3 p-3 sm:p-3.5")}>
+        <p className={formSectionTitleClass}>ข้อมูลพื้นฐาน</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className={cn(formLabelClass, "sm:col-span-2")}>
+            ชื่อสินค้า
             <input
               className={cn(ecommerceFieldClass, "mt-1.5")}
-              value={opts.skuVal}
-              onChange={(e) => opts.setSkuVal?.(e.target.value)}
+              value={opts.nameVal}
+              onChange={(e) => opts.setNameVal(e.target.value)}
             />
           </label>
-        ) : null}
-      </div>
-      <label className="block text-sm font-semibold text-[#1e1b4b]">
-        หมวดหมู่
-        <select
-          className={cn(ecommerceFieldClass, "mt-1.5")}
-          value={opts.categoryVal}
-          onChange={(e) => opts.setCategoryVal(e.target.value)}
-        >
-          <option value="">— ไม่ระบุหมวด —</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {opts.setDescriptionVal ? (
-        <label className="block text-sm font-semibold text-[#1e1b4b]">
-          รายละเอียดสินค้า
-          <textarea
-            className={cn(ecommerceFieldClass, "mt-1.5 min-h-[5.5rem] resize-y py-2")}
-            value={opts.descriptionVal ?? ""}
-            onChange={(e) => opts.setDescriptionVal?.(e.target.value)}
-            placeholder="สรุปสั้น ๆ แสดงบนการ์ดหน้าร้าน · รายละเอียดเต็มในหน้าดูสินค้า"
-            maxLength={2000}
-            rows={4}
-          />
-        </label>
+          <label className={formLabelClass}>
+            ราคา (บาท)
+            <input
+              className={cn(ecommerceFieldClass, "mt-1.5")}
+              type="number"
+              min={0}
+              value={opts.priceVal}
+              onChange={(e) => opts.setPriceVal(e.target.value)}
+            />
+          </label>
+          <label className={formLabelClass}>
+            สต๊อก
+            <input
+              className={cn(ecommerceFieldClass, "mt-1.5")}
+              type="number"
+              min={0}
+              value={opts.stockVal}
+              onChange={(e) => opts.setStockVal(e.target.value)}
+            />
+          </label>
+          {opts.setSkuVal ? (
+            <label className={cn(formLabelClass, "sm:col-span-2")}>
+              SKU (ถ้ามี)
+              <input
+                className={cn(ecommerceFieldClass, "mt-1.5")}
+                value={opts.skuVal}
+                onChange={(e) => opts.setSkuVal?.(e.target.value)}
+              />
+            </label>
+          ) : null}
+          <label className={cn(formLabelClass, "sm:col-span-2")}>
+            หมวดหมู่
+            <select
+              className={cn(ecommerceFieldClass, "mt-1.5")}
+              value={opts.categoryVal}
+              onChange={(e) => opts.setCategoryVal(e.target.value)}
+            >
+              <option value="">— ไม่ระบุหมวด —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {opts.setDescriptionVal ? (
+            <label className={cn(formLabelClass, "sm:col-span-2")}>
+              รายละเอียดสินค้า
+              <textarea
+                className={cn(ecommerceStoreTextareaClass, "mt-1.5")}
+                value={opts.descriptionVal ?? ""}
+                onChange={(e) => opts.setDescriptionVal?.(e.target.value)}
+                placeholder="สรุปสั้น ๆ แสดงบนการ์ดหน้าร้าน · รายละเอียดเต็มในหน้าดูสินค้า"
+                maxLength={2000}
+                rows={4}
+              />
+            </label>
+          ) : null}
+        </div>
+      </section>
+
+      {opts.setIsActive || opts.setRecommended || opts.setBestseller || opts.showFeatured ? (
+        <section className={cn(ecommerceStorePanelClass, "space-y-2 p-3 sm:p-3.5")}>
+          <p className={formSectionTitleClass}>การแสดงบนเว็บไซต์</p>
+          {opts.setIsActive ? (
+            <label className={formCheckRowClass}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                checked={opts.isActive ?? true}
+                onChange={(e) => opts.setIsActive?.(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-[#1e1b4b]">แสดงบนเว็บไซต์</span>
+                <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                  ติ๊กไว้ = ลูกค้าเห็นบนหน้าร้าน · ไม่ติ๊ก = ซ่อนจากเว็บ
+                </span>
+              </span>
+            </label>
+          ) : null}
+          {opts.showFeatured && opts.setFeatured ? (
+            <label className={formCheckRowClass}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                checked={opts.featured ?? false}
+                onChange={(e) => opts.setFeatured?.(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-[#1e1b4b]">สินค้าเด่น (Sale Page)</span>
+                <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                  ตั้งเป็นสินค้าหน้าซื้อด่วน
+                </span>
+              </span>
+            </label>
+          ) : null}
+          {opts.setRecommended ? (
+            <label className={formCheckRowClass}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                checked={opts.recommended ?? false}
+                onChange={(e) => opts.setRecommended?.(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-[#1e1b4b]">สินค้าแนะนำ</span>
+                <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                  แสดงในแถวแนะนำบนหน้าร้าน
+                </span>
+              </span>
+            </label>
+          ) : null}
+          {opts.setBestseller ? (
+            <label className={formCheckRowClass}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                checked={opts.bestseller ?? false}
+                onChange={(e) => opts.setBestseller?.(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-[#1e1b4b]">สินค้าขายดี</span>
+                <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                  แสดงในแถวขายดีบนหน้าร้าน
+                </span>
+              </span>
+            </label>
+          ) : null}
+        </section>
       ) : null}
-      {opts.setIsActive ? (
-        <label className="flex min-h-[44px] cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-slate-300"
-            checked={opts.isActive ?? true}
-            onChange={(e) => opts.setIsActive?.(e.target.checked)}
-          />
-          <span className="min-w-0">
-            <span className="block text-sm font-bold text-[#1e1b4b]">แสดงบนเว็บไซต์</span>
-            <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
-              ติ๊กไว้ = ลูกค้าเห็นสินค้านี้บนหน้าร้าน · เอาออก = ซ่อนจากเว็บ (ยังจัดการในแดชบอร์ดได้)
-            </span>
-          </span>
-        </label>
-      ) : null}
-      {opts.showFeatured && opts.setFeatured ? (
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
-            checked={opts.featured ?? false}
-            onChange={(e) => opts.setFeatured?.(e.target.checked)}
-          />
-          ตั้งเป็นสินค้าเด่น (Sale Page)
-        </label>
-      ) : null}
-      {opts.setRecommended ? (
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
-            checked={opts.recommended ?? false}
-            onChange={(e) => opts.setRecommended?.(e.target.checked)}
-          />
-          สินค้าแนะนำ (แสดงแถวแนะนำบนหน้าร้าน)
-        </label>
-      ) : null}
-      {opts.setBestseller ? (
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
-            checked={opts.bestseller ?? false}
-            onChange={(e) => opts.setBestseller?.(e.target.checked)}
-          />
-          สินค้าขายดี (แสดงแถวขายดีบนหน้าร้อง)
-        </label>
-      ) : null}
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-[#1e1b4b]">รูปปกสินค้า</p>
-        <div className="flex flex-wrap items-center gap-3">
+
+      <section className={cn(ecommerceStorePanelClass, "space-y-3 p-3 sm:p-3.5")}>
+        <div>
+          <p className={formSectionTitleClass}>รูปปกสินค้า</p>
+          <p className="mt-0.5 text-[11px] font-medium text-[#66638c]">รูปหลักบนการ์ดหน้าร้าน</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
           {opts.imageVal ? (
             <AppImageThumb src={opts.imageVal} alt="รูปสินค้า" onOpen={() => lb.open(opts.imageVal!)} />
-          ) : null}
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-[#8b87b8]">
+              ไม่มีรูป
+            </div>
+          )}
           <input
             ref={opts.galleryInputRef}
             type="file"
@@ -786,77 +862,90 @@ export function EcommerceProductsClient({
             busy={uploading}
             onPickGallery={() => opts.galleryInputRef.current?.click()}
             onPickCamera={() => opts.cameraInputRef.current?.click()}
-            labels={{ gallery: "รูปปก", camera: "ถ่ายปก" }}
+            labels={{ gallery: "เลือกรูปปก", camera: "ถ่ายรูปปก" }}
+            className="justify-start"
+            buttonClassName={ecommerceStoreOutlineButtonClass}
           />
         </div>
-      </div>
-      {opts.setGalleryUrls && opts.anglesInputRef ? (
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-[#1e1b4b]">
-            รูปมุมอื่น ({opts.galleryUrls?.length ?? 0}/{ECOM_GALLERY_MAX})
-          </p>
-          <p className="text-xs font-medium text-[#66638c]">ลูกค้าเลื่อนดูหลายมุมบนหน้าร้านได้</p>
-          <input
-            ref={opts.anglesInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="sr-only"
-            onChange={(e) => {
-              const files = e.target.files;
-              if (files?.length) {
-                void uploadGalleryFiles(
-                  files,
-                  opts.galleryUrls ?? [],
-                  opts.setGalleryUrls!,
-                  opts.imageVal,
-                );
-              }
-              e.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            disabled={uploading || (opts.galleryUrls?.length ?? 0) >= ECOM_GALLERY_MAX}
-            onClick={() => opts.anglesInputRef?.current?.click()}
-            className={cn(ecommerceStoreRowIconButtonClass, "min-h-10 px-3 text-xs font-bold")}
-          >
-            + เพิ่มมุมรูป
-          </button>
-          {(opts.galleryUrls?.length ?? 0) > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {opts.galleryUrls!.map((url, idx) => (
-                <div key={`${url}-${idx}`} className="relative">
-                  <AppImageThumb
-                    src={url}
-                    alt={`มุม ${idx + 1}`}
-                    onOpen={() =>
-                      lb.openGallery(
-                        [opts.imageVal, ...(opts.galleryUrls ?? [])].filter(
-                          (u): u is string => Boolean(u),
-                        ),
-                        opts.imageVal ? idx + 1 : idx,
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white"
-                    aria-label={`ลบมุมที่ ${idx + 1}`}
-                    onClick={() =>
-                      opts.setGalleryUrls?.(opts.galleryUrls!.filter((_, i) => i !== idx))
-                    }
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+
+        {opts.setGalleryUrls && opts.anglesInputRef ? (
+          <div className="space-y-2 border-t border-slate-200/80 pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className={formSectionTitleClass}>
+                  รูปมุมอื่น ({opts.galleryUrls?.length ?? 0}/{ECOM_GALLERY_MAX})
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-[#66638c]">
+                  ลูกค้าเลื่อนดูหลายมุมบนหน้าร้านได้
+                </p>
+              </div>
+              <input
+                ref={opts.anglesInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files?.length) {
+                    void uploadGalleryFiles(
+                      files,
+                      opts.galleryUrls ?? [],
+                      opts.setGalleryUrls!,
+                      opts.imageVal,
+                    );
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploading || (opts.galleryUrls?.length ?? 0) >= ECOM_GALLERY_MAX}
+                onClick={() => opts.anglesInputRef?.current?.click()}
+                className={ecommerceStoreOutlineButtonClass}
+              >
+                + เพิ่มมุมรูป
+              </button>
             </div>
-          ) : null}
-        </div>
-      ) : null}
+            {(opts.galleryUrls?.length ?? 0) > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {opts.galleryUrls!.map((url, idx) => (
+                  <div key={`${url}-${idx}`} className="relative">
+                    <AppImageThumb
+                      src={url}
+                      alt={`มุม ${idx + 1}`}
+                      onOpen={() =>
+                        lb.openGallery(
+                          [opts.imageVal, ...(opts.galleryUrls ?? [])].filter(
+                            (u): u is string => Boolean(u),
+                          ),
+                          opts.imageVal ? idx + 1 : idx,
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className={cn(
+                        ecommerceStoreRowIconButtonClass,
+                        "absolute -right-1.5 -top-1.5 border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100",
+                      )}
+                      aria-label={`ลบมุมที่ ${idx + 1}`}
+                      onClick={() =>
+                        opts.setGalleryUrls?.(opts.galleryUrls!.filter((_, i) => i !== idx))
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
     </div>
   );
+
 
   const body = (
     <>
@@ -1175,7 +1264,7 @@ export function EcommerceProductsClient({
         description="ชื่อหมวดจะแสดงให้ลูกค้าเลือกบนหน้าร้าน"
         size="sm"
         footer={
-          <FormModalFooterActions
+          <ProductFormModalFooter
             onCancel={() => {
               setShowAddCategoryModal(false);
               resetCategoryForm();
@@ -1187,8 +1276,8 @@ export function EcommerceProductsClient({
           />
         }
       >
-        <div className="space-y-3 p-1">
-          <label className="block text-sm font-semibold text-[#1e1b4b]">
+        <div className={cn(ecommerceStorePanelClass, "space-y-3 p-3")}>
+          <label className={formLabelClass}>
             ชื่อหมวด
             <input
               className={cn(ecommerceFieldClass, "mt-1.5")}
@@ -1198,7 +1287,7 @@ export function EcommerceProductsClient({
               autoFocus
             />
           </label>
-          {categoryErr ? <p className="text-sm text-rose-600">{categoryErr}</p> : null}
+          {categoryErr ? <p className="text-sm font-semibold text-rose-600">{categoryErr}</p> : null}
         </div>
       </FormModal>
 
@@ -1212,7 +1301,7 @@ export function EcommerceProductsClient({
         description="กรอกข้อมูลและแนบรูป — บันทึกแล้วแสดงในหน้าร้าน"
         size="lg"
         footer={
-          <FormModalFooterActions
+          <ProductFormModalFooter
             onCancel={() => {
               setShowAddProductModal(false);
               resetProductForm();
@@ -1249,7 +1338,11 @@ export function EcommerceProductsClient({
           bestseller: newBestseller,
           setBestseller: setNewBestseller,
         })}
-        {productErr ? <p className="px-1 text-sm text-rose-600">{productErr}</p> : null}
+        {productErr ? (
+          <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+            {productErr}
+          </p>
+        ) : null}
       </FormModal>
 
       <FormModal
@@ -1262,7 +1355,7 @@ export function EcommerceProductsClient({
         description="ชื่อ ราคา สต๊อก หมวด รายละเอียด และรูป"
         size="lg"
         footer={
-          <FormModalFooterActions
+          <ProductFormModalFooter
             onCancel={() => {
               setShowEditProductModal(false);
               resetEditForm();
@@ -1304,7 +1397,11 @@ export function EcommerceProductsClient({
           bestseller: editBestseller,
           setBestseller: setEditBestseller,
         })}
-        {editErr ? <p className="px-1 text-sm text-rose-600">{editErr}</p> : null}
+        {editErr ? (
+          <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+            {editErr}
+          </p>
+        ) : null}
       </FormModal>
 
       <FormModal
