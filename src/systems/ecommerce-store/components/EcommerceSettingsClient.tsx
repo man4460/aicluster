@@ -11,7 +11,6 @@ import {
 } from "@/components/app-templates";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
-import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
@@ -70,13 +69,15 @@ const LOGO_UPLOAD_URL = "/api/ecommerce-store/session/upload-logo";
 const SETTINGS_TABS: { id: EcommerceStoreSettingsTab; label: string; shortLabel: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
-  { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า", shortLabel: "ลิงก์ลูกค้า" },
+  { id: "portal", label: "ลิงก์เว็บ", shortLabel: "ลิงก์เว็บ" },
+  { id: "staff", label: "พนักงาน", shortLabel: "พนักงาน" },
 ];
 
 const SETTINGS_TAB_DESCRIPTIONS: Record<EcommerceStoreSettingsTab, string> = {
   basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่ · สต๊อก",
   finance: "ชำระเงิน · พร้อมเพย์ · ขนาดสลิป · หมายเหตุชำระ",
-  portal: "ลิงก์ร้าน · ลิงก์พนักงาน · LINE · Facebook · แผนที่ · โดเมน · Sale Page",
+  portal: "ลิงก์ร้านลูกค้า · LINE · Facebook · แผนที่ · โดเมน · Sale Page",
+  staff: "ลิงก์ / QR พนักงาน — แดชบอร์ด + เว็บร้าน (ไม่เปิดการเงิน/จัดการ/ตั้งค่า)",
 };
 
 const SETTINGS_TAB_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.id));
@@ -105,23 +106,18 @@ function IconSave({ className }: { className?: string }) {
   );
 }
 
-function EcommercePortalLinkPanel({
+function EcommerceShopWebLinkPanel({
   shopUrl,
   storeId,
-  storeName,
-  logoUrl,
   salePageEnabled,
   featuredProductId,
 }: {
   shopUrl: string;
   storeId: string;
-  storeName: string;
-  logoUrl: string | null;
   salePageEnabled: boolean;
   featuredProductId: string | null;
 }) {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const [staffModalOpen, setStaffModalOpen] = useState(false);
 
   const copy = async () => {
     try {
@@ -132,81 +128,72 @@ function EcommercePortalLinkPanel({
     }
   };
 
-  const cardClass =
-    "min-h-[140px] rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/70 via-white/50 to-indigo-50/50 p-4 text-left shadow-md backdrop-blur-xl transition hover:-translate-y-0.5 sm:rounded-[2rem] sm:p-5";
-
   return (
-    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
+    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="ลิงก์เว็บ">
       <div className="space-y-3 text-left">
-        <p className="text-sm text-[#5f5a8a]">
-          ลิงก์ร้านให้ลูกค้า · ลิงก์พนักงานใช้ได้เฉพาะเมนูแดชบอร์ดและเว็บร้าน
-        </p>
+        <p className="text-sm text-[#5f5a8a]">ลิงก์ร้านออนไลน์ให้ลูกค้าสั่งซื้อ · ตั้ง LINE / โดเมน / Sale Page ด้านล่าง</p>
         {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className={cardClass}>
-            <p className="text-xs font-bold text-[#4d47b6]">ลิงก์ร้านออนไลน์ (ลูกค้า)</p>
-            <p className="mt-2 break-all text-sm font-semibold text-[#1e1b4b]">{shopUrl}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <a
-                href={ecommercePublicShopUrl(storeId)}
+        <div className="rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/70 via-white/50 to-indigo-50/50 p-4 text-left shadow-md backdrop-blur-xl sm:rounded-[2rem] sm:p-5">
+          <p className="text-xs font-bold text-[#4d47b6]">ลิงก์ร้านออนไลน์ (ลูกค้า)</p>
+          <p className="mt-2 break-all text-sm font-semibold text-[#1e1b4b]">{shopUrl}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={ecommercePublicShopUrl(storeId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={ecommerceStoreCompactOutlineButtonClass}
+            >
+              เปิดลิงก์
+            </a>
+            <button
+              type="button"
+              onClick={() => void copy()}
+              className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
+            >
+              <IconCopy className="h-3.5 w-3.5" aria-hidden />
+              คัดลอกลิงก์
+            </button>
+            {salePageEnabled && featuredProductId ? (
+              <Link
+                href={`/shop/${storeId}/sale`}
                 target="_blank"
-                rel="noopener noreferrer"
                 className={ecommerceStoreCompactOutlineButtonClass}
               >
-                เปิดลิงก์
-              </a>
-              <button
-                type="button"
-                onClick={() => void copy()}
-                className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
-              >
-                <IconCopy className="h-3.5 w-3.5" aria-hidden />
-                คัดลอกลิงก์
-              </button>
-              {salePageEnabled && featuredProductId ? (
-                <Link
-                  href={`/shop/${storeId}/sale`}
-                  target="_blank"
-                  className={ecommerceStoreCompactOutlineButtonClass}
-                >
-                  Sale Page
-                </Link>
-              ) : null}
-            </div>
+                Sale Page
+              </Link>
+            ) : null}
           </div>
-
-          <button type="button" className={cardClass} onClick={() => setStaffModalOpen(true)}>
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-lg text-white">
-              👥
-            </span>
-            <h2 className="mt-3 text-base font-black text-[#1e1b4b] sm:text-lg">ลิงก์ / QR พนักงาน</h2>
-            <p className="mt-1 text-sm text-[#66638c]">
-              ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน · เว็บร้าน — ไม่เปิดการเงิน/จัดการ/ตั้งค่า
-            </p>
-          </button>
         </div>
+      </div>
+    </ModuleQrMonthlyGate>
+  );
+}
 
-        <FormModal
-          open={staffModalOpen}
-          onClose={() => setStaffModalOpen(false)}
-          size="full"
-          appearance="glass"
-          glassTint="amber"
-          mobileCentered
-          title="QR พนักงาน"
-        >
-          <ModuleStaffTokenQrPanel
-            moduleSlug={ECOMMERCE_STORE_MODULE_SLUG}
-            planGateAllowed
-            staffLinkApiPath="/api/ecommerce-store/session/staff-link"
-            shopLabel={storeName || "ร้านออนไลน์"}
-            logoUrl={logoUrl}
-            tagline="สแกนเข้าหน้าพนักงาน — เมนูแดชบอร์ด + เว็บร้าน"
-            mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน"
-            openPrimaryLabel="เปิดหน้าพนักงาน"
-          />
-        </FormModal>
+function EcommerceStaffLinkPanel({
+  storeName,
+  logoUrl,
+}: {
+  storeName: string;
+  logoUrl: string | null;
+}) {
+  return (
+    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="พนักงาน">
+      <div className="space-y-3 text-left">
+        <p className="text-sm text-[#5f5a8a]">
+          สร้างลิงก์ / QR ให้พนักงาน — ใช้ได้เฉพาะภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน · เว็บร้าน
+          (ไม่เปิดการเงิน / การจัดการ / ตั้งค่า)
+        </p>
+        <ModuleStaffTokenQrPanel
+          moduleSlug={ECOMMERCE_STORE_MODULE_SLUG}
+          planGateAllowed
+          staffLinkApiPath="/api/ecommerce-store/session/staff-link"
+          shopLabel={storeName || "ร้านออนไลน์"}
+          logoUrl={logoUrl}
+          tagline="สแกนเข้าหน้าพนักงาน — เมนูแดชบอร์ด + เว็บร้าน"
+          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน"
+          openPrimaryLabel="เปิดหน้าพนักงาน"
+        />
       </div>
     </ModuleQrMonthlyGate>
   );
@@ -421,18 +408,20 @@ export function EcommerceSettingsClient() {
               </nav>
             </div>
             <div className={ecommerceStoreHeaderActionShellClass} role="group" aria-label="บันทึกการตั้งค่า">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void save()}
-                className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "disabled:opacity-50")}
-                aria-label={saving ? "กำลังบันทึก" : "บันทึกการตั้งค่า"}
-                aria-busy={saving}
-                title={saving ? "กำลังบันทึก…" : "บันทึก"}
-              >
-                <IconSave className={cn("h-3.5 w-3.5 shrink-0", saving && "animate-pulse")} />
-                <span className="hidden sm:inline">{saving ? "กำลังบันทึก…" : "บันทึก"}</span>
-              </button>
+              {tab !== "staff" ? (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save()}
+                  className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "disabled:opacity-50")}
+                  aria-label={saving ? "กำลังบันทึก" : "บันทึกการตั้งค่า"}
+                  aria-busy={saving}
+                  title={saving ? "กำลังบันทึก…" : "บันทึก"}
+                >
+                  <IconSave className={cn("h-3.5 w-3.5 shrink-0", saving && "animate-pulse")} />
+                  <span className="hidden sm:inline">{saving ? "กำลังบันทึก…" : "บันทึก"}</span>
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -639,11 +628,9 @@ export function EcommerceSettingsClient() {
               aria-labelledby="ecommerce-settings-tab-portal"
               className="space-y-4"
             >
-              <EcommercePortalLinkPanel
+              <EcommerceShopWebLinkPanel
                 shopUrl={shopUrl}
                 storeId={store.id}
-                storeName={store.storeName}
-                logoUrl={store.logoUrl}
                 salePageEnabled={store.salePageEnabled}
                 featuredProductId={store.featuredProductId}
               />
@@ -731,6 +718,17 @@ export function EcommerceSettingsClient() {
                   </label>
                 ) : null}
               </div>
+            </div>
+          ) : null}
+
+          {tab === "staff" ? (
+            <div
+              id="ecommerce-settings-panel-staff"
+              role="tabpanel"
+              aria-labelledby="ecommerce-settings-tab-staff"
+              className="space-y-4"
+            >
+              <EcommerceStaffLinkPanel storeName={store.storeName} logoUrl={store.logoUrl} />
             </div>
           ) : null}
         </div>
