@@ -4,9 +4,10 @@ import {
   generateEcommerceReferenceCode,
   generateEcommerceTrackingCode,
 } from "@/lib/ecommerce/order-codes";
+import { serializeEcommerceGalleryImages } from "@/lib/ecommerce/product-images";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
-/** รูปที่ตรวจ HEAD 200 แล้ว — ห้ามใช้ picsum (ลิงก์ไม่เสถียร) */
+/** รูป Unsplash ที่ตรวจ HEAD 200 แล้ว — ห้ามใช้ picsum */
 const U = (id: string, w = 800) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
@@ -27,6 +28,48 @@ const CATEGORY_DEFS = [
   "สุขภาพ / กีฬา",
 ] as const;
 
+/** มุมอื่นต่อหมวด (verified 200) — ไม่รวมรูปปกของสินค้าแต่ละชิ้น */
+const GALLERY_BY_CATEGORY: Record<(typeof CATEGORY_DEFS)[number], readonly string[]> = {
+  สกินแคร์: [
+    "photo-1556228453-efd6c1ff04f6",
+    "photo-1556228578-8c89e6adf883",
+    "photo-1611930022073-b7a4ba5fcccd",
+    "photo-1596755389378-c31d21fd1273",
+    "photo-1629198688000-71f23e745b6e",
+  ],
+  เมคอัพ: [
+    "photo-1522335789203-aabd1fc54bc9",
+    "photo-1487412947147-5cebf100ffc2",
+    "photo-1487412720507-e7ab37603c6f",
+    "photo-1515377905703-c4788e51af15",
+  ],
+  ของใช้ในบ้าน: [
+    "photo-1556740738-b6a63e27c4df",
+    "photo-1441984904996-e0b6ba687e04",
+    "photo-1483985988355-763728e1935b",
+    "photo-1553062407-98eeb64c6a62",
+  ],
+  Gadget: [
+    "photo-1526170375885-4d8ecf77b99f",
+    "photo-1498049794561-7780e7231661",
+    "photo-1583394838336-acd977736f90",
+    "photo-1556656793-08538906a9f8",
+    "photo-1592899677977-9c10ca588bbd",
+  ],
+  แฟชั่น: [
+    "photo-1515886657613-9f3515b0c78f",
+    "photo-1490481651871-ab68de25d43d",
+    "photo-1460353581641-37baddab0fa2",
+    "photo-1483985988355-763728e1935b",
+  ],
+  "สุขภาพ / กีฬา": [
+    "photo-1571019613454-1cb2f99b2d8b",
+    "photo-1518611012118-696072aa579a",
+    "photo-1544367567-0f2fcb009e0b",
+    "photo-1599058917765-a780eda07a3e",
+  ],
+};
+
 type ProductDef = {
   name: string;
   description: string;
@@ -35,10 +78,31 @@ type ProductDef = {
   sku: string;
   category: (typeof CATEGORY_DEFS)[number];
   imageId: string;
+  /** มุมอื่นเพิ่มจากชุดหมวด — ค่าว่าง = ใช้ pool หมวดอัตโนมัติ */
+  galleryIds?: readonly string[];
+  galleryCount?: number;
   recommended?: boolean;
   bestseller?: boolean;
   active?: boolean;
 };
+
+function galleryUrlsForProduct(p: ProductDef): string[] {
+  const pool = p.galleryIds?.length
+    ? [...p.galleryIds]
+    : [...(GALLERY_BY_CATEGORY[p.category] ?? [])];
+  const extras = pool.filter((id) => id !== p.imageId);
+  const count = Math.min(Math.max(p.galleryCount ?? 3, 0), 5, extras.length);
+  // กระจายตาม sku เพื่อไม่ให้ทุกชิ้นรูปมุมเดียวกันหมด
+  const start = Math.abs(
+    [...p.sku].reduce((acc, ch) => acc + ch.charCodeAt(0), 0),
+  ) % Math.max(extras.length, 1);
+  const picked: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const id = extras[(start + i) % extras.length]!;
+    if (!picked.includes(id)) picked.push(id);
+  }
+  return picked.map((id) => U(id));
+}
 
 const PRODUCT_DEFS: readonly ProductDef[] = [
   {
@@ -49,6 +113,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SK-SERUM-01",
     category: "สกินแคร์",
     imageId: "photo-1556228720-195a672e8a03",
+    galleryCount: 4,
     recommended: true,
     bestseller: true,
   },
@@ -60,6 +125,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SK-SUN-02",
     category: "สกินแคร์",
     imageId: "photo-1612817288484-6f916006741a",
+    galleryCount: 3,
     recommended: true,
   },
   {
@@ -70,6 +136,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SK-FOAM-03",
     category: "สกินแคร์",
     imageId: "photo-1556228578-0d85b1a4d571",
+    galleryCount: 3,
   },
   {
     name: "มาส์กหน้าคอลลาเจน (แพ็ก 5)",
@@ -79,6 +146,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SK-MASK-04",
     category: "สกินแคร์",
     imageId: "photo-1598440947619-2c35fc9aa908",
+    galleryCount: 3,
     bestseller: true,
   },
   {
@@ -89,6 +157,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SK-TONER-05",
     category: "สกินแคร์",
     imageId: "photo-1608571423902-eed4a5ad8108",
+    galleryCount: 3,
   },
   {
     name: "ลิปสติกโทนนู้ด",
@@ -98,6 +167,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "MK-LIP-01",
     category: "เมคอัพ",
     imageId: "photo-1586495777744-4413f21062fa",
+    galleryCount: 4,
     recommended: true,
   },
   {
@@ -108,6 +178,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "MK-EYE-02",
     category: "เมคอัพ",
     imageId: "photo-1512496015851-a90fb38ba796",
+    galleryCount: 4,
     bestseller: true,
   },
   {
@@ -118,6 +189,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "MK-CUSH-03",
     category: "เมคอัพ",
     imageId: "photo-1631214524020-7e18db9a8f92",
+    galleryCount: 3,
   },
   {
     name: "มาสคาร่ากันน้ำ",
@@ -127,6 +199,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "MK-MAS-04",
     category: "เมคอัพ",
     imageId: "photo-1616683693504-3ea7e9ad6fec",
+    galleryCount: 3,
   },
   {
     name: "ถุงผ้าลดโลกร้อน",
@@ -136,6 +209,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "HM-BAG-01",
     category: "ของใช้ในบ้าน",
     imageId: "photo-1553062407-98eeb64c6a62",
+    galleryCount: 3,
   },
   {
     name: "น้ำมันหอมระเหยลาเวนเดอร์",
@@ -145,6 +219,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "HM-OIL-02",
     category: "ของใช้ในบ้าน",
     imageId: "photo-1607619056574-7b8d3ee536b2",
+    galleryCount: 3,
     recommended: true,
   },
   {
@@ -155,6 +230,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "HM-CANDLE-03",
     category: "ของใช้ในบ้าน",
     imageId: "photo-1601924994987-69e26d50dc26",
+    galleryCount: 3,
   },
   {
     name: "ขวดน้ำเก็บความเย็น 750ml",
@@ -164,6 +240,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "HM-BOTTLE-04",
     category: "ของใช้ในบ้าน",
     imageId: "photo-1602143407151-7111542de6e8",
+    galleryCount: 3,
   },
   {
     name: "หูฟังบลูทูธ (ขาว)",
@@ -173,6 +250,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "GD-BT-01",
     category: "Gadget",
     imageId: "photo-1505740420928-5e560c06d30e",
+    galleryCount: 4,
     bestseller: true,
     recommended: true,
   },
@@ -184,6 +262,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "GD-CABLE-02",
     category: "Gadget",
     imageId: "photo-1580910051074-3eb694886505",
+    galleryCount: 3,
   },
   {
     name: "ลำโพงพกพา Bluetooth",
@@ -193,6 +272,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "GD-SPK-03",
     category: "Gadget",
     imageId: "photo-1546868871-7041f2a55e12",
+    galleryCount: 3,
   },
   {
     name: "สมาร์ทวอทช์ Sport",
@@ -202,6 +282,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "GD-WATCH-04",
     category: "Gadget",
     imageId: "photo-1523275335684-37898b6baf30",
+    galleryCount: 4,
     bestseller: true,
   },
   {
@@ -212,6 +293,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "GD-CASE-05",
     category: "Gadget",
     imageId: "photo-1511707171634-5f897ff02aa9",
+    galleryCount: 3,
   },
   {
     name: "แว่นกันแดด UV400",
@@ -221,6 +303,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-SUN-01",
     category: "แฟชั่น",
     imageId: "photo-1572635196237-14b3f281503f",
+    galleryCount: 3,
     recommended: true,
   },
   {
@@ -231,6 +314,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-BAG-02",
     category: "แฟชั่น",
     imageId: "photo-1560343090-f0409e92791a",
+    galleryCount: 3,
   },
   {
     name: "เสื้อยืดคอกลม (ขาว)",
@@ -240,6 +324,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-TEE-03",
     category: "แฟชั่น",
     imageId: "photo-1618354691373-d851c5c3a990",
+    galleryCount: 3,
   },
   {
     name: "รองเท้าผ้าใบยูนีเซ็กซ์",
@@ -249,6 +334,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-SHOE-04",
     category: "แฟชั่น",
     imageId: "photo-1542291026-7eec264c27ff",
+    galleryCount: 4,
     bestseller: true,
   },
   {
@@ -259,6 +345,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-CAP-05",
     category: "แฟชั่น",
     imageId: "photo-1588850561407-ed78c282e89b",
+    galleryCount: 3,
   },
   {
     name: "เข็มขัดหนังแท้",
@@ -267,7 +354,8 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     stock: 17,
     sku: "FS-BELT-06",
     category: "แฟชั่น",
-    imageId: "photo-1624222247344-550fb60583fd",
+    imageId: "photo-1606107557195-0e29a4b5b4aa",
+    galleryCount: 3,
   },
   {
     name: "โยคะแมท TPE 6mm",
@@ -277,6 +365,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SP-MAT-01",
     category: "สุขภาพ / กีฬา",
     imageId: "photo-1601925260368-ae2f83cf8b7f",
+    galleryCount: 3,
     recommended: true,
   },
   {
@@ -287,6 +376,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SP-DUMB-02",
     category: "สุขภาพ / กีฬา",
     imageId: "photo-1517836357463-d25dfeac3438",
+    galleryCount: 3,
   },
   {
     name: "ขวดเชคเกอร์โปรตีน 700ml",
@@ -296,6 +386,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SP-SHAKE-03",
     category: "สุขภาพ / กีฬา",
     imageId: "photo-1593095948071-474c5cc2989d",
+    galleryCount: 3,
     bestseller: true,
   },
   {
@@ -305,7 +396,8 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     stock: 38,
     sku: "SP-BAND-04",
     category: "สุขภาพ / กีฬา",
-    imageId: "photo-1599058945522-28d584b6f14f",
+    imageId: "photo-1599058917765-a780eda07a3e",
+    galleryCount: 3,
   },
   {
     name: "โฟมโรลเลอร์นวดกล้ามเนื้อ",
@@ -315,6 +407,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "SP-ROLL-05",
     category: "สุขภาพ / กีฬา",
     imageId: "photo-1571019614242-c5c5dee9f50b",
+    galleryCount: 3,
   },
   {
     name: "ครีมบำรุงกลางคืน Retinol",
@@ -323,7 +416,8 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     stock: 29,
     sku: "SK-NIGHT-06",
     category: "สกินแคร์",
-    imageId: "photo-1571781926291-c77df809f0b2",
+    imageId: "photo-1556228453-efd6c1ff04f6",
+    galleryCount: 4,
     recommended: true,
   },
   {
@@ -334,6 +428,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "MK-BLUSH-05",
     category: "เมคอัพ",
     imageId: "photo-1596462502278-27bfdc403348",
+    galleryCount: 3,
   },
   {
     name: "พาวเวอร์แบงก์ 20000mAh",
@@ -342,7 +437,8 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     stock: 25,
     sku: "GD-PWR-06",
     category: "Gadget",
-    imageId: "photo-1609091839311-b34812546dfe",
+    imageId: "photo-1592899677977-9c10ca588bbd",
+    galleryCount: 4,
     bestseller: true,
   },
   {
@@ -353,6 +449,7 @@ const PRODUCT_DEFS: readonly ProductDef[] = [
     sku: "FS-PERF-X",
     category: "แฟชั่น",
     imageId: "photo-1585386959984-a4155224a1ad",
+    galleryCount: 0,
     active: false,
   },
 ];
@@ -472,6 +569,7 @@ export async function seedEcommerceStoreProdDemoForOwner(
         priceBaht: new Prisma.Decimal(p.price),
         stockBalance: p.stock,
         imageUrl: U(p.imageId),
+        galleryImagesJson: serializeEcommerceGalleryImages(galleryUrlsForProduct(p)),
         isActive: p.active !== false,
         isRecommended: Boolean(p.recommended),
         isBestseller: Boolean(p.bestseller),
