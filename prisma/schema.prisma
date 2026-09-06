@@ -372,6 +372,7 @@ model User {
   ecommerceCostCategories            EcommerceCostCategory[]
   ecommerceCostEntries               EcommerceCostEntry[]
   ecommerceStaffLinks                EcommerceStaffLink[]
+  ecommerceProductReviews            EcommerceProductReview[]
   smartPoliceProfile                 SmartPoliceProfile?
   smartPoliceCases                   SmartPoliceCase[]
   smartPoliceTemplates               SmartPoliceTemplate[]
@@ -6506,6 +6507,7 @@ model EcommerceStore {
   products        EcommerceProduct[]
   orders          EcommerceOrder[]
   buyerCustomers  EcommerceBuyerCustomer[]
+  productReviews  EcommerceProductReview[]
   featuredProduct EcommerceProduct?        @relation("EcommerceFeaturedProduct", fields: [featuredProductId], references: [id], onDelete: SetNull)
 
   @@unique([ownerUserId, trialSessionId], map: "ecstore_owner_trial_uniq")
@@ -6548,6 +6550,10 @@ model EcommerceProduct {
 
   name          String             @db.VarChar(255)
   imageUrl      String?            @map("image_url") @db.VarChar(512)
+  /**
+   * รูปมุมอื่นเพิ่มเติม — JSON string[] (ไม่รวม imageUrl ปก)
+   */
+  galleryImagesJson String           @default("[]") @map("gallery_images_json") @db.Text
   description   String?            @db.Text
   priceBaht     Decimal            @map("price_baht") @db.Decimal(12, 2)
   sku           String?            @db.VarChar(64)
@@ -6570,6 +6576,7 @@ model EcommerceProduct {
 
   orderItems      EcommerceOrderItem[]
   featuredInStore EcommerceStore[]     @relation("EcommerceFeaturedProduct")
+  reviews         EcommerceProductReview[]
 
   @@unique([storeId, sku], map: "ecprod_store_sku_uidx")
   @@index([storeId, isActive, sortOrder], map: "ecprod_store_active_sort_idx")
@@ -6578,6 +6585,36 @@ model EcommerceProduct {
   @@index([storeId, categoryId], map: "ecprod_store_category_idx")
   @@index([ownerUserId], map: "ecprod_owner_idx")
   @@map("ecommerce_products")
+}
+
+/**
+ * รีวิวสินค้าจากลูกค้า — 1 สินค้าต่อ 1 เบอร์ (ค้นหาออเดอร์ยืนยันการซื้อ)
+ */
+model EcommerceProductReview {
+  id            String           @id @default(cuid())
+  storeId       String           @map("store_id") @db.VarChar(191)
+  store         EcommerceStore   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ownerUserId   String           @map("owner_id") @db.VarChar(191)
+  owner         User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  productId     String           @map("product_id") @db.VarChar(191)
+  product       EcommerceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId       String           @map("order_id") @db.VarChar(191)
+  order         EcommerceOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  customerPhone String  @map("customer_phone") @db.VarChar(32)
+  customerName  String? @map("customer_name") @db.VarChar(200)
+  rating        Int
+  comment       String  @default("") @db.VarChar(800)
+  isPublished   Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([storeId, productId, customerPhone], map: "ecrev_store_product_phone_uidx")
+  @@index([storeId, productId, isPublished, createdAt], map: "ecrev_store_product_pub_idx")
+  @@index([orderId], map: "ecrev_order_idx")
+  @@index([ownerUserId], map: "ecrev_owner_idx")
+  @@map("ecommerce_product_reviews")
 }
 
 model EcommerceOrder {
@@ -6618,7 +6655,8 @@ model EcommerceOrder {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  items EcommerceOrderItem[]
+  items   EcommerceOrderItem[]
+  reviews EcommerceProductReview[]
 
   @@unique([storeId, referenceCode], map: "ecord_store_ref_uidx")
   @@unique([trackingCode], map: "ecord_tracking_uidx")

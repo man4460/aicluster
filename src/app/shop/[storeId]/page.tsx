@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseEcommerceProductImageUrls } from "@/lib/ecommerce/product-images";
 import { getEcommerceStorefrontAvailability } from "@/lib/ecommerce/storefront-availability";
 import { EcommerceStoreUnavailable } from "@/systems/ecommerce-store/storefront/EcommerceStoreUnavailable";
 import { EcommerceStorefrontClient } from "@/systems/ecommerce-store/storefront/EcommerceStorefrontClient";
@@ -40,7 +41,13 @@ export default async function PublicShopPage({
             { sortOrder: "asc" },
             { name: "asc" },
           ],
-          include: { category: { select: { id: true, name: true } } },
+          include: {
+            category: { select: { id: true, name: true } },
+            reviews: {
+              where: { isPublished: true },
+              select: { rating: true },
+            },
+          },
         },
       },
     }),
@@ -70,18 +77,28 @@ export default async function PublicShopPage({
         salePageEnabled: data.salePageEnabled,
         featuredProductId: data.featuredProductId,
         categories,
-        products: data.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          imageUrl: p.imageUrl,
-          description: p.description,
-          priceBaht: p.priceBaht.toString(),
-          stockBalance: p.stockBalance,
-          categoryId: p.categoryId,
-          categoryName: p.category?.name ?? null,
-          isRecommended: p.isRecommended,
-          isBestseller: p.isBestseller,
-        })),
+        products: data.products.map((p) => {
+          const reviewCount = p.reviews.length;
+          const reviewAvg =
+            reviewCount > 0
+              ? p.reviews.reduce((s, r) => s + r.rating, 0) / reviewCount
+              : null;
+          return {
+            id: p.id,
+            name: p.name,
+            imageUrl: p.imageUrl,
+            imageUrls: parseEcommerceProductImageUrls(p.imageUrl, p.galleryImagesJson),
+            description: p.description,
+            priceBaht: p.priceBaht.toString(),
+            stockBalance: p.stockBalance,
+            categoryId: p.categoryId,
+            categoryName: p.category?.name ?? null,
+            isRecommended: p.isRecommended,
+            isBestseller: p.isBestseller,
+            reviewAvg,
+            reviewCount,
+          };
+        }),
       }}
     />
   );

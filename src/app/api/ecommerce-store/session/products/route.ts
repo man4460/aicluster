@@ -4,8 +4,34 @@ import { getSession } from "@/lib/auth/session";
 import { requireModulePage } from "@/lib/modules/guard";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { getEcommerceOwnerFromAuth, getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
+import {
+  parseEcommerceProductImageUrls,
+  serializeEcommerceGalleryImages,
+} from "@/lib/ecommerce/product-images";
 import { prisma } from "@/lib/prisma";
 import { withEcommerceStoreOwnerOrStaff } from "@/systems/ecommerce-store/lib/api-auth";
+
+function parseGalleryBody(body: Record<string, unknown>, coverUrl: string | null): string | undefined {
+  if (!Array.isArray(body.galleryImageUrls) && typeof body.galleryImagesJson !== "string") {
+    return undefined;
+  }
+  let extras: string[] = [];
+  if (Array.isArray(body.galleryImageUrls)) {
+    extras = body.galleryImageUrls.filter((u): u is string => typeof u === "string");
+  } else if (typeof body.galleryImagesJson === "string") {
+    try {
+      const arr = JSON.parse(body.galleryImagesJson) as unknown;
+      if (Array.isArray(arr)) {
+        extras = arr.filter((u): u is string => typeof u === "string");
+      }
+    } catch {
+      extras = [];
+    }
+  }
+  const cover = coverUrl?.trim() || "";
+  const withoutCover = extras.map((u) => u.trim()).filter((u) => u && u !== cover);
+  return serializeEcommerceGalleryImages(withoutCover);
+}
 
 export async function GET(req: Request) {
   const auth = await withEcommerceStoreOwnerOrStaff(req);
@@ -17,7 +43,13 @@ export async function GET(req: Request) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     include: { category: { select: { id: true, name: true } } },
   });
-  return NextResponse.json({ products, lowStockThreshold: store.lowStockThreshold });
+  return NextResponse.json({
+    products: products.map((p) => ({
+      ...p,
+      imageUrls: parseEcommerceProductImageUrls(p.imageUrl, p.galleryImagesJson),
+    })),
+    lowStockThreshold: store.lowStockThreshold,
+  });
 }
 
 export async function POST(req: Request) {
@@ -46,6 +78,9 @@ export async function POST(req: Request) {
     categoryId = cat.id;
   }
 
+  const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() || null : null;
+  const galleryImagesJson = parseGalleryBody(body, imageUrl) ?? "[]";
+
   const product = await prisma.ecommerceProduct.create({
     data: {
       storeId: store.id,
@@ -53,7 +88,8 @@ export async function POST(req: Request) {
       name,
       priceBaht: new Prisma.Decimal(price),
       sku: typeof body.sku === "string" ? body.sku.trim() || null : null,
-      imageUrl: typeof body.imageUrl === "string" ? body.imageUrl.trim() || null : null,
+      imageUrl,
+      galleryImagesJson,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
       stockBalance: typeof body.stockBalance === "number" ? Math.max(0, Math.floor(body.stockBalance)) : 0,
       isActive: body.isActive !== false,
@@ -63,7 +99,12 @@ export async function POST(req: Request) {
     },
     include: { category: { select: { id: true, name: true } } },
   });
-  return NextResponse.json({ product });
+  return NextResponse.json({
+    product: {
+      ...product,
+      imageUrls: parseEcommerceProductImageUrls(product.imageUrl, product.galleryImagesJson),
+    },
+  });
 }
 
 export async function PATCH(req: Request) {
@@ -90,7 +131,11 @@ export async function PATCH(req: Request) {
     if (Number.isFinite(price) && price >= 0) data.priceBaht = new Prisma.Decimal(price);
   }
   if (typeof body.sku === "string") data.sku = body.sku.trim() || null;
-  if (typeof body.imageUrl === "string") data.imageUrl = body.imageUrl.trim() || null;
+  let nextCover = existing.imageUrl;
+  if (typeof body.imageUrl === "string") {
+    nextCover = body.imageUrl.trim() || null;
+    data.imageUrl = nextCover;
+  }
   if (typeof body.description === "string") data.description = body.description.trim() || null;
   if (typeof body.stockBalance === "number" && Number.isFinite(body.stockBalance)) {
     data.stockBalance = Math.max(0, Math.floor(body.stockBalance));
@@ -112,6 +157,9 @@ export async function PATCH(req: Request) {
     data.category = { connect: { id: cat.id } };
   }
 
+  const galleryJson = parseGalleryBody(body, nextCover);
+  if (galleryJson !== undefined) data.galleryImagesJson = galleryJson;
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "ไม่มีข้อมูลให้อัปเดต" }, { status: 400 });
   }
@@ -121,7 +169,12 @@ export async function PATCH(req: Request) {
     data,
     include: { category: { select: { id: true, name: true } } },
   });
-  return NextResponse.json({ product });
+  return NextResponse.json({
+    product: {
+      ...product,
+      imageUrls: parseEcommerceProductImageUrls(product.imageUrl, product.galleryImagesJson),
+    },
+  });
 }
 
 export async function DELETE(req: Request) {

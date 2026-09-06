@@ -8,10 +8,13 @@ import { IconCart, IconSearch } from "@/systems/ecommerce-store/components/Ecomm
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { EcommercePortalSection } from "@/systems/ecommerce-store/storefront/EcommercePortalSection";
 import { EcommerceProductCard } from "@/systems/ecommerce-store/storefront/EcommerceProductCard";
+import { EcommerceProductDetailModal } from "@/systems/ecommerce-store/storefront/EcommerceProductDetailModal";
+import { EcommerceStorefrontReviewPanel } from "@/systems/ecommerce-store/storefront/EcommerceStorefrontReviewPanel";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import {
   ecommerceStoreOutlineButtonClass,
   ecommerceStorePortalCategoryChipClass,
+  ecommerceStorePortalProductGridClass,
   ecommerceStorePortalShopNameClass,
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
@@ -34,6 +37,9 @@ export type StorefrontProductItem = {
   categoryName: string | null;
   isRecommended: boolean;
   isBestseller: boolean;
+  imageUrls?: string[];
+  reviewAvg?: number | null;
+  reviewCount?: number;
 };
 
 type StorePayload = {
@@ -59,6 +65,7 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
   const mounted = useMounted();
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(ECOMMERCE_CATEGORY_ALL);
+  const [detailProduct, setDetailProduct] = useState<StorefrontProductItem | null>(null);
   const cart = useEcommerceCart(data.store.id);
 
   const filtered = useMemo(() => {
@@ -104,23 +111,13 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
         product={p}
         categoryName={p.categoryName}
         inCartQty={cart.getLineQty(p.id)}
-        onAdd={(qty) =>
-          cart.add(
-            {
-              productId: p.id,
-              name: p.name,
-              priceBaht: Number(p.priceBaht),
-              imageUrl: p.imageUrl,
-              maxStock: p.stockBalance,
-            },
-            qty,
-          )
-        }
+        compact={compact}
+        onOpen={() => setDetailProduct(p)}
       />
     );
     if (compact) {
       return (
-        <div key={p.id} className="w-[44%] max-w-[11rem] shrink-0 snap-start sm:w-[28%] sm:max-w-[14rem]">
+        <div key={p.id} className="w-[28%] max-w-[7.5rem] shrink-0 snap-start sm:w-[18%] sm:max-w-[9rem] lg:w-[11%] lg:max-w-[8.5rem]">
           {card}
         </div>
       );
@@ -134,9 +131,9 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
         <div className="border-b border-slate-200/80 bg-white px-4 py-4">
           <div className="mx-auto h-12 max-w-6xl animate-pulse rounded-xl bg-slate-100" />
         </div>
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 px-4 py-8 sm:grid-cols-3 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="aspect-[3/4] animate-pulse rounded-xl bg-slate-100" />
+        <div className={cn("mx-auto max-w-6xl px-4 py-8", ecommerceStorePortalProductGridClass)}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="aspect-square animate-pulse rounded-xl bg-slate-100" />
           ))}
         </div>
       </div>
@@ -269,14 +266,14 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
           <div className="space-y-10">
             {recommendedProducts.length > 0 ? (
               <EcommercePortalSection id="recommended" title="สินค้าแนะนำ">
-                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:gap-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {recommendedProducts.map((p) => renderCard(p, true))}
                 </div>
               </EcommercePortalSection>
             ) : null}
             {bestsellerProducts.length > 0 ? (
               <EcommercePortalSection id="bestsellers" title="ขายดี">
-                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:gap-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {bestsellerProducts.map((p) => renderCard(p, true))}
                 </div>
               </EcommercePortalSection>
@@ -309,10 +306,14 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
                       : "ไม่พบสินค้าที่ค้นหา"}
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <div className={ecommerceStorePortalProductGridClass}>
               {filtered.map((p) => renderCard(p))}
             </div>
           )}
+        </EcommercePortalSection>
+
+        <EcommercePortalSection id="reviews" title="รีวิวสินค้า">
+          <EcommerceStorefrontReviewPanel storeId={data.store.id} />
         </EcommercePortalSection>
 
         {data.store.description?.trim() ||
@@ -395,6 +396,27 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
           )}
         </div>
       </div>
+
+      <EcommerceProductDetailModal
+        open={Boolean(detailProduct)}
+        product={detailProduct}
+        storeId={data.store.id}
+        inCartQty={detailProduct ? cart.getLineQty(detailProduct.id) : 0}
+        onClose={() => setDetailProduct(null)}
+        onAdd={(qty) => {
+          if (!detailProduct) return false;
+          return cart.add(
+            {
+              productId: detailProduct.id,
+              name: detailProduct.name,
+              priceBaht: Number(detailProduct.priceBaht),
+              imageUrl: detailProduct.imageUrl,
+              maxStock: detailProduct.stockBalance,
+            },
+            qty,
+          );
+        }}
+      />
     </div>
   );
 }

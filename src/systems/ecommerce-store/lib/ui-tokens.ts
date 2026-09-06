@@ -220,6 +220,10 @@ export const ecommerceStoreContentStackClass = "space-y-4 sm:space-y-5";
 export const ecommerceStorePortalShopNameClass =
   "bg-gradient-to-r from-[#0000BF] via-[#5b61ff] to-[#c026d3] bg-clip-text font-black tracking-tight text-transparent";
 
+/** กริดสินค้าหน้าร้าน — มือถือ 3 · คอม 8 (แนวเดียวแกลเลอรีชมรม) */
+export const ecommerceStorePortalProductGridClass =
+  "grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-8 lg:gap-3";
+
 export const ecommerceStorePortalShopNameHeroClass = cn(
   ecommerceStorePortalShopNameClass,
   "drop-shadow-[0_1px_8px_rgba(30,27,75,0.35)]",

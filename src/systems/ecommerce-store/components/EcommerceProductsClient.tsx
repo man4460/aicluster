@@ -8,10 +8,12 @@ import {
   AppImageLightbox,
   AppImageThumb,
   AppSectionHeader,
+  prepareImageFileForUpload,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { parseEcommerceProductImageUrls } from "@/lib/ecommerce/product-images";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   assetRowEditIconButtonClass,
@@ -53,12 +55,24 @@ type Product = {
   stockBalance: number;
   sku: string | null;
   imageUrl: string | null;
+  galleryImagesJson?: string;
+  imageUrls?: string[];
   isActive: boolean;
   categoryId: string | null;
   category: { id: string; name: string } | null;
   isRecommended: boolean;
   isBestseller: boolean;
 };
+
+const ECOM_GALLERY_MAX = 11;
+
+function productGalleryExtras(p: Product): string[] {
+  if (p.imageUrls?.length) {
+    const cover = p.imageUrl?.trim() || "";
+    return p.imageUrls.filter((u) => u && u !== cover).slice(0, ECOM_GALLERY_MAX);
+  }
+  return parseEcommerceProductImageUrls(p.imageUrl, p.galleryImagesJson).slice(1);
+}
 
 export type EcommerceProductsEmbeddedToolbarApi = {
   filterOpen: boolean;
@@ -110,6 +124,7 @@ export function EcommerceProductsClient({
   const [stock, setStock] = useState("0");
   const [newCategoryId, setNewCategoryId] = useState("");
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+  const [newGalleryUrls, setNewGalleryUrls] = useState<string[]>([]);
   const [newRecommended, setNewRecommended] = useState(false);
   const [newBestseller, setNewBestseller] = useState(false);
 
@@ -120,6 +135,7 @@ export function EcommerceProductsClient({
   const [editSku, setEditSku] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editGalleryUrls, setEditGalleryUrls] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
   const [editFeatured, setEditFeatured] = useState(false);
   const [editRecommended, setEditRecommended] = useState(false);
@@ -132,6 +148,8 @@ export function EcommerceProductsClient({
   const cameraRef = useRef<HTMLInputElement>(null);
   const editGalleryRef = useRef<HTMLInputElement>(null);
   const editCameraRef = useRef<HTMLInputElement>(null);
+  const newAnglesRef = useRef<HTMLInputElement>(null);
+  const editAnglesRef = useRef<HTMLInputElement>(null);
 
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -145,6 +163,7 @@ export function EcommerceProductsClient({
     setStock("0");
     setNewCategoryId("");
     setNewImageUrl(null);
+    setNewGalleryUrls([]);
     setNewRecommended(false);
     setNewBestseller(false);
     setProductErr(null);
@@ -158,6 +177,7 @@ export function EcommerceProductsClient({
     setEditSku("");
     setEditCategoryId("");
     setEditImageUrl(null);
+    setEditGalleryUrls([]);
     setEditIsActive(true);
     setEditFeatured(false);
     setEditRecommended(false);
@@ -178,6 +198,7 @@ export function EcommerceProductsClient({
     setEditSku(p.sku ?? "");
     setEditCategoryId(p.categoryId ?? "");
     setEditImageUrl(p.imageUrl);
+    setEditGalleryUrls(productGalleryExtras(p));
     setEditIsActive(p.isActive);
     setEditFeatured(false);
     setEditRecommended(p.isRecommended);
@@ -280,15 +301,45 @@ export function EcommerceProductsClient({
 
   async function uploadImage(file: File, onUrl: (url: string) => void) {
     setUploading(true);
-    const fd = new FormData();
-    fd.set("file", file);
-    const res = await fetch("/api/ecommerce-store/session/upload-product-image", {
-      method: "POST",
-      body: fd,
-    });
-    setUploading(false);
-    const j = await res.json();
-    if (res.ok && j.imageUrl) onUrl(j.imageUrl);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const fd = new FormData();
+      fd.set("file", prepared);
+      const res = await fetch("/api/ecommerce-store/session/upload-product-image", {
+        method: "POST",
+        body: fd,
+      });
+      const j = await res.json();
+      if (res.ok && j.imageUrl) onUrl(j.imageUrl);
+      else noticeErrorRef.current(typeof j.error === "string" ? j.error : "อัปโหลดรูปไม่สำเร็จ");
+    } catch (e) {
+      noticeErrorRef.current(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function uploadGalleryFiles(
+    files: FileList | File[],
+    current: string[],
+    setUrls: (next: string[]) => void,
+    coverUrl: string | null,
+  ) {
+    const room = ECOM_GALLERY_MAX - current.length;
+    if (room <= 0) {
+      noticeErrorRef.current(`เพิ่มรูปมุมอื่นได้สูงสุด ${ECOM_GALLERY_MAX} รูป`);
+      return;
+    }
+    const list = Array.from(files).slice(0, room);
+    const added: string[] = [];
+    for (const file of list) {
+      await uploadImage(file, (url) => {
+        if (url && url !== coverUrl?.trim() && !current.includes(url) && !added.includes(url)) {
+          added.push(url);
+        }
+      });
+    }
+    if (added.length) setUrls([...current, ...added].slice(0, ECOM_GALLERY_MAX));
   }
 
   async function addCategory() {
@@ -327,6 +378,7 @@ export function EcommerceProductsClient({
           priceBaht: Number(price),
           stockBalance: Number(stock),
           imageUrl: newImageUrl,
+          galleryImageUrls: newGalleryUrls,
           categoryId: newCategoryId || null,
           isRecommended: newRecommended,
           isBestseller: newBestseller,
@@ -366,6 +418,7 @@ export function EcommerceProductsClient({
           stockBalance: Math.floor(stockNum),
           sku: editSku.trim() || null,
           imageUrl: editImageUrl,
+          galleryImageUrls: editGalleryUrls,
           categoryId: editCategoryId || null,
           isActive: editIsActive,
           isRecommended: editRecommended,
@@ -553,6 +606,9 @@ export function EcommerceProductsClient({
       setCategoryVal: (v: string) => void;
       imageVal: string | null;
       onImage: (url: string) => void;
+      galleryUrls?: string[];
+      setGalleryUrls?: (urls: string[]) => void;
+      anglesInputRef?: RefObject<HTMLInputElement | null>;
       galleryInputRef: RefObject<HTMLInputElement | null>;
       cameraInputRef: RefObject<HTMLInputElement | null>;
       showActive?: boolean;
@@ -667,40 +723,108 @@ export function EcommerceProductsClient({
           สินค้าขายดี (แสดงแถวขายดีบนหน้าร้อง)
         </label>
       ) : null}
-      <div className="flex flex-wrap items-center gap-3">
-        {opts.imageVal ? (
-          <AppImageThumb src={opts.imageVal} alt="รูปสินค้า" onOpen={() => lb.open(opts.imageVal!)} />
-        ) : null}
-        <input
-          ref={opts.galleryInputRef}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void uploadImage(f, opts.onImage);
-            e.target.value = "";
-          }}
-        />
-        <input
-          ref={opts.cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void uploadImage(f, opts.onImage);
-            e.target.value = "";
-          }}
-        />
-        <AppImagePickCameraButtons
-          busy={uploading}
-          onPickGallery={() => opts.galleryInputRef.current?.click()}
-          onPickCamera={() => opts.cameraInputRef.current?.click()}
-          labels={{ gallery: "รูปสินค้า", camera: "ถ่ายรูป" }}
-        />
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-[#1e1b4b]">รูปปกสินค้า</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {opts.imageVal ? (
+            <AppImageThumb src={opts.imageVal} alt="รูปสินค้า" onOpen={() => lb.open(opts.imageVal!)} />
+          ) : null}
+          <input
+            ref={opts.galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadImage(f, opts.onImage);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={opts.cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadImage(f, opts.onImage);
+              e.target.value = "";
+            }}
+          />
+          <AppImagePickCameraButtons
+            busy={uploading}
+            onPickGallery={() => opts.galleryInputRef.current?.click()}
+            onPickCamera={() => opts.cameraInputRef.current?.click()}
+            labels={{ gallery: "รูปปก", camera: "ถ่ายปก" }}
+          />
+        </div>
       </div>
+      {opts.setGalleryUrls && opts.anglesInputRef ? (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-[#1e1b4b]">
+            รูปมุมอื่น ({opts.galleryUrls?.length ?? 0}/{ECOM_GALLERY_MAX})
+          </p>
+          <p className="text-xs font-medium text-[#66638c]">ลูกค้าเลื่อนดูหลายมุมบนหน้าร้านได้</p>
+          <input
+            ref={opts.anglesInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (files?.length) {
+                void uploadGalleryFiles(
+                  files,
+                  opts.galleryUrls ?? [],
+                  opts.setGalleryUrls!,
+                  opts.imageVal,
+                );
+              }
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploading || (opts.galleryUrls?.length ?? 0) >= ECOM_GALLERY_MAX}
+            onClick={() => opts.anglesInputRef?.current?.click()}
+            className={cn(ecommerceStoreRowIconButtonClass, "min-h-10 px-3 text-xs font-bold")}
+          >
+            + เพิ่มมุมรูป
+          </button>
+          {(opts.galleryUrls?.length ?? 0) > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {opts.galleryUrls!.map((url, idx) => (
+                <div key={`${url}-${idx}`} className="relative">
+                  <AppImageThumb
+                    src={url}
+                    alt={`มุม ${idx + 1}`}
+                    onOpen={() =>
+                      lb.openGallery(
+                        [opts.imageVal, ...(opts.galleryUrls ?? [])].filter(
+                          (u): u is string => Boolean(u),
+                        ),
+                        opts.imageVal ? idx + 1 : idx,
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white"
+                    aria-label={`ลบมุมที่ ${idx + 1}`}
+                    onClick={() =>
+                      opts.setGalleryUrls?.(opts.galleryUrls!.filter((_, i) => i !== idx))
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -1079,6 +1203,9 @@ export function EcommerceProductsClient({
           setCategoryVal: setNewCategoryId,
           imageVal: newImageUrl,
           onImage: setNewImageUrl,
+          galleryUrls: newGalleryUrls,
+          setGalleryUrls: setNewGalleryUrls,
+          anglesInputRef: newAnglesRef,
           galleryInputRef: galleryRef,
           cameraInputRef: cameraRef,
           recommended: newRecommended,
@@ -1124,6 +1251,9 @@ export function EcommerceProductsClient({
           setCategoryVal: setEditCategoryId,
           imageVal: editImageUrl,
           onImage: setEditImageUrl,
+          galleryUrls: editGalleryUrls,
+          setGalleryUrls: setEditGalleryUrls,
+          anglesInputRef: editAnglesRef,
           galleryInputRef: editGalleryRef,
           cameraInputRef: editCameraRef,
           showActive: true,
@@ -1184,7 +1314,13 @@ export function EcommerceProductsClient({
         ) : null}
       </FormModal>
 
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปสินค้า" />
+      <AppImageLightbox
+        src={lb.src}
+        sources={lb.sources}
+        initialIndex={lb.initialIndex}
+        onClose={lb.close}
+        alt="รูปสินค้า"
+      />
     </>
   );
 
