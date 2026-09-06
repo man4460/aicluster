@@ -21,6 +21,18 @@ export type ClubPortalSectionIconKey =
   | "detail"
   | "youtube";
 
+export function isClubPortalSectionIconKey(value: string): value is ClubPortalSectionIconKey {
+  return (
+    value === "schedule" ||
+    value === "past" ||
+    value === "gallery" ||
+    value === "rules" ||
+    value === "contact" ||
+    value === "detail" ||
+    value === "youtube"
+  );
+}
+
 const TILE: Record<ClubPortalSectionIconKey, { wrap: string; icon: string; node: ReactNode }> = {
   schedule: {
     wrap: "bg-violet-100/90 text-violet-700 ring-violet-200/80",

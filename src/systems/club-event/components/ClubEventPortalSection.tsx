@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   ClubEventPortalSectionTitleIcon,
+  isClubPortalSectionIconKey,
   type ClubPortalSectionIconKey,
 } from "@/systems/club-event/lib/portal-section-icons";
 import {
@@ -34,9 +35,9 @@ export function ClubEventPortalSection({
 }) {
   const headingId = titleId ?? (id ? `${id}-title` : undefined);
   const iconNode =
-    typeof titleIcon === "string" ? (
+    typeof titleIcon === "string" && isClubPortalSectionIconKey(titleIcon) ? (
       <ClubEventPortalSectionTitleIcon name={titleIcon} />
-    ) : (
+    ) : typeof titleIcon === "string" ? null : (
       titleIcon
     );
 
