@@ -70,7 +70,7 @@ const SETTINGS_TABS: { id: EcommerceStoreSettingsTab; label: string; shortLabel:
 ];
 
 const SETTINGS_TAB_DESCRIPTIONS: Record<EcommerceStoreSettingsTab, string> = {
-  basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่ · สต๊อก",
+  basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่ · เลขผู้เสียภาษี · สต๊อก",
   finance: "ชำระเงิน · พร้อมเพย์ · ขนาดสลิป · หมายเหตุชำระ",
   portal: "LINE · Facebook · แผนที่ · โดเมน · Sale Page — ไม่มีลิงก์คัดลอก (อยู่แท็บลิงก์)",
   link: "ลิงก์เว็บไซต์ + พนักงาน — บล็อกสายรายวันทีเดียว",
@@ -406,6 +406,18 @@ export function EcommerceSettingsClient() {
                   className={cn(ecommerceStoreFieldClass, "mt-1")}
                   value={store.address ?? ""}
                   onChange={(e) => setStore({ ...store, address: e.target.value })}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">เลขผู้เสียภาษี</span>
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1")}
+                  value={store.taxId ?? ""}
+                  onChange={(e) => setStore({ ...store, taxId: e.target.value })}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="เช่น 0-1234-56789-01-2"
+                  maxLength={30}
                 />
               </label>
               <label className="block space-y-1">
