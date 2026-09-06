@@ -71,17 +71,18 @@ alwaysApply: false
 
 ดู **`ecommerce-storefront-category-scroll.mdc`** — แถวเดียวเลื่อนแนวนอน ห้าม wrap
 
-### ตะกร้า / ชำระเงิน (`/cart` · `/checkout`)
+### ตะกร้า / ชำระเงิน / สรุปรายการ (`/cart` · `/checkout` · `/order/[code]`)
 
 | ชั้น | ค่า |
 |------|-----|
 | ความกว้าง | `max-w-6xl` · `px-4 sm:px-6` (`ecommerceStorePortalPageInnerClass`) |
 | พื้น | `#faf9ff` · หัว sticky ขาว (`ecommerceStorePortal*`) |
-| มือถือ | เนื้อหา 1 คอลัมน์ · **dock ล่าง** ยอดรวม + CTA (`ecommerceStorePortalBottomDockClass` · `lg:hidden`) |
-| คอม (`lg+`) | **2 คอลัมน์** — รายการ/ฟอร์มซ้าย · สรุป(+QR) ขวาสติ๊กกี้ · ซ่อน dock |
+| มือถือ | เนื้อหา 1 คอลัมน์ · **dock ล่าง** ยอด + CTA (`ecommerceStorePortalBottomDockClass` · `lg:hidden`) · `pb-28` |
+| คอม (`lg+`) | **2 คอลัมน์** — รายการ/ฟอร์มซ้าย · สรุป(+QR/สลิป) ขวาสติ๊กกี้ · ซ่อน dock |
 
 - แผง: `ecommerceStorePanelClass`  
 - **checkout:** การ์ดเดียว — ที่อยู่จัดส่ง + แนบสลิป (ห้ามหัวข้อซ้ำ «ข้อมูลจัดส่ง» / «แนบสลิป» เมื่อมีหัวหน้า «ชำระเงิน» แล้ว)  
+- **สรุปรายการ:** สถานะ+รายการ+ที่อยู่ซ้าย · ยอด/สลิปขวา (`lg`) · dock «ติดตาม / ซื้อต่อ» บนมือถือ  
 - ช่องกรอก: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
 - ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
 - **หลังยืนยันออเดอร์:** `router.push(/shop/{storeId}/order/{trackingCode})` — หน้าสรุปรายการ (`EcommerceOrderSummaryClient`) ห้ามค้างที่ checkout  

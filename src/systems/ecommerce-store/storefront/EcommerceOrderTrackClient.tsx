@@ -8,6 +8,12 @@ import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import {
   ecommerceStoreFieldClass,
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePanelClass,
+  ecommerceStorePortalPageInnerClass,
+  ecommerceStorePortalPageShellClass,
+  ecommerceStorePortalPageTitleClass,
+  ecommerceStorePortalStickyHeaderClass,
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
@@ -160,164 +166,201 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white px-4 py-8" aria-hidden>
-        <div className="mx-auto max-w-md app-surface h-64 animate-pulse rounded-[2rem] bg-[#ecebff]/30" />
+      <div className={ecommerceStorePortalPageShellClass} aria-hidden>
+        <div className={cn(ecommerceStorePortalPageInnerClass, "py-8")}>
+          <div className="h-64 animate-pulse rounded-xl bg-slate-100" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white px-4 py-8 pb-10">
-      <div className="mx-auto max-w-md app-surface rounded-[2rem] p-6">
-        <h1 className="font-black text-xl text-[#1e1b4b]">ออเดอร์ของฉัน</h1>
-        <p className="mt-1 text-sm text-[#66638c]">ติดตามสถานะหรือดูประวัติการซื้อจากร้านนี้</p>
-
-        <div className="mt-4 flex rounded-2xl bg-[#f0eeff] p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setTab("code");
-              setErr(null);
-            }}
-            className={`min-h-[40px] flex-1 rounded-xl text-sm font-bold transition ${
-              tab === "code" ? "bg-white text-[#4d47b6] shadow-sm" : "text-[#66638c]"
-            }`}
-          >
-            รหัสติดตาม
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab("history");
-              setErr(null);
-              setResult(null);
-            }}
-            className={`min-h-[40px] flex-1 rounded-xl text-sm font-bold transition ${
-              tab === "history" ? "bg-white text-[#4d47b6] shadow-sm" : "text-[#66638c]"
-            }`}
-          >
-            ประวัติซื้อ
-          </button>
-        </div>
-
-        {tab === "code" ? (
-          <>
-            <p className="mt-4 text-xs text-[#8b87b8]">ใส่รหัสที่ได้หลังสั่งซื้อสำเร็จ (หน้าชำระเงินจะพาไปหน้านี้อัตโนมัติ)</p>
-            <div className="mt-3 flex gap-2">
-              <input
-                className={cn(ecommerceStoreFieldClass, "flex-1")}
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="รหัสติดตาม"
-                aria-label="รหัสติดตามออเดอร์"
-              />
-              <button
-                type="button"
-                disabled={busy || !code.trim()}
-                onClick={() => void lookupByCode()}
-                className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
-              >
-                ค้นหา
-              </button>
-            </div>
-            {result ? (
-              <div className="mt-6 space-y-3 rounded-2xl bg-[#f8f7ff] p-4 text-sm">
-                <p>
-                  <span className="text-[#66638c]">ร้าน:</span> {result.store.storeName}
-                </p>
-                <p>
-                  <span className="text-[#66638c]">เลขอ้างอิง:</span> {result.referenceCode}
-                </p>
-                <p>
-                  <span className="text-[#66638c]">สถานะ:</span>{" "}
-                  <span className="font-bold text-[#4d47b6]">{result.statusLabel}</span>
-                </p>
-                <p>
-                  <span className="text-[#66638c]">ยอด:</span> ฿
-                  {Number(result.totalAmount).toLocaleString("th-TH")}
-                </p>
-                {result.courierTrackingNo ? (
-                  <p>
-                    <span className="text-[#66638c]">เลขพัสดุ:</span>{" "}
-                    <span className="font-bold text-[#1e1b4b]">{result.courierTrackingNo}</span>
-                  </p>
-                ) : null}
-                {result.trackingCode ? (
-                  <Link
-                    href={`/shop/${storeId}/order/${encodeURIComponent(result.trackingCode)}`}
-                    className="inline-flex text-sm font-bold text-[#4d47b6]"
-                  >
-                    ดูสรุปรายการเต็ม →
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <p className="mt-4 text-xs text-[#8b87b8]">
-              ใช้เบอร์โทรเดียวกับตอนสั่งซื้อ — แสดงเฉพาะออเดอร์ในร้านนี้
+    <div className={ecommerceStorePortalPageShellClass}>
+      <header className={ecommerceStorePortalStickyHeaderClass}>
+        <div
+          className={cn(
+            ecommerceStorePortalPageInnerClass,
+            "flex flex-wrap items-center justify-between gap-2 py-3 sm:gap-3",
+          )}
+        >
+          <div className="min-w-0 flex-1">
+            <h1 className={cn(ecommerceStorePortalPageTitleClass, "!text-xl sm:!text-2xl")}>
+              ออเดอร์ของฉัน
+            </h1>
+            <p className="truncate text-xs font-semibold text-[#66638c] sm:text-sm">
+              ติดตามสถานะหรือดูประวัติการซื้อ
             </p>
-            <div className="mt-3 flex gap-2">
-              <input
-                className={cn(ecommerceStoreFieldClass, "flex-1")}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="เบอร์โทร"
-                inputMode="tel"
-                aria-label="เบอร์โทรที่ใช้สั่งซื้อ"
-              />
-              <button
-                type="button"
-                disabled={busy || !phone.trim()}
-                onClick={() => void lookupByPhone()}
-                className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
-              >
-                ดูประวัติ
-              </button>
-            </div>
-            {historyName ? (
-              <p className="mt-3 text-sm text-[#66638c]">
-                ลูกค้า: <span className="font-semibold text-[#1e1b4b]">{historyName}</span>
+          </div>
+          <Link href={`/shop/${storeId}`} className={cn(ecommerceStoreOutlineButtonClass, "shrink-0")}>
+            กลับร้าน
+          </Link>
+        </div>
+      </header>
+
+      <main className={cn(ecommerceStorePortalPageInnerClass, "py-6")}>
+        <div className={cn(ecommerceStorePanelClass, "mx-auto max-w-3xl p-4 sm:p-5 lg:max-w-none")}>
+          <div
+            className="flex rounded-lg border border-slate-200/90 bg-slate-50 p-1"
+            role="tablist"
+            aria-label="ค้นหาออเดอร์"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "code"}
+              onClick={() => {
+                setTab("code");
+                setErr(null);
+              }}
+              className={cn(
+                "min-h-9 flex-1 rounded-md text-xs font-bold transition sm:min-h-10 sm:text-sm",
+                tab === "code" ? "bg-white text-[#4d47b6] shadow-sm" : "text-[#66638c]",
+              )}
+            >
+              รหัสติดตาม
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "history"}
+              onClick={() => {
+                setTab("history");
+                setErr(null);
+                setResult(null);
+              }}
+              className={cn(
+                "min-h-9 flex-1 rounded-md text-xs font-bold transition sm:min-h-10 sm:text-sm",
+                tab === "history" ? "bg-white text-[#4d47b6] shadow-sm" : "text-[#66638c]",
+              )}
+            >
+              ประวัติซื้อ
+            </button>
+          </div>
+
+          {tab === "code" ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-[#8b87b8]">
+                ใส่รหัสที่ได้หลังสั่งซื้อสำเร็จ — หรือเปิดจากหน้าสรุปรายการ
               </p>
-            ) : null}
-            {history.length > 0 ? (
-              <ul className="mt-4 space-y-2">
-                {history.map((o) => (
-                  <li key={o.trackingCode}>
-                    <button
-                      type="button"
-                      onClick={() => openOrderDetail(o.trackingCode)}
-                      className="w-full rounded-2xl border border-white/80 bg-[#f8f7ff] p-4 text-left text-sm transition hover:border-[#4d47b6]/30"
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  className={cn(ecommerceStoreFieldClass, "min-w-0 flex-1")}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="รหัสติดตาม"
+                  aria-label="รหัสติดตามออเดอร์"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !code.trim()}
+                  onClick={() => void lookupByCode()}
+                  className={cn(ecommerceStorePrimaryButtonClass, "w-full shrink-0 sm:w-auto sm:px-5")}
+                >
+                  ค้นหา
+                </button>
+              </div>
+              {result ? (
+                <div className="space-y-3 rounded-xl border border-slate-200/90 bg-slate-50/80 p-4 text-sm">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <p>
+                      <span className="text-[#66638c]">ร้าน:</span> {result.store.storeName}
+                    </p>
+                    <p>
+                      <span className="text-[#66638c]">เลขอ้างอิง:</span> {result.referenceCode}
+                    </p>
+                    <p>
+                      <span className="text-[#66638c]">สถานะ:</span>{" "}
+                      <span className="font-bold text-[#4d47b6]">{result.statusLabel}</span>
+                    </p>
+                    <p>
+                      <span className="text-[#66638c]">ยอด:</span> ฿
+                      {Number(result.totalAmount).toLocaleString("th-TH")}
+                    </p>
+                  </div>
+                  {result.courierTrackingNo ? (
+                    <p>
+                      <span className="text-[#66638c]">เลขพัสดุ:</span>{" "}
+                      <span className="font-bold text-[#1e1b4b]">{result.courierTrackingNo}</span>
+                    </p>
+                  ) : null}
+                  {result.trackingCode ? (
+                    <Link
+                      href={`/shop/${storeId}/order/${encodeURIComponent(result.trackingCode)}`}
+                      className={cn(ecommerceStorePrimaryButtonClass, "inline-flex w-full sm:w-auto")}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-bold text-[#1e1b4b]">{o.referenceCode}</span>
-                        <span className="shrink-0 font-bold text-[#4d47b6]">{o.statusLabel}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-[#66638c]">
-                        {new Date(o.createdAt).toLocaleString("th-TH", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-[#1e1b4b]">
-                        ฿{Number(o.totalAmount).toLocaleString("th-TH")}
-                      </p>
-                      <p className="mt-1 text-xs text-[#8b87b8]">แตะเพื่อดูรายละเอียด · รหัส {o.trackingCode}</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </>
-        )}
+                      ดูสรุปรายการ
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-[#8b87b8]">
+                ใช้เบอร์โทรเดียวกับตอนสั่งซื้อ — แสดงเฉพาะออเดอร์ในร้านนี้
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  className={cn(ecommerceStoreFieldClass, "min-w-0 flex-1")}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="เบอร์โทร"
+                  inputMode="tel"
+                  aria-label="เบอร์โทรที่ใช้สั่งซื้อ"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !phone.trim()}
+                  onClick={() => void lookupByPhone()}
+                  className={cn(ecommerceStorePrimaryButtonClass, "w-full shrink-0 sm:w-auto sm:px-5")}
+                >
+                  ดูประวัติ
+                </button>
+              </div>
+              {historyName ? (
+                <p className="text-sm text-[#66638c]">
+                  ลูกค้า: <span className="font-semibold text-[#1e1b4b]">{historyName}</span>
+                </p>
+              ) : null}
+              {history.length > 0 ? (
+                <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {history.map((o) => (
+                    <li key={o.trackingCode}>
+                      <button
+                        type="button"
+                        onClick={() => openOrderDetail(o.trackingCode)}
+                        className={cn(
+                          ecommerceStorePanelClass,
+                          "w-full p-3.5 text-left text-sm transition hover:border-[#5b61ff]/35 sm:p-4",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="truncate font-bold text-[#1e1b4b]">{o.referenceCode}</span>
+                          <span className="shrink-0 text-[11px] font-bold text-[#4d47b6]">
+                            {o.statusLabel}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#66638c]">
+                          {new Date(o.createdAt).toLocaleString("th-TH", {
+                            timeZone: "Asia/Bangkok",
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                        <p className="mt-1 text-sm font-black tabular-nums text-emerald-700">
+                          ฿{Number(o.totalAmount).toLocaleString("th-TH")}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          )}
 
-        {err ? <p className="mt-3 text-sm text-rose-600">{err}</p> : null}
-
-        <Link href={`/shop/${storeId}`} className="mt-6 inline-block text-sm font-semibold text-[#4d47b6]">
-          ← กลับหน้าร้าน
-        </Link>
-      </div>
+          {err ? <p className="mt-3 text-sm font-semibold text-rose-600">{err}</p> : null}
+        </div>
+      </main>
     </div>
   );
 }
