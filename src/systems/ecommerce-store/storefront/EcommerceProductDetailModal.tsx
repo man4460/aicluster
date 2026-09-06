@@ -175,10 +175,48 @@ export function EcommerceProductDetailModal({
           </div>
 
           <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-3.5">
-            <p className="text-2xl font-black tabular-nums text-emerald-700">
-              ฿{price.toLocaleString("th-TH")}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-[#66638c]">คงเหลือ {maxQty} ชิ้น</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-2xl font-black tabular-nums text-emerald-700">
+                  ฿{price.toLocaleString("th-TH")}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-[#66638c]">คงเหลือ {maxQty} ชิ้น</p>
+              </div>
+              {maxQty > 0 ? (
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#4d47b6]">จำนวน</span>
+                    <div className="flex items-center rounded-lg border border-slate-200/90 bg-white">
+                      <button
+                        type="button"
+                        className="min-h-9 min-w-9 text-sm font-bold text-[#4d47b6]"
+                        aria-label="ลดจำนวน"
+                        onClick={() => setQty((q) => Math.max(1, q - 1))}
+                      >
+                        -
+                      </button>
+                      <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums">
+                        {safeQty}
+                      </span>
+                      <button
+                        type="button"
+                        className="min-h-9 min-w-9 text-sm font-bold text-[#4d47b6]"
+                        aria-label="เพิ่มจำนวน"
+                        onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  {inCartQty > 0 ? (
+                    <span className="text-[10px] font-semibold text-[#66638c]">ในตะกร้า {inCartQty}</span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            {maxQty <= 0 ? (
+              <p className="mt-2 text-sm font-bold text-rose-600">สินค้าหมดชั่วคราว</p>
+            ) : null}
             {product.reviewCount && product.reviewCount > 0 && product.reviewAvg != null ? (
               <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[#4d47b6]">
                 <Stars n={Math.round(product.reviewAvg)} />
@@ -191,36 +229,6 @@ export function EcommerceProductDetailModal({
               </p>
             ) : null}
           </div>
-
-          {maxQty > 0 ? (
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
-              <span className="text-xs font-bold text-[#4d47b6]">จำนวน</span>
-              <div className="flex items-center rounded-lg border border-slate-200/90 bg-white">
-                <button
-                  type="button"
-                  className="min-h-10 min-w-10 text-sm font-bold text-[#4d47b6]"
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                >
-                  -
-                </button>
-                <span className="min-w-[2rem] text-center text-sm font-bold tabular-nums">{safeQty}</span>
-                <button
-                  type="button"
-                  className="min-h-10 min-w-10 text-sm font-bold text-[#4d47b6]"
-                  onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-                >
-                  +
-                </button>
-              </div>
-              {inCartQty > 0 ? (
-                <span className="text-xs font-semibold text-[#66638c]">ในตะกร้า {inCartQty}</span>
-              ) : null}
-            </div>
-          ) : (
-            <p className="rounded-xl border border-rose-200/80 bg-white p-3 text-sm font-bold text-rose-600 shadow-sm">
-              สินค้าหมดชั่วคราว
-            </p>
-          )}
 
           <div className="space-y-2 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-3.5">
             <p className="text-xs font-bold text-[#4d47b6]">รีวิวสินค้า</p>
