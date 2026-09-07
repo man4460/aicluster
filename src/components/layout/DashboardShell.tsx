@@ -399,7 +399,8 @@ function HeaderAccountSummary({
   return (
     <p className={cn("min-w-0 truncate", className)} title={title}>
       <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>
-      <span className="font-medium text-white/70"> โทเคน</span>
+      {/* มือถือแคบ: เหลือตัวเลข — คำว่าโทเคนกินพื้นที่จน truncate หาย */}
+      <span className="hidden font-medium text-white/70 min-[380px]:inline"> โทเคน</span>
       <span className="hidden lg:inline">
         {packageLabel ? (
           <>
@@ -1467,8 +1468,9 @@ export function DashboardShell({
 
           <Link
             href="/dashboard"
-            className="shrink-0 transition-transform hover:scale-105 active:scale-95"
+            className="max-w-[4.5rem] shrink-0 overflow-hidden transition-transform hover:scale-105 active:scale-95 sm:max-w-none"
             onClick={() => setDrawerOpen(false)}
+            aria-label="MAWELL — หน้าแรกแดชบอร์ด"
           >
             <MawellLogo size="sm" />
           </Link>
@@ -1534,8 +1536,8 @@ export function DashboardShell({
             </div>
           ) : null}
 
-          {/* กลาง: ยอดโทเคน (มือถือย่อเหลือตัวเลข) / เมนูโมดูลเมื่อย่อหัว */}
-          <div className="min-w-[5.75rem] flex-1 overflow-hidden px-0.5 sm:min-w-0 sm:px-1">
+          {/* กลาง: ยอดโทเคน (มือถือย่อ · basis-0 ให้ได้พื้นที่ก่อนไอคอนขวา) / เมนูโมดูลเมื่อย่อหัว */}
+          <div className="min-w-0 flex-1 basis-0 overflow-hidden px-0.5 sm:px-1">
             {showDrinkPosHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -2046,8 +2048,8 @@ export function DashboardShell({
             )}
           </div>
 
-          {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2.5 sm:gap-2 sm:pl-3.5">
+          {/* ขวา: มือถือเหลือโปรไฟล์ · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
+          <div className="flex shrink-0 flex-nowrap items-center gap-0.5 border-l border-white/20 pl-1.5 sm:gap-1.5 sm:pl-2.5 md:gap-2 md:pl-3.5">
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
@@ -2106,12 +2108,19 @@ export function DashboardShell({
                     <span className="text-lg">👤</span>
                     โปรไฟล์ของคุณ
                   </Link>
+                  <LogoutButton
+                    className="mt-0.5 flex w-full items-center justify-start gap-2.5 rounded-xl border-0 bg-transparent px-3.5 py-2.5 text-left text-sm font-bold text-rose-600 shadow-none hover:bg-rose-50"
+                  />
                 </div>
               ) : null}
             </div>
 
-            <AppBrowserFullscreenButton className="hidden h-10 w-10 sm:inline-flex" />
-            <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
+            <span className="hidden sm:contents">
+              <AppBrowserFullscreenButton className="h-10 w-10" />
+            </span>
+            <span className="hidden sm:contents">
+              <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
+            </span>
           </div>
         </div>
       </header>
