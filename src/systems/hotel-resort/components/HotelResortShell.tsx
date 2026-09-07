@@ -201,33 +201,193 @@ export function HotelResortShell({ children }: { children: ReactNode }) {
           subtitle="แดชบอร์ด ห้องพัก จอง เช็คอิน การเงิน · ลิงก์ QR อยู่ในเมนูตั้งค่า"
           sections={[
             {
-              title: "เมนูหลัก",
+              title: "ลำดับเริ่มต้นแนะนำ (ที่พักใหม่)",
+              content: (
+                <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน</strong> — ชื่อที่พัก · โลโก้ · ติดต่อ · พร้อมเพย์/บัญชี · โหมดมัดจำ/ชำระเต็มบนเว็บ · เวลาเช็คอิน–เช็คเอาต์
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ห้องพัก</strong> — สร้างอาคาร/ตึก · ประเภทห้อง · เพิ่มห้องพร้อมราคาและสถานะ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์ QR</strong> — แท็บ «ลิงก์ QR» ในตั้งค่า · คัดลอกลิงก์เว็บจอง · ดาวน์โหลดโปสเตอร์ · QR พนักงาน (ถ้าใช้)
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ทดลองจอง</strong> — จองจากแดชบอร์ดหรือเว็บลูกค้า · เช็คอิน · ตรวจการเงินและสลิป
+                  </li>
+                </ol>
+              ),
+            },
+            {
+              title: "เมนูหลักโมดูล (6 รายการ)",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>แท็บเมนูอยู่ในส่วนหัว — กดซ่อนเพื่อย้ายไปแถบบน (คอมพิวเตอร์) หรือเหลือเมนูล่าง (มือถือ)</li>
-                  <li>มือถือใช้ dock ด้านล่างสลับหน้าตามแพทเทิร์นคาร์แคร์</li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — สถิติวันนี้ (กริด 2 คอลัมน์บนมือถือ) · ผังห้องสถานะวันนี้ · ปุ่มจอง/เช็คอิน/เช็คเอาต์บนการ์ดห้อง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ห้องพัก</strong> — จัดการอาคาร · ประเภทห้อง · เพิ่ม/แก้ไข/ปิดใช้ห้อง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">จอง</strong> — รายการจองล่วงหน้า · กรองช่วงเวลา · เตือนเลยเวลาเช็คอิน/เช็คเอาต์
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">เช็คอิน</strong> — รับแขก walk-in หรือจากการจอง · อัปโหลดรูปบัตร · รับชำระ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — สรุปรายรับ–รายจ่าย · กรอง · กราฟ · ประวัติผู้เข้าพัก/รายรับ/รายจ่าย
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน</strong> — พื้นฐาน · การเงิน · เว็บลูกค้า · เวลาเช็คอิน · ลิงก์ QR
+                  </li>
+                  <li>มือถือใช้ <strong className="font-semibold text-[#2e2a58]">dock ล่าง</strong> 6 ปุ่ม · เดสก์ท็อปใช้แท็บในการ์ดหัวโมดูล</li>
+                  <li>
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">ซ่อนส่วนหัว</strong> ยุบการ์ดชื่อโมดูล — เมนูยังใช้ dock/แถบม่วงได้ · จำค่าในเครื่อง
+                  </li>
                 </ul>
               ),
             },
             {
-              title: "แดชบอร์ด",
-              content: <p>สถิติและผังห้อง — จองหรือเช็คอินจากปุ่มบนการ์ดห้อง</p>,
+              title: "แดชบอร์ด — สถิติ · ผังห้อง",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">แสดงกรอง / ซ่อนกรอง</strong> คู่รีเฟรช — กรองค้นหา · สถานะ · อาคาร · ประเภทห้อง · «ต้องปิดงาน»
+                  </li>
+                  <li>
+                    ผังอ้างอิง <strong className="font-semibold text-[#2e2a58]">วันนี้</strong> เสมอ (ไม่กรองช่วงวันที่บนผัง — ใช้หน้า «จอง» แทน)
+                  </li>
+                  <li>
+                    การ์ดห้อง — สีเตือน <strong className="font-semibold text-[#2e2a58]">amber</strong> ไม่มาเช็คอิน · <strong className="font-semibold text-[#2e2a58]">rose</strong> ต้องเช็คเอาต์ · แสดงชื่อผู้จองเมื่อเช็คอินแล้ว
+                  </li>
+                  <li>
+                    ห้องว่าง/จอง — ปุ่ม <strong className="font-semibold text-[#2e2a58]">จอง</strong> หรือ <strong className="font-semibold text-[#2e2a58]">เช็คอิน</strong> บนการ์ด · ห้องเข้าพัก — ปุ่ม <strong className="font-semibold text-[#2e2a58]">เช็คเอาต์</strong>
+                  </li>
+                  <li>ไม่มีแบนเนอร์สรุปด้านบนผัง — อ่านสถานะจากสีและข้อความบนการ์ดแต่ละห้อง</li>
+                </ul>
+              ),
             },
             {
-              title: "ห้องพัก",
-              content: <p>จัดการอาคาร · ประเภทห้อง · เพิ่ม/แก้ไขห้อง — เมนู «ห้องพัก»</p>,
+              title: "จอง — กรอง · สลิป · ปิดงาน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    ชิปช่วง: <strong className="font-semibold text-[#2e2a58]">วันนี้</strong> · เดือนนี้ · ปีนี้ · ช่วงเวลา · ทั้งหมด · ติ๊ก «ต้องปิดงาน» เมื่อเลยเวลาเช็คอิน/เช็คเอาต์
+                  </li>
+                  <li>
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">แสดงกรอง / ซ่อนกรอง</strong> ทุกขนาดจอ — มีจุดเตือนเมื่อกรองค้างแต่แผงปิด
+                  </li>
+                  <li>
+                    ชำระมัดจำ/บางส่วน — การ์ดแสดงยอดชำระแล้ว/คงเหลือ · สลิปมัดจำ (<strong className="font-semibold text-[#2e2a58]">depositSlipUrl</strong>) กดดู lightbox
+                  </li>
+                  <li>
+                    โมดัลจัดการจอง — แก้วันเข้าพัก · ห้อง · ยอด · สถานะ · ดูสลิปมัดจำและสลิปชำระเพิ่มแยกกัน
+                  </li>
+                  <li>ยืนยันลบ/ยกเลิกผ่าน popup กลางจอ — ไม่ใช้ window.confirm</li>
+                </ul>
+              ),
             },
             {
-              title: "ตั้งค่า — ลิงก์ QR",
-              content: <p>QR พอร์ทัลลูกค้า/พนักงาน · แบนเนอร์และข้อมูลลิงก์ — อยู่ในเมนู «ตั้งค่า»</p>,
+              title: "เช็คอิน · เช็คเอาต์ — ชำระเงิน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">เช็คอิน</strong> — เลือกห้อง/การจอง · กรอกข้อมูลแขก · ถ่าย/อัปโหลดรูปบัตรประชาชน · สรุปยอดที่ต้องชำระเพิ่ม
+                  </li>
+                  <li>
+                    ช่องทางชำระ: <strong className="font-semibold text-[#2e2a58]">เงินสด</strong> · <strong className="font-semibold text-[#2e2a58]">พร้อมเพย์</strong> · <strong className="font-semibold text-[#2e2a58]">โอนเงิน</strong> · <strong className="font-semibold text-[#2e2a58]">บัตรเครดิต</strong>
+                  </li>
+                  <li>
+                    พร้อมเพย์/โอน — แสดง QR ยอดที่ชำระครั้งนี้ · แนบสลิปได้ (ทางเลือกบนแดชบอร์ด) · เก็บใน <strong className="font-semibold text-[#2e2a58]">paymentSlipUrl</strong> แยกจากสลิปมัดจำ
+                  </li>
+                  <li>
+                    ถ้ามีมัดจำจากเว็บ — แสดงสลิปมัดจำอ่านอย่างเดียว · <strong className="font-semibold text-[#2e2a58]">ห้าม</strong> ทับสลิปมัดจำด้วยสลิปเช็คอิน
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">เช็คเอาต์</strong> — จากผังห้องเข้าพัก · รายการเพิ่ม (มินิบาร์ ฯลฯ) · สรุปยอดคงเหลือ · ชำระครั้งสุดท้ายด้วยแผงเดียวกัน
+                  </li>
+                </ul>
+              ),
             },
             {
-              title: "จอง / เช็คอิน",
-              content: <p>หน้าจองสำหรับงานล่วงหน้า · หน้าเช็คอินอัปโหลดรูปบัตรประชาชนและรับชำระ</p>,
+              title: "ห้องพัก — อาคาร · ประเภท · ห้อง",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">อาคาร/ตึก</strong> — เพิ่มหลายอาคารเมื่อที่พักมีหลายตึก · ใช้กรองบนผังและรายการจอง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ประเภทห้อง</strong> — ชื่อ · ราคา · จำนวนที่นอน/สิ่งอำนวยความสะดวก · ใช้ตอนจองและเช็คอิน
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ห้อง</strong> — เลขห้อง · อาคาร · ประเภท · สถานะเปิด/ปิด · แก้ไข/ปิดใช้แทนลบถาวรเมื่อเป็นไปได้
+                  </li>
+                  <li>เรียงลำดับ: ตั้งโครงสร้างอาคาร → ประเภท → ห้องก่อนเปิดรับจองจริง</li>
+                </ul>
+              ),
             },
             {
-              title: "การเงิน",
-              content: <p>รายรับ–ต้นทุน · QR พร้อมเพย์ · ใบเสร็จ/สลิป</p>,
+              title: "การเงิน — กรอง · กราฟ · แท็บ",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    การ์ดเดียว «ช่วงเวลาและกราฟ» — ปุ่ม <strong className="font-semibold text-[#2e2a58]">แสดง/ซ่อนกรอง</strong> และ <strong className="font-semibold text-[#2e2a58]">แสดง/ซ่อนกราฟ</strong>
+                  </li>
+                  <li>
+                    ชิปช่วง: วันนี้ · 7 วัน · เดือน · ปี · กำหนดเอง · กราฟใช้โหมด <strong className="font-semibold text-[#2e2a58]">compact</strong> ชุดเดียวทั้งหน้า
+                  </li>
+                  <li>
+                    แท็บในการ์ดรายละเอียด: <strong className="font-semibold text-[#2e2a58]">ประวัติผู้เข้าพัก</strong> · <strong className="font-semibold text-[#2e2a58]">รายรับ</strong> · <strong className="font-semibold text-[#2e2a58]">รายจ่าย</strong>
+                  </li>
+                  <li>
+                    รายจ่าย — จัดการหมวดหมู่ · บันทึกรายการแนบสลิป · แก้/ลบด้วย popup ยืนยัน
+                  </li>
+                  <li>ราคารายรับสีเขียว · รายจ่ายสีชมพู — ตามมาตรฐานการเงินโมดูล</li>
+                </ul>
+              ),
+            },
+            {
+              title: "ตั้งค่าร้าน (5 แท็บ)",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อที่พัก · ผู้จัดการ · โลโก้ · สโลแกน · เบอร์ · ที่อยู่ · LINE · Facebook · แผนที่
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชีโอน · โหมดชำระเว็บ (ไม่เก็บ/มัดจำ/เต็ม) · ยอดมัดจำ · ขนาดกระดาษสลิป · PIN พนักงาน
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็ปลิงค์ลูกค้า</strong> — แบนเนอร์ · รูปโปรโมท · ข้อความพอร์ทัล · <strong className="font-semibold text-[#2e2a58]">ไม่มี</strong> คัดลอกลิงก์/QR ในแท็บนี้
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเวลาเช็คอิน / เช็คเอาต์</strong> — เวลาเริ่ม–สิ้นสุด (เวลาไทย) · ใช้เตือนเลยเวลาบนรายการจองและผัง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์ QR</strong> — การ์ดคู่ลิงก์เว็บจอง + QR พนักงาน · คัดลอก · ดาวน์โหลดโปสเตอร์ · บล็อกสายรายวันครั้งเดียว
+                  </li>
+                  <li>มือถือ — dropdown เลือกแท็บ · เดสก์ท็อป — แถบ pill ในแถวเดียวกับปุ่มบันทึก</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เว็บจองลูกค้า · มัดจำ · สลิป",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    URL รูปแบบ <strong className="font-semibold text-[#2e2a58]">/hotel-resort/[ownerId]</strong> — แบนเนอร์ · ค้นหาห้องว่าง · เลือกวันเข้า–ออก · กรอกข้อมูลแขก
+                  </li>
+                  <li>
+                    เมื่อมียอดชำระบนเว็บ — เลือก <strong className="font-semibold text-[#2e2a58]">พร้อมเพย์</strong> หรือ <strong className="font-semibold text-[#2e2a58]">โอน</strong> · QR ฝังยอด · <strong className="font-semibold text-[#2e2a58]">บังคับแนบสลิป</strong> ก่อนยืนยันจอง
+                  </li>
+                  <li>
+                    หลังจองสำเร็จ — หน้ารายละเอียดแสดงยอดจอง · ชำระแล้ว · คงเหลือ · สลิปมัดจำกดขยายได้
+                  </li>
+                  <li>
+                    ลิงก์และ QR เปิดจากแท็บ <strong className="font-semibold text-[#2e2a58]">ลิงก์ QR</strong> ในเมนูตั้งค่า — ไม่ปนกับแท็บตั้งค่าเว็บ
+                  </li>
+                </ul>
+              ),
             },
           ]}
         />

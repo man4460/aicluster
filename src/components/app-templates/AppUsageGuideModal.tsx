@@ -1,11 +1,10 @@
 "use client";
 
 import { FormModal } from "@/components/ui/FormModal";
-
-type AppUsageGuideSection = {
-  title: string;
-  content: React.ReactNode;
-};
+import {
+  type AppUsageGuideSection,
+  withAppUsageGuideStandardSections,
+} from "@/components/app-templates/app-usage-guide-shared";
 
 function Section({ title, content }: AppUsageGuideSection) {
   return (
@@ -18,6 +17,7 @@ function Section({ title, content }: AppUsageGuideSection) {
 
 /**
  * คู่มือการใช้งาน — ใช้ FormModal + mobileCentered (กึ่งกลางจอบนมือถือ)
+ * แนบท้ายอัตโนมัติ: มือถือ/แถบหัว + สร้างแอปหน้าจอโฮม iOS/Android
  * กฎ: `.cursor/rules/app-usage-guide-modal.mdc`
  */
 export function AppUsageGuideModal({
@@ -26,13 +26,24 @@ export function AppUsageGuideModal({
   title,
   subtitle,
   sections,
+  includeChromeGuide = true,
+  includeHomeScreenGuide = true,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   sections: AppUsageGuideSection[];
+  /** แนบท้ายคู่มือ dock / ยุบหัว / โทเคน (ค่าเริ่ม true) */
+  includeChromeGuide?: boolean;
+  /** แนบท้ายขั้นตอนติดตั้งแอปหน้าจอโฮม iOS + Android (ค่าเริ่ม true) */
+  includeHomeScreenGuide?: boolean;
 }) {
+  const merged = withAppUsageGuideStandardSections(sections, {
+    includeChrome: includeChromeGuide,
+    includeHomeScreen: includeHomeScreenGuide,
+  });
+
   return (
     <FormModal
       open={open}
@@ -54,7 +65,7 @@ export function AppUsageGuideModal({
       }
     >
       <div className="space-y-5">
-        {sections.map((section) => (
+        {merged.map((section) => (
           <Section key={section.title} title={section.title} content={section.content} />
         ))}
       </div>

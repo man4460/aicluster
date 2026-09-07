@@ -111,29 +111,86 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 
 const guideSections = [
   {
-    title: "เก็บอย่างปลอดภัย",
+    title: "ลำดับเริ่มต้นแนะนำ",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-indigo-600">
-        <li>รหัสผ่านถูกเข้ารหัสด้วย AES-256-GCM ก่อนเก็บฐานข้อมูล</li>
-        <li>เห็นรหัสจริงต่อเมื่อกด «แสดงรหัส» เท่านั้น — ระบบจะบันทึกเวลาใช้งานล่าสุด</li>
+      <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>
+          เปิด <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — ดูบัญชีทั้งหมด · ค้นหา · กรองหมวด
+        </li>
+        <li>
+          กด <strong className="font-semibold text-[#2e2a58]">+ เพิ่มบัญชี</strong> — เลือกบริการยอดนิยมหรือกำหนดเอง · ใส่ชื่อผู้ใช้/รหัส/URL
+        </li>
+        <li>
+          ปักหมุด (<strong className="font-semibold text-[#2e2a58]">ดาว</strong>) บัญชีที่ใช้บ่อยให้อยู่บนสุด
+        </li>
+        <li>
+          ใช้ปุ่ม <strong className="font-semibold text-[#2e2a58]">คัดลอก</strong> บนการ์ด — ไม่ต้องเปิดดูรหัสทุกครั้ง
+        </li>
+      </ol>
+    ),
+  },
+  {
+    title: "เมนูหลัก (2 รายการ)",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — รายการบัญชีทั้งหมด · ค้นหา · กรอง · เพิ่ม/แก้ไข/ลบ
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ตั้งค่าความปลอดภัยและพฤติกรรมคัดลอก (ถ้ามีในโมดูล)
+        </li>
+        <li>
+          มือถือใช้ <strong className="font-semibold text-[#2e2a58]">dock ล่าง</strong> 2 ปุ่ม · กดซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง
+        </li>
       </ul>
     ),
   },
   {
-    title: "เพิ่มและจัดหมวด",
+    title: "เก็บอย่างปลอดภัย",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-indigo-600">
-        <li>เพิ่มบัญชีพร้อมเลือก «บริการยอดนิยม» เพื่อให้ระบบใส่ไอคอนและสีให้อัตโนมัติ</li>
-        <li>กดดาวเพื่อปักหมุดบัญชีที่ใช้บ่อย</li>
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          รหัสผ่านถูก <strong className="font-semibold text-[#2e2a58]">เข้ารหัส AES-256-GCM</strong> ก่อนเก็บในฐานข้อมูล
+        </li>
+        <li>
+          เห็นรหัสจริงต่อเมื่อกด <strong className="font-semibold text-[#2e2a58]">แสดงรหัส</strong> เท่านั้น — ระบบบันทึกเวลาใช้งานล่าสุด
+        </li>
+        <li>อย่าแชร์หน้าจอขณะเปิดรหัส · ปิดแท็บเมื่อไม่ใช้งาน</li>
+        <li>ข้อมูลผูกกับบัญชี MAWELL ของคุณ — ไม่แชร์ข้ามผู้ใช้</li>
+      </ul>
+    ),
+  },
+  {
+    title: "เพิ่ม · แก้ไข · จัดหมวด",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          เพิ่มบัญชี — ชื่อเรียก · ชื่อผู้ใช้/อีเมล · รหัส · URL · หมายเหตุ · เลือกหมวด
+        </li>
+        <li>
+          เลือก <strong className="font-semibold text-[#2e2a58]">บริการยอดนิยม</strong> (Facebook, Gmail ฯลฯ) — ระบบใส่ไอคอนและสีให้อัตโนมัติ
+        </li>
+        <li>
+          กด <strong className="font-semibold text-[#2e2a58]">ดาว</strong> บนการ์ด — ปักหมุดบัญชีที่ใช้บ่อยให้เรียงบนสุด
+        </li>
+        <li>
+          แก้ไข/ลบ — ไอคอนบนการ์ด · ลบผ่าน popup ยืนยันกลางจอ
+        </li>
+        <li>กรองตามหมวดหรือค้นหาชื่อ — ใช้ช่องค้นหาด้านบนรายการ</li>
       </ul>
     ),
   },
   {
     title: "คัดลอกเร็ว",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-indigo-600">
-        <li>กดปุ่มก๊อบปี้ที่ตัวการ์ดเพื่อคัดลอกชื่อผู้ใช้หรือรหัสไปยังคลิปบอร์ดได้ทันที</li>
-        <li>คลิปบอร์ดจะล้างอัตโนมัติหลังคัดลอกรหัส 30 วินาที (เฉพาะอุปกรณ์รองรับ)</li>
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          กดปุ่ม <strong className="font-semibold text-[#2e2a58]">ก๊อบปี้</strong> ที่การ์ด — คัดลอกชื่อผู้ใช้หรือรหัสไปคลิปบอร์ดทันที
+        </li>
+        <li>
+          หลังคัดลอกรหัส — คลิปบอร์ดอาจ <strong className="font-semibold text-[#2e2a58]">ล้างอัตโนมัติหลัง 30 วินาที</strong> (อุปกรณ์ที่รองรับ)
+        </li>
+        <li>แตะการ์ดเพื่อเปิดรายละเอียดเต็ม · คัดลอกทีละฟิลด์จากโมดัลได้</li>
       </ul>
     ),
   },

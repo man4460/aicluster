@@ -172,27 +172,53 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
               <ol className="list-decimal space-y-3 pl-5 marker:font-semibold marker:text-[#4d47b6]">
                 <li>
                   <p className="font-semibold text-[#2e2a58]">แดชบอร์ด</p>
-                  <p className="mt-0.5">ดูภาพรวมร้านก่อนเปิดกะ — รายรับวันนี้ จำนวนออเดอร์ และทางลัดไปรับออเดอร์ / QR</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>ดูภาพรวมร้านก่อนเปิดกะ — รายรับวันนี้ · จำนวนออเดอร์ · โต๊ะค้าง</li>
+                    <li>ทางลัดไปรับออเดอร์ · คิวออเดอร์ · QR — อัปเดตแบบเรียลไทม์เมื่อมีออเดอร์ใหม่</li>
+                  </ul>
                 </li>
                 <li>
                   <p className="font-semibold text-[#2e2a58]">ออร์เดอร์</p>
-                  <p className="mt-0.5">หน้ารับออเดอร์ของพนักงาน — เลือกโต๊ะ ช่องทาง เมนู แล้วส่งเข้าครัวทันที</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>เลือกโต๊ะ/ช่องทาง · เลือกเมนูจากกริด · ส่งเข้าครัวทันที</li>
+                    <li>มือถือ: กริดเมนู 3 คอลัมน์ · สรุปบิลเหนือ dock · คอม: แผงซ้าย–ขวาเลื่อนแยก</li>
+                  </ul>
                 </li>
                 <li>
                   <p className="font-semibold text-[#2e2a58]">คิวออเดอร์</p>
-                  <p className="mt-0.5">กระดาน 4 ขั้น: รับออเดอร์ → ครัวกำลังทำ → กำลังเสิร์ฟ → เสร็จแล้ว อัปเดตสถานะได้ทันที</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>กระดาน 4 ขั้น: รับออเดอร์ → ครัวกำลังทำ → กำลังเสิร์ฟ → เสร็จแล้ว</li>
+                    <li>แตะการ์ดเพื่ออัปเดตสถานะ — ทุกจอที่เปิดคิว sync พร้อมกัน</li>
+                  </ul>
                 </li>
                 <li>
                   <p className="font-semibold text-[#2e2a58]">เมนู / หมวดหมู่</p>
-                  <p className="mt-0.5">สร้างหมวด (เช่น จานหลัก · เครื่องดื่ม) แล้วเพิ่มเมนู ราคา รูป และเปิด/ปิดขาย</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>ปุ่ม <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> — จัดการหมวดในโมดัล · ชิปกรองใต้หัวการ์ด</li>
+                    <li>เพิ่มเมนู — ชื่อ · ราคา · หมวด · รูป · แผนกครัว · เปิด/ปิดขาย</li>
+                  </ul>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">การเงิน</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>สรุปรายรับ (เขียว) · รายจ่าย (ชมพู) · กำไร — ค่าเริ่ม <strong className="font-semibold text-[#2e2a58]">เดือนนี้</strong></li>
+                    <li>กดแสดงกรอง/กราฟ · แท็บประวัติรายรับ · แท็บรายจ่าย (หมวด · สลิป · แก้ไข/ลบ)</li>
+                    <li>ปิดบิล · พิมพ์สลิป · บันทึกรายจ่ายพร้อมหลักฐานก่อนสรุปกะ</li>
+                  </ul>
                 </li>
                 <li>
                   <p className="font-semibold text-[#2e2a58]">QR</p>
-                  <p className="mt-0.5">QR ลูกค้า/โต๊ะ · ลิงก์พนักงาน · ลิงก์แผนกครัว/เสิร์ฟ สำหรับเปิดบนมือถือหรือแท็บเล็ต</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>QR ลูกค้า/โต๊ะ · ลิงก์พนักงาน · ลิงก์ครัว · ลิงก์เสิร์ฟ</li>
+                    <li>คัดลอกลิงก์ · ดาวน์โหลดโปสเตอร์ · ทดสอบสแกนบนมือถือก่อนติดโต๊ะ</li>
+                  </ul>
                 </li>
                 <li>
-                  <p className="font-semibold text-[#2e2a58]">การเงิน (ยอดขาย · รายจ่าย)</p>
-                  <p className="mt-0.5">ตรวจยอด ปิดบิล พิมพ์สลิป กรองช่วงเวลา และบันทึกรายจ่ายพร้อมหลักฐาน</p>
+                  <p className="font-semibold text-[#2e2a58]">ตั้งค่า</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 marker:text-[#4d47b6]">
+                    <li>ชื่อร้าน · โลโก้ · พร้อมเพย์/บัญชี · ขนาดสลิป · เวลาเปิดร้าน</li>
+                    <li>ตั้งค่าเว็บไซต์ (ถ้ามี) · ลิงก์/QR รวมใน hub เดียวกับเมนู QR</li>
+                  </ul>
                 </li>
               </ol>
             ),

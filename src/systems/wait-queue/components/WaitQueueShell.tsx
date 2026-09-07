@@ -91,25 +91,91 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 
 const guideSections = [
   {
-    title: "ภาพรวม",
+    title: "ลำดับเริ่มต้นแนะนำ (ร้านใหม่)",
+    content: (
+      <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อร้าน · ข้อความประกาศเมื่อเรียกคิว (เช่น «เชิญเข้าร้าน»)
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ทดลองลงคิว</strong> — กรอกจำนวนคน · ชื่อเรียก (ถ้ามี) · กดบันทึก
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">เรียกคิว</strong> — กด «เรียกถัดไป» หรือเรียกจากแถว · เปิดเสียงประกาศ (ถ้าต้องการ)
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ปิดคิว</strong> — ยืนยันเข้าร้านหรือข้ามเมื่อลูกค้าไม่มา
+        </li>
+      </ol>
+    ),
+  },
+  {
+    title: "เมนูหลัก (2 รายการ)",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>พนักงานลงคิวลูกค้า walk-in พร้อมจำนวนคนและชื่อเรียก (ถ้ามี)</li>
-        <li>กดเรียกคิวถัดไป หรือเรียกจากแถวรายการ — แถบด้านบนจะแสดงเลขคิวที่ถึงคิวและข้อความเชิญเข้าร้าน</li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">คิววันนี้</strong> — ลงคิว · เรียก · อัปเดตสถานะ · แถบประกาศด้านบน
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อร้าน · ข้อความเรียกคิว · บันทึก
+        </li>
+        <li>
+          มือถือใช้ <strong className="font-semibold text-[#2e2a58]">dock ล่าง</strong> 2 ปุ่ม · เดสก์ท็อปใช้แท็บในการ์ดหัว
+        </li>
+        <li>
+          ปุ่ม <strong className="font-semibold text-[#2e2a58]">ซ่อนส่วนหัว</strong> ยุบการ์ดชื่อโมดูล — เมนูยังใช้ dock/แถบม่วงได้
+        </li>
       </ul>
     ),
   },
   {
-    title: "สถานะ",
+    title: "คิววันนี้ — ลงคิว · เรียก · ประกาศ",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>
-          <strong className="font-bold text-[#1e1b4b]">กำลังรอ</strong> → เรียกแล้วจะเป็น{' '}
-          <strong className="font-bold text-[#1e1b4b]">เรียกแล้ว</strong>
+          ลงคิว walk-in — ระบุ <strong className="font-semibold text-[#2e2a58]">จำนวนคน</strong> · ชื่อเรียก/หมายเหตุ (ถ้ามี) · ได้เลขคิวอัตโนมัติ
         </li>
         <li>
-          ยืนยันเมื่อลูกค้าเข้าร้าน → <strong className="font-bold text-[#1e1b4b]">เข้าร้านแล้ว</strong> หรือข้ามถ้าไม่มา
+          แถบด้านบน — แสดงเลขคิวที่ <strong className="font-semibold text-[#2e2a58]">ถึงคิว</strong> และข้อความเชิญจากตั้งค่า
         </li>
+        <li>
+          ปุ่ม <strong className="font-semibold text-[#2e2a58]">เรียกถัดไป</strong> — เรียกคิวรอที่เก่าที่สุด · หรือกดเรียกจากแถวรายการโดยตรง
+        </li>
+        <li>
+          สวิตช์ <strong className="font-semibold text-[#2e2a58]">เสียงประกาศ</strong> — อ่านเลขคิวด้วยเสียง (ต้องแตะเปิดเสียงครั้งแรกบนมือถือ)
+        </li>
+        <li>ปุ่มรีเฟรช — โหลดคิวล่าสุดเมื่อมีหลายเครื่องพนักงาน</li>
+      </ul>
+    ),
+  },
+  {
+    title: "สถานะคิว — ขั้นตอนการทำงาน",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">กำลังรอ</strong> — ลูกค้ารอเรียก · กดเรียกแล้วเปลี่ยนเป็น «เรียกแล้ว»
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">เรียกแล้ว</strong> — ประกาศแล้ว · รอยืนยันว่าเข้าร้าน
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">เข้าร้านแล้ว</strong> — ปิดคิวสำเร็จ · หรือกดข้าม/ยกเลิกถ้าลูกค้าไม่มา
+        </li>
+        <li>คิววันนี้รีเซ็ตอัตโนมัติตามวันปฏิทินไทย (Asia/Bangkok)</li>
+      </ul>
+    ),
+  },
+  {
+    title: "ตั้งค่า",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ชื่อร้าน</strong> — แสดงบนหัวหน้าคิว (ถ้ามี)
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ข้อความเรียกคิว</strong> — ต่อท้ายเลขคิวตอนประกาศ เช่น «เชิญเข้าร้าน»
+        </li>
+        <li>กดบันทึก — ใช้กับคิวใหม่ทันที · แจ้งสำเร็จผ่าน popup กลางจอ</li>
       </ul>
     ),
   },
@@ -227,6 +293,7 @@ export function WaitQueueShell({
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
           title="คู่มือ — คิวหน้าร้าน"
+          subtitle="ลงคิว · เรียก · ประกาศเสียง · ตั้งค่า"
           sections={guideSections}
         />
 

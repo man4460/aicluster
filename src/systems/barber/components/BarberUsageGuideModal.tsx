@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import {
+  APP_USAGE_GUIDE_HOME_SCREEN_SECTION,
+  APP_USAGE_GUIDE_MOBILE_CHROME_SECTION,
+} from "@/components/app-templates";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import {
   barberCardSurfaceRadiusClass,
@@ -307,6 +311,15 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
                 <li>เมื่อเห็นแบนเนอร์โหมดทดลอง ข้อมูลในโมดูลนี้แยกจากข้อมูลหลังสมัครใช้งานจริง</li>
                 <li>ดาวน์โหลดโปสเตอร์ QR อาจถูกปิดตามข้อความในแบนเนอร์</li>
               </ul>
+            </Section>
+
+            <Section
+              title={APP_USAGE_GUIDE_MOBILE_CHROME_SECTION.title}
+            >
+              {APP_USAGE_GUIDE_MOBILE_CHROME_SECTION.content}
+            </Section>
+            <Section title={APP_USAGE_GUIDE_HOME_SCREEN_SECTION.title}>
+              {APP_USAGE_GUIDE_HOME_SCREEN_SECTION.content}
             </Section>
           </div>
         </div>

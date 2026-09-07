@@ -158,53 +158,148 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
         subtitle="แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า · เว็บลูกค้า"
         sections={[
           {
-            title: "เริ่มต้น",
-            content:
-              "ตั้งค่าร้าน → การจัดการ → เพิ่มสินค้าและรูป → คัดลอกลิงก์ /shop แชร์ลูกค้า → ตรวจสลิปที่แท็บออเดอร์",
+            title: "ลำดับเริ่มต้นแนะนำ (ร้านใหม่)",
+            content: (
+              <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อร้าน · โลโก้ · พร้อมเพย์/บัญชี · ตั้งค่าเว็บไซต์ (LINE · โดเมน · Sale Page)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ → สินค้า</strong> — เพิ่มสินค้า · รูปปก+มุมอื่น · หมวด · สต๊อก · ติ๊ก «แสดงบนเว็บไซต์»
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ลิงก์</strong> — แท็บลิงก์ในตั้งค่า · คัดลอก <strong className="font-semibold text-[#2e2a58]">/shop/[storeId]</strong> · QR พนักงาน
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ทดลองขาย</strong> — สั่งจากเว็บ · ตรวจสลิปที่ออเดอร์ออนไลน์ · ทด POS หน้าร้าน
+                </li>
+              </ol>
+            ),
           },
           {
-            title: "เมนูหลัก",
-            content:
-              "แดชบอร์ด (ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน) · การเงิน · การจัดการ (สินค้า · CRM) · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+            title: "เมนูหลักโมดูล (4 รายการ)",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน (แท็บย่อย)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — สรุปออนไลน์/หน้าร้าน · รายจ่าย · กรอง · กราฟ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> — สินค้า (รวมสต๊อก) · CRM (แท็บย่อย)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — พื้นฐาน · การเงิน · ตั้งค่าเว็บไซต์ · ลิงก์
+                </li>
+                <li>
+                  มือถือใช้ <strong className="font-semibold text-[#2e2a58]">dock ล่าง</strong> 4 ปุ่ม · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วงบนเดสก์ท็อป
+                </li>
+              </ul>
+            ),
           },
           {
             title: "แดชบอร์ด — ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน",
-            content:
-              "ภาพรวมแสดงสถิติร้าน · ออเดอร์ออนไลน์สำหรับตรวจสลิป/อัปเดตสถานะ · ขายหน้าร้านเป็น POS ตัดสต๊อกทันที · การเงินแยกรายรับออนไลน์กับหน้าร้าน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — สถิติยอดขาย · ออเดอร์รอ · สต๊อกใกล้หมด (กริด 2 คอลัมน์บนมือถือ)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ออเดอร์ออนไลน์</strong> — ตรวจสลิป · อัปเดตสถานะ (รอชำระ → จัดส่ง) · ดูที่อยู่จัดส่ง
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ขายหน้าร้าน</strong> — POS เลือกสินค้า · ตะกร้า · ชำระเงินสด/โอน · ตัดสต๊อกทันที
+                </li>
+                <li>ปุ่มแก้ไข/ลบ/พิมพ์บนการ์ดออเดอร์เป็นไอคอน — มี aria-label</li>
+              </ul>
+            ),
           },
           {
-            title: "การเงิน",
-            content:
-              "สรุปออนไลน์ · หน้าร้าน · รายจ่าย · สุทธิ · กรองช่วงเวลา · กราฟเปรียบเทียบช่องทาง · แท็บประวัติออเดอร์และรายจ่าย — ค่าเริ่มต้นเดือนนี้",
+            title: "การเงิน — กรอง · กราฟ · ประวัติ",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  ค่าเริ่ม <strong className="font-semibold text-[#2e2a58]">เดือนนี้</strong> — ปุ่มแสดง/ซ่อนกรองและกราฟในการ์ดเดียว
+                </li>
+                <li>
+                  สรุปแยก <strong className="font-semibold text-[#2e2a58]">ออนไลน์</strong> · <strong className="font-semibold text-[#2e2a58]">หน้าร้าน</strong> · รายจ่าย · สุทธิ
+                </li>
+                <li>
+                  กราฟเปรียบเทียบช่องทาง — โหมด <strong className="font-semibold text-[#2e2a58]">compact</strong> · แท็บประวัติออเดอร์และรายจ่าย
+                </li>
+                <li>รายจ่าย — บันทึกหมวด · แนบสลิป · แก้/ลบด้วย popup ยืนยัน</li>
+              </ul>
+            ),
           },
           {
-            title: "การจัดการ",
-            content:
-              "แท็บสินค้า (รวมสต๊อก · Excel · หมวด · รูป) และแท็บ CRM (ลูกค้า · ยอดซื้อ) — สลับจากแถบย่อยในการ์ดเดียวกัน",
+            title: "การจัดการ — สินค้า · CRM",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> — กรองทั้งหมด/ใกล้หมด/หมด/ซ่อนเว็บ · ค้นหา · ± สต๊อก · Export Excel
+                </li>
+                <li>
+                  ฟอร์มสินค้า — 3 แผง: ข้อมูลพื้นฐาน · การแสดงบนเว็บ (ติ๊กแสดง/เด่น/แนะนำ) · รูปปก+มุมอื่น (ย่อก่อนอัปโหลด)
+                </li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">CRM</strong> — รายชื่อลูกค้า · ยอดซื้อสะสม · ประวัติออเดอร์
+                </li>
+                <li>ปุ่มเพิ่มสินค้า/หมวด — เปิด FormModal กลางจอ ไม่ใช่ฟอร์มยาวถาวรบนหน้า</li>
+              </ul>
+            ),
           },
           {
-            title: "ตั้งค่าร้าน",
-            content:
-              "แยกหมวด พื้นฐาน · การเงิน · ตั้งค่าเว็บไซต์ · ลิงก์ — แท็บเว็บไซต์มีเฉพาะตั้งค่า (LINE/โดเมน/Sale Page) · แท็บลิงก์รวมลิงก์เว็บไซต์+พนักงานและบล็อกสายรายวันทีเดียว",
+            title: "ตั้งค่าร้าน (4 แท็บ)",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อ · โลโก้ · สโลแกน · เบอร์ · ที่อยู่ · นโยบายสต๊อก
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชี · ขนาดสลิป · หมายเหตุชำระ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็บไซต์</strong> — LINE · Facebook · แผนที่ · โดเมนส่วนตัว · Sale Page · <strong className="font-semibold text-[#2e2a58]">ไม่มี</strong> คัดลอกลิงก์/QR
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ลิงก์</strong> — การ์ดคู่ลิงก์เว็บไซต์+พนักงาน · บล็อกสายรายวันครั้งเดียว
+                </li>
+              </ul>
+            ),
           },
           {
-            title: "PromptPay",
-            content: "ใส่เบอร์พร้อมเพย์ในตั้งค่าการเงิน — หน้าชำระเงินลูกค้าจะเห็น QR ฝังยอดอัตโนมัติ",
+            title: "PromptPay · Sale Page · โดเมน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  ใส่เบอร์พร้อมเพย์ในแท็บการเงิน — หน้า checkout ลูกค้าเห็น <strong className="font-semibold text-[#2e2a58]">QR ฝังยอด</strong> อัตโนมัติ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">Sale Page</strong> — ในแท็บตั้งค่าเว็บไซต์ เลือกสินค้าเด่น + เปิดโหมด · ลิงก์เปิดจากแท็บลิงก์
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">โดเมนส่วนตัว</strong> — ชี้ CNAME มา MAWELL → บันทึก → กดยืนยัน · ลูกค้าเข้า shop.yourbrand.com
+                </li>
+              </ul>
+            ),
           },
           {
-            title: "Sale Page",
-            content:
-              "ในแท็บตั้งค่าเว็บไซต์ เลือกสินค้าเด่น + เปิดโหมด Sale Page — ลิงก์เปิดอยู่แท็บลิงก์",
-          },
-          {
-            title: "ลิงก์",
-            content:
-              "แท็บลิงก์ = ลิงก์เว็บไซต์ลูกค้า + QR พนักงาน — สายรายวันถูกจำกัดสิทธิ์ที่นี่ครั้งเดียว · พนักงานเข้าได้เฉพาะแดชบอร์ดและเว็บร้าน",
-          },
-          {
-            title: "โดเมนส่วนตัว",
-            content:
-              "ชี้ CNAME มา MAWELL → บันทึกโดเมน → กดยืนยันโดเมน — ลูกค้าเข้า shop.yourbrand.com ได้โดยไม่เห็น /shop/id",
+            title: "เว็บลูกค้า · ตะกร้า · ชำระเงิน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  หน้าร้าน <strong className="font-semibold text-[#2e2a58]">/shop/[storeId]</strong> — กริดสินค้า · หมวดเลื่อนแนวนอน · คลิกการ์ดเปิดโมดัลรายละเอียด
+                </li>
+                <li>
+                  ตะกร้า → checkout — ที่อยู่จัดส่ง · พร้อมเพย์/โอน · แนบสลิป (ถ่าย/แกลเลอรี) · ยืนยันออเดอร์
+                </li>
+                <li>
+                  หลังสั่ง — ไปหน้าสรุป <strong className="font-semibold text-[#2e2a58]">/shop/…/order/[code]</strong> · ติดตามสถานะ · รีวิวเมื่อจัดส่งแล้ว
+                </li>
+                <li>QR พนักงาน — เข้าได้เฉพาะแดชบอร์ดและเว็บร้าน (ไม่ใช่เมนูหลัก MAWELL)</li>
+              </ul>
+            ),
           },
         ]}
       />

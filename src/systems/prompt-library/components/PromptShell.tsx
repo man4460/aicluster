@@ -199,25 +199,94 @@ export function PromptShell({ children }: { children: React.ReactNode }) {
           subtitle="คลังคำสั่ง และหมวดหมู่"
           sections={[
             {
-              title: "เมนูหลัก",
+              title: "ลำดับเริ่มต้นแนะนำ",
+              content: (
+                <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>
+                    เปิด <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> — สร้างหมวดสำหรับจัดกลุ่มคำสั่ง (เช่น Marketing · Coding · ภาษา)
+                  </li>
+                  <li>
+                    ไป <strong className="font-semibold text-[#2e2a58]">คลังคำสั่ง</strong> — เพิ่มคำสั่งพร้อมเลือกหมวด · ใส่ชื่อและเนื้อหา prompt
+                  </li>
+                  <li>
+                    ทดลอง <strong className="font-semibold text-[#2e2a58]">คัดลอก</strong> จากการ์ด → วางในแชท AI
+                  </li>
+                  <li>
+                    (ทางเลือก) <strong className="font-semibold text-[#2e2a58]">ส่งออก JSON</strong> สำรอง · นำเข้าบนเครื่องอื่น
+                  </li>
+                </ol>
+              ),
+            },
+            {
+              title: "เมนูหลัก (2 รายการ)",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>แท็บเมนูอยู่ในส่วนหัว — กดซ่อนเพื่อย้ายไปแถบบน (คอมพิวเตอร์) หรือเหลือเมนูล่าง (มือถือ)</li>
-                  <li>มือถือใช้ dock ด้านล่างสลับหน้าตามแพทเทิร์นโรงแรม / POS</li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">คลังคำสั่ง</strong> — การ์ดแยกหมวด · ค้นหา · คัดลอก · เพิ่ม/แก้ไข/ลบ/ทำซ้ำ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> — จัดการหมวด · เรียง · แก้ชื่อ · ลบ (ถ้าไม่มีคำสั่งผูก)
+                  </li>
+                  <li>
+                    แท็บเมนูอยู่ในส่วนหัว — กด <strong className="font-semibold text-[#2e2a58]">ซ่อนส่วนหัว</strong> เพื่อย้ายไปแถบบน (เดสก์ท็อป) หรือใช้ dock ล่าง (มือถือ)
+                  </li>
                 </ul>
               ),
             },
             {
-              title: "คลังคำสั่ง",
-              content: <p>การ์ดแยกหมวด — ค้นหา · คัดลอกไปใช้กับ AI · ส่งออก/นำเข้า JSON</p>,
+              title: "คลังคำสั่ง — ค้นหา · คัดลอก · จัดการ",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    การ์ดจัดตาม <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> — แตะการ์ดเพื่อดูเนื้อหาเต็มในโมดัล
+                  </li>
+                  <li>
+                    ช่อง <strong className="font-semibold text-[#2e2a58]">ค้นหา</strong> — กรองชื่อ/เนื้อหา · กรองตามหมวดจากแถบชิป
+                  </li>
+                  <li>
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">คัดลอก</strong> — คัดลอก prompt ไปคลิปบอร์ด · บันทึกจำนวนครั้งใช้งาน
+                  </li>
+                  <li>
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">ทำซ้ำ</strong> — สร้างสำเนาคำสั่งเพื่อแก้เป็นฉบับใหม่
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ส่งออก JSON</strong> / <strong className="font-semibold text-[#2e2a58]">นำเข้า</strong> — สำรองหรือย้ายคลังทั้งชุด
+                  </li>
+                </ul>
+              ),
             },
             {
               title: "หมวดหมู่",
-              content: <p>จัดการหมวดหมู่การ์ดคำสั่ง — เพิ่มแก้ไขลบหมวดหมู่</p>,
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    เพิ่มหมวด — ชื่อหมวด · สี/ไอคอน (ถ้ามี) · ใช้ตอนสร้างคำสั่งใหม่
+                  </li>
+                  <li>
+                    แก้ไขชื่อหมวด — ไอคอนดินสอบนแถว · คำสั่งเดิมยังอยู่หมวดเดิม
+                  </li>
+                  <li>
+                    ลบหมวด — popup ยืนยัน · ถ้ามีคำสั่งผูกอยู่ระบบจะเตือน
+                  </li>
+                  <li>จัดหมวดให้สั้นและชัด — ช่วยค้นหาเร็วบนคลังขนาดใหญ่</li>
+                </ul>
+              ),
             },
             {
               title: "เคล็ดลับการใช้งาน",
-              content: <p>แตะการ์ดเพื่อดูเนื้อหา · กดคัดลอกเพื่อวางในแชท AI ได้ทันที</p>,
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    ตั้งชื่อคำสั่งให้บอก <strong className="font-semibold text-[#2e2a58]">จุดประสงค์</strong> ชัด — ค้นหาและคัดลอกเร็วขึ้น
+                  </li>
+                  <li>
+                    ใส่ตัวแปรใน prompt เช่น <strong className="font-semibold text-[#2e2a58]">{"{topic}"}</strong> แล้วแทนที่ก่อนวางใน AI
+                  </li>
+                  <li>
+                    คู่มือนี้เปิดจากปุ่ม <strong className="font-semibold text-[#2e2a58]">?</strong> มุมขวาบนการ์ดหัวโมดูล
+                  </li>
+                </ul>
+              ),
             },
           ]}
         />

@@ -158,23 +158,136 @@ function LmsModuleChromeInner({
         subtitle="แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า · เว็บสาธารณะ"
         sections={[
           {
-            title: "เมนูหลัก (4 รายการ)",
+            title: "ลำดับเริ่มต้นแนะนำ (โรงเรียน/สถาบันใหม่)",
             content: (
-              <ul className="list-disc space-y-1 pl-4">
-                <li>แดชบอร์ด — กำหนดการ · ย้อนหลัง · โครงสร้างกรรมการ</li>
-                <li>การเงิน — รายรับ/รายจ่าย + สลิป</li>
-                <li>การจัดการ — สมาชิก · ทรัพย์สิน</li>
-                <li>ตั้งค่า — พื้นฐาน · การเงิน · เว็บลูกค้า / Link Hub</li>
+              <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อสถาบัน · โลโก้ · พร้อมเพย์/บัญชี · ตั้งค่าเว็ปลิงค์ลูกค้า (แบนเนอร์ · slug)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ → คอร์ส</strong> — สร้างคอร์ส · บทเรียน · ข้อสอบ · ราคา · เปิด/ปิดขาย
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ → นักเรียน</strong> — เพิ่มนักเรียน · มอบสิทธิ์คอร์ส · ติดตามความคืบหน้า
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">แชร์พอร์ทัล</strong> — คัดลอกลิงก์ <strong className="font-semibold text-[#2e2a58]">/lms/[slug]</strong> ให้นักเรียนซื้อ/เรียนออนไลน์
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ทดลองขาย</strong> — สร้างคำขอซื้อจากเว็บ · อนุมัติที่แดชบอร์ด · ตรวจการเงิน
+                </li>
+              </ol>
+            ),
+          },
+          {
+            title: "เมนูหลักโมดูล (4 รายการ)",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — ภาพรวม · คำขอซื้อ (แท็บย่อย)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — สรุปรายรับ–รายจ่าย · กรอง · กราฟ · ประวัติ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> — คอร์ส · นักเรียน (แท็บย่อย)
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ตั้งค่าพื้นฐาน · ตั้งค่าเกี่ยวกับการเงิน · ตั้งค่าเว็ปลิงค์ลูกค้า
+                </li>
+                <li>
+                  มือถือใช้ <strong className="font-semibold text-[#2e2a58]">dock ล่าง</strong> 4 ปุ่ม · เดสก์ท็อปใช้แท็บในการ์ดหัวโมดูล
+                </li>
+                <li>
+                  ปุ่ม <strong className="font-semibold text-[#2e2a58]">ซ่อนส่วนหัว</strong> ยุบการ์ดชื่อโมดูล — เมนูยังใช้ dock/แถบม่วงได้
+                </li>
               </ul>
             ),
           },
           {
-            title: "มือถือ",
-            content: "ใช้เมนูล่าง 4 ช่อง · กดซ่อนหัวโมดูลได้ · แท็บหลักจะไปอยู่แถบม่วงเมื่อยุบหัวบนเดสก์ท็อป",
+            title: "แดชบอร์ด — ภาพรวม · คำขอซื้อ",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — สถิติคอร์ส · นักเรียน · รายได้ · คำขอรอดำเนินการ (กริด 2 คอลัมน์บนมือถือ)
+                </li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">คำขอซื้อ</strong> — รายการสมัคร/ซื้อคอร์สจากเว็บ · อนุมัติ/ปฏิเสธ · ดูสลิปชำระ (ถ้ามี)
+                </li>
+                <li>
+                  ปุ่ม <strong className="font-semibold text-[#2e2a58]">แสดงกรอง / ซ่อนกรอง</strong> บนรายการคำขอ — ชิปสถานะ · ค้นหา · ล้างเมื่อค้าง
+                </li>
+                <li>อนุมัติแล้ว — นักเรียนได้สิทธิ์เข้าคอร์สบนพอร์ทัลอัตโนมัติ</li>
+              </ul>
+            ),
           },
           {
-            title: "พอร์ทัลสาธารณะ",
-            content: "แชร์ลิงก์ /lms/[slug] จากตั้งค่าเว็บลูกค้า ให้นักเรียนเข้าเรียนผ่านพอร์ทัล",
+            title: "การเงิน — กรอง · กราฟ · รายการ",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  ปุ่ม <strong className="font-semibold text-[#2e2a58]">แสดงกรอง / ซ่อนกรอง</strong> ทุกขนาดจอ — มือถือเป็นไอคอน funnel
+                </li>
+                <li>
+                  ช่วงเวลา — วันนี้ / 7 วัน / เดือน / ปี / กำหนดเอง · กราฟ <strong className="font-semibold text-[#2e2a58]">compact</strong> ชุดเดียวทั้งหน้า
+                </li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">รายรับ · รายจ่าย · ประวัติ</strong> — รายรับจากขายคอร์ส · รายจ่ายแนบสลิปได้
+                </li>
+                <li>สลิป — คลิกรูปย่อขยายเต็มจอ (lightbox) · แก้/ลบด้วย popup ยืนยันกลางจอ</li>
+              </ul>
+            ),
+          },
+          {
+            title: "การจัดการ — คอร์ส · นักเรียน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">คอร์ส</strong> — เพิ่ม/แก้ไขคอร์ส · รูปปก · ราคา · คำอธิบาย · เปิด/ปิดขาย
+                </li>
+                <li>
+                  กดเข้าคอร์ส — จัดการ <strong className="font-semibold text-[#2e2a58]">บทเรียน</strong> (วิดีโอ/เอกสาร) และ <strong className="font-semibold text-[#2e2a58]">ข้อสอบ</strong> แยกหน้าเต็ม
+                </li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">นักเรียน</strong> — รายชื่อ · ค้นหา · มอบ/ถอนสิทธิ์คอร์ส · ดูความคืบหน้า
+                </li>
+                <li>ปุ่มแก้ไข/ลบในแถวเป็นไอคอน — มี aria-label ชัดเจน</li>
+              </ul>
+            ),
+          },
+          {
+            title: "ตั้งค่า (3 แท็บ)",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อสถาบัน · โลโก้ · ที่อยู่ · ติดต่อ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชีโอน · ขนาดกระดาษสลิป · หมายเหตุใบเสร็จ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็ปลิงค์ลูกค้า</strong> — slug พอร์ทัล · แบนเนอร์ · ข้อความต้อนรับ · ลิงก์แชร์ <strong className="font-semibold text-[#2e2a58]">/lms/[slug]</strong>
+                </li>
+                <li>มือถือ — dropdown เลือกแท็บ · เดสก์ท็อป — แถบ pill คู่ปุ่มบันทึก</li>
+              </ul>
+            ),
+          },
+          {
+            title: "พอร์ทัลนักเรียน · ซื้อคอร์ส · เรียน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  นักเรียนเปิด <strong className="font-semibold text-[#2e2a58]">/lms/[slug]</strong> — ดูแคตตาล็อกคอร์ส · รายละเอียด · ราคา
+                </li>
+                <li>
+                  ซื้อคอร์ส — เลือกพร้อมเพย์/โอน · QR ฝังยอด · แนบสลิป · รออนุมัติจากแดชบอร์ด (แท็บคำขอซื้อ)
+                </li>
+                <li>
+                  หลังอนุมัติ — เข้าเรียนบทเรียน/ทำข้อสอบบนพอร์ทัล · ความคืบหน้าบันทึกอัตโนมัติ
+                </li>
+                <li>ลิงก์พอร์ทัลตั้งจากแท็บตั้งค่าเว็ปลิงค์ลูกค้า — คัดลอกแชร์ใน LINE/Facebook ได้</li>
+              </ul>
+            ),
           },
         ]}
       />

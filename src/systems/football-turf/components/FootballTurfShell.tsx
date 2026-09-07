@@ -205,16 +205,18 @@ export function FootballTurfShell({ children }: { children: React.ReactNode }) {
                       พร้อมเพย์/บัญชีโอน · เบอร์ติดต่อ
                     </li>
                     <li>
-                      ไปแท็บ <strong className="font-semibold text-[#2e2a58]">จัดการสนาม</strong> — เพิ่ม/แก้ไข/ลบ ·
-                      เวลาเปิด–ปิด · ความยาวคิว (นาที) · ราคา · รูปปก
+                      ไปแท็บ <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> →{" "}
+                      <strong className="font-semibold text-[#2e2a58]">สนาม</strong> — เพิ่ม/แก้ไข/ลบ · เวลาเปิด–ปิด ·
+                      ความยาวคิว · ราคา · รูปปก
                     </li>
                     <li>
-                      สร้างโปรโมชั่นในแท็บ <strong className="font-semibold text-[#2e2a58]">โปรโมชั่น</strong>{" "}
-                      (ถ้าขายแพ็กสิทธิ์)
+                      สร้างโปรใน <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> →{" "}
+                      <strong className="font-semibold text-[#2e2a58]">โปรโมชัน</strong> (ถ้าขายแพ็กสิทธิ์)
                     </li>
                     <li>
-                      เปิดแท็บ <strong className="font-semibold text-[#2e2a58]">QR / ลิงก์</strong> — คัดลอกลิงก์จอง
-                      ไปทดสอบบนมือถือ
+                      เปิดแท็บ <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> →{" "}
+                      <strong className="font-semibold text-[#2e2a58]">ลิงก์ QR</strong> — คัดลอกลิงก์จอง ·
+                      ทดสอบบนมือถือ
                     </li>
                     <li>จองทดลอง 1 คิว · แนบสลิปหรือชำระหน้างาน · เช็กอินจากแดชบอร์ด/พนักงาน</li>
                   </ol>
@@ -226,7 +228,15 @@ export function FootballTurfShell({ children }: { children: React.ReactNode }) {
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                   <li>
-                    แท็บหลัก: ภาพรวม · จอง · การเงิน · โปรโมชั่น · ลูกค้า · จัดการสนาม · QR / ลิงก์ · ตั้งค่า
+                    แท็บหลัก: <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> ·{" "}
+                    <strong className="font-semibold text-[#2e2a58]">จอง</strong> ·{" "}
+                    <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> ·{" "}
+                    <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> ·{" "}
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong>
+                  </li>
+                  <li>
+                    ใน <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong>: โปรโมชัน · ลูกค้า · สนาม
+                    (แท็บย่อยภายใน)
                   </li>
                   <li>
                     <strong className="font-semibold text-[#2e2a58]">มือถือ</strong> — เมนูล่างสลับแท็บ · กดซ่อนหัวเพื่อพื้นที่เนื้อหา
@@ -249,13 +259,26 @@ export function FootballTurfShell({ children }: { children: React.ReactNode }) {
               ),
             },
             {
-              title: "แท็บจัดการสนาม",
+              title: "แท็บการจัดการ",
               content: (
-                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>เพิ่ม · แก้ไข · ลบสนาม</li>
-                  <li>ตั้งเวลาเปิด–ปิด · ความยาวสล็อต · ราคาต่อรอบ</li>
-                  <li>แนบรูปปกสนาม (เลือกแกลเลอรีหรือถ่ายกล้อง)</li>
-                </ul>
+                <>
+                  <p className="font-semibold text-[#2e2a58]">โปรโมชัน</p>
+                  <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                    <li>แท็บย่อย <strong className="font-semibold text-[#2e2a58]">แพ็กโปร</strong> — สร้างแพ็ก · ราคา · จำนวนสิทธิ์ · คำอธิบาย</li>
+                    <li>แท็บย่อย <strong className="font-semibold text-[#2e2a58]">ถือสิทธิ์</strong> — ดูผู้ซื้อ · สิทธิ์คงเหลือ · ขายโปรจากแดชบอร์ด</li>
+                    <li>หลังขายโปร ตัดสิทธิ์ตอนเช็กอินกับคิวที่จองไว้</li>
+                  </ul>
+                  <p className="mt-3 font-semibold text-[#2e2a58]">ลูกค้า</p>
+                  <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                    <li>เก็บเบอร์ · ชื่อ · ทีม — ค้นหาคิวและสิทธิ์โปร</li>
+                    <li>จองจากลิงก์ลูกค้าผูกเบอร์อัตโนมัติ · แตะการ์ดดูประวัติจอง/โปร/คะแนน</li>
+                  </ul>
+                  <p className="mt-3 font-semibold text-[#2e2a58]">สนาม</p>
+                  <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                    <li>เพิ่ม · แก้ไข · ลบสนาม · ตั้งเวลาเปิด–ปิด · ความยาวสล็อต · ราคาต่อรอบ</li>
+                    <li>แนบรูปปก (แกลเลอรีหรือถ่ายกล้อง)</li>
+                  </ul>
+                </>
               ),
             },
             {
@@ -269,7 +292,8 @@ export function FootballTurfShell({ children }: { children: React.ReactNode }) {
                   <li>คิวที่หมดเวลาแล้วจะไม่ให้เช็กอินหรือใช้สิทธิ์โปรต่อ</li>
                 </ul>
               ),
-            },            {
+            },
+            {
               title: "แท็บการเงิน",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
@@ -282,56 +306,22 @@ export function FootballTurfShell({ children }: { children: React.ReactNode }) {
               ),
             },
             {
-              title: "แท็บโปรโมชั่น",
-              content: (
-                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>สร้างแพ็ก เช่น «โปร 10 รอบ» — กำหนดจำนวนสิทธิ์ · ราคา · คำอธิบาย</li>
-                  <li>
-                    หลังขายโปร ลูกค้าจะมีสิทธิ์เหลือตามจำนวนรอบ — ใช้ตัดตอนเช็กอินกับคิวที่จองไว้
-                  </li>
-                  <li>ปิดหรือแก้ไขโปรที่ไม่ขายแล้ว เพื่อไม่ให้ขายต่อจากแดชบอร์ดโดยไม่ตั้งใจ</li>
-                </ul>
-              ),
-            },
-            {
-              title: "แท็บลูกค้า",
-              content: (
-                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>เก็บเบอร์โทร · ชื่อ · ทีม — ใช้ค้นหาคิวและสิทธิ์โปรในแดชบอร์ด</li>
-                  <li>จองจากลิงก์ลูกค้าจะผูกเบอร์อัตโนมัติและอัปเดตโปรไฟล์ลูกค้า</li>
-                  <li>แตะการ์ดลูกค้าเพื่อดูสถิติการใช้บริการ · คะแนน · ประวัติจอง · แลกรางวัล</li>
-                  <li>แนะนำให้ใช้เบอร์เดียวกับตอนจองออนไลน์ เพื่อให้ค้นหาเจอครบ</li>
-                </ul>
-              ),
-            },
-            {
-              title: "แท็บ QR / ลิงก์",
-              content: (
-                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>
-                    <strong className="font-semibold text-[#2e2a58]">ลิงก์จองสนาม</strong> — ลูกค้าเลือกสนาม ·
-                    ช่วงเวลา · กรอกผู้ติดต่อ · ชำระ/แนบสลิป
-                  </li>
-                  <li>
-                    <strong className="font-semibold text-[#2e2a58]">QR พนักงาน</strong> — ลิงก์ลับเข้าแดชบอร์ดพนักงาน
-                    (เช็กอิน / ใช้สิทธิ์โปรที่นี่ ไม่มีลิงก์เช็กอินสาธารณะ)
-                  </li>
-                  <li>คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ QR ติดหน้าร้าน / ส่งในแชท</li>
-                  <li>ทดสอบจากมือถือจริงก่อนแจกลูกค้า — ตรวจว่าพร้อมเพย์และสล็อตว่างถูกต้อง</li>
-                </ul>
-              ),
-            },
-            {
               title: "แท็บตั้งค่า",
               content: (
-                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>ชื่อสนาม · คำโปรย · ที่อยู่ · เบอร์โทร · LINE</li>
-                  <li>พร้อมเพย์ / ธนาคาร / ชื่อบัญชี — ใช้สร้าง QR โอนในหน้าจองและขายโปร</li>
-                  <li>เลขผู้เสียภาษี (ถ้ามี) สำหรับเอกสารหน้าร้าน</li>
-                  <li>ขนาดสลิปใบเสร็จ (58 / 80 / A4) — ใช้ตอนพิมพ์ใบเสร็จทั่วไปหลังชำระครบ</li>
-                  <li>เปิดสะสมคะแนน · ตั้งกฎบาท→คะแนน · เพิ่มของรางวัลสำหรับแลก</li>
-                  <li>บันทึกแล้วรีเฟรชลิงก์ลูกค้า — ข้อมูลชำระเงินจะอัปเดตตามค่าใหม่</li>
-                </ul>
+                <>
+                  <p>แท็บย่อย: ข้อมูลสนาม · รับโอน/จอง · เอกสาร·สลิป · คะแนน · ตัวอย่าง · ลิงก์ QR</p>
+                  <ul className="mt-2 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                    <li>ชื่อสนาม · คำโปรย · ที่อยู่ · เบอร์โทร · LINE</li>
+                    <li>พร้อมเพย์ / ธนาคาร / ชื่อบัญชี — ใช้สร้าง QR โอนในหน้าจองและขายโปร</li>
+                    <li>เลขผู้เสียภาษี · ขนาดสลิป (58 / 80 / A4) · โหมดชำระลิงก์ลูกค้า</li>
+                    <li>เปิดสะสมคะแนน · ตั้งกฎบาท→คะแนน · เพิ่มของรางวัลสำหรับแลก</li>
+                    <li>
+                      <strong className="font-semibold text-[#2e2a58]">ลิงก์ QR</strong> — ลิงก์จองสนาม · QR พนักงาน ·
+                      คัดลอก/ดาวน์โหลดโปสเตอร์ · ทดสอบบนมือถือก่อนแจกลูกค้า
+                    </li>
+                    <li>บันทึกแล้วรีเฟรชลิงก์ลูกค้า — ข้อมูลชำระเงินอัปเดตตามค่าใหม่</li>
+                  </ul>
+                </>
               ),
             },
             {

@@ -244,6 +244,13 @@ export {
 } from "./AppTemplateIcons";
 export { AppUsageGuideModal } from "./AppUsageGuideModal";
 export {
+  APP_USAGE_GUIDE_HOME_SCREEN_SECTION,
+  APP_USAGE_GUIDE_MOBILE_CHROME_SECTION,
+  appUsageGuideHomeScreenInstallContent,
+  withAppUsageGuideStandardSections,
+  type AppUsageGuideSection,
+} from "./app-usage-guide-shared";
+export {
   AppTime24Input,
   normalizeAppTime24,
   type AppTime24InputProps,

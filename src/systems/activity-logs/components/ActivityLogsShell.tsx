@@ -108,22 +108,61 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 
 const guideSections = [
   {
-    title: "ภาพรวม",
+    title: "ลำดับเริ่มต้นแนะนำ",
+    content: (
+      <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>เมนู ประวัติล่าสุด — ดูกิจกรรมล่าสุดของผู้ใช้ในระบบ (CREATE / UPDATE / DELETE)</li>
+        <li>เมนู ตัวกรอง — เลือกช่วงวันที่ · ตาราง · ประเภทการกระทำ · ส่งออก Excel</li>
+        <li>เมนู ตั้งค่า — กำหนดระยะเก็บ log · การแจ้งเตือน (ถ้ามี)</li>
+        <li>ใช้ตรวจสอบเมื่อข้อมูลผิดปกติหรือต้อง audit ย้อนหลัง</li>
+      </ol>
+    ),
+  },
+  {
+    title: "เมนูหลักโมดูล (3 รายการ)",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>บันทึกทุกการกระทำของผู้ใช้ในระบบ — เพิ่ม แก้ไข ลบข้อมูล</li>
-        <li>ใช้ตัวกรองเพื่อค้นหารายการเฉพาะเจาะจงตามช่วงวัน ชื่อตาราง หรือประเภทการกระทำ</li>
+        <li>
+          <strong>ประวัติล่าสุด</strong> — รายการ log เรียงเวลา · ผู้ใช้ · ตาราง · การกระทำ
+        </li>
+        <li>
+          <strong>ตัวกรอง</strong> — ช่วงวันที่ · modelName · CREATE/UPDATE/DELETE · Export
+        </li>
+        <li>
+          <strong>ตั้งค่า</strong> — การเก็บประวัติ · ตัวเลือกแสดงผล
+        </li>
       </ul>
     ),
   },
   {
-    title: "การใช้งานตัวกรอง",
+    title: "เมนู: ประวัติล่าสุด",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>เลือกช่วงวันที่ต้องการดู — เริ่มต้นเป็นของเดือนปัจจุบัน</li>
-        <li>กรองตามชื่อตาราง (modelName) เช่น HomeFinanceEntry</li>
-        <li>กรองตามประเภทการกระทำ: CREATE / UPDATE / DELETE</li>
-        <li>กดปุ่ม Excel เพื่อส่งออกรายการในหน้าปัจจุบัน</li>
+        <li>บันทึกทุกการกระทำ — เพิ่ม · แก้ไข · ลบข้อมูลในโมดูลต่าง ๆ</li>
+        <li>แสดงเวลา (Asia/Bangkok) · อีเมล/ชื่อผู้ใช้ · ชื่อตาราง (modelName)</li>
+        <li>การ์ดรายการ — ข้อความสรุปยาว · กริด 1 คอลัมน์เพื่ออ่านง่าย</li>
+        <li>คลิกรายการเพื่อดูรายละเอียด before/after (ถ้ามี)</li>
+      </ul>
+    ),
+  },
+  {
+    title: "เมนู: ตัวกรอง",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>เลือกช่วงวันที่ — ค่าเริ่มต้นเดือนปัจจุบัน · ปรับได้ตามการสอบสวน</li>
+        <li>กรองชื่อตาราง — เช่น HomeFinanceEntry · User · โมดูลที่ต้องการ</li>
+        <li>กรองประเภท — CREATE / UPDATE / DELETE</li>
+        <li>ปุ่ม Excel — ส่งออกรายการที่กำลังแสดงหลังกรอง (SpreadsheetML)</li>
+        <li>ปุ่มแสดง/ซ่อนกรอง — ทุก breakpoint · badge เมื่อมีเงื่อนไขค้าง</li>
+      </ul>
+    ),
+  },
+  {
+    title: "เมนู: ตั้งค่า",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>ตัวเลือกการแสดงผลและระยะเก็บ log ตามนโยบายองค์กร</li>
+        <li>ใช้ร่วมกับศูนย์แอดมิน — ไม่แทนที่ audit ในโมดูลเฉพาะ (เช่น สารบรรณ)</li>
       </ul>
     ),
   },

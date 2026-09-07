@@ -213,17 +213,45 @@ export function GeneralStorePosShell({ children }: { children: React.ReactNode }
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
           title="คู่มือการใช้งาน — POS ร้านทั่วไป"
-          subtitle="หน้าสินค้า ยอดขาย และปุ่มเมนู"
+          subtitle="สินค้า · ยอดขาย · ตั้งค่า — ขั้นตอนใช้งานหน้าร้าน"
           sections={[
             {
-              title: "เมนูหลัก (คอมพิวเตอร์)",
+              title: "ลำดับเริ่มต้นแนะนำ",
+              content: (
+                <>
+                  <p>เตรียมหมวดและสินค้าให้ครบก่อนเปิดขายหน้าร้าน แล้วทดลองบันทึกบิล 1 ใบ</p>
+                  <ol className="mt-2 list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                    <li>
+                      เปิด <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> — สร้างหมวด · เพิ่มสินค้า · อัปโหลดรูป ·
+                      เปิดขาย
+                    </li>
+                    <li>ทดลองแตะการ์ดสินค้าเพื่อเพิ่มในบิลร่าง — ตรวจยอดรวมก่อนบันทึก</li>
+                    <li>
+                      ไป <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> — บันทึกบิล · ดูกราฟ 7 วัน ·
+                      กรองประวัติ
+                    </li>
+                    <li>
+                      เปิด <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อร้าน · ช่องทางชำระ ·
+                      ขนาดสลิป
+                    </li>
+                  </ol>
+                </>
+              ),
+            },
+            {
+              title: "เมนูหลัก",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                   <li>
-                    <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> / <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong>{" "}
-                    อยู่ในแถบเดียวกัน แบ่งซ้าย–ขวาเต็มความกว้าง (แบบคาร์แคร์) — ไม่ต้องมีคำอธิบายยาวใต้ชื่อโมดูล
+                    <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> — จัดการหมวด · กริดสินค้า · บิลร่างก่อนขาย
                   </li>
-                  <li>มือถือใช้เมนูล่างแทน — ดูกฎ dock ของโมดูลนี้ใน repo</li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> — บันทึกบิล · กราฟ · ประวัติ · กรอง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ข้อมูลร้านและการเงิน
+                  </li>
+                  <li>เดสก์ท็อป: แท็บในแถบเดียวกันแบบคาร์แคร์ · กดซ่อนหัวแล้วแท็บย้ายไปแถบม่วง</li>
                 </ul>
               ),
             },
@@ -231,16 +259,16 @@ export function GeneralStorePosShell({ children }: { children: React.ReactNode }
               title: "หน้าสินค้า",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>การ์ดสรุปด้านบน: หมวด / สินค้าเปิดขาย / แนะนำ / ยอดขายวันนี้ (กทม.)</li>
-                  <li>กรองหมวด: แถบชิปเลื่อนแนวนอน — แตะหมวดเพื่อกรองการ์ดสินค้า</li>
+                  <li>การ์ดสรุปด้านบน: จำนวนหมวด · สินค้าเปิดขาย · แนะนำ · ยอดขายวันนี้ (เวลาไทย)</li>
+                  <li>ปุ่ม <strong className="font-semibold text-[#2e2a58]">+ เพิ่มหมวด</strong> / <strong className="font-semibold text-[#2e2a58]">+ เพิ่มสินค้า</strong> ที่หัวการ์ด</li>
+                  <li>แถบชิปหมวดเลื่อนแนวนอน — แตะ «ทั้งหมด» หรือหมวดเพื่อกรองการ์ด</li>
+                  <li>แตะการ์ดครั้งเดียว = +1 ชิ้น · แตะซ้ำเร็วบนการ์ดเดิม = +2 ชิ้น</li>
+                  <li>ไอคอนแก้ไข/ลบใต้การ์ด — ปรับราคา · รูป · สถานะเปิดขาย</li>
+                  <li>บิลร่าง: มือถืออยู่เหนือ dock · คอมเป็นการ์ดลอยมุมขวาล่าง · กดบันทึกเมื่อยอดถูกต้อง</li>
                   <li>
-                    แตะการ์ดสินค้า: ครั้งเดียวเพิ่มในบิล 1 ชิ้น — แตะซ้ำเร็วบนการ์ดเดิมเพิ่ม 2 ชิ้น (ช่วงเวลาสั้น ๆ ตามโค้ด{" "}
-                    <code className="rounded bg-[#ecebff] px-1 text-xs">GENERAL_STORE_CARD_DOUBLE_TAP_MS</code>)
-                  </li>
-                  <li>แก้ไข / ลบสินค้า: ไอคอนด้านล่างการ์ด (ไม่ใช้ข้อความยาวบนการ์ด)</li>
-                  <li>รายการรอก่อนบันทึกบิล: มือถืออยู่เหนือ dock — เดสก์ท็อปเป็นการ์ดลอยมุมขวาล่าง</li>
-                  <li>
-                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">แนะภาพตามสินค้า</strong> / <strong className="font-semibold text-[#2e2a58]">แนะภาพตามหมวด</strong>: เติม URL รูปตัวอย่างจากชื่อสินค้า+หมวดหรือชื่อหมวด — ควรอัปโหลดรูปจริงของร้านก่อนขาย
+                    ปุ่ม <strong className="font-semibold text-[#2e2a58]">แนะภาพตามสินค้า</strong> /{" "}
+                    <strong className="font-semibold text-[#2e2a58]">แนะภาพตามหมวด</strong> — เติม URL ตัวอย่างชั่วคราว ·
+                    ควรอัปโหลดรูปจริงของร้านก่อนขาย
                   </li>
                 </ul>
               ),
@@ -249,19 +277,33 @@ export function GeneralStorePosShell({ children }: { children: React.ReactNode }
               title: "หน้ายอดขาย",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>กราฟ 7 วัน + ยอดรวมด้านขวา — กรองบิลแล้วกราฟสะท้อนตามข้อมูลที่กรอง</li>
-                  <li>ปุ่มรีเฟรชอยู่ข้างปุ่มบันทึกขายในการ์ดบิล — มือถือเป็นไอคอนล้วน</li>
-                  <li>ฟิลเตอร์มือถือ: ไอคอนกรอง — เดสก์ท็อปแสดงฟอร์มเต็ม</li>
+                  <li>กด <strong className="font-semibold text-[#2e2a58]">+ บันทึกขาย</strong> — เลือกสินค้า · จำนวน · หมายเหตุ · ยืนยันบันทึก</li>
+                  <li>กราฟ 7 วัน + ยอดรวม — อัปเดตตามข้อมูลที่กรอง</li>
+                  <li>กด <strong className="font-semibold text-[#2e2a58]">แสดงกรอง</strong> — ค้นหา · ช่วงวันที่ · ล้างเมื่อกรองค้าง</li>
+                  <li>ปุ่มรีเฟรชข้างบันทึกขาย — มือถือเป็นไอคอนล้วน · ใช้หลังขายหลายเครื่องพร้อมกัน</li>
+                  <li>รายการบิล: ราคาขวา · แก้ไข/ลบจากไอคอนแถว (ถ้ามีในโมดูล)</li>
                 </ul>
               ),
             },
             {
-              title: "ข้อความใน UI",
+              title: "หน้าตั้งค่า",
               content: (
-                <p>
-                  ไม่ใส่คำอธิบายการตลาดหรือคู่มือยาวใน shell / หัวการ์ด / โมดัล — ใช้โมดัลคู่มือนี้และ{" "}
-                  <code className="rounded bg-[#ecebff] px-1 text-xs">aria-label</code> แทน
-                </p>
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>ชื่อร้าน · ที่อยู่ · เบอร์ติดต่อ — แสดงบนใบเสร็จและสรุปยอด</li>
+                  <li>พร้อมเพย์ / บัญชีโอน — ใช้เมื่อลูกค้าโอนหรือแนบสลิป (ถ้าเปิดในโมดูล)</li>
+                  <li>ขนาดสลิป (58 / 80 / A4) — กำหนดก่อนพิมพ์ใบเสร็จหลังบันทึกขาย</li>
+                  <li>บันทึกแล้วทดลองพิมพ์ 1 ใบจากหน้ายอดขาย — ตรวจว่าข้อมูลร้านและขนาดกระดาษถูกต้อง</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เคล็ดลับหน้างาน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>จัดหมวดให้สั้นและชัด — ลูกค้า/พนักงานกรองสินค้าได้เร็วบนมือถือ</li>
+                  <li>ปิดขายสินค้าที่หมดชั่วคราวแทนการลบ — ประวัติยอดขายยังอ้างอิงได้</li>
+                  <li>ปิดกะ: เปิดยอดขาย → กรองวันนี้ → รีเฟรช → เทียบกับเงินสดในลิ้นชัก</li>
+                </ul>
               ),
             },
           ]}

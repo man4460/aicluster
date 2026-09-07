@@ -16,6 +16,11 @@ alwaysApply: false
 4. **`rounded-[2rem]`** บนมือถือเมื่อ `mobileCentered` (มาจาก FormModal อัตโนมัติ)
 5. ปิดด้วย ESC / คลิกพื้นหลัง / ปุ่ม X หัวโมดัล / ปุ่ม **ปิด** ใน footer
 6. โครงเนื้อหา: `title` + `subtitle` (optional → `description` ของ FormModal) + `sections[]` (`title` + `content` ReactNode)
+7. **`AppUsageGuideModal` แนบท้ายอัตโนมัติ** (ค่าเริ่มเปิด):
+   - มือถือ · ไอแพดแนวตั้ง · แถบหัว (dock / ยุบหัว / โทเคน)
+   - **สร้างแอปบนหน้าจอโฮม (iOS และ Android)** — จาก `app-usage-guide-shared.tsx`
+   - ปิดได้ด้วย `includeChromeGuide={false}` / `includeHomeScreenGuide={false}` ถ้าคู่มือกำหนดเองแล้ว
+8. คู่มือเฉพาะโมดูล (เช่น `BarberUsageGuideModal`) ที่ไม่ใช้ `AppUsageGuideModal` — **ต้อง** ใส่ `APP_USAGE_GUIDE_HOME_SCREEN_SECTION` (+ chrome) เอง
 
 ## แพทเทิร์น
 
@@ -38,9 +43,10 @@ const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 ## อ้างอิง
 
 - Implementation: `src/components/app-templates/AppUsageGuideModal.tsx`
+- ส่วนท้ายร่วม: `src/components/app-templates/app-usage-guide-shared.tsx`
 - โมดัลฟอร์มทั่วไป: `.cursor/rules/dashboard-add-form-modal.mdc`
 - โมดัลกึ่งกลางมือถือ (QR / ซักผ้า): `.cursor/rules/shop-qr-hub-popup-pattern.mdc` (`mobileCentered`)
 
 ## ข้อยกเว้น
 
-- โมดูลที่มีคู่มือเฉพาะมาก (เช่น บาร์เบอร์ `BarberUsageGuideModal`) อาจใช้ portal ของโมดูล — ถ้า refactor ให้ยึด **`mobileCentered`** / กึ่งกลางจอบนมือถือเช่นกัน
+- โมดูลที่มีคู่มือเฉพาะมาก (เช่น บาร์เบอร์ `BarberUsageGuideModal`) อาจใช้ portal ของโมดูล — ถ้า refactor ให้ยึด **`mobileCentered`** / กึ่งกลางจอบนมือถือเช่นกัน · และต้องมีขั้นตอนติดตั้งแอปหน้าจอโฮม

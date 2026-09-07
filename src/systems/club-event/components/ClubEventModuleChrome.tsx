@@ -158,23 +158,138 @@ function ClubEventModuleChromeInner({
         subtitle="แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า · เว็บสาธารณะ"
         sections={[
           {
+            title: "ลำดับเริ่มต้นแนะนำ",
+            content: (
+              <>
+                <p>ตั้งค่าชมรมและเว็บสาธารณะให้ครบก่อนประกาศกิจกรรม แล้วทดสอบลิงก์สมาชิก 1 รอบ</p>
+                <ol className="mt-2 list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>
+                    เปิด <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อชมรม · โลโก้ · ช่องทางติดต่อ ·
+                    พร้อมเพย์/บัญชี
+                  </li>
+                  <li>
+                    ตั้งค่า <strong className="font-semibold text-[#2e2a58]">เว็ปลิงค์ลูกค้า</strong> — แบนเนอร์ · slug ·
+                    คัดลอกลิงก์ <code className="rounded bg-[#ecebff] px-1 text-xs">/club/[slug]</code>
+                  </li>
+                  <li>
+                    เพิ่ม <strong className="font-semibold text-[#2e2a58]">สมาชิก</strong> และ{" "}
+                    <strong className="font-semibold text-[#2e2a58]">โครงสร้างกรรมการ</strong> ในแดชบอร์ด
+                  </li>
+                  <li>
+                    สร้าง <strong className="font-semibold text-[#2e2a58]">กิจกรรม</strong> — วันเวลา · สถานที่ · แกลเลอรี/วิดีโอ ·
+                    ลิงก์ลงทะเบียน (ถ้ามี)
+                  </li>
+                  <li>บันทึกรายรับ–รายจ่ายในการเงิน · แนบสลิปเมื่อโอน</li>
+                </ol>
+              </>
+            ),
+          },
+          {
             title: "เมนูหลัก (4 รายการ)",
             content: (
-              <ul className="list-disc space-y-1 pl-4">
-                <li>แดชบอร์ด — กำหนดการ · ย้อนหลัง · โครงสร้างกรรมการ</li>
-                <li>การเงิน — รายรับ/รายจ่าย + สลิป</li>
-                <li>การจัดการ — สมาชิก · ทรัพย์สิน</li>
-                <li>ตั้งค่า — พื้นฐาน · การเงิน · เว็บลูกค้า / Link Hub</li>
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — กำหนดการ · กิจกรรมย้อนหลัง · โครงสร้างกรรมการ
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — รายรับ · รายจ่าย · กราฟ · สลิป
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> — สมาชิก · ทรัพย์สินชมรม
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — พื้นฐาน · การเงิน · ค่าบำรุง · เว็ปลิงค์ลูกค้า
+                </li>
+                <li>เดสก์ท็อป: แท็บในส่วนหัว · กดซ่อนหัวแล้วแท็บย้ายไปแถบม่วงด้านบน</li>
               </ul>
             ),
           },
           {
-            title: "มือถือ",
-            content: "ใช้เมนูล่าง 4 ช่อง · กดซ่อนหัวโมดูลได้ · แท็บหลักจะไปอยู่แถบม่วงเมื่อยุบหัวบนเดสก์ท็อป",
+            title: "แดชบอร์ด",
+            content: (
+              <>
+                <p className="font-semibold text-[#2e2a58]">แท็บย่อย</p>
+                <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">กำหนดการ</strong> — กิจกรรมที่จะมาถึง · กด + เพิ่มกิจกรรม ·
+                    แตะการ์ดเข้ารายละเอียด/แก้ไข
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ย้อนหลัง</strong> — กิจกรรมที่จบแล้ว · ดูแกลเลอรี · คำตอบจากลิงก์สอบถาม
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">โครงสร้าง</strong> — ตำแหน่งกรรมการ · ชื่อ · ติดต่อ · เรียงลำดับแสดงผล
+                  </li>
+                </ul>
+                <p className="mt-3 font-semibold text-[#2e2a58]">รายละเอียดกิจกรรม</p>
+                <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>เพิ่มวิดีโอ YouTube เป็นกริดการ์ด · คลิกเล่นในป๊อปอัป · แกลเลอรีรูป 3/8 คอลัมน์</li>
+                  <li>ปุ่ม <strong className="font-semibold text-[#2e2a58]">รับชมสไลด์</strong> เมื่อมีรูป — เล่นอัตโนมัติ · เต็มจอได้</li>
+                  <li>สร้างลิงก์ลงทะเบียน/สอบถาม · ดูคำตอบที่เมนู submissions · จุดลงทะเบียนวันงาน (desk)</li>
+                </ul>
+              </>
+            ),
+          },
+          {
+            title: "การเงิน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>สรุปรายรับ (เขียว) · รายจ่าย (ชมพู) · คงเหลือ — กรองช่วง วันนี้/เดือนนี้/ปีนี้/กำหนดเอง</li>
+                <li>กด <strong className="font-semibold text-[#2e2a58]">แสดงกรอง</strong> และ <strong className="font-semibold text-[#2e2a58]">แสดงกราฟ</strong> ตามต้องการ</li>
+                <li>บันทึกรายรับ/รายจ่าย — แนบสลิปโอน · ดูรูปเต็มจอจากรายการ · แก้ไข/ลบแถวได้</li>
+                <li>ใช้กราฟเปรียบเทียบรายรับ–รายจ่ายรายวันก่อนสรุปงบประชุมหรือส่งรายงานกรรมการ</li>
+              </ul>
+            ),
+          },
+          {
+            title: "การจัดการ",
+            content: (
+              <>
+                <p className="font-semibold text-[#2e2a58]">สมาชิก</p>
+                <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>เพิ่มสมาชิก — ชื่อ · เบอร์ · อีเมล · ตำแหน่ง · สถานะใช้งาน</li>
+                  <li>ค้นหาและกรองสถานะ · แก้ไข/ลบจากไอคอนแถว · ใช้ข้อมูลติดต่อกิจกรรมและค่าบำรุง</li>
+                </ul>
+                <p className="mt-3 font-semibold text-[#2e2a58]">ทรัพย์สิน</p>
+                <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>บันทึกอุปกรณ์/ทรัพย์สินชมรม — ชื่อ · สถานที่ · สภาพ · หมายเหตุ</li>
+                  <li>กรองและค้นหา · อัปเดตเมื่อยืม–คืนหรือซ่อมบำรุง</li>
+                </ul>
+              </>
+            ),
+          },
+          {
+            title: "ตั้งค่า",
+            content: (
+              <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อชมรม · โลโก้ · ที่อยู่ · เบอร์ · LINE
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชี ·
+                  ขนาดสลิป/เอกสาร
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ค่าบำรุงประจำปี</strong> — กำหนดยอด · รอบปี · ใช้เก็บ/ติดตามสมาชิก
+                </li>
+                <li>
+                  <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็ปลิงค์ลูกค้า</strong> — slug · แบนเนอร์ · แกลเลอรี ·
+                  ลิงก์โซเชียล · คัดลอก URL สาธารณะ
+                </li>
+              </ol>
+            ),
           },
           {
             title: "พอร์ทัลสาธารณะ",
-            content: "แชร์ลิงก์ /club/[slug] จากตั้งค่าเว็บลูกค้า ให้สมาชิกดูกำหนดการและแกลเลอรีโดยไม่ต้องล็อกอิน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>
+                  แชร์ลิงก์ <code className="rounded bg-[#ecebff] px-1 text-xs">/club/[slug]</code> จากแท็บตั้งค่าเว็ปลิงค์ลูกค้า
+                </li>
+                <li>สมาชิกและผู้สนใจดูกำหนดการ · รายละเอียดกิจกรรม · แกลเลอรี/วิดีโอ — ไม่ต้องล็อกอิน MAWELL</li>
+                <li>ทดสอบบนมือถือก่อนแชร์ในกลุ่ม LINE — ตรวจว่ารูปและวันที่แสดงถูกต้อง (เวลาไทย)</li>
+              </ul>
+            ),
           },
         ]}
       />

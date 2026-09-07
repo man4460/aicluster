@@ -252,11 +252,71 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
           subtitle="ออร์เดอร์ สินค้า และยอดขาย"
           sections={[
             {
+              title: "ลำดับเริ่มต้นแนะนำ",
+              content: (
+                <>
+                  <p>ตั้งค่าร้านและเมนูให้พร้อมก่อนรับออเดอร์จริง แล้วทดสอบลิงก์ลูกค้าและแผนกทำอย่างน้อย 1 รอบ</p>
+                  <ol className="mt-2 list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                    <li>
+                      เปิด <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน</strong> — ชื่อร้าน · พร้อมเพย์/บัญชี ·
+                      ขนาดสลิป · เวลาเปิดร้าน
+                    </li>
+                    <li>
+                      ไป <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> — สร้างหมวด · เพิ่มเมนู ราคา รูป ·
+                      เปิดขาย
+                    </li>
+                    <li>
+                      ตั้งค่า <strong className="font-semibold text-[#2e2a58]">สะสมคะแนน</strong> (ถ้าใช้) ในแท็บตั้งค่า
+                    </li>
+                    <li>
+                      เปิดแท็บ <strong className="font-semibold text-[#2e2a58]">ลิงก์</strong> ในตั้งค่า — คัดลอก QR ลูกค้า ·
+                      ลิงก์แผนกทำ/เสิร์ฟ · ทดสอบบนมือถือ
+                    </li>
+                    <li>ลองรับออเดอร์ 1 บิล · ติดตามคิว · ชำระเงิน · ตรวจยอดในการเงิน</li>
+                  </ol>
+                </>
+              ),
+            },
+            {
+              title: "เมนูหลัก",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ออร์เดอร์</strong> — หน้ารับออเดอร์หลักของพนักงาน
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">คิวออเดอร์</strong> — กระดานสถานะออเดอร์แบบเรียลไทม์
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">สินค้า</strong> — จัดการหมวด · เมนู · ทดลองเพิ่มในบิล
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — ยอดขาย · กราฟ · ประวัติ · รายจ่าย
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน</strong> — ข้อมูลร้าน · การเงิน · เว็บ · เวลา ·
+                    แต้ม · ลิงก์ QR
+                  </li>
+                  <li>เดสก์ท็อป: แท็บอยู่ในส่วนหัว · กดซ่อนหัวแล้วแท็บย้ายไปแถบม่วงด้านบน</li>
+                </ul>
+              ),
+            },
+            {
               title: "ออร์เดอร์",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>ซ้าย: ค้นหาสมาชิกและรายการที่เลือก</li>
-                  <li>ขวา: เลือกเมนูสินค้าแบบเต็มจอ</li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">คอมพิวเตอร์:</strong> ซ้าย = ค้นหาสมาชิก · รายการในบิล ·
+                    ชำระเงิน · ขวา = กริดเมนู 3 คอลัมน์ขึ้นไป
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">มือถือ:</strong> กริดเมนูเต็มจอ · สรุปบิลอยู่เหนือ dock ·
+                    แตะสรุปเปิดโมดัลแก้จำนวน/ลบ/ชำระ
+                  </li>
+                  <li>เลือกสมาชิกก่อนบันทึกถ้าต้องการสะสม/ใช้แต้ม — ระบบแสดงยอดและสิทธิ์คงเหลือ</li>
+                  <li>ช่องทางชำระ: เงินสด · พร้อมเพย์ · โอน — พร้อมเพย์/โอนแนบสลิปได้ (ไม่บังคับ)</li>
+                  <li>ติ๊ก «พิมพ์สลิปหลังออเดอร์» ได้ที่หน้านี้ — ระบบจำค่าที่เลือกไว้</li>
+                  <li>บันทึกแล้วออเดอร์เข้าคิวออเดอร์อัตโนมัติ — ไม่ต้องคีย์ซ้ำ</li>
                 </ul>
               ),
             },
@@ -264,25 +324,84 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
               title: "คิวออเดอร์",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>ดูสถานะ: รับออเดอร์ · กำลังทำ · เสร็จแล้ว (แยกสี)</li>
-                  <li>ลิงก์แผนกทำ / เสิร์ฟ · QR ลูกค้า — อยู่ในเมนู «ตั้งค่า» แท็บลิงก์ QR</li>
+                  <li>สถานะหลัก: รับออเดอร์ → กำลังทำ → เสร็จแล้ว (พร้อมรับ) → ส่งมอบแล้ว — แยกสีชัด</li>
+                  <li>แตะการ์ดออเดอร์เพื่อขยับสถานะทีละขั้น — อัปเดตแบบเรียลไทม์ทุกจอที่เปิดคิว</li>
+                  <li>เปิดจอคิวไว้ที่เคาน์เตอร์ · เปิดลิงก์แผนกทำ/เสิร์ฟบนแท็บเล็ตในครัว</li>
+                  <li>ลิงก์แผนกและ QR ลูกค้า — อยู่ใน <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน</strong> แท็บ{" "}
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์</strong>
+                  </li>
                 </ul>
               ),
             },
             {
-              title: "เมนูหลัก",
+              title: "สินค้า",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>แท็บเมนูอยู่ในส่วนหัว — กดซ่อนเพื่อย้ายไปแถบบน (มือถือและคอมพิวเตอร์)</li>
-                  <li>มือถือยังใช้เมนูล่างสลับหน้าได้</li>
+                  <li>ปุ่ม <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> ที่หัวการ์ด — จัดการเพิ่ม/แก้/ลบหมวดในโมดัล</li>
+                  <li>แถบชิปหมวดใต้หัว — กด «ทั้งหมด» หรือหมวดเพื่อกรองกริดสินค้า</li>
+                  <li>กด <strong className="font-semibold text-[#2e2a58]">+ เพิ่มสินค้า</strong> — ตั้งชื่อ · ราคา · หมวด · รูป · เปิด/ปิดขาย</li>
+                  <li>แตะการ์ดสินค้าเพื่อทดลองเพิ่มในบิลร่าง — มือถือสรุปอยู่เหนือ dock · คอมเป็นแผงลอยมุมขวาล่าง</li>
+                  <li>ไอคอนแก้ไข/ลบที่แถวสินค้า — ใช้เมื่อต้องปรับราคาหรือถอดเมนูออกจากการขาย</li>
                 </ul>
               ),
             },
             {
-              title: "หน้าสินค้า",
+              title: "การเงิน",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>จัดการหมวดและสินค้า · แตะการ์ดเพื่อทดลองเพิ่มในบิล</li>
+                  <li>สรุปด้านบน: รายรับ (เขียว) · ต้นทุน/รายจ่าย (ชมพู) · กำไร — ค่าเริ่มช่วง <strong className="font-semibold text-[#2e2a58]">เดือนนี้</strong></li>
+                  <li>กด <strong className="font-semibold text-[#2e2a58]">แสดงกรอง</strong> — เลือก วันนี้ / เดือนนี้ / ปีนี้ / กำหนดเอง · ค้นหาบิล</li>
+                  <li>กด <strong className="font-semibold text-[#2e2a58]">แสดงกราฟ</strong> — ดูรายรับเทียบต้นทุนรายวันและยอดขายตามช่วง</li>
+                  <li>แท็บ <strong className="font-semibold text-[#2e2a58]">ประวัติ / รายรับ</strong> — ทุกแถวแก้ไขและลบได้ · มีสลิปเมื่อแนบ · ราคาขวาเป็นสีเขียว</li>
+                  <li>แท็บ <strong className="font-semibold text-[#2e2a58]">รายจ่าย</strong> — บันทึกต้นทุน · หมวดรายจ่าย · แนบสลิป · กรองตามหมวด</li>
+                  <li>ปิดกะ: กรองช่วงวัน → ตรวจยอดสรุป → บันทึกรายจ่ายที่ค้าง → รีเฟรชก่อนส่งรายงาน</li>
+                </ul>
+              ),
+            },
+            {
+              title: "ตั้งค่าร้าน",
+              content: (
+                <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อร้าน · โลโก้ · ที่อยู่ · เบอร์ติดต่อ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชีโอน ·
+                    ขนาดสลิปพิมพ์
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็บไซต์</strong> — แบนเนอร์ · แกลเลอรี · LINE · แผนที่
+                    (ถ้าเปิดพอร์ทัล)
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเวลาเปิดร้าน</strong> — วันและเวลาเปิด–ปิด (เวลาไทย)
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">สะสมคะแนน</strong> — กำหนดบาท→คะแนน · ของรางวัลแลก ·
+                    ข้อความกฎอัปเดตตามที่ตั้ง
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์</strong> — QR/ลิงก์ลูกค้า · พนักงาน · แผนกทำ · แผนกเสิร์ฟ ·
+                    ดาวน์โหลดโปสเตอร์
+                  </li>
+                </ol>
+              ),
+            },
+            {
+              title: "ลิงก์ลูกค้าและแผนก",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">QR ลูกค้า</strong> — ลูกค้าสแกนสั่งเอง · เลือกเมนู · ส่งออเดอร์เข้าคิวเดียวกับหน้าร้าน
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์แผนกทำ</strong> — เปิดบนแท็บเล็ตในครัว · เห็นออเดอร์ที่ต้องทำ ·
+                    อัปเดตสถานะ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ลิงก์แผนกเสิร์ฟ</strong> — ใช้เมื่ออาหาร/เครื่องดื่มพร้อมส่งมอบ
+                  </li>
+                  <li>คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ QR ติดเคาน์เตอร์ · ทดสอบสแกนจากมือถือจริงก่อนเปิดร้าน</li>
                 </ul>
               ),
             },

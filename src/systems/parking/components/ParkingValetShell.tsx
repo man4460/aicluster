@@ -78,36 +78,129 @@ function ParkingHeaderCollapseGlyph() {
 
 const parkingGuideSections = [
   {
-    title: "แดชบอร์ด",
+    title: "ลำดับเริ่มต้นแนะนำ",
+    content: (
+      <>
+        <p>ตั้งค่าลานและช่องจอดให้ครบก่อนรับรถจริง แล้วทดสอบ QR ช่องจอดอย่างน้อย 1 ช่อง</p>
+        <ol className="mt-2 list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+          <li>
+            เปิด <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — ชื่อลาน · พร้อมเพย์/บัญชี · โหมดราคา ·
+            PIN พนักงาน
+          </li>
+          <li>
+            ไป <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> แท็บ <strong className="font-semibold text-[#2e2a58]">ลาน</strong> — เพิ่มลาน ·
+            ตั้งราคาชม./วัน/เดือน · สร้างช่องจอดและ QR
+          </li>
+          <li>
+            สร้าง <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong> และ <strong className="font-semibold text-[#2e2a58]">สมาชิกเหมา</strong> (ถ้าใช้)
+          </li>
+          <li>
+            ตั้งค่า <strong className="font-semibold text-[#2e2a58]">ลิงก์ / QR</strong> และเว็บลูกค้าในแท็บตั้งค่า
+          </li>
+          <li>ทดลองเช็คอิน 1 คัน · เช็คเอาต์ · ตรวจยอดในการเงิน</li>
+        </ol>
+      </>
+    ),
+  },
+  {
+    title: "เมนูหลัก",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ภาพรวม · สถานะช่อง (ว่าง / มีการจอง / มีรถจอด) · เช็คอินพนักงาน · จองล่วงหน้า</li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — ภาพรวม · เช็คอิน · เช็คเอาต์ · การจอง
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> — แพ็กเกจ · สมาชิกเหมา · ลานและช่องจอด
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — สรุปรายรับ · ประวัติเซสชัน · กราฟ
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> — พื้นฐาน · การเงิน · จอง · เว็บลูกค้า · แต้ม · ลิงก์ QR
+        </li>
       </ul>
+    ),
+  },
+  {
+    title: "แดชบอร์ด",
+    content: (
+      <>
+        <p className="font-semibold text-[#2e2a58]">แท็บย่อย</p>
+        <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+          <li>
+            <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — สถานะช่อง (ว่าง / จอง / มีรถจอด) · เลือกลาน ·
+            ทางลัดเช็คอิน
+          </li>
+          <li>
+            <strong className="font-semibold text-[#2e2a58]">เช็คอิน</strong> — รับรถเข้าช่อง · เลือกแพ็ก/เหมา · บันทึกทะเบียน ·
+            สแกน QR ช่อง (ถ้ามี)
+          </li>
+          <li>
+            <strong className="font-semibold text-[#2e2a58]">เช็คเอาต์</strong> — ปิดรอบจอด · คำนวณค่าจอด · ชำระเงิน · ออกใบเสร็จ
+          </li>
+          <li>
+            <strong className="font-semibold text-[#2e2a58]">การจอง</strong> — จองล่วงหน้า · ยืนยันเมื่อรถมาถึง · ยกเลิก/เลื่อนได้ตามสถานะ
+          </li>
+        </ul>
+      </>
     ),
   },
   {
     title: "การจัดการ",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>แพ็กเกจบริการ · สมาชิกเหมาจ่าย — ตัดสิทธิ์ตอนเช็คอิน</li>
-        <li>เพิ่มลาน · ตั้งราคาชม./วัน/เดือน · จัดการช่องจอดและ QR ในแต่ละลาน</li>
-      </ul>
+      <>
+        <p className="font-semibold text-[#2e2a58]">แพ็กเกจบริการ</p>
+        <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+          <li>สร้างแพ็ก เช่น รายชม./รายวัน/รายเดือน — ตั้งชื่อ · ราคา · คำอธิบาย · เปิด/ปิดขาย</li>
+          <li>ใช้ตัดสิทธิ์ตอนเช็คอินเมื่อลูกค้ามีแพ็กที่เหมาจ่าย</li>
+        </ul>
+        <p className="mt-3 font-semibold text-[#2e2a58]">สมาชิกเหมาจ่าย</p>
+        <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+          <li>ขายแพ็กให้ลูกค้า · บันทึกทะเบียน/เบอร์ · ดูสิทธิ์คงเหลือ</li>
+          <li>เช็คอินแล้วเลือกหักจากแพ็ก — ระบบลดสิทธิ์อัตโนมัติ</li>
+        </ul>
+        <p className="mt-3 font-semibold text-[#2e2a58]">ลานและช่องจอด</p>
+        <ul className="mt-1 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+          <li>เพิ่มลาน · ตั้งโหมดราคา ชม./วัน/เดือน · จำนวนช่อง</li>
+          <li>มุมมองช่องจอด — พิมพ์/ดาวน์โหลด QR ติดหลังช่อง · ลูกค้าสแกนเช็คอินได้</li>
+        </ul>
+      </>
     ),
   },
   {
     title: "การเงิน",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>สรุปรายรับจากรอบจอดที่ชำระแล้ว และดูประวัติเซสชัน</li>
+        <li>สรุปรายรับจากรอบจอดที่ชำระแล้ว — กรอง วันนี้/เดือนนี้/ปีนี้/กำหนดเอง</li>
+        <li>กด <strong className="font-semibold text-[#2e2a58]">แสดงกรอง</strong> และ <strong className="font-semibold text-[#2e2a58]">แสดงกราฟ</strong> ตามต้องการ</li>
+        <li>ประวัติเซสชัน — ทะเบียน · เวลาเข้า–ออก · ยอด · ช่องทางชำระ · สลิป (ถ้ามี)</li>
+        <li>ปิดกะ: กรองวันนี้ → รีเฟรช → เทียบยอดกับเงินสด/POS หน้างาน</li>
       </ul>
     ),
   },
   {
-    title: "ตั้งค่า",
+    title: "ตั้งค่าและลิงก์ QR",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ตั้งค่าพื้นฐานและการเงินของลานหลัก · ลิงก์ / QR</li>
-      </ul>
+      <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่าพื้นฐาน</strong> — ชื่อลาน · ที่อยู่ · เบอร์ · โลโก้
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเกี่ยวกับการเงิน</strong> — พร้อมเพย์ · บัญชี · ขนาดสลิป
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">การจอง</strong> — โหมดมัดจำ/เต็มจำนวน · เปิด–ปิดจองออนไลน์
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็ปลิงค์ลูกค้า</strong> — แบนเนอร์ · แกลเลอรี · ช่องทางติดต่อ
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">สะสมคะแนน</strong> — กำหนดบาท→คะแนน (ถ้าเปิดใช้)
+        </li>
+        <li>
+          <strong className="font-semibold text-[#2e2a58]">ลิงก์ / QR</strong> — QR ลาน/ช่อง · ลิงก์พนักงาน · คัดลอก/ดาวน์โหลดโปสเตอร์
+        </li>
+      </ol>
     ),
   },
 ];
