@@ -857,7 +857,7 @@ export function DrinkPosSalesClient() {
                                   alt="สลิปชำระเงิน"
                                   className="h-14 w-14 shrink-0"
                                   onOpen={() => slipLb.open(slipUrl)}
-                                />
+                                  objectFit="contain" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">
@@ -1189,7 +1189,7 @@ export function DrinkPosSalesClient() {
                   alt="สลิปบิล"
                   onOpen={() => slipLb.open(editSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setEditSlipUrl("")}

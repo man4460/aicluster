@@ -234,8 +234,8 @@ async function main() {
     },
     {
       slug: "income-expense-basic",
-      title: "ระบบบันทึกรายรับรายจ่ายบ้าน",
-      description: "กลุ่ม 1 (Basic) — ค่าน้ำไฟ รถ ซ่อมบ้าน รายรับรายจ่ายทั่วไป",
+      title: "บันทึกส่วนตัว",
+      description: "กลุ่ม 1 (Basic) — ค่าน้ำไฟ รถ ซ่อมบ้าน บันทึกส่วนตัว · รหัสผ่าน · โน้ต",
       groupId: 1,
       sortOrder: 24,
     },

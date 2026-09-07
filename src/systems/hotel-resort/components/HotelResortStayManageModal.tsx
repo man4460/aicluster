@@ -340,7 +340,7 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
                 alt="สลิปมัดจำ"
                 onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
                 className="h-16 w-16"
-              />
+                objectFit="contain" />
             </div>
           ) : null}
 

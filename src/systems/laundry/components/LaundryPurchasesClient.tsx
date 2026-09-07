@@ -408,7 +408,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
             emptyLabel="ไม่มีสลิป"
             onOpen={slip ? () => slipLightbox.open(slip) : undefined}
             className={compact ? slipThumbCompactClassName : cn(slipThumbClassName, "shrink-0")}
-          />
+            objectFit="contain" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-start justify-between gap-1.5">
               <div className="min-w-0">

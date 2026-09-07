@@ -1411,7 +1411,7 @@ export function HotelResortFinanceClient() {
                                   alt={`สลิป ${item.label}`}
                                   onOpen={() => slipLb.open(slip)}
                                   className="h-14 w-14 shrink-0"
-                                />
+                                  objectFit="contain" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">
@@ -1468,7 +1468,7 @@ export function HotelResortFinanceClient() {
                                       alt={`สลิปมัดจำ ${s.guestName}`}
                                       onOpen={() => slipLb.open(depositSlip)}
                                       className="h-14 w-14 shrink-0"
-                                    />
+                                      objectFit="contain" />
                                   ) : null}
                                   {slip ? (
                                     <AppImageThumb
@@ -1476,7 +1476,7 @@ export function HotelResortFinanceClient() {
                                       alt={`สลิปชำระเพิ่ม ${s.guestName}`}
                                       onOpen={() => slipLb.open(slip)}
                                       className="h-14 w-14 shrink-0"
-                                    />
+                                      objectFit="contain" />
                                   ) : null}
                                 </div>
                               ) : null}
@@ -1639,7 +1639,7 @@ export function HotelResortFinanceClient() {
                                 alt={`สลิป ${c.label}`}
                                 onOpen={() => slipLb.open(slip)}
                                 className="h-14 w-14 shrink-0"
-                              />
+                                objectFit="contain" />
                             ) : null}
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-bold text-[#66638c]">{formatThaiDateTime(c.spentAt)}</p>
@@ -1781,7 +1781,7 @@ export function HotelResortFinanceClient() {
                   alt="สลิปรายจ่าย"
                   onOpen={() => slipLb.open(costSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}
@@ -1977,7 +1977,7 @@ export function HotelResortFinanceClient() {
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(incomeSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setIncomeSlipUrl("")}
@@ -2215,7 +2215,7 @@ export function HotelResortFinanceClient() {
                   alt="บัตรประชาชน"
                   onOpen={() => slipLb.open(stayIdCardImageUrl)}
                   className="h-20 w-28"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setStayIdCardImageUrl(null)}
@@ -2367,7 +2367,7 @@ export function HotelResortFinanceClient() {
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(staySlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setStaySlipUrl("")}

@@ -235,7 +235,7 @@ export function HomeFinanceFormAttachmentsBlock({
                     title="ดูตัวอย่าง"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={row.objectUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={row.objectUrl} alt="" className="h-full w-full bg-slate-50 object-contain object-center" />
                   </button>
                 )}
                 <div className="min-w-0 flex-1">
@@ -271,7 +271,7 @@ export function HomeFinanceFormAttachmentsBlock({
                       title="ดูขยาย"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={abs} alt="" className="h-full w-full object-cover" />
+                      <img src={abs} alt="" className="h-full w-full bg-slate-50 object-contain object-center" />
                     </button>
                   )}
                   <div className="min-w-0 flex-1">
@@ -416,7 +416,7 @@ export function HomeFinanceVehicleRowAttachments({
                   title="ดูขยาย"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={abs} alt="" className="h-full w-full object-cover" />
+                  <img src={abs} alt="" className="h-full w-full bg-slate-50 object-contain object-center" />
                 </button>
               )}
             </div>
@@ -504,7 +504,7 @@ export function HomeFinanceHistoryAttachmentStrip({
               title="ดูขยาย"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={abs} alt="" className="h-9 w-9 object-cover" />
+              <img src={abs} alt="" className="h-9 w-9 bg-slate-50 object-contain object-center" />
             </button>
             <div className="flex max-w-[5rem] flex-wrap justify-center gap-x-1.5 gap-y-0">
               <a

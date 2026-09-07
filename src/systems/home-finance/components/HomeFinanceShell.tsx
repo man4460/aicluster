@@ -144,7 +144,7 @@ const guideSections = [
           <strong>โน้ต</strong>
         </li>
         <li>
-          สลับแท็บได้จากแถบย่อยบนหน้า (มือถือและเดสก์ท็อป) — ไม่ต้องออกจากโมดูลรายรับ–รายจ่าย
+          สลับแท็บได้จากแถบย่อยบนหน้า (มือถือและเดสก์ท็อป) — ไม่ต้องออกจากโมดูลบันทึกส่วนตัว
         </li>
         <li>
           ข้อมูลอยู่ภายใต้บัญชีคุณ — แยกจากสลิป/รายการเงินในแท็บภาพรวมและบันทึก
@@ -312,7 +312,7 @@ function HomeFinanceShellInner({ children }: { children: ReactNode }) {
 
           <nav
             className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden"
-            aria-label="เมนูระบบรายรับรายจ่าย"
+            aria-label="เมนูระบบบันทึกส่วนตัว"
           >
             <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {HOME_FINANCE_NAV_ITEMS.map((item) => {
@@ -339,7 +339,7 @@ function HomeFinanceShellInner({ children }: { children: ReactNode }) {
         <AppUsageGuideModal
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
-          title="คู่มือ — รายรับ–รายจ่าย"
+          title="คู่มือ — บันทึกส่วนตัว"
           subtitle="ครอบคลุมเมนูหลัก · รหัสผ่าน · โน้ต · บันทึก · เอกสาร · ตั้งค่า"
           sections={guideSections}
         />
@@ -347,7 +347,7 @@ function HomeFinanceShellInner({ children }: { children: ReactNode }) {
         <div className={appModuleShellMainScrollClass}>{children}</div>
 
         {isHomeFinanceModulePath(pathname) ? (
-          <AppMobileDockShell ariaLabel="เมนูล่างระบบรายรับรายจ่าย">
+          <AppMobileDockShell ariaLabel="เมนูล่างระบบบันทึกส่วนตัว">
             <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
               {HOME_FINANCE_NAV_ITEMS.map((item) => {
                 const active = isHomeFinanceNavItemActive(pathname, item.key);

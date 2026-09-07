@@ -867,7 +867,7 @@ export function BuildingPosPortalClient({
                         }
                       />
                       {slipUrl ? (
-                        <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
+                        <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
                       ) : null}
                     </div>
                   ) : null}

@@ -570,7 +570,7 @@ export function MassageCostPanel({
                             alt="สลิป"
                             onOpen={() => lightbox.open(slipResolved)}
                             className="h-14 w-14 rounded-[1.25rem]"
-                          />
+                            objectFit="contain" />
                         : null}
                         <div className="min-w-0">
                           <p className="text-xs tabular-nums text-slate-500">
@@ -641,7 +641,7 @@ export function MassageCostPanel({
                           alt="สลิป"
                           onOpen={() => lightbox.open(slipResolved)}
                           className="h-14 w-14 rounded-[1.25rem]"
-                        />
+                          objectFit="contain" />
                       : null}
                       <div className="min-w-0">
                         <p className="text-xs tabular-nums text-slate-500">

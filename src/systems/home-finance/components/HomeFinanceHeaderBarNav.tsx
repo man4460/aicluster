@@ -16,7 +16,6 @@ import {
   isHomeFinanceNavItemActive,
   type HomeFinanceNavKey,
 } from "@/systems/home-finance/home-finance-module-nav";
-import { homeFinanceNavActiveClass, homeFinanceNavIdleClass } from "@/systems/home-finance/lib/ui-tokens";
 
 function IconOverview({ className }: { className?: string }) {
   return (
@@ -99,7 +98,7 @@ export function HomeFinanceHeaderBarNav({ onExpand }: { onExpand: () => void }) 
     <div className={appDashboardModuleHeaderNavRowClass}>
       <nav
         className={appDashboardModuleHeaderNavShellClass}
-        aria-label="เมนูระบบรายรับรายจ่าย"
+        aria-label="เมนูระบบบันทึกส่วนตัว"
       >
         {HOME_FINANCE_NAV_ITEMS.map((item) => {
           const active = isHomeFinanceNavItemActive(pathname, item.key);

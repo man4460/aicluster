@@ -15,7 +15,7 @@ async function main() {
     select: { id: true },
   });
   if (!mod) {
-    console.error("ไม่พบโมดูลรายรับ–รายจ่ายใน app_module");
+    console.error("ไม่พบโมดูลบันทึกส่วนตัวใน app_module");
     process.exitCode = 1;
     return;
   }

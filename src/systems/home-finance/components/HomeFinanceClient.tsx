@@ -23,6 +23,7 @@ import {
   AppSparkChartsTwoColumnGrid,
   openPrintableHtml,
   useAppImageLightbox,
+  useAppNoticePopup,
   type AppColumnBarBucket,
   type AppCompareBarRow,
   type AppRevenueCostBucket,
@@ -54,6 +55,10 @@ import { HomeFinanceStatCard } from "@/systems/home-finance/components/HomeFinan
 import {
   hfFilterChipClass,
   hfPanelGlassClass,
+  homeFinanceIconButtonClass,
+  homeFinanceOutlineButtonClass,
+  homeFinancePrimaryButtonClass,
+  homeFinancePrimaryIconButtonClass,
 } from "@/systems/home-finance/components/home-finance-ui-tokens";
 import {
   HomeFinanceFormAttachmentsBlock,
@@ -64,6 +69,8 @@ import {
 import { HomeFinanceSlipUploadField } from "@/systems/home-finance/components/HomeFinanceSlipUploadField";
 import { HomeFinanceEntryRowCard } from "@/systems/home-finance/components/HomeFinanceEntryRowCard";
 import { HomeFinanceRemindersSection } from "@/systems/home-finance/components/HomeFinanceRemindersSection";
+import { HomeFinanceOverviewSubNav } from "@/systems/home-finance/components/HomeFinancePageSubNav";
+import { HomeFinanceCardIconAddButton } from "@/systems/home-finance/components/HomeFinanceCardHeaderActions";
 import {
   encodeHomeFinancePublicAssetHref,
   isHomeFinancePdfUrl,
@@ -88,6 +95,10 @@ import {
   saveHomeFinanceFilterPrefs,
   type HomeFinanceBudgetItem,
 } from "@/systems/home-finance/lib/home-finance-prefs";
+import {
+  homeFinanceCardIconTileClass,
+  homeFinanceCategoryCardTone,
+} from "@/systems/home-finance/lib/card-tones";
 
 type Entry = {
   id: number;
@@ -293,7 +304,7 @@ function metaEndpointFailureLine(label: string, res: Response, data: Record<stri
   if (err) return `${label}: ${err}`;
   if (res.status === 401) return `${label}: เซสชันหมดอายุ — ลองล็อกอินใหม่`;
   if (res.status === 403) {
-    return `${label}: ไม่มีสิทธิ์ — ถ้าเป็นบัญชีพนักงานให้เข้าด้วยบัญชีเจ้าของ หรือตรวจสอบการเปิดโมดูลรายรับ–รายจ่าย`;
+    return `${label}: ไม่มีสิทธิ์ — ถ้าเป็นบัญชีพนักงานให้เข้าด้วยบัญชีเจ้าของ หรือตรวจสอบการเปิดโมดูลบันทึกส่วนตัว`;
   }
   if (res.status >= 500) return `${label}: เซิร์ฟเวอร์/ฐานข้อมูลผิดพลาด (รหัส ${res.status})`;
   return `${label}: โหลดไม่สำเร็จ (รหัส ${res.status})`;
@@ -456,7 +467,7 @@ function buildTrendBuckets(fromYmd: string, toYmd: string, entries: Entry[]): { 
 }
 
 const inputClz =
-  "min-h-[46px] w-full rounded-2xl border border-white/70 bg-white/78 px-3.5 py-2.5 text-sm text-[#28254a] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition placeholder:text-[#9a98b5] focus:border-[#5a57d8]/45 focus:bg-white focus:ring-2 focus:ring-[#5a57d8]/15";
+  "box-border h-9 min-h-9 w-full rounded-lg border border-slate-200/90 bg-white px-3 text-sm font-semibold text-[#1e1b4b] outline-none transition placeholder:text-slate-400 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15";
 
 type HomeFinanceClientProps = {
   /** ส่งจากแต่ละ page.tsx — กันพลาดจาก pathname / hydration */
@@ -475,14 +486,15 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [q, setQ] = useState("");
-  const [historyTab, setHistoryTab] = useState<"list" | "filter" | "charts">("list");
+  const [historyFilterOpen, setHistoryFilterOpen] = useState(false);
+  const [historyChartsOpen, setHistoryChartsOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<"list" | "charts" | "budget">("list");
+  const notice = useAppNoticePopup();
   /** เริ่ม false → กลายเป็น true หลัง read prefs จาก localStorage ครั้งแรก เพื่อกัน save ทับด้วย default ระหว่าง hydration */
   const [filterPrefsHydrated, setFilterPrefsHydrated] = useState(false);
   const [budgets, setBudgets] = useState<HomeFinanceBudgetItem[]>(DEFAULT_HOME_FINANCE_BUDGETS);
   const [budgetEditOpen, setBudgetEditOpen] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<HomeFinanceBudgetItem[]>(DEFAULT_HOME_FINANCE_BUDGETS);
-  const [selectedHistoryIds, setSelectedHistoryIds] = useState<number[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [summary, setSummary] = useState({ count: 0, income: 0, expense: 0, balance: 0 });
   const [previousPeriodBalance, setPreviousPeriodBalance] = useState<number | null>(null);
@@ -724,10 +736,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }, [categoryKey]);
 
   useEffect(() => {
-    setSelectedHistoryIds([]);
-  }, [entries, from, to, typeFilter, categoryFilter, q]);
-
-  useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
       const target = ev.target as HTMLElement | null;
       const isTyping =
@@ -748,7 +756,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       }
       if (ev.key.toLowerCase() === "f" && section === "history") {
         ev.preventDefault();
-        setHistoryTab("filter");
+        setHistoryFilterOpen(true);
         window.setTimeout(() => filterSearchInputRef.current?.focus(), 0);
       }
     };
@@ -1089,7 +1097,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }
 
   async function removeEntry(id: number) {
-    if (!confirm("ลบรายการนี้?")) return;
+    const ok = await notice.confirm("ลบรายการนี้?");
+    if (!ok) return;
     try {
       const res = await homeFinanceFetch(`/api/home-finance/entries/${id}`, { method: "DELETE" });
       const parsed = await readHomeFinanceJsonResponse(res);
@@ -1106,21 +1115,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       setError(fetchErrorMessage(e));
       return;
     }
-    await loadEntries();
-  }
-
-  async function removeEntriesBulk(ids: number[]) {
-    if (ids.length === 0) return;
-    if (!confirm(`ลบ ${ids.length} รายการที่เลือก?`)) return;
-    for (const id of ids) {
-      const res = await homeFinanceFetch(`/api/home-finance/entries/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const parsed = await readHomeFinanceJsonResponse(res);
-        setError(metaEndpointFailureLine("ลบหลายรายการ", res, parsed.data));
-        break;
-      }
-    }
-    setSelectedHistoryIds([]);
     await loadEntries();
   }
 
@@ -1165,7 +1159,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       setTo(today);
       return;
     }
-    setHistoryTab("filter");
+    setHistoryFilterOpen(true);
   }
 
   async function onSubmitEdit(e: React.FormEvent) {
@@ -1451,7 +1445,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }
 
   async function removeUtility(id: number) {
-    if (!confirm("ลบรายการบิลนี้?")) return;
+    if (!(await notice.confirm("ลบรายการบิลนี้?"))) return;
     setError(null);
     let res: Response;
     try {
@@ -1701,7 +1695,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }
 
   async function removeVehicle(id: number) {
-    if (!confirm("ลบรายการรถนี้?")) return;
+    if (!(await notice.confirm("ลบรายการรถนี้?"))) return;
     setError(null);
     let res: Response;
     try {
@@ -1769,7 +1763,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }
 
   async function removeReminder(id: number) {
-    if (!confirm("ลบรายการแจ้งเตือนนี้?")) return;
+    if (!(await notice.confirm("ลบรายการแจ้งเตือนนี้?"))) return;
     await fetch(`/api/home-finance/reminders/${id}`, { method: "DELETE" });
     await loadMeta();
   }
@@ -1990,12 +1984,13 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }, [entries, from, to]);
 
   const exportHistoryPdf = useCallback(() => {
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>รายรับรายจ่าย</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4ff}</style></head><body><h2>รายรับรายจ่าย ${from} - ${to}</h2><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th>จำนวน</th></tr></thead><tbody>${entries.map((e) => `<tr><td>${e.entryDate}</td><td>${e.type === "INCOME" ? "รายรับ" : "รายจ่าย"}</td><td>${e.categoryLabel}</td><td>${e.title}</td><td style="text-align:right">${thb(e.amount)}</td></tr>`).join("")}</tbody></table></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>บันทึกส่วนตัว</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4ff}</style></head><body><h2>บันทึกส่วนตัว ${from} - ${to}</h2><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th>จำนวน</th></tr></thead><tbody>${entries.map((e) => `<tr><td>${e.entryDate}</td><td>${e.type === "INCOME" ? "รายรับ" : "รายจ่าย"}</td><td>${e.categoryLabel}</td><td>${e.title}</td><td style="text-align:right">${thb(e.amount)}</td></tr>`).join("")}</tbody></table></body></html>`;
     openPrintableHtml(html);
   }, [entries, from, to, thb]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {notice.popup}
       {saveNotice ? (
         <div
           role="status"
@@ -2049,43 +2044,55 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       {showFinanceMain ? (
         <>
           {section === "dashboard" ? (
-            <section className={hfPanelGlassClass}>
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/50 pb-3">
+            <HomeFinanceOverviewSubNav
+              action={<HomeFinanceCardIconAddButton label="เพิ่มรายการ" onClick={openAddEntryModal} />}
+            >
+              <div className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-base font-black tracking-tight text-[#1e1b4b]">สรุปเดือนนี้</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <h3 className="text-sm font-bold tracking-tight text-[#1e1b4b]">สรุปเดือนนี้</h3>
+                  <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
                     {dashboardFrom} – {dashboardTo} · {summary.count} รายการ
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <div className="flex flex-wrap items-center justify-end gap-1">
                   <HistoryToolbarButton
                     active={dashboardTab === "charts"}
                     onClick={() => setDashboardTab((t) => (t === "charts" ? "list" : "charts"))}
                     ariaLabel="ดูกราฟสรุป"
+                    iconOnly
                   >
-                    กราฟ
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                      <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+                      <path d="M8 15v-4M12 15V8M16 15v-7" strokeLinecap="round" />
+                    </svg>
                   </HistoryToolbarButton>
                   <HistoryToolbarButton
                     active={dashboardTab === "budget"}
                     onClick={() => setDashboardTab((t) => (t === "budget" ? "list" : "budget"))}
                     ariaLabel="ดูงบเดือน"
+                    iconOnly
                   >
-                    งบ
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                      <rect x="3" y="6" width="18" height="13" rx="2" />
+                      <path d="M3 10h18M8 6V4M16 6V4" strokeLinecap="round" />
+                    </svg>
                   </HistoryToolbarButton>
                   <Link
                     href="/dashboard/home-finance/history"
-                    className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-semibold text-slate-700 transition hover:border-[#4d47b6]/25 hover:bg-white"
+                    className={cn(homeFinanceIconButtonClass)}
                     aria-label="ดูประวัติเต็ม"
+                    title="ประวัติ"
                   >
-                    ประวัติ
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                      <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
+                      <path d="M3 4v4h4M12 7v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </Link>
-                  <HomeFinancePrimaryButton type="button" onClick={openAddEntryModal} className="min-h-[40px] px-3 text-xs sm:px-4">
-                    + เพิ่ม
-                  </HomeFinancePrimaryButton>
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                 <Stat title="รายการ" value={String(summary.count)} />
                 <Stat title="รายรับ" value={formatMoneyCompact(thb, summary.income)} tone="green" />
                 <Stat title="รายจ่าย" value={formatMoneyCompact(thb, summary.expense)} tone="red" />
@@ -2093,7 +2100,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
               </div>
 
               {dashboardTab === "list" ? (
-                <div className="mt-3" role="tabpanel">
+                <div role="tabpanel">
                   {loading ? (
                     <p className="py-8 text-center text-sm text-slate-500">กำลังโหลด…</p>
                   ) : entries.length === 0 ? (
@@ -2104,7 +2111,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                         {dashboardSortedEntries.map((e) => (
                           <li key={e.id}>
                             <HomeFinanceEntryRowCard
-                              variant="dashboard"
                               entry={e}
                               thb={thb}
                               onOpenSlip={(url) => openFinanceAttachmentUrl(url)}
@@ -2120,7 +2126,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
               ) : null}
 
               {dashboardTab === "charts" ? (
-                <div className="mt-3" role="tabpanel">
+                <div role="tabpanel">
                   <HomeFinanceAnalyticsSection
                     entries={entries}
                     from={dashboardFrom}
@@ -2136,7 +2142,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
               ) : null}
 
               {dashboardTab === "budget" ? (
-                <div className="mt-3 space-y-3" role="tabpanel">
+                <div className="space-y-3" role="tabpanel">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#66638c]">งบเดือนนี้</p>
                     <button
@@ -2192,32 +2198,33 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                   ) : null}
                 </div>
               ) : null}
-            </section>
+              </div>
+            </HomeFinanceOverviewSubNav>
           ) : null}
 
           {section === "history" ? (
             <section className={hfPanelGlassClass}>
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/50 pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/80 pb-3">
                 <div className="min-w-0">
-                  <h2 className="text-base font-black tracking-tight text-[#1e1b4b]">ประวัติรายการ</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <h2 className="text-sm font-bold tracking-tight text-[#1e1b4b]">ประวัติรายการ</h2>
+                  <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
                     {from} – {to} · {summary.count} รายการ
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <div className="flex flex-wrap items-center justify-end gap-1">
                   <HistoryToolbarButton
-                    active={historyTab === "filter"}
-                    onClick={() => setHistoryTab((t) => (t === "filter" ? "list" : "filter"))}
-                    ariaLabel="กรองรายการ"
+                    active={historyFilterOpen}
+                    onClick={() => setHistoryFilterOpen((o) => !o)}
+                    ariaLabel={historyFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
                   >
-                    กรอง
+                    {historyFilterOpen ? "ซ่อนกรอง" : "กรอง"}
                   </HistoryToolbarButton>
                   <HistoryToolbarButton
-                    active={historyTab === "charts"}
-                    onClick={() => setHistoryTab((t) => (t === "charts" ? "list" : "charts"))}
-                    ariaLabel="ดูกราฟสรุป"
+                    active={historyChartsOpen}
+                    onClick={() => setHistoryChartsOpen((o) => !o)}
+                    ariaLabel={historyChartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
                   >
-                    กราฟ
+                    {historyChartsOpen ? "ซ่อนกราฟ" : "กราฟ"}
                   </HistoryToolbarButton>
                   <HistoryToolbarButton onClick={exportHistoryCsv} ariaLabel="ส่งออก CSV">
                     CSV
@@ -2225,7 +2232,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                   <HistoryToolbarButton onClick={exportHistoryPdf} ariaLabel="พิมพ์หรือส่งออก PDF">
                     PDF
                   </HistoryToolbarButton>
-                  <HomeFinancePrimaryButton type="button" onClick={openAddEntryModal} className="min-h-[40px] px-3 text-xs sm:px-4">
+                  <HomeFinancePrimaryButton type="button" onClick={openAddEntryModal}>
                     + เพิ่ม
                   </HomeFinancePrimaryButton>
                 </div>
@@ -2238,54 +2245,9 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                 <Stat title="คงเหลือ" value={formatMoneyCompact(thb, summary.balance)} tone={summary.balance >= 0 ? "blue" : "red"} />
               </div>
 
-              {historyTab === "list" ? (
-                <div className="mt-3" role="tabpanel">
-                  {selectedHistoryIds.length > 0 ? (
-                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#4d47b6]/20 bg-[#f5f4ff] p-2">
-                      <span className="text-xs font-semibold text-[#4d47b6]">เลือกแล้ว {selectedHistoryIds.length} รายการ</span>
-                      <button
-                        type="button"
-                        onClick={() => void removeEntriesBulk(selectedHistoryIds)}
-                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
-                      >
-                        ลบที่เลือก
-                      </button>
-                    </div>
-                  ) : null}
-                  {loading ? (
-                    <p className="py-8 text-center text-sm text-slate-500">กำลังโหลด…</p>
-                  ) : entries.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-slate-500">ยังไม่มีรายการในช่วงที่เลือก — ลองขยายช่วงที่ปุ่ม «กรอง»</p>
-                  ) : (
-                    <div className="max-h-[min(65vh,36rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-                      <ul className="grid grid-cols-1 gap-1" aria-label="รายการในช่วงที่เลือก">
-                        {entries.map((e) => (
-                          <li key={e.id}>
-                            <HomeFinanceEntryRowCard
-                              variant="history"
-                              entry={e}
-                              thb={thb}
-                              selected={selectedHistoryIds.includes(e.id)}
-                              onToggleSelected={() =>
-                                setSelectedHistoryIds((prev) =>
-                                  prev.includes(e.id) ? prev.filter((id) => id !== e.id) : [...prev, e.id],
-                                )
-                              }
-                              onOpenSlip={(url) => openFinanceAttachmentUrl(url)}
-                              onEdit={() => openEdit(e)}
-                              onDelete={() => void removeEntry(e.id)}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {historyTab === "filter" ? (
-                <div className="mt-3 space-y-3" role="tabpanel">
-                  <div className="flex flex-wrap gap-1.5">
+              {historyFilterOpen ? (
+                <div id="hf-history-filter-panel" className="mt-3 space-y-3 border-t border-slate-200/80 pt-3">
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="กรองช่วงเวลา">
                     <QuickChip active={filterMatches7d} onClick={() => applyQuickRange("7d")}>
                       7 วัน
                     </QuickChip>
@@ -2360,12 +2322,11 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       />
                     </label>
                   </div>
-                  <p className="text-[11px] text-slate-500">ลัด: กด F เพื่อเปิดกรอง · ดูกราฟที่ปุ่ม «กราฟ»</p>
                 </div>
               ) : null}
 
-              {historyTab === "charts" ? (
-                <div className="mt-3" role="tabpanel">
+              {historyChartsOpen ? (
+                <div className="mt-3 border-t border-slate-200/80 pt-3">
                   <HomeFinanceAnalyticsSection
                     entries={entries}
                     from={from}
@@ -2379,6 +2340,30 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                   />
                 </div>
               ) : null}
+
+              <div className="mt-3 border-t border-slate-200/80 pt-3">
+                  {loading ? (
+                    <p className="py-8 text-center text-sm text-slate-500">กำลังโหลด…</p>
+                  ) : entries.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-500">ยังไม่มีรายการในช่วงที่เลือก — ลองขยายช่วงที่ปุ่ม «กรอง»</p>
+                  ) : (
+                    <div className="max-h-[min(65vh,36rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                      <ul className="grid grid-cols-1 gap-1" aria-label="รายการในช่วงที่เลือก">
+                        {entries.map((e) => (
+                          <li key={e.id}>
+                            <HomeFinanceEntryRowCard
+                              entry={e}
+                              thb={thb}
+                              onOpenSlip={(url) => openFinanceAttachmentUrl(url)}
+                              onEdit={() => openEdit(e)}
+                              onDelete={() => void removeEntry(e.id)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
             </section>
           ) : null}
         </>
@@ -2589,17 +2574,12 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
             className="flex flex-row items-start justify-between gap-3 sm:items-center"
             actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
             action={
-              <button
-                type="button"
-                onClick={() => openCategoryCreateModal()}
-                aria-label="เพิ่มหมวด"
-                className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-[#0000BF] px-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0000a6] sm:min-w-0 sm:px-4"
-              >
-                <span className="text-lg leading-none sm:hidden" aria-hidden>
+              <HomeFinancePrimaryButton type="button" onClick={() => openCategoryCreateModal()} aria-label="เพิ่มหมวด">
+                <span className="sm:hidden" aria-hidden>
                   +
                 </span>
                 <span className="hidden sm:inline">+ เพิ่มหมวด</span>
-              </button>
+              </HomeFinancePrimaryButton>
             }
           />
           <div>
@@ -2608,46 +2588,57 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
               <HomeFinanceEmptyState>ยังไม่มีหมวด — กดปุ่ม &quot;+ เพิ่มหมวด&quot;</HomeFinanceEmptyState>
             ) : (
               <HomeFinanceList as="ul" listRole="รายการหมวด">
-                {categories.map((c) => (
-                  <li key={c.id}>
-                    <HomeFinanceEntityRow>
-                      <HomeFinanceEntityMain className="flex-wrap">
-                        <p className="text-sm font-semibold text-slate-900">{c.name}</p>
-                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-tight text-slate-600 ring-1 ring-slate-200/80">
-                          ลำดับ {c.sortOrder}
-                        </span>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight",
-                            c.isActive
-                              ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200/70"
-                              : "bg-slate-200 text-slate-600 ring-1 ring-slate-300/60",
-                          )}
-                        >
-                          {c.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                        </span>
-                      </HomeFinanceEntityMain>
-                      <HomeFinanceEntityActions>
-                        <HomeFinanceRowActionIconButton
-                          variant="primary"
-                          title="แก้ไข"
-                          aria-label={`แก้ไขหมวด ${c.name}`}
-                          onClick={() => openCategoryEditModal(c)}
-                        >
-                          <HomeFinanceRowIconEdit />
-                        </HomeFinanceRowActionIconButton>
-                        <HomeFinanceRowActionIconButton
-                          variant="danger"
-                          title="ลบ"
-                          aria-label={`ลบหมวด ${c.name}`}
-                          onClick={() => openCategoryDeleteModal(c)}
-                        >
-                          <HomeFinanceRowIconTrash />
-                        </HomeFinanceRowActionIconButton>
-                      </HomeFinanceEntityActions>
-                    </HomeFinanceEntityRow>
-                  </li>
-                ))}
+                {categories.map((c) => {
+                  const tone = homeFinanceCategoryCardTone(c.isActive);
+                  return (
+                    <li key={c.id}>
+                      <HomeFinanceEntityRow tone={tone}>
+                        <HomeFinanceEntityMain className="min-w-0 gap-3">
+                          <span className={homeFinanceCardIconTileClass(tone)} aria-hidden>
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.15}>
+                              <path d="M4 7h16M4 12h10M4 17h14" strokeLinecap="round" />
+                              <circle cx="18" cy="12" r="2.5" />
+                            </svg>
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-[#1e1b4b]">{c.name}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-medium text-[#66638c]">ลำดับ {c.sortOrder}</span>
+                              <span
+                                className={cn(
+                                  "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+                                  c.isActive
+                                    ? "bg-emerald-100/90 text-emerald-800 ring-1 ring-emerald-200/70"
+                                    : "bg-slate-200/80 text-slate-600 ring-1 ring-slate-300/60",
+                                )}
+                              >
+                                {c.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                              </span>
+                            </div>
+                          </div>
+                        </HomeFinanceEntityMain>
+                        <HomeFinanceEntityActions>
+                          <HomeFinanceRowActionIconButton
+                            variant="primary"
+                            title="แก้ไข"
+                            aria-label={`แก้ไขหมวด ${c.name}`}
+                            onClick={() => openCategoryEditModal(c)}
+                          >
+                            <HomeFinanceRowIconEdit />
+                          </HomeFinanceRowActionIconButton>
+                          <HomeFinanceRowActionIconButton
+                            variant="danger"
+                            title="ลบ"
+                            aria-label={`ลบหมวด ${c.name}`}
+                            onClick={() => openCategoryDeleteModal(c)}
+                          >
+                            <HomeFinanceRowIconTrash />
+                          </HomeFinanceRowActionIconButton>
+                        </HomeFinanceEntityActions>
+                      </HomeFinanceEntityRow>
+                    </li>
+                  );
+                })}
               </HomeFinanceList>
             )}
           </div>
@@ -3106,7 +3097,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                 vehicles.map((v) => (
                   <HomeFinanceEntityRow
                     key={v.id}
-                    className="flex-col items-stretch gap-4 rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/70 via-[#f6f5ff]/72 to-[#edf0ff]/70 p-4 shadow-[0_14px_34px_-20px_rgba(30,27,75,0.34)] backdrop-blur-xl ring-1 ring-white/60 sm:flex-row sm:items-center sm:gap-3 sm:rounded-[2.5rem] sm:p-5"
+                    className="flex-col items-stretch gap-4 rounded-lg border border-slate-200/90 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:p-5"
                   >
                     <HomeFinanceEntityMain className="w-full items-start gap-3 sm:gap-4">
                       <HomeFinanceVehicleCoverUpload
@@ -4135,23 +4126,29 @@ function HistoryToolbarButton({
   onClick,
   children,
   ariaLabel,
+  iconOnly = false,
 }: {
   active?: boolean;
   onClick: () => void;
   children: React.ReactNode;
   ariaLabel: string;
+  iconOnly?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
+      title={ariaLabel}
       aria-pressed={active}
       className={cn(
-        "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border px-3 text-xs font-semibold transition",
-        active
-          ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]"
-          : "border-slate-200 bg-white/90 text-slate-700 hover:border-[#4d47b6]/25 hover:bg-white",
+        iconOnly
+          ? active
+            ? homeFinancePrimaryIconButtonClass
+            : homeFinanceIconButtonClass
+          : active
+            ? homeFinancePrimaryButtonClass
+            : homeFinanceOutlineButtonClass,
       )}
       suppressHydrationWarning
     >
@@ -4165,7 +4162,8 @@ function QuickChip({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       type="button"
       onClick={onClick}
-      className={cn("rounded-full px-3 py-1.5 text-xs font-bold", hfFilterChipClass(active))}
+      className={hfFilterChipClass(active)}
+      aria-pressed={active}
       suppressHydrationWarning
     >
       {children}

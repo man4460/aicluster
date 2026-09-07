@@ -177,7 +177,7 @@ function PersonSubmissionCard({
             alt="สลิป"
             onOpen={() => onOpenSlip(s.slipUrl!)}
             className="h-10 w-10 shrink-0"
-          />
+            objectFit="contain" />
         ) : (
           <span className={clubEventCardIconTileClass(cardTone)} aria-hidden>
             <UserRound className="h-4 w-4" strokeWidth={2.25} />

@@ -6,7 +6,9 @@ import {
   AppImagePickCameraButtons,
   AppImageThumb,
   useAppImageLightbox,
+  useAppNoticePopup,
 } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import {
   encodeHomeFinancePublicAssetHref,
   isHomeFinancePdfUrl,
@@ -33,9 +35,13 @@ import {
   HomeFinanceSecondaryButton,
   HomeFinanceSectionHeader,
 } from "@/systems/home-finance/components/HomeFinanceUi";
+import {
+  homeFinanceCardIconTileClass,
+  homeFinanceDocumentCardTone,
+} from "@/systems/home-finance/lib/card-tones";
 
 const inputClz =
-  "min-h-[46px] w-full rounded-2xl border border-white/70 bg-white/78 px-3.5 py-2.5 text-sm text-[#28254a] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition placeholder:text-[#9a98b5] focus:border-[#5a57d8]/45 focus:bg-white focus:ring-2 focus:ring-[#5a57d8]/15";
+  "box-border h-9 min-h-9 w-full rounded-lg border border-slate-200/90 bg-white px-3 text-sm font-semibold text-[#1e1b4b] outline-none transition placeholder:text-slate-400 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15";
 
 type PersonalDocument = {
   id: number;
@@ -46,6 +52,15 @@ type PersonalDocument = {
   note: string | null;
   createdAt: string;
 };
+
+function IconDocFile({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2.15} aria-hidden>
+      <path d="M8 4h8l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" strokeLinejoin="round" />
+      <path d="M16 4v4h4M10 13h6M10 17h4" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -58,6 +73,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function HomeFinanceDocumentsClient() {
   const lightbox = useAppImageLightbox();
+  const notice = useAppNoticePopup();
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
@@ -178,7 +194,8 @@ export function HomeFinanceDocumentsClient() {
   };
 
   const removeDoc = async (id: number) => {
-    if (!window.confirm("ลบเอกสารนี้?")) return;
+    const ok = await notice.confirm("ลบเอกสารนี้?");
+    if (!ok) return;
     setError(null);
     try {
       const res = await fetch(`/api/home-finance/documents/${id}`, {
@@ -198,23 +215,19 @@ export function HomeFinanceDocumentsClient() {
 
   return (
     <HomeFinancePageSection>
+      {notice.popup}
       <HomeFinanceSectionHeader
         title="เอกสารส่วนตัว"
         description="เก็บบัตรประชาชน สัญญา ใบรับรอง และไฟล์สำคัญ — แยกจากสลิปรายรับ–รายจ่าย"
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         action={
-          <button
-            type="button"
-            onClick={openCreate}
-            aria-label="เพิ่มเอกสาร"
-            className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-[#0000BF] px-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0000a6] sm:min-w-0 sm:px-4"
-          >
-            <span className="text-lg leading-none sm:hidden" aria-hidden>
+          <HomeFinancePrimaryButton type="button" onClick={openCreate} aria-label="เพิ่มเอกสาร">
+            <span className="sm:hidden" aria-hidden>
               +
             </span>
             <span className="hidden sm:inline">+ เพิ่มเอกสาร</span>
-          </button>
+          </HomeFinancePrimaryButton>
         }
       />
 
@@ -235,34 +248,39 @@ export function HomeFinanceDocumentsClient() {
             {items.map((doc) => {
               const abs = encodeHomeFinancePublicAssetHref(doc.fileUrl);
               const pdf = isHomeFinancePdfUrl(doc.fileUrl);
+              const tone = homeFinanceDocumentCardTone(pdf);
               return (
                 <li key={doc.id}>
-                  <HomeFinanceEntityRow>
+                  <HomeFinanceEntityRow tone={tone}>
                     <HomeFinanceEntityMain className="items-start gap-3">
                       {pdf ? (
                         <a
                           href={abs}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-red-50 text-xs font-bold text-red-800 ring-2 ring-red-200/80"
+                          className={cn(homeFinanceCardIconTileClass(tone, "lg"), "flex-col gap-0.5 text-[10px] font-bold")}
+                          title="เปิด PDF"
                         >
+                          <IconDocFile className="h-5 w-5" />
                           PDF
                         </a>
                       ) : (
                         <AppImageThumb
                           src={abs}
                           alt={doc.title}
+                          objectFit="contain"
                           onOpen={() => lightbox.open(abs)}
+                          className="h-14 w-14 sm:h-16 sm:w-16"
                         />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{doc.title}</p>
+                        <p className="text-sm font-bold text-[#1e1b4b]">{doc.title}</p>
                         {doc.category ? (
-                          <p className="mt-0.5 text-xs text-[#4d47b6]">{doc.category}</p>
+                          <p className="mt-0.5 text-xs font-medium text-[#66638c]">{doc.category}</p>
                         ) : null}
-                        {doc.note ? <p className="mt-1 text-xs text-slate-600">{doc.note}</p> : null}
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          {new Date(doc.createdAt).toLocaleDateString("th-TH")}
+                        {doc.note ? <p className="mt-1 line-clamp-2 text-xs text-[#66638c]">{doc.note}</p> : null}
+                        <p className="mt-1 text-[10px] font-medium text-slate-400">
+                          {new Date(doc.createdAt).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}
                         </p>
                       </div>
                     </HomeFinanceEntityMain>
@@ -335,6 +353,7 @@ export function HomeFinanceDocumentsClient() {
                       {!isHomeFinancePdfUrl(form.fileUrl) ? (
                         <AppImageThumb
                           src={encodeHomeFinancePublicAssetHref(form.fileUrl)}
+                          objectFit="contain"
                           onOpen={() =>
                             lightbox.open(encodeHomeFinancePublicAssetHref(form.fileUrl))
                           }

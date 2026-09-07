@@ -75,7 +75,7 @@ export function HomeFinanceMobileDockNav() {
   if (!isHomeFinanceModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางระบบรายรับรายจ่าย">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางระบบบันทึกส่วนตัว">
       {HOME_FINANCE_NAV_ITEMS.map((item) => {
         const active = isHomeFinanceNavItemActive(pathname, item.key);
         return (

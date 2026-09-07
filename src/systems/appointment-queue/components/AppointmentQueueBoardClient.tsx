@@ -481,8 +481,7 @@ export function AppointmentQueueBoardClient({
                           alt="สลิปมัดจำ"
 
                           onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)}
-
-                        />
+                          objectFit="contain" />
 
                       ) : null}
 
@@ -555,8 +554,7 @@ export function AppointmentQueueBoardClient({
                           alt="สลิปมัดจำ"
 
                           onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)}
-
-                        />
+                          objectFit="contain" />
 
                       ) : null}
 

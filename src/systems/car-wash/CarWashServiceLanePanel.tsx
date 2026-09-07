@@ -1611,7 +1611,7 @@ export function CarWashServiceLanePanel({
                             src={photoResolved}
                             alt="สลิปชำระ"
                             onOpen={() => lightbox.open(photoResolved)}
-                          />
+                            objectFit="contain" />
                         ) : (
                           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-[10px] font-medium leading-tight text-slate-400">
                             ไม่มีสลิป

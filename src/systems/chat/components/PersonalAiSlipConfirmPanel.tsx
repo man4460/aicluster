@@ -79,11 +79,11 @@ export function PersonalAiSlipConfirmPanel({ imageDataUrl, glmResult, form, onCh
             ลอง Kimi ก่อน แล้วใช้ GLM-OCR รองเมื่อตัวแรกไม่พอ — ตรวจก่อนกดยืนยัน; ส่งรูปไป Telegram ได้เพิ่มถ้าต้องการ
           </p>
         </div>
-        <AppImageThumb src={imageDataUrl} alt="สลิป" className="h-16 w-16 rounded-lg" onOpen={onOpenImage} />
+        <AppImageThumb src={imageDataUrl} alt="สลิป" className="h-16 w-16 rounded-lg" onOpen={onOpenImage} objectFit="contain" />
       </div>
 
       <p className="mb-2 rounded-lg border border-indigo-200/80 bg-indigo-50/90 px-2.5 py-2 text-xs font-medium leading-snug text-[#1e1b4b]">
-        แสดงผลการอ่านสลิป — ตรวจ/แก้ไขรายช่องด้านล่าง แล้วกด「ยืนยันบันทึก」เพื่อบันทึกรายรับ–รายจ่าย
+        แสดงผลการอ่านสลิป — ตรวจ/แก้ไขรายช่องด้านล่าง แล้วกด「ยืนยันบันทึก」เพื่อบันทึกลงบันทึกส่วนตัว
       </p>
 
       {glmResult.readPipeline?.usedGlmFallback ? (
@@ -237,7 +237,7 @@ export function PersonalAiSlipConfirmPanel({ imageDataUrl, glmResult, form, onCh
           onClick={() => void onSave()}
           className="rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก…" : "ยืนยันบันทึก (รายรับ–รายจ่าย)"}
+          {saving ? "กำลังบันทึก…" : "ยืนยันบันทึก (บันทึกส่วนตัว)"}
         </button>
         <button
           type="button"

@@ -2298,7 +2298,7 @@ export function CarWashDashboard({
                                         src={slipResolved}
                                         alt="สลิป"
                                         onOpen={() => bundleTabLightbox.open(slipResolved)}
-                                      />
+                                        objectFit="contain" />
                                     : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-amber-200 bg-amber-50/80 text-[8px] text-amber-800/80 sm:h-14 sm:w-14">
                                         ไม่มีสลิป
                                       </div>
@@ -3319,7 +3319,7 @@ export function CarWashDashboard({
                         const u = resolveAssetUrl(bundleForm.slip_photo_url.trim(), baseUrl);
                         if (u) bundleTabLightbox.open(u);
                       }}
-                    />
+                      objectFit="contain" />
                     <button
                       type="button"
                       className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-md active:scale-90"

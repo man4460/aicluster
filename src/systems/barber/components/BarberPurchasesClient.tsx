@@ -138,7 +138,7 @@ function BarberPurchaseSlipCell(props: {
   const hasHint = Boolean(row.saleReceiptImageUrl?.trim());
 
   if (!hasHint) {
-    return <AppImageThumb src={null} emptyLabel="ไม่มีสลิป" className={className} />;
+    return <AppImageThumb src={null} emptyLabel="ไม่มีสลิป" className={className} objectFit="contain" />;
   }
 
   if (loading) {
@@ -162,7 +162,7 @@ function BarberPurchaseSlipCell(props: {
       emptyLabel="ไม่มีสลิป"
       onOpen={displaySrc ? () => onOpenLightbox(displaySrc) : undefined}
       className={className}
-    />
+      objectFit="contain" />
   );
 }
 

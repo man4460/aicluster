@@ -65,7 +65,7 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
   },
   {
     slug: "income-expense-basic",
-    blurb: "รายรับ–รายจ่าย ครัวเรือน/ธุรกิจ",
+    blurb: "บันทึกส่วนตัว ครัวเรือน/ธุรกิจ",
     coverSrc:
       "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=900&q=78",
   },

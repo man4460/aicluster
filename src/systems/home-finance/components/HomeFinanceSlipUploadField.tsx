@@ -4,7 +4,7 @@ import { useRef, type ChangeEvent } from "react";
 import {
   AppGalleryCameraFileInputs,
   AppImagePickCameraButtons,
-  AppImageThumb,
+  AppSlipImageThumb,
 } from "@/components/app-templates";
 import { encodeHomeFinancePublicAssetHref } from "@/lib/home-finance/attachments";
 import { HomeFinanceSecondaryButton } from "@/systems/home-finance/components/HomeFinanceUi";
@@ -37,10 +37,10 @@ export function HomeFinanceSlipUploadField({
   };
 
   return (
-    <div className="space-y-2 rounded-2xl border border-dashed border-[#0000BF]/30 bg-gradient-to-br from-[#f4f4ff]/80 to-white p-3">
+    <div className="space-y-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3">
       {slipUrl ? (
         <div className="flex flex-wrap items-center gap-2.5">
-          <AppImageThumb
+          <AppSlipImageThumb
             src={encodeHomeFinancePublicAssetHref(slipUrl)}
             alt="สลิปที่แนบ"
             onOpen={() => onOpenPreview(encodeHomeFinancePublicAssetHref(slipUrl))}

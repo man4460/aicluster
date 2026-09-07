@@ -81,7 +81,7 @@ function OrderAside({
               src={order.paymentSlipUrl}
               alt="สลิปชำระเงิน"
               onOpen={() => onOpenSlip(order.paymentSlipUrl!)}
-            />
+              objectFit="contain" />
           </div>
         ) : null}
       </div>

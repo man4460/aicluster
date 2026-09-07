@@ -583,7 +583,7 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                                   alt={`สลิปมัดจำ ${b.guestName}`}
                                   onOpen={() => slipLb.open(b.depositSlipUrl!.trim())}
                                   className="h-14 w-14"
-                                />
+                                  objectFit="contain" />
                               ) : null}
                               {b.paymentSlipUrl?.trim() ? (
                                 <AppImageThumb
@@ -591,7 +591,7 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                                   alt={`สลิปชำระเพิ่ม ${b.guestName}`}
                                   onOpen={() => slipLb.open(b.paymentSlipUrl!.trim())}
                                   className="h-14 w-14"
-                                />
+                                  objectFit="contain" />
                               ) : null}
                             </div>
                           ) : null}
@@ -710,7 +710,7 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                               alt={`สลิปมัดจำ ${manage.booking.guestName}`}
                               onOpen={() => slipLb.open(manage.booking!.depositSlipUrl!.trim())}
                               className="h-20 w-20"
-                            />
+                              objectFit="contain" />
                           </div>
                         ) : null}
                         {manage.booking.paymentSlipUrl?.trim() ? (
@@ -723,7 +723,7 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                               alt={`สลิปชำระเพิ่ม ${manage.booking.guestName}`}
                               onOpen={() => slipLb.open(manage.booking!.paymentSlipUrl!.trim())}
                               className="h-20 w-20"
-                            />
+                              objectFit="contain" />
                           </div>
                         ) : null}
                       </div>

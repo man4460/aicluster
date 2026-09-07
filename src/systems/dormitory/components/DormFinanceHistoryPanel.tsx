@@ -511,7 +511,7 @@ export function DormFinanceHistoryPanel({
                         alt={`สลิป ${item.label}`}
                         onOpen={() => slipLb.open(slip)}
                         className="h-14 w-14 shrink-0"
-                      />
+                        objectFit="contain" />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#66638c]">
@@ -562,7 +562,7 @@ export function DormFinanceHistoryPanel({
                       alt={`สลิปห้อง ${p.bill.room.roomNumber}`}
                       onOpen={() => slipLb.open(slip)}
                       className="h-14 w-14 shrink-0"
-                    />
+                      objectFit="contain" />
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-black text-[#1e1b4b]">
@@ -682,7 +682,7 @@ export function DormFinanceHistoryPanel({
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(incomeSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setIncomeSlipUrl("")}

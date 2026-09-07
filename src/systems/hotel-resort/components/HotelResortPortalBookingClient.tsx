@@ -182,7 +182,7 @@ export function HotelResortPortalBookingClient({
                       alt="สลิปมัดจำ / ชำระตอนจอง"
                       onOpen={() => lb.open(booking.depositSlipUrl!)}
                       className="h-24 w-24"
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
                 {booking.paymentSlipUrl ? (
@@ -194,7 +194,7 @@ export function HotelResortPortalBookingClient({
                       alt="สลิปชำระเพิ่ม"
                       onOpen={() => lb.open(booking.paymentSlipUrl!)}
                       className="h-24 w-24"
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
               </section>

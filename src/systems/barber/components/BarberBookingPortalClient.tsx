@@ -996,7 +996,7 @@ export function BarberBookingPortalClient({
                   }
                 />
                 {bookSlipUrl ? (
-                  <AppImageThumb src={bookSlipUrl} alt="สลิปจอง" onOpen={() => lb.open(bookSlipUrl)} />
+                  <AppImageThumb src={bookSlipUrl} alt="สลิปจอง" onOpen={() => lb.open(bookSlipUrl)} objectFit="contain" />
                 ) : (
                   <p className="text-xs font-semibold text-amber-800">
                     {barberPortalSlipProofMessage(bookPayMode)}
@@ -1368,7 +1368,7 @@ export function BarberBookingPortalClient({
               />
               {cameraModal}
               {slipUrl ? (
-                <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
+                <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
               ) : null}
 
               {buyErr ? <p className="text-sm font-semibold text-rose-600">{buyErr}</p> : null}

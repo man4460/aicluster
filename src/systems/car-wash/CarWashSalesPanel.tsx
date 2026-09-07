@@ -1684,7 +1684,7 @@ export function CarWashSalesPanel({
                               src={slipResolved}
                               alt="สลิปแพ็กเหมา"
                               onOpen={() => lightbox.open(slipResolved)}
-                            />
+                              objectFit="contain" />
                           </div>
                         : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-white/50 text-[9px] font-medium leading-tight text-amber-600">
                             NO SLIP
@@ -1793,7 +1793,7 @@ export function CarWashSalesPanel({
                             src={slipResolved}
                             alt="สลิปรายจ่าย"
                             onOpen={() => lightbox.open(slipResolved)}
-                          />
+                            objectFit="contain" />
                         </div>
                       : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-rose-50/50 text-[9px] font-medium leading-tight text-rose-400">
                           NO SLIP
@@ -3051,7 +3051,7 @@ export function CarWashSalesPanel({
                       const u = resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl);
                       if (u) lightbox.open(u);
                     }}
-                  />
+                    objectFit="contain" />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-amber-50/50 text-[10px] font-bold text-amber-500">
                     ไม่มีสลิป

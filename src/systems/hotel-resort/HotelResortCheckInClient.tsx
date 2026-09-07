@@ -574,7 +574,7 @@ export function HotelResortCheckInClient({
                   alt="สลิปมัดจำ"
                   onOpen={() => slipLb.open(existingBooking.depositSlipUrl!.trim())}
                   className="h-16 w-16"
-                />
+                  objectFit="contain" />
               </div>
             ) : null}
           </div>

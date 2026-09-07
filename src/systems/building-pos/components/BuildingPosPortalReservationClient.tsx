@@ -158,7 +158,7 @@ export function BuildingPosPortalReservationClient({
                     src={reservation.paymentSlipUrl}
                     alt="สลิป"
                     onOpen={() => lb.open(reservation.paymentSlipUrl!)}
-                  />
+                    objectFit="contain" />
                 </div>
               ) : null}
             </div>

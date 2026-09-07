@@ -246,7 +246,7 @@ export function EcommerceSalePageClient({
               alt="สลิป"
               onOpen={() => lb.open(slipUrl)}
               className="mt-2"
-            />
+              objectFit="contain" />
           ) : null}
           <input
             ref={galleryRef}

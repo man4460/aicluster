@@ -363,7 +363,7 @@ export function BuildingPosCostsPanel({
                     alt={`สลิป ${entry.label}`}
                     onOpen={() => slipLb.open(slip)}
                     className="h-14 w-14 shrink-0"
-                  />
+                    objectFit="contain" />
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
@@ -579,7 +579,7 @@ export function BuildingPosCostsPanel({
                   alt="สลิปรายจ่าย"
                   onOpen={() => slipLb.open(costSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}

@@ -190,7 +190,7 @@ export function ParkingPortalBookingClient({
                       alt="สลิปมัดจำ / ชำระตอนจอง"
                       onOpen={() => lb.open(booking.depositSlipUrl!)}
                       className="h-24 w-24"
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
                 {booking.paymentSlipUrl ? (
@@ -202,7 +202,7 @@ export function ParkingPortalBookingClient({
                       alt="สลิปชำระเพิ่ม"
                       onOpen={() => lb.open(booking.paymentSlipUrl!)}
                       className="h-24 w-24"
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
               </section>

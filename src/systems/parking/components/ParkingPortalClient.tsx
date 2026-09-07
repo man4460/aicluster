@@ -1142,7 +1142,7 @@ export function ParkingPortalClient({
                       alt="สลิป"
                       className="h-24 w-24"
                       onOpen={() => lb.open(slipUrl)}
-                    />
+                      objectFit="contain" />
                   ) : null}
                   {uploadingSlip ? <p className={mutedTextClass}>กำลังอัปโหลดสลิป…</p> : null}
                 </>

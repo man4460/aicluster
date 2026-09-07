@@ -1127,7 +1127,7 @@ export function HotelResortPortalClient({
                       labels={{ gallery: "แนบสลิป", camera: "ถ่ายสลิป" }}
                     />
                     {slipUrl ? (
-                      <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
+                      <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
                     ) : null}
                   </div>
                 </div>

@@ -10,7 +10,14 @@ import {
   hfListRowCardClass,
   hfSectionClass,
   hfSectionTightClass,
+  homeFinanceOutlineButtonClass,
+  homeFinancePanelSectionClass,
+  homeFinancePrimaryButtonClass,
 } from "@/systems/home-finance/components/home-finance-ui-tokens";
+import {
+  homeFinanceTonedRowCardClass,
+  type HomeFinanceCardTone,
+} from "@/systems/home-finance/lib/card-tones";
 
 /** พื้นหลังรายการประวัติ (มือถือ/เดสก์ท็อป) — ค่าเดียวกับ `appDashboardHistoryListShellClass` */
 export const hfHistoryListShellClass = appDashboardHistoryListShellClass;
@@ -27,7 +34,11 @@ export function HomeFinancePageSection({
   className?: string;
   tight?: boolean;
 }) {
-  return <div className={cn(tight ? hfSectionTightClass : hfSectionClass, className)}>{children}</div>;
+  return (
+    <div className={cn(tight ? hfSectionTightClass : hfSectionClass, className)}>
+      <div className={homeFinancePanelSectionClass}>{children}</div>
+    </div>
+  );
 }
 
 /** หัวข้อหน้า + คำอธิบาย + ปุ่มด้านขวา (เช่น เพิ่มบิลใหม่) */
@@ -51,7 +62,7 @@ export function HomeFinanceInsetForm({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-[1.4rem] border border-white/65 bg-gradient-to-br from-white/85 via-white/70 to-[#eef1ff]/72 p-4 shadow-[0_16px_34px_-26px_rgba(38,28,116,0.45)] ring-1 ring-white/65 backdrop-blur-xl">
+    <div className="rounded-lg border border-slate-200/90 bg-slate-50/80 p-3 sm:p-4">
       {title ? (
         <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#66638c]">{title}</h3>
       ) : null}
@@ -92,10 +103,24 @@ export function HomeFinanceEmptyState({ children }: { children: ReactNode }) {
   return <AppEmptyState tone="slate">{children}</AppEmptyState>;
 }
 
-/** แถวรายการ: เนื้อหาซ้าย + ปุ่มขวา (บิล / รถ / แจ้งเตือน) */
-export function HomeFinanceEntityRow({ children, className }: { children: ReactNode; className?: string }) {
+/** แถวรายการ: เนื้อหาซ้าย + ปุ่มขวา (บิล / รถ / แจ้งเตือน / เอกสาร / หมวด) */
+export function HomeFinanceEntityRow({
+  children,
+  className,
+  tone,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** เมื่อส่ง — ใช้การ์ดโทนเส้นซ้ายตาม template */
+  tone?: HomeFinanceCardTone;
+}) {
   return (
-    <div className={cn("flex items-center justify-between gap-3", hfListRowCardClass, className)}>
+    <div
+      className={cn(
+        tone ? homeFinanceTonedRowCardClass(tone) : cn("flex items-center justify-between gap-3", hfListRowCardClass),
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -135,7 +160,7 @@ export function HomeFinanceRowActionButton({
 }
 
 const rowActionIconBase =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border touch-manipulation transition-colors sm:h-8 sm:w-8";
+  "box-border inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 items-center justify-center rounded-md border touch-manipulation transition-colors";
 
 /** ปุ่มไอคอนในแถวการ์ด (เช่น รถ) — ต้องมี title / aria-label ชัดเจน */
 export function HomeFinanceRowActionIconButton({
@@ -245,10 +270,7 @@ export function HomeFinanceToolbarButton({ className, ...props }: React.Componen
   return (
     <button
       type="button"
-      className={cn(
-        "inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-4 py-2.5 text-sm font-black text-white shadow-sm touch-manipulation transition active:scale-[0.98] hover:brightness-[1.03] sm:min-h-0",
-        className,
-      )}
+      className={cn(homeFinancePrimaryButtonClass, className)}
       {...props}
     />
   );
@@ -263,10 +285,7 @@ export function HomeFinancePrimaryButton({
   return (
     <button
       type={type}
-      className={cn(
-        "inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-gradient-to-b from-[#5f63ff] to-[#4d47b6] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_26px_-18px_rgba(72,59,181,0.85)] transition active:scale-[0.98] hover:brightness-[1.03] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px]",
-        className,
-      )}
+      className={cn(homeFinancePrimaryButtonClass, className)}
       {...props}
     />
   );
@@ -276,10 +295,7 @@ export function HomeFinanceSecondaryButton({ className, ...props }: React.Compon
   return (
     <button
       type="button"
-      className={cn(
-        "inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/70 bg-white/72 px-5 py-3 text-sm font-semibold text-[#4d4a76] shadow-[0_14px_24px_-20px_rgba(35,28,94,0.55)] transition active:scale-[0.98] hover:bg-white/88 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px]",
-        className,
-      )}
+      className={cn(homeFinanceOutlineButtonClass, className)}
       {...props}
     />
   );
@@ -295,7 +311,7 @@ export function HomeFinanceModalActionBar({
   return (
     <div
       className={cn(
-        "sticky bottom-0 -mx-1 mt-5 flex flex-col-reverse gap-2 rounded-[1.35rem] border border-white/70 bg-gradient-to-b from-white/80 to-white/65 p-2.5 backdrop-blur-xl sm:mx-0 sm:flex-row sm:justify-end sm:gap-2.5 sm:p-3",
+        "sticky bottom-0 -mx-1 mt-4 flex flex-col-reverse gap-2 border-t border-slate-200/80 bg-white p-2 sm:mx-0 sm:flex-row sm:justify-end sm:gap-2",
         className,
       )}
     >
@@ -308,10 +324,7 @@ export function HomeFinanceModalCloseTextButton({ className, onClick, ...props }
   return (
     <button
       type="button"
-      className={cn(
-        "rounded-xl border border-white/70 bg-white/65 px-2.5 py-1.5 text-sm font-medium text-[#585184] shadow-sm transition hover:bg-white/85",
-        className,
-      )}
+      className={cn(homeFinanceOutlineButtonClass, "text-xs", className)}
       onClick={onClick}
       {...props}
     />
@@ -335,7 +348,7 @@ export function HomeFinanceHeroCta({
         <button
           type="button"
           onClick={onAddClick}
-          className="flex h-12 w-full shrink-0 items-center justify-center rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-6 text-base font-black text-white shadow-[0_14px_30px_-10px_rgba(91,97,255,0.55)] transition active:scale-[0.98] sm:h-11 sm:w-auto sm:min-w-[11rem] sm:text-sm"
+          className={cn(homeFinancePrimaryButtonClass, "w-full sm:w-auto")}
           suppressHydrationWarning
         >
           {buttonLabel}
@@ -402,7 +415,7 @@ export function HomeFinanceModalPanel({
   return (
     <div
       className={cn(
-        "max-h-[90vh] w-full overflow-y-auto rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/92 via-white/82 to-[#eef0ff]/84 p-5 shadow-[0_24px_70px_-28px_rgba(53,42,138,0.6)] ring-1 ring-white/65 backdrop-blur-2xl sm:rounded-[2.25rem] sm:p-6",
+        "max-h-[90vh] w-full overflow-y-auto rounded-xl border border-slate-200/90 bg-white p-4 shadow-xl sm:p-5",
         maxWidthClassName,
       )}
       style={{ animation: "hfModalPanelIn 200ms ease-out" }}
@@ -412,7 +425,7 @@ export function HomeFinanceModalPanel({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 id={titleId} className="text-base font-semibold text-[#232043] sm:text-lg">
+        <h2 id={titleId} className="text-base font-bold tracking-tight text-[#1e1b4b] sm:text-lg">
           {title}
         </h2>
         <HomeFinanceModalCloseTextButton onClick={onClose}>ปิด</HomeFinanceModalCloseTextButton>
@@ -420,7 +433,7 @@ export function HomeFinanceModalPanel({
       {error ? (
         <div
           role="alert"
-          className="mb-4 rounded-2xl border border-red-200/85 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-800"
+          className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-900"
         >
           {error}
         </div>
@@ -483,10 +496,10 @@ export function HomeFinanceVehicleCoverUpload({
         <button
           type="button"
           onClick={onOpenPhoto}
-          className="flex h-full w-full overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/35"
+          className="flex h-full w-full overflow-hidden rounded-lg bg-slate-50 ring-1 ring-slate-200 transition hover:ring-[#0000BF]/35"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photoUrl} alt="" className="h-full w-full object-cover object-center" />
+          <img src={photoUrl} alt="" className="h-full w-full bg-slate-50 object-contain object-center" />
         </button>
       ) : (
         <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-100 px-1 text-center text-[9px] leading-tight text-slate-400 ring-2 ring-slate-100">

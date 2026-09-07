@@ -160,7 +160,7 @@ export function MassagePortalBookingClient({
                       src={booking.depositSlipUrl}
                       alt="สลิปมัดจำ"
                       onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
                 {booking.paymentSlipUrl?.trim() ? (
@@ -172,7 +172,7 @@ export function MassagePortalBookingClient({
                       src={booking.paymentSlipUrl}
                       alt="สลิปชำระเพิ่ม"
                       onOpen={() => slipLb.open(booking.paymentSlipUrl!.trim())}
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
               </section>

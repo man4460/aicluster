@@ -488,7 +488,7 @@ export function VillageFinanceHistoryPanel({
                         alt={`สลิป ${item.label}`}
                         onOpen={() => slipLb.open(slip)}
                         className="h-14 w-14 shrink-0"
-                      />
+                        objectFit="contain" />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#66638c]">
@@ -651,7 +651,7 @@ export function VillageFinanceHistoryPanel({
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(incomeSlipUrl)}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setIncomeSlipUrl("")}

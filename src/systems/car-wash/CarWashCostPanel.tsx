@@ -457,7 +457,7 @@ export function CarWashCostPanel({
                         alt="สลิป"
                         onOpen={() => slipResolved && lightbox.open(slipResolved)}
                         className="h-14 w-14 rounded-lg lg:h-16 lg:w-16"
-                      />
+                        objectFit="contain" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs tabular-nums text-slate-500">
                           {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}

@@ -16,7 +16,7 @@ export type DashboardSystemCatalogEntry = DashboardSystemCard & {
 export const DASHBOARD_LIVE_SYSTEMS: DashboardSystemCatalogEntry[] = [
   { href: "/dashboard/attendance", label: "เช็คอินอัจฉริยะ", emoji: "📋", moduleSlug: "attendance" },
   { href: "/dashboard/dormitory", label: "หอพัก", emoji: "🏠", moduleSlug: "dormitory" },
-  { href: "/dashboard/home-finance", label: "รายรับ–รายจ่าย", emoji: "💰", moduleSlug: "income-expense-basic" },
+  { href: "/dashboard/home-finance", label: "บันทึกส่วนตัว", emoji: "💰", moduleSlug: "income-expense-basic" },
   { href: "/dashboard/village", label: "หมู่บ้าน", emoji: "🏘️", moduleSlug: "village" },
   { href: "/dashboard/barber", label: "ร้านตัดผม", emoji: "✂️", moduleSlug: "barber" },
   { href: "/dashboard/car-wash", label: "คาร์แคร์", emoji: "🚿", moduleSlug: "car-wash" },

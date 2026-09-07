@@ -177,7 +177,7 @@ export function BuildingPosReservationsPanel() {
                       alt="สลิป"
                       className="h-12 w-12"
                       onOpen={() => lb.open(r.paymentSlipUrl!)}
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
               </div>

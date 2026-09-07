@@ -48,7 +48,7 @@ alwaysApply: false
 
 | เงื่อนไข | พฤติกรรม |
 |----------|----------|
-| **มี URL สลิป** | แสดง **`AppImageThumb`** (`h-14 w-14`) · กดเปิด **`AppImageLightbox`** ผ่าน `useAppImageLightbox` |
+| **มี URL สลิป** | แสดง **`AppSlipImageThumb`** (`h-14 w-14` · `object-contain`) · กดเปิด **`AppImageLightbox`** ผ่าน `useAppImageLightbox` |
 | **ไม่มีสลิป** | **ไม่แสดง** ช่องว่าง / empty / ข้อความ «ไม่มีสลิป» |
 
 ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย**
@@ -73,7 +73,7 @@ alwaysApply: false
 
 ```tsx
 {slipUrl ? (
-  <AppImageThumb src={slipUrl} alt="สลิป …" onOpen={() => lb.open(slipUrl)} className="h-14 w-14 shrink-0" />
+  <AppSlipImageThumb src={slipUrl} alt="สลิป …" onOpen={() => lb.open(slipUrl)} className="h-14 w-14 shrink-0" />
 ) : null}
 ```
 
@@ -93,7 +93,7 @@ alwaysApply: false
 
 | | บังคับ |
 |--|--------|
-| **แก้ไข** | ไอคอนดินสอทุกแถว · `FormModal` · PATCH ตามโดเมน · **รวมสลิป** (ดูย่อ · ลบ · อัปโหลด/ถ่ายใหม่ ด้วย `AppImageThumb` + gallery/camera จาก app-templates) |
+| **แก้ไข** | ไอคอนดินสอทุกแถว · `FormModal` · PATCH ตามโดเมน · **รวมสลิป** (ดูย่อ · ลบ · อัปโหลด/ถ่ายใหม่ ด้วย `AppSlipImageThumb` + gallery/camera จาก app-templates) |
 | **ลบ** | ไอคอนถังทุกแถว · **`await notice.confirm(...)`** ก่อน DELETE |
 | **วางปุ่ม** | ขวาสุดคู่ราคา · `dashboard-row-action-icon-buttons.mdc` · `aria-label` |
 | **สีราคา** | `text-emerald-700` |
@@ -172,4 +172,4 @@ if (!ok) return;
 - [ ] ลบใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
 - [ ] ฟอร์มรายจ่ายครบ 5 ช่องตามต้นแบบร้านอาหาร
 - [ ] CTA รายจ่ายอยู่แท็บรายจ่ายเท่านั้น
-- [ ] `AppImageThumb` / `AppImageLightbox` จาก `app-templates`
+- [ ] `AppSlipImageThumb` / `AppImageLightbox` จาก `app-templates`

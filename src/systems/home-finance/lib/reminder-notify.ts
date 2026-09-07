@@ -117,7 +117,7 @@ export function notifyDueAlertsIfEnabled(alerts: HomeFinanceDueAlert[], todayYmd
       a.diff < 0 ? "เกินกำหนดแล้ว" : a.diff === 0 ? "ครบกำหนดวันนี้" : "ครบกำหนดพรุ่งนี้";
     const body = `${a.kind} · ${a.title} (${formatDueDateLabel(a.dueDate)})`;
     try {
-      new Notification(`รายรับ-รายจ่าย: ${headline}`, {
+      new Notification(`บันทึกส่วนตัว: ${headline}`, {
         body,
         tag: dueAlertNotifyKey(a, todayYmd),
       });

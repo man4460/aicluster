@@ -10,7 +10,8 @@ alwaysApply: true
 ## บังคับ
 
 - Import จาก **`@/components/app-templates`** เท่านั้น:
-  - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64) + `onOpen`
+  - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64 · `object-cover`) + `onOpen`
+  - **`AppSlipImageThumb`** — รูปย่อ**สลิป / ใบเสร็จ / หลักฐานโอน** (กรอบเดิม · `object-contain` เห็นรูปครบ ไม่ตัด) — **บังคับใช้แทน `AppImageThumb` เมื่อเป็นสลิป**
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
   - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ (ไอคอนล้วน · ไม่มีลิงก์ watch)
@@ -24,11 +25,16 @@ alwaysApply: true
 ## แพทเทิร์นมาตรฐาน
 
 ```tsx
-import { AppImageLightbox, AppImageThumb, useAppImageLightbox } from "@/components/app-templates";
+import { AppImageLightbox, AppImageThumb, AppSlipImageThumb, useAppImageLightbox } from "@/components/app-templates";
 
 const lb = useAppImageLightbox();
 
+{/* รูปทั่วไป / แกลเลอรี / โลโก้ */}
 <AppImageThumb src={url} alt="คำอธิบาย" onOpen={() => url && lb.open(url)} />
+
+{/* สลิปชำระ · ใบเสร็จ · หลักฐานโอน — เห็นรูปครบในกรอบ */}
+<AppSlipImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => slipUrl && lb.open(slipUrl)} />
+
 <AppImageLightbox src={lb.src} onClose={lb.close} alt="คำอธิบาย" />
 ```
 
@@ -37,10 +43,20 @@ const lb = useAppImageLightbox();
 เมื่อแก้หรือเพิ่ม **`AppImageThumb`** (`src/components/app-templates/AppImageThumb.tsx`) หรือเลียนแบบรูปแบบเดียวกัน:
 
 1. **กำหนดขนาดที่ wrapper** (`<button>` / กรอบคลิก) — เช่น `h-16 w-16` + `overflow-hidden` + `rounded-xl` + `ring-2` — ไม่ใช่กำหนดแค่ที่ `<img>` อย่างเดียว เพื่อไม่ให้กรอบกับรูปคนละขนาด
-2. **`<img>`** ใช้ **`h-full w-full min-h-0 min-w-0 object-cover object-center`** ให้รูปเต็มกรอบสี่เหลี่ยม ตัดส่วนเกินสม่ำเสมอ ไม่เว้นขอบแปลกจาก intrinsic size
+2. **`<img>`** ใช้ **`object-cover`** (ค่าเริ่ม) สำหรับแกลเลอรี/โลโก้/รูปโปรไฟล์ — หรือส่ง **`objectFit="contain"`** เมื่อต้องเห็นรูปครบ
 3. **สถานะไม่มีรูป** (`emptyLabel`) — ใช้ **ขนาดเดียวกับมีรูป** (`h-16 w-16` ฯลฯ) + `ring` สอดคล้องกรอบมีรูป
-4. **ขนาดอื่น** — ส่ง **`className`** ไปที่ `AppImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"` (ทั้งปุ่มและ empty ใช้ className ร่วมกันใน component)
+4. **ขนาดอื่น** — ส่ง **`className`** ให้ `AppImageThumb` / `AppSlipImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"`
 5. **Lightbox ทับโมดัล** — `AppImageLightbox` ใช้ **`z-[240]`** เหนือ `FormModal` (`z-[200]`) และ `AppCameraCaptureModal` (`z-[220]`) — ถ้าแก้ z-index โมดัล ต้องเช็คลำดับซ้อนกับ lightbox
+
+## AppSlipImageThumb — สลิป (บังคับ)
+
+เมื่อมี **อัปโหลด/แสดงสลิปชำระ · ใบเสร็จ · หลักฐานโอน · สลิปรายจ่าย**:
+
+1. ใช้ **`AppSlipImageThumb`** จาก `@/components/app-templates` (ห่อ `AppImageThumb` + `objectFit="contain"`)
+2. **ห้าม** ใช้ `AppImageThumb` แบบ `object-cover` สำหรับสลิป — จะตัดขอบใบเสร็จ
+3. กรอบขนาดเดิม (`h-14 w-14` / `h-16 w-16` / `h-20 w-20` ตามแถวการเงิน) — พื้นว่างเป็น `bg-slate-50`
+4. กดเปิด **`AppImageLightbox`** เหมือนรูปอื่น
+5. แผงชำระกลาง: `AppPaymentMethodPanel` ใช้ `AppSlipImageThumb` แล้ว
 
 ## ความเข้ากันได้
 

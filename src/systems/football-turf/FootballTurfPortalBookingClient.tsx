@@ -199,7 +199,7 @@ export function FootballTurfPortalBookingClient({
                   alt={slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
                   onOpen={() => lb.open(slipUrl)}
                   className="h-24 w-24"
-                />
+                  objectFit="contain" />
               </section>
             ) : null}
 

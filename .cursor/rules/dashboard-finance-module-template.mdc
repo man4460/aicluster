@@ -176,7 +176,7 @@ alwaysApply: false
 
 | มี URL สลิป | ไม่มี |
 |-------------|-------|
-| `AppImageThumb` (`h-14 w-14`) + `AppImageLightbox` | **ไม่แสดง**ช่องว่าง / empty / «ไม่มีสลิป» |
+| `AppSlipImageThumb` (`h-14 w-14` · contain) + `AppImageLightbox` | **ไม่แสดง**ช่องว่าง / empty / «ไม่มีสลิป» |
 
 เลย์เอาต์แถวหลัก (มือถือ+เดสก์ท็อป):
 
@@ -205,7 +205,7 @@ alwaysApply: false
 
 ฟอร์มแก้ไขรายรับต้องมีบล็อกสลิปเหมือนรายจ่าย:
 
-1. ถ้ามี URL เดิม → แสดง `AppImageThumb` + ปุ่ม **ลบสลิป** (เคลียร์ URL ในฟอร์ม)  
+1. ถ้ามี URL เดิม → แสดง `AppSlipImageThumb` + ปุ่ม **ลบสลิป** (เคลียร์ URL ในฟอร์ม)  
 2. ปุ่ม gallery/camera จาก `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
 3. บันทึกส่ง `paymentSlipUrl` / `payment_slip_url` (ว่าง = ลบออกจากรายการ)  
 4. Import media จาก `@/components/app-templates` เท่านั้น

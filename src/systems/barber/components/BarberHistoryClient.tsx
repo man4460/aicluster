@@ -984,7 +984,7 @@ export function BarberHistoryClient({
                           alt="สลิป"
                           onOpen={() => receiptLightbox.open(receiptSrc)}
                           className="h-14 w-14 shrink-0 self-start rounded-[1.25rem] border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35"
-                        />
+                          objectFit="contain" />
                       ) : null}
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">

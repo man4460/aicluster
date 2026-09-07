@@ -335,7 +335,7 @@ export function LmsPurchasesPanel({
                     alt="สลิป"
                     className="h-20 w-20 shrink-0 sm:h-24 sm:w-24"
                     onOpen={() => lb.open(p.slipUrl!)}
-                  />
+                    objectFit="contain" />
                 ) : (
                   <span
                     className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[11px] font-bold text-[#9b97b8] sm:h-24 sm:w-24"

@@ -32,11 +32,11 @@ const MODEL_LABELS: Record<string, string> = {
   AttendanceShift: "กะงาน",
   AttendanceRosterEntry: "ตารางกะ",
   AttendanceLog: "บันทึกเวลาเข้า–ออก",
-  HomeFinanceEntry: "รายรับ–รายจ่าย (บ้าน)",
-  HomeFinanceCategory: "หมวดรายรับ–รายจ่าย",
+  HomeFinanceEntry: "บันทึกส่วนตัว",
+  HomeFinanceCategory: "หมวดบันทึกส่วนตัว",
   HomeUtilityProfile: "มิเตอร์/ค่าไฟน้ำ (บ้าน)",
   HomeVehicleProfile: "ยานพาหนะ (บ้าน)",
-  HomeFinanceReminder: "การแจ้งเตือน (รายรับ–รายจ่าย)",
+  HomeFinanceReminder: "การแจ้งเตือน (บันทึกส่วนตัว)",
   CarWashPackage: "แพ็กคาร์แคร์",
   CarWashBundle: "ชุดแพ็กคาร์แคร์",
   CarWashVisit: "รายการเข้าใช้คาร์แคร์",
@@ -278,7 +278,7 @@ function humanizeManualPayload(action: string, modelName: string, p: Record<stri
   }
 
   if (modelName === "HomeFinanceEntry" && action === "CREATE" && typeof p.title === "string" && p.amount != null) {
-    return `บันทึกรายรับ–รายจ่ายใหม่ — «${truncate(p.title, 40)}» จำนวน ${formatScalar(p.amount)} บาท${p.id != null ? ` (รหัส ${p.id})` : ""}`;
+    return `บันทึกรายการใหม่ในบันทึกส่วนตัว — «${truncate(p.title, 40)}» จำนวน ${formatScalar(p.amount)} บาท${p.id != null ? ` (รหัส ${p.id})` : ""}`;
   }
 
   if (modelName === "HomeFinanceReminder" && action === "CREATE" && typeof p.title === "string") {

@@ -5374,7 +5374,7 @@ export function FootballTurfDashboard({
                               alt={`สลิปการจอง ${guest}`}
                               onOpen={() => item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)}
                               className="h-14 w-14"
-                            />
+                              objectFit="contain" />
                             <div className="min-w-0">
                               <p className="text-xs font-black text-emerald-800">แนบสลิปแล้ว</p>
                               <p className="truncate text-[11px] font-medium text-emerald-700">
@@ -5845,7 +5845,7 @@ export function FootballTurfDashboard({
                                   alt={`สลิป ${item.title}`}
                                   onOpen={() => saleSlipLightbox.open(item.slipUrl)}
                                   className="h-14 w-14 shrink-0"
-                                />
+                                  objectFit="contain" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-black text-[#1e1b4b]">{item.title}</p>
@@ -6067,7 +6067,7 @@ export function FootballTurfDashboard({
                                   alt={`สลิป ${item.title}`}
                                   onOpen={() => saleSlipLightbox.open(item.slipUrl)}
                                   className="h-14 w-14 shrink-0"
-                                />
+                                  objectFit="contain" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">{item.dateLabel}</p>
@@ -6466,7 +6466,7 @@ export function FootballTurfDashboard({
                               onOpen={() =>
                                 item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)
                               }
-                            />
+                              objectFit="contain" />
                           </div>
                         ) : null}
                       </div>
@@ -7836,7 +7836,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                       alt="สลิปรายรับ"
                       onOpen={() => saleSlipLightbox.open(bookingForm.paymentSlipDataUrl)}
                       className="h-20 w-20"
-                    />
+                      objectFit="contain" />
                     <button
                       type="button"
                       className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-3 py-2 text-xs font-bold text-rose-600")}
@@ -8043,7 +8043,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                           alt="สลิปการจอง"
                           onOpen={() => saleSlipLightbox.open(bookingForm.paymentSlipDataUrl)}
                           className="h-24 w-24"
-                        />
+                          objectFit="contain" />
                         <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — บันทึกแล้วรอตรวจชำระ</p>
                       </div>
                     ) : (
@@ -8448,7 +8448,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                         alt="สลิปขายโปร"
                         onOpen={() => saleSlipLightbox.open(saleForm.paymentSlipDataUrl)}
                         className="h-24 w-24"
-                      />
+                        objectFit="contain" />
                       <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — บันทึกแล้วรอตรวจชำระ</p>
                     </div>
                   ) : (
@@ -8650,7 +8650,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                     saleEditForm.paymentSlipDataUrl && saleSlipLightbox.open(saleEditForm.paymentSlipDataUrl)
                   }
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-3 py-2 text-xs font-bold text-rose-600")}
@@ -9009,7 +9009,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                   alt="สลิปรายจ่าย"
                   onOpen={() => saleSlipLightbox.open(costForm.paymentSlipUrl)}
                   className="h-14 w-14"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "min-h-[40px] px-3 text-xs font-black text-rose-600")}
@@ -9216,7 +9216,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                   alt="สลิปรายรับ"
                   onOpen={() => saleSlipLightbox.open(incomeForm.paymentSlipUrl)}
                   className="h-14 w-14"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "min-h-[40px] px-3 text-xs font-black text-rose-600")}
@@ -9655,7 +9655,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                       alt="สลิปการจอง"
                       onOpen={() => saleSlipLightbox.open(booking.paymentSlipDataUrl!)}
                       className="h-20 w-20"
-                    />
+                      objectFit="contain" />
                   </div>
                 ) : null}
 
@@ -9857,7 +9857,7 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                           alt="สลิปค้างชำระ"
                           onOpen={() => saleSlipLightbox.open(balancePaySlipDataUrl)}
                           className="h-24 w-24"
-                        />
+                          objectFit="contain" />
                         <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว</p>
                       </div>
                     ) : (

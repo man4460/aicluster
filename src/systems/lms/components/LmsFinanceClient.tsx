@@ -698,7 +698,7 @@ export function LmsFinanceClient() {
                       alt="สลิป"
                       onOpen={() => lb.open(row.slipUrl!)}
                       className="h-14 w-14 shrink-0"
-                    />
+                      objectFit="contain" />
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{row.category}</p>
@@ -810,7 +810,7 @@ export function LmsFinanceClient() {
             <p className="text-xs font-bold text-[#4d47b6]">สลิป (ไม่บังคับ)</p>
             {form.slipUrl ? (
               <div className="flex items-center gap-2">
-                <AppImageThumb src={form.slipUrl} alt="สลิป" onOpen={() => lb.open(form.slipUrl!)} />
+                <AppImageThumb src={form.slipUrl} alt="สลิป" onOpen={() => lb.open(form.slipUrl!)} objectFit="contain" />
                 <button
                   type="button"
                   className={lmsOutlineButtonClass}

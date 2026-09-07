@@ -507,7 +507,7 @@ export const LaundryCostPanel = forwardRef<
                             emptyLabel="ไม่มีสลิป"
                             onOpen={() => slipResolved && lightbox.open(slipResolved)}
                             className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
-                          />
+                            objectFit="contain" />
                           <div className="min-w-0 flex-1 text-left">
                             <p className="text-sm font-bold text-[#1e1b4b]">{title}</p>
                             {subtitle ?

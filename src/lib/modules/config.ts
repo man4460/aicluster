@@ -204,7 +204,7 @@ export function isQrLinkAllowedOnDailyPlan(slug: string): boolean {
 /** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
 export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === ATTENDANCE_MODULE_SLUG) return "เช็คอินอัจฉริยะ";
-  if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "รายรับ–รายจ่าย";
+  if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "บันทึกส่วนตัว";
   if (slug === BARBER_MODULE_SLUG) return "ร้านตัดผม";
   if (slug === CAR_WASH_MODULE_SLUG) return "คาร์แคร์";
   if (slug === FOOTBALL_TURF_MODULE_SLUG) return "สนามฟุตบอล";
@@ -252,7 +252,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · POS เครื่องดื่ม · ร้านออนไลน์ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · สนามฟุตบอล · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · POS เครื่องดื่ม · ร้านออนไลน์ · หอพัก · บันทึกส่วนตัว · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · สนามฟุตบอล · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
   2: "Smart Police (สำนวนคดี) · สต็อก · ใบเสร็จ (เร็ว ๆ นี้)",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

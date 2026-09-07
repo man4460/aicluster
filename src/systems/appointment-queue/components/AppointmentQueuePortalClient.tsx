@@ -304,7 +304,7 @@ export function AppointmentQueuePortalClient({ ownerId }: { ownerId: string }) {
                   />
                   {slipUrl ? (
                     <>
-                      <AppImageThumb src={slipUrl} alt="สลิปมัดจำ" onOpen={() => lb.open(slipUrl)} />
+                      <AppImageThumb src={slipUrl} alt="สลิปมัดจำ" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
                       <button
                         type="button"
                         className={cn(

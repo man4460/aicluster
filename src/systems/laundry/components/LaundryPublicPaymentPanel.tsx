@@ -254,7 +254,7 @@ export function LaundryPublicPaymentPanel({
             />
             <AppGalleryCameraFileInputs galleryInputRef={galleryRef} cameraInputRef={cameraInputRef} onChange={onSlipInputChange} />
             {slipUrl ?
-              <AppImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => lb.open(slipUrl)} className="h-20 w-20" />
+              <AppImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => lb.open(slipUrl)} className="h-20 w-20" objectFit="contain" />
             : null}
             {slipErr ? <p className="text-xs font-semibold text-rose-600">{slipErr}</p> : null}
           </div>

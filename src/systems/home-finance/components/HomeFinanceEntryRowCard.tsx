@@ -20,7 +20,7 @@ export type HomeFinanceEntryRow = {
 };
 
 const hfEntryRowCardClass =
-  "rounded-2xl border border-white/60 bg-white/55 px-2.5 py-2 shadow-sm ring-1 ring-inset ring-white/50";
+  "rounded-lg border border-slate-200/90 bg-white px-2.5 py-2 shadow-sm";
 
 function entryAttachmentUrls(e: HomeFinanceEntryRow): string[] {
   if (e.attachmentUrls?.length > 0) return e.attachmentUrls;
@@ -89,13 +89,13 @@ function SlipThumbButton({
       className={cn(
         "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 transition touch-manipulation",
         hasSlip
-          ? "bg-white text-[#4d47b6] ring-[#4d47b6]/30 hover:ring-[#4d47b6]/55 active:scale-95"
+          ? "bg-slate-50 text-[#4d47b6] ring-[#4d47b6]/30 hover:ring-[#4d47b6]/55 active:scale-95"
           : "cursor-default bg-slate-100 text-slate-300 ring-slate-200/80",
       )}
     >
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="" className="h-full w-full object-cover" />
+        <img src={preview} alt="" className="h-full w-full object-contain object-center" />
       ) : (
         <IconSlip className="h-4 w-4" />
       )}
@@ -115,9 +115,6 @@ type HomeFinanceEntryRowCardProps = {
   entry: HomeFinanceEntryRow;
   thb: (n: number) => string;
   onOpenSlip?: (url: string) => void;
-  variant?: "dashboard" | "history";
-  selected?: boolean;
-  onToggleSelected?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 };
@@ -127,14 +124,10 @@ export function HomeFinanceEntryRowCard({
   entry: e,
   thb,
   onOpenSlip,
-  variant = "dashboard",
-  selected = false,
-  onToggleSelected,
   onEdit,
   onDelete,
 }: HomeFinanceEntryRowCardProps) {
   const attachments = entryAttachmentUrls(e);
-  const isHistory = variant === "history";
 
   return (
     <article
@@ -142,20 +135,9 @@ export function HomeFinanceEntryRowCard({
         hfEntryRowCardClass,
         "border-l-[3px] py-1.5",
         accentBorderClass(e.type),
-        selected && "ring-2 ring-[#4d47b6]/35",
       )}
     >
       <div className="flex items-center gap-2">
-        {isHistory ? (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelected}
-            aria-label={`เลือก ${e.title}`}
-            className="h-4 w-4 shrink-0 rounded border-slate-300"
-          />
-        ) : null}
-
         <SlipThumbButton urls={attachments} title={e.title} onOpen={onOpenSlip} />
 
         <div className="min-w-0 flex-1">

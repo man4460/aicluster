@@ -231,7 +231,7 @@ export function LmsPublicPaymentPanel({
           {slipErr ? <p className="text-xs font-semibold text-rose-600">{slipErr}</p> : null}
           {slipUrl ? (
             <div className="flex items-center gap-3">
-              <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} />
+              <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
               <button
                 type="button"
                 className="text-xs font-bold text-rose-600"

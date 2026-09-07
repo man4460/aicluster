@@ -297,7 +297,7 @@ export function LaundryServiceHistoryList({
                         emptyLabel="ไม่มีสลิป"
                         onOpen={() => slipResolved && lightbox.open(slipResolved)}
                         className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
-                      />
+                        objectFit="contain" />
                     : null}
                     <button
                       type="button"

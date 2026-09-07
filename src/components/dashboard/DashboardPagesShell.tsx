@@ -70,6 +70,7 @@ const DOCKED_MODULE_PREFIXES = [
   "/dashboard/massage",
   "/dashboard/parking",
   "/dashboard/car-wash",
+  "/dashboard/home-finance",
   "/dashboard/pro-resume",
 ] as const;
 

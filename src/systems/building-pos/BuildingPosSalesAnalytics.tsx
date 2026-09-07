@@ -1362,7 +1362,7 @@ function PosSalesHistoryCard({
               if (onSlipImageOpen) onSlipImageOpen(slipUrl);
               else window.open(slipUrl, "_blank", "noopener,noreferrer");
             }}
-          />
+            objectFit="contain" />
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -2410,7 +2410,7 @@ export function BuildingPosSalesHistoryPanel({
                     if (onSlipImageOpen) onSlipImageOpen(editSlipUrl);
                   }}
                   className="h-20 w-20"
-                />
+                  objectFit="contain" />
                 <button
                   type="button"
                   onClick={() => setEditSlipUrl("")}

@@ -1454,7 +1454,7 @@ export function FootballTurfBookingPortalClient({
                           src={paymentSlipDataUrl}
                           alt="สลิป"
                           onOpen={() => lb.open(paymentSlipDataUrl)}
-                        />
+                          objectFit="contain" />
                       ) : (
                         <p className="text-[11px] font-bold text-rose-600">
                           ยังไม่มีสลิป — แนบหรือถ่ายก่อนยืนยันจอง

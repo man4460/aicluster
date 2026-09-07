@@ -682,7 +682,7 @@ export function ClubEventFinanceClient() {
                   <li key={row.id} className={clubEventTonedRowCardClass(tone)}>
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       {row.slipUrl ? (
-                        <AppImageThumb src={row.slipUrl} alt="สลิป" onOpen={() => lb.open(row.slipUrl!)} />
+                        <AppImageThumb src={row.slipUrl} alt="สลิป" onOpen={() => lb.open(row.slipUrl!)} objectFit="contain" />
                       ) : (
                         <span className={clubEventCardIconTileClass(tone, "lg")} aria-hidden>
                           {row.type === "INCOME" ? (
@@ -844,7 +844,7 @@ export function ClubEventFinanceClient() {
             {photoBusy ? <p className="mt-2 text-xs font-medium text-violet-700">กำลังอัปโหลดรูป…</p> : null}
             {form.slipUrl ? (
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 p-3">
-                <AppImageThumb src={form.slipUrl} alt="สลิปแนบ" onOpen={() => lb.open(form.slipUrl!)} />
+                <AppImageThumb src={form.slipUrl} alt="สลิปแนบ" onOpen={() => lb.open(form.slipUrl!)} objectFit="contain" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
                 </div>
