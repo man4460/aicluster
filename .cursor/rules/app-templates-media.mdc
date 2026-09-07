@@ -13,10 +13,13 @@ alwaysApply: true
   - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64) + `onOpen`
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
-  - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ
+  - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ (ไอคอนล้วน · ไม่มีลิงก์ watch)
+  - **`AppSecureYoutubePlayer`** — เล่น YouTube **ในหน้า** แบบ LMS (controls ปิด · ไอคอน · CSS fullscreen บน iOS)
+- **กฎ YouTube เต็ม:** **`app-templates-youtube.mdc`** — ห้ามคัดลอกลิงก์ / เปิดบน YouTube บน UI ผู้ใช้ปลายทาง
 - **แกลเลอรีหลายรูป + สไลด์โชว์ + กริดวิดีโอ:** ดูกฎ **`dashboard-module-media-gallery-slideshow.mdc`** (ต้นแบบชมรม)
 - **ห้าม** คัดลอก/เลียนแบบ `HomeFinanceImageLightbox` หรือ `HomeFinanceThumb` เป็นไฟล์ใหม่ในโมดูลอื่น
 - **ห้าม** สร้าง lightbox ใหม่ด้วย `fixed inset-0` + `img` เองถ้าเป้าหมายคือ “ดูรูปแนบแบบเดียวกับระบบเดิม” — ขยายที่ `AppImageLightbox` ถ้าต้องการพฤติกรรมเพิ่ม (แล้วได้ทุกหน้าพร้อมกัน)
+- **ห้าม** สร้าง iframe/โมดัล YouTube เองเมื่อมี `AppYoutubeLightbox` / `AppSecureYoutubePlayer`
 
 ## แพทเทิร์นมาตรฐาน
 

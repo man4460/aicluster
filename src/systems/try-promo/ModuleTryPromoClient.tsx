@@ -6,9 +6,11 @@ import {
   AppEmptyState,
   AppImageLightbox,
   AppPublicCheckInGlassPage,
+  AppYoutubeLightbox,
   appDashboardBrandGradientFillClass,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
+  useAppYoutubeLightbox,
   appSafeAreaPortalHeaderClass,
   appSafeAreaPortalHeroTopPadClass,
 } from "@/components/app-templates";
@@ -19,7 +21,7 @@ import {
   type ModuleTryPromoFallbackVideo,
   type ModuleTryPromoFeature,
 } from "@/lib/modules/try-promo-page";
-import { youtubeEmbedUrl } from "@/lib/youtube-url";
+import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
 const navLinkClass =
   "rounded-full px-3 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/25";
@@ -55,7 +57,7 @@ function mapFallback(list: ModuleTryPromoFallbackVideo[]): DisplayVideo[] {
     title: v.title,
     hint: v.hint,
     thumbUrl: v.thumb,
-    videoId: null,
+    videoId: extractYoutubeVideoId(v.href),
     href: v.href,
   }));
 }
@@ -69,11 +71,11 @@ export function ModuleTryPromoClient({
 }: Props) {
   const copy = useMemo(() => getModuleTryPromoCopy(moduleSlug, moduleTitle), [moduleSlug, moduleTitle]);
   const lb = useAppImageLightbox();
+  const ytLb = useAppYoutubeLightbox();
   const [banner, setBanner] = useState(
     () => (initialBanner?.trim() || copy.defaultBanner).trim(),
   );
   const [videos, setVideos] = useState<DisplayVideo[]>(() => mapFallback(copy.fallbackVideos));
-  const [playing, setPlaying] = useState<DisplayVideo | null>(null);
 
   const features: ModuleTryPromoFeature[] = copy.features;
   const fallbackVideos = useMemo(
@@ -121,52 +123,18 @@ export function ModuleTryPromoClient({
   }, [moduleSlug, fallbackVideos]);
 
   function onOpenVideo(v: DisplayVideo) {
-    if (v.videoId) {
-      setPlaying(v);
+    const id = v.videoId ?? extractYoutubeVideoId(v.href);
+    if (id) {
+      ytLb.open(`https://www.youtube.com/watch?v=${id}`, v.title);
       return;
     }
-    window.open(v.href, "_blank", "noopener,noreferrer");
+    /* ไม่มี video id — ไม่เปิดลิงก์ภายนอก (กันคัดลอก/หลุดจากแอป) */
   }
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="แบนเนอร์" />
-
-      {playing?.videoId ? (
-        <div
-          className="fixed inset-0 z-[240] flex items-center justify-center bg-[#1e1b4b]/75 p-3 backdrop-blur-sm sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={playing.title}
-          onClick={() => setPlaying(null)}
-        >
-          <div
-            className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-white/30 bg-black shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2">
-              <p className="truncate text-sm font-bold text-white">{playing.title}</p>
-              <button
-                type="button"
-                className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg bg-white/10 text-white"
-                aria-label="ปิดวิดีโอ"
-                onClick={() => setPlaying(null)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="aspect-video w-full">
-              <iframe
-                title={playing.title}
-                src={youtubeEmbedUrl(playing.videoId, true)}
-                className="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
 
       <header className={appSafeAreaPortalHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">

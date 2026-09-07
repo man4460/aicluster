@@ -38,6 +38,34 @@ export function youtubeEmbedUrl(videoId: string, autoplay = true): string {
   return `https://www.youtube.com/embed/${videoId}${q}`;
 }
 
+/**
+ * Embed โหมดปลอดภัย (LMS / เล่นในแอป) — ปิด controls ของ YouTube · modestbranding · playsinline
+ * ใช้กับ AppSecureYoutubePlayer / AppYoutubeLightbox — ห้ามโชว์ลิงก์ watch ให้ผู้ใช้คัดลอก
+ */
+export function secureYoutubeEmbedUrl(videoId: string, autoplay = false): string {
+  const params = new URLSearchParams({
+    modestbranding: "1",
+    controls: "0",
+    showinfo: "0",
+    rel: "0",
+    disablekb: "1",
+    enablejsapi: "1",
+    playsinline: "1",
+  });
+  if (autoplay) params.set("autoplay", "1");
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+}
+
+/** แปลง URL/id ใด ๆ เป็น secure embed หรือ null */
+export function normalizeSecureYoutubeEmbedUrl(raw: string | null | undefined): string | null {
+  if (raw == null) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const id = extractYoutubeVideoId(trimmed);
+  if (!id) return null;
+  return secureYoutubeEmbedUrl(id);
+}
+
 export function youtubeWatchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }

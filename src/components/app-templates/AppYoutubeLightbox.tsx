@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { extractYoutubeVideoId, youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/youtube-url";
+import { extractYoutubeVideoId, secureYoutubeEmbedUrl } from "@/lib/youtube-url";
 import {
   appSafeAreaOverlayExpandedHeaderPadClass,
   appSafeAreaOverlayPadAllClass,
@@ -17,6 +17,11 @@ export type AppYoutubeLightboxProps = {
   onClose: () => void;
 };
 
+function getFullscreenElement(): Element | null {
+  const doc = document as Document & { webkitFullscreenElement?: Element | null };
+  return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
 function nativeFullscreenSupported(): boolean {
   if (typeof document === "undefined") return false;
   const doc = document as Document & {
@@ -26,25 +31,36 @@ function nativeFullscreenSupported(): boolean {
   return Boolean(doc.fullscreenEnabled ?? doc.webkitFullscreenEnabled);
 }
 
+/** iOS / iPad — requestFullscreen บน div มักพัง iframe YouTube */
+function preferCssFullscreenOnly(): boolean {
+  if (typeof navigator === "undefined") return true;
+  const ua = navigator.userAgent;
+  if (/iP(hone|ad|od)/i.test(ua)) return true;
+  if (/Macintosh/i.test(ua) && typeof document !== "undefined" && "ontouchend" in document) {
+    return true;
+  }
+  return false;
+}
+
+const headerIconClass =
+  "inline-flex h-9 w-9 touch-manipulation items-center justify-center text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] transition active:scale-95 active:opacity-80";
+
 /**
  * Template กลาง — เล่น YouTube ในป๊อปอัป (พื้นมืด · Esc · ปิด · เต็มจอ)
- * มือถือ/iOS: ใช้โหมดขยายเต็มพื้นที่ (CSS) เมื่อ browser fullscreen ใช้ไม่ได้
- * iframe มี allowFullScreen ให้ปุ่มเต็มจอของ YouTube ใช้ได้
+ * แบบ LMS: ไม่มีลิงก์ watch / คัดลอก · ปุ่มไอคอนล้วน · iOS ใช้ขยาย CSS
  */
 export function AppYoutubeLightbox({
   youtubeUrl,
-  title = "วิดีโอ YouTube",
+  title = "วิดีโอ",
   onClose,
 }: AppYoutubeLightboxProps) {
   const [mounted, setMounted] = useState(false);
   const [cssExpanded, setCssExpanded] = useState(false);
   const [nativeFs, setNativeFs] = useState(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const videoId = youtubeUrl?.trim() ? extractYoutubeVideoId(youtubeUrl.trim()) : null;
   const open = Boolean(videoId);
-  const embed = videoId ? youtubeEmbedUrl(videoId, true) : null;
-  const watch = videoId ? youtubeWatchUrl(videoId) : null;
+  const embed = videoId ? secureYoutubeEmbedUrl(videoId, true) : null;
 
   useEffect(() => {
     setMounted(true);
@@ -79,10 +95,7 @@ export function AppYoutubeLightbox({
 
   useEffect(() => {
     const onFsChange = () => {
-      const doc = document as Document & {
-        webkitFullscreenElement?: Element | null;
-      };
-      const active = Boolean(document.fullscreenElement ?? doc.webkitFullscreenElement);
+      const active = Boolean(getFullscreenElement());
       setNativeFs(active);
       if (!active) setCssExpanded(false);
     };
@@ -100,7 +113,7 @@ export function AppYoutubeLightbox({
       msExitFullscreen?: () => Promise<void> | void;
     };
     try {
-      if (document.exitFullscreen) await document.exitFullscreen();
+      if (document.exitFullscreen && getFullscreenElement()) await document.exitFullscreen();
       else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
       else if (doc.msExitFullscreen) await doc.msExitFullscreen();
     } catch {
@@ -109,35 +122,38 @@ export function AppYoutubeLightbox({
   }, []);
 
   const enterFullscreen = useCallback(async () => {
-    /** มือถือ/iOS ส่วนใหญ่ไม่รองรับ requestFullscreen บน div — ขยายด้วย CSS */
-    if (!nativeFullscreenSupported()) {
+    if (preferCssFullscreenOnly() || !nativeFullscreenSupported()) {
       setCssExpanded(true);
       return;
     }
 
-    const targets: (HTMLElement | null)[] = [iframeRef.current, stageRef.current];
-    for (const el of targets) {
-      if (!el) continue;
-      const anyEl = el as HTMLElement & {
-        webkitRequestFullscreen?: () => Promise<void> | void;
-        msRequestFullscreen?: () => Promise<void> | void;
-      };
-      try {
-        if (el.requestFullscreen) {
-          await el.requestFullscreen();
-          return;
-        }
-        if (anyEl.webkitRequestFullscreen) {
-          await anyEl.webkitRequestFullscreen();
-          return;
-        }
-        if (anyEl.msRequestFullscreen) {
-          await anyEl.msRequestFullscreen();
-          return;
-        }
-      } catch {
-        /* try next target */
+    const el = stageRef.current;
+    if (!el) {
+      setCssExpanded(true);
+      return;
+    }
+    const anyEl = el as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+      msRequestFullscreen?: () => Promise<void> | void;
+    };
+    try {
+      if (el.requestFullscreen) {
+        await el.requestFullscreen();
+        if (!getFullscreenElement()) setCssExpanded(true);
+        return;
       }
+      if (anyEl.webkitRequestFullscreen) {
+        await anyEl.webkitRequestFullscreen();
+        if (!getFullscreenElement()) setCssExpanded(true);
+        return;
+      }
+      if (anyEl.msRequestFullscreen) {
+        await anyEl.msRequestFullscreen();
+        if (!getFullscreenElement()) setCssExpanded(true);
+        return;
+      }
+    } catch {
+      /* fall through */
     }
     setCssExpanded(true);
   }, []);
@@ -162,9 +178,7 @@ export function AppYoutubeLightbox({
     <div
       className={cn(
         "fixed inset-0 z-[240] flex items-center justify-center overflow-hidden bg-slate-950/90",
-        expanded
-          ? "p-0"
-          : cn(appSafeAreaOverlayPadAllClass),
+        expanded ? "p-0" : cn(appSafeAreaOverlayPadAllClass),
       )}
       role="dialog"
       aria-modal="true"
@@ -182,44 +196,34 @@ export function AppYoutubeLightbox({
       >
         <div
           className={cn(
-            "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2",
+            "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b]/95 px-3 py-2",
             expanded && appSafeAreaOverlayExpandedHeaderPadClass,
           )}
         >
           <p className="min-w-0 truncate text-sm font-bold text-white">{title}</p>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               type="button"
-              className="inline-flex min-h-10 min-w-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20 sm:min-w-0"
+              className={headerIconClass}
               aria-label={expanded ? "ย่อจากเต็มจอ" : "ดูเต็มจอ"}
               aria-pressed={expanded}
               title={expanded ? "ย่อ" : "ดูเต็มจอ"}
               onClick={() => void toggleFullscreen()}
             >
               {expanded ? (
-                <Minimize2 className="h-4 w-4" aria-hidden />
+                <Minimize2 className="h-5 w-5" aria-hidden />
               ) : (
-                <Maximize2 className="h-4 w-4" aria-hidden />
+                <Maximize2 className="h-5 w-5" aria-hidden />
               )}
-              <span className="hidden sm:inline">{expanded ? "ย่อ" : "เต็มจอ"}</span>
             </button>
-            {watch ? (
-              <a
-                href={watch}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center rounded-lg bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20"
-              >
-                YouTube
-              </a>
-            ) : null}
             <button
               type="button"
-              className="inline-flex min-h-10 min-w-10 touch-manipulation items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+              className={headerIconClass}
               aria-label="ปิดวิดีโอ"
+              title="ปิด"
               onClick={onClose}
             >
-              <X className="h-4 w-4" aria-hidden />
+              <X className="h-5 w-5" aria-hidden />
             </button>
           </div>
         </div>
@@ -231,7 +235,6 @@ export function AppYoutubeLightbox({
           )}
         >
           <iframe
-            ref={iframeRef}
             title={title}
             src={embed}
             className="absolute inset-0 h-full w-full"

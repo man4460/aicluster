@@ -1,6 +1,7 @@
 import {
   extractYoutubeVideoId,
-  youtubeEmbedUrl,
+  normalizeSecureYoutubeEmbedUrl,
+  secureYoutubeEmbedUrl,
   youtubeWatchUrl,
 } from "@/lib/youtube-url";
 
@@ -62,14 +63,9 @@ export const CLUB_EVENT_TRIAL_SAMPLE_YOUTUBE_VIDEOS: ClubEventYoutubeVideo[] = [
   },
 ];
 
-/** แปลงลิงก์ YouTube ใด ๆ (watch / youtu.be / embed / shorts) เป็น embed URL เก็บใน DB — ไม่มี autoplay */
+/** แปลงลิงก์ YouTube ใด ๆ (watch / youtu.be / embed / shorts) เป็น secure embed เก็บใน DB — ไม่มี autoplay */
 export function normalizeClubEventYoutubeEmbedUrl(raw: string | null | undefined): string | null {
-  if (raw == null) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const id = extractYoutubeVideoId(trimmed);
-  if (!id) return null;
-  return youtubeEmbedUrl(id, false);
+  return normalizeSecureYoutubeEmbedUrl(raw);
 }
 
 export function clubEventYoutubeWatchUrlFromStored(embedOrAny: string | null | undefined): string | null {
@@ -155,7 +151,7 @@ export function parseClubEventYoutubeUrls(
   legacyEmbedUrl?: string | null,
 ): string[] {
   return parseClubEventYoutubeVideos(youtubeUrlsJson, legacyEmbedUrl).map((v) =>
-    youtubeEmbedUrl(v.videoId, false),
+    secureYoutubeEmbedUrl(v.videoId, false),
   );
 }
 

@@ -1,0 +1,83 @@
+---
+description: YouTube ในแอป — ห้ามคัดลอกลิงก์ · ไอคอนล้วน · เต็มจอแบบ LMS (AppSecureYoutubePlayer / AppYoutubeLightbox)
+globs:
+  - "src/components/app-templates/**/*Youtube*"
+  - "src/systems/**/**/*Youtube*"
+  - "src/systems/**/**/*youtube*"
+  - "src/lib/youtube-url.ts"
+alwaysApply: false
+---
+
+# YouTube ในแอป — แม่แบบ LMS
+
+ใช้เมื่อเล่นวิดีโอ YouTube ในแดชบอร์ด · พอร์ทัล · ทดลองโมดูล · ห้องเรียน
+
+**คู่กับ:** `app-templates-media.mdc` · `dashboard-module-media-gallery-slideshow.mdc`
+
+---
+
+## เลือกคอมโพเนนต์
+
+| กรณี | ใช้ |
+|------|-----|
+| เล่น **ในหน้า** (ห้องเรียน · บทเรียน · ฝังยาว) | **`AppSecureYoutubePlayer`** จาก `@/components/app-templates` |
+| เล่นจาก **การ์ด thumb → ป๊อปอัป** | **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox`** |
+| แปลง URL → embed ปลอดภัย | **`secureYoutubeEmbedUrl`** / **`normalizeSecureYoutubeEmbedUrl`** ใน `@/lib/youtube-url` |
+
+`LmsSecureYoutubePlayer` = re-export ของ `AppSecureYoutubePlayer` (อย่าคัดลอกไฟล์ LMS)
+
+---
+
+## บังคับ — UX แบบ LMS
+
+1. **ห้าม** โชว์ลิงก์ `youtube.com/watch` / ปุ่ม «เปิดบน YouTube» / ปุ่มคัดลอกลิงก์ บน UI ผู้เรียน/ลูกค้า  
+2. **ห้าม** สร้าง iframe YouTube ดิบ + โมดัลเอง เมื่อเป้าหมายคือเล่นคลิปในแอป  
+3. ปุ่มควบคุมผู้เล่น / lightbox: **ไอคอนล้วน** (`aria-label` + `title`) — ไม่ใส่ข้อความ «เต็มจอ» / «ย่อ» ข้างไอคอน  
+4. **เต็มจอ:**  
+   - **iOS / iPad (และ Mac touch):** ขยายด้วย **CSS** (`fixed` / `100dvh`) — **ห้าม** พึ่ง `requestFullscreen` บน wrapper รอบ iframe เป็นหลัก  
+   - เดสก์ท็อปอื่น: native fullscreen ได้ ถ้าใช้ได้ ไม่เช่นนั้น fallback CSS  
+5. Embed ใช้พารามิเตอร์ secure (`controls:0`, `modestbranding`, `playsinline`, `rel:0`, …) — ผ่าน helper กลาง ไม่ hardcode คนละชุด
+
+---
+
+## แพทเทิร์น
+
+```tsx
+import {
+  AppSecureYoutubePlayer,
+  AppYoutubeLightbox,
+  useAppYoutubeLightbox,
+} from "@/components/app-templates";
+
+// inline
+<AppSecureYoutubePlayer youtubeUrl={url} title={title} onProgress={…} />
+
+// grid → popup
+const yt = useAppYoutubeLightbox();
+yt.open(url, title);
+<AppYoutubeLightbox youtubeUrl={yt.youtubeUrl} title={yt.title} onClose={yt.close} />
+```
+
+---
+
+## อนุญาตลิงก์ watch
+
+- **ฟอร์มแอดมิน** วาง URL ตอนบันทึก — ได้  
+- **เก็บ/แปลงเป็น embed ใน DB** — ได้  
+- **แสดง/เปิดภายนอกให้ผู้ใช้ปลายทางคัดลอก** บนเครื่องเล่น — **ห้าม**
+
+---
+
+## ห้าม
+
+- คัดลอก `LmsSecureYoutubePlayer` เป็นไฟล์ใหม่ในโมดูลอื่น  
+- ปุ่ม «YouTube» ใน `AppYoutubeLightbox`  
+- `window.open(watchUrl)` จากกริดวิดีโอโปรโมทเมื่อมี video id แล้ว  
+- ข้อความเต็มจอบนปุ่ม (ใช้ไอคอน Maximize/Minimize อย่างเดียว)
+
+## เช็กลิสต์
+
+- [ ] เล่นในหน้า → `AppSecureYoutubePlayer`
+- [ ] ป๊อปอัป → `AppYoutubeLightbox` (ไม่มีลิงก์ watch)
+- [ ] ไอคอนเต็มจอ + CSS FS บน iOS
+- [ ] ไม่มีปุ่มคัดลอก / เปิดบน YouTube บน UI ผู้ใช้ปลายทาง

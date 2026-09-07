@@ -11,6 +11,9 @@ export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLi
 export { AppYoutubeLightbox, type AppYoutubeLightboxProps } from "./AppYoutubeLightbox";
 export { useAppYoutubeLightbox, type AppYoutubeLightboxState } from "./useAppYoutubeLightbox";
 export {
+  AppSecureYoutubePlayer,
+} from "./AppSecureYoutubePlayer";
+export {
   APP_PAYMENT_METHODS,
   appPaymentMethodLabel,
   appPaymentRequiresSlip,

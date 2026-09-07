@@ -10,7 +10,7 @@ alwaysApply: false
 
 ใช้เมื่อโมดูลมี **วิดีโอ YouTube** และ/หรือ **แกลเลอรีรูป** บนหน้ารายละเอียดหรือแก้ไข (ต้นแบบ: **ชมรมกิจกรรม**)
 
-**คู่กับ:** `app-templates-media.mdc` · `app-image-lightbox-centered.mdc` · `dashboard-module-design-check-laundry-first.mdc`
+**คู่กับ:** `app-templates-media.mdc` · `app-templates-youtube.mdc` · `app-image-lightbox-centered.mdc` · `dashboard-module-design-check-laundry-first.mdc`
 
 **อ้างอิงโค้ด:**
 
@@ -18,7 +18,8 @@ alwaysApply: false
 |------|-----|
 | หน้ารายละเอียด | `ClubEventEventDetailClient.tsx` |
 | สไลด์ป๊อปอัป | `ClubEventSlideshow.tsx` |
-| YouTube lightbox | `AppYoutubeLightbox` + `useAppYoutubeLightbox` |
+| YouTube lightbox | `AppYoutubeLightbox` + `useAppYoutubeLightbox` (ไม่มีลิงก์ watch · ไอคอนเต็มจอ) |
+| YouTube ฝังในหน้า | `AppSecureYoutubePlayer` (แม่แบบ LMS) |
 | รูปเดี่ยว / เลื่อน | `AppImageLightbox` + `useAppImageLightbox` |
 | โทเค็นกริด | `clubEventYoutubeCardGridClass` · `clubEventGalleryCardGridClass` ใน `club-event/lib/ui-tokens.ts` |
 | คลิปตัวอย่างทดลอง | `CLUB_EVENT_TRIAL_SAMPLE_YOUTUBE_VIDEOS` ใน `club-event/lib/youtube.ts` |
@@ -34,7 +35,7 @@ alwaysApply: false
 
 1. แสดงเป็น **การ์ด thumb** (aspect-video + ปุ่ม Play ทับ) — **ห้าม** ฝัง iframe เล่นตรงในรายการยาวทั้งหน้า  
 2. **คลิกการ์ด** → เปิด **`AppYoutubeLightbox`** (ป๊อปอัปเล่น)  
-3. ใน lightbox ต้องมีปุ่ม **เต็มจอ** (browser fullscreen / YouTube allowFullScreen)  
+3. ใน lightbox: ปุ่ม **เต็มจอเป็นไอคอนล้วน** · iOS ใช้ขยาย CSS · **ห้าม** ลิงก์/ปุ่มเปิดหรือคัดลอก YouTube (ดู **`app-templates-youtube.mdc`**)  
 4. โทเค็นกริดรวมใน `lib/ui-tokens.ts` ของโมดูล — อย่า copy `grid-cols-*` กระจายหลายไฟล์  
 
 ```tsx
@@ -90,6 +91,7 @@ alwaysApply: false
 - กริดรูปมือถือ 2 / เดสก์ท็อป 4 เป็นค่าเริ่มเมื่อทำโมดูลใหม่ตามแม่แบบนี้ (ใช้ 3 / 8)  
 - สไลด์เต็มจอแบบ `fixed inset-0` โดยไม่มีปุ่ม **เต็มจอ** ของเบราว์เซอร์ และไม่มีโหมดป๊อปอัป  
 - สร้าง lightbox YouTube / รูป เอง ทั้งที่ `AppYoutubeLightbox` / `AppImageLightbox` มีแล้ว  
+- โชว์ลิงก์ watch / «เปิดบน YouTube» / คัดลอกลิงก์ บน lightbox หรือเครื่องเล่นผู้ใช้ปลายทาง  
 
 ---
 

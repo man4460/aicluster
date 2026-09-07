@@ -12,9 +12,9 @@ export type AppYoutubeLightboxState = {
 /** คู่กับ AppYoutubeLightbox — เปิดคลิปจาก thumb แล้วปิดเมื่อจบ */
 export function useAppYoutubeLightbox(): AppYoutubeLightboxState {
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
-  const [title, setTitle] = useState("วิดีโอ YouTube");
+  const [title, setTitle] = useState("วิดีโอ");
 
-  const open = useCallback((url: string, clipTitle = "วิดีโอ YouTube") => {
+  const open = useCallback((url: string, clipTitle = "วิดีโอ") => {
     setYoutubeUrl(url);
     setTitle(clipTitle);
   }, []);
