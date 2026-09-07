@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { cn } from "@/lib/cn";
+import { appSafeAreaFixedBottomBarPadClass } from "@/components/app-templates/safe-area-tokens";
 import {
   laundryPortalPackagePriceLabel,
   type LaundryPortalPackageItem,
@@ -108,8 +109,12 @@ export function LaundryPortalPackageDetailModal({
           : null}
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
-          <button type="button" onClick={onClose} className={cn(laundryCompactOutlineButtonClass, "flex-1")}>
+        <div
+          className={cn(
+            "flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 pt-3 sm:px-5",
+            appSafeAreaFixedBottomBarPadClass,
+          )}
+        >          <button type="button" onClick={onClose} className={cn(laundryCompactOutlineButtonClass, "flex-1")}>
             ปิด
           </button>
           <button

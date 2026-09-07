@@ -7,6 +7,7 @@ import {
   appDashboardBrandGradientBarClass,
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates/dashboard-tokens";
+import { appSafeAreaLandingHeaderPadClass } from "@/components/app-templates/safe-area-tokens";
 import { BUILDING_POS_BASE } from "@/systems/building-pos/building-pos-nav";
 
 type PresentationVariant = "embedded" | "public";
@@ -383,8 +384,14 @@ export function BuildingPosPresentationClient({
         />
 
         <div className={cn("relative z-10", isPublic && "flex min-h-dvh flex-1 flex-col")}>
-          <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-[max(1.5rem,env(safe-area-inset-top))]">
-            <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "flex items-start justify-between px-5 sm:px-8",
+              isPublic
+                ? appSafeAreaLandingHeaderPadClass
+                : "pt-5 sm:pt-[max(1.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]",
+            )}
+          >            <div className="flex items-center gap-3">
               <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] border border-white/60 bg-white/60 text-xl shadow-sm backdrop-blur-md ring-1 ring-inset ring-white/55 sm:h-12 sm:w-12">
                 <span aria-hidden>🍽️</span>
               </span>

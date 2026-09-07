@@ -10,6 +10,7 @@ import {
   shopQrTemplateOrderPagePaddingClass,
   shopQrTemplatePageBgClass,
 } from "@/components/qr/shop-qr-template";
+import { appSafeAreaBottomPadClass } from "@/components/app-templates/safe-area-tokens";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import {
@@ -1340,7 +1341,7 @@ export function BuildingPosCustomerOrderClient({
             {customerReviewsBeforeSend ? "ตรวจสอบรายการ" : "ส่งออเดอร์"}
           </button>
         </div>
-        <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]" aria-hidden />
+        <div className={appSafeAreaBottomPadClass} aria-hidden />
       </div>
       : null}
 
@@ -1439,7 +1440,7 @@ export function BuildingPosCustomerOrderClient({
                 {submitting ? "กำลังส่ง…" : "ยืนยันส่งออเดอร์"}
               </button>
             </div>
-            <div className="h-[max(0.5rem,env(safe-area-inset-bottom))] shrink-0 bg-white sm:h-2" aria-hidden />
+            <div className={cn(appSafeAreaBottomPadClass, "shrink-0 bg-white sm:h-2 sm:pb-2")} aria-hidden />
           </div>
         </div>
       : null}

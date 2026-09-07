@@ -10,6 +10,7 @@ import {
   shopQrTemplateOrderPagePaddingClass,
   shopQrTemplatePageBgClass,
 } from "@/components/qr/shop-qr-template";
+import { appSafeAreaBottomPadClass } from "@/components/app-templates/safe-area-tokens";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeStable } from "@/lib/dormitory/format-display-stable";
 import {
@@ -1153,7 +1154,7 @@ export function DrinkPosCustomerOrderClient({
               ตรวจสอบรายการ
             </button>
           </div>
-          <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]" aria-hidden />
+          <div className={appSafeAreaBottomPadClass} aria-hidden />
         </div>
       : null}
 

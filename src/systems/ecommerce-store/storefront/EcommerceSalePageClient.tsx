@@ -14,10 +14,15 @@ import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/Ecommer
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
 import {
+  ecommerceStorePortalPageShellClass,
   ecommerceStorePrimaryButtonClass,
   ecommerceStoreRowIconButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
-import { appSafeAreaFixedBottomBarPadClass } from "@/components/app-templates/safe-area-tokens";
+import {
+  appSafeAreaFixedBottomBarPadClass,
+  appSafeAreaLandingHeaderPadClass,
+  appSafeAreaPageContentTopPadClass,
+} from "@/components/app-templates/safe-area-tokens";
 
 type Product = {
   id: string;
@@ -39,8 +44,8 @@ type StorePay = {
 
 function SalePageSkeleton({ storeName }: { storeName: string }) {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white pb-28" aria-hidden>
-      <header className="px-4 py-4 text-center">
+    <div className={cn(ecommerceStorePortalPageShellClass, "bg-gradient-to-b from-[#f8f7ff] to-white")} aria-hidden>
+      <header className={cn("px-4 pb-3 text-center", appSafeAreaLandingHeaderPadClass)}>
         <div className="mx-auto h-7 w-48 animate-pulse rounded-xl bg-[#ecebff]/60" />
         <p className="sr-only">{storeName}</p>
       </header>
@@ -135,7 +140,13 @@ export function EcommerceSalePageClient({
 
   if (tracking) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-12 text-center">
+      <div
+        className={cn(
+          "mx-auto max-w-lg px-4 text-center",
+          appSafeAreaPageContentTopPadClass,
+          "pb-[max(2.5rem,calc(1.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+        )}
+      >
         <h1 className="font-black text-2xl text-[#1e1b4b]">สั่งซื้อสำเร็จ</h1>
         <p className="mt-2 text-sm text-[#66638c]">รหัสติดตาม: {tracking}</p>
         <Link
@@ -149,8 +160,8 @@ export function EcommerceSalePageClient({
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white pb-28">
-      <header className="px-4 py-4 text-center">
+    <div className={cn(ecommerceStorePortalPageShellClass, "bg-gradient-to-b from-[#f8f7ff] to-white")}>
+      <header className={cn("px-4 pb-3 text-center", appSafeAreaLandingHeaderPadClass)}>
         <h1 className="font-black text-xl text-[#1e1b4b]">{store.storeName}</h1>
       </header>
       <div className="mx-auto max-w-lg space-y-4 px-4">

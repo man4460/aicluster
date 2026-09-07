@@ -41,22 +41,20 @@ export type AppBrowserFullscreenButtonProps = {
 
 /**
  * สลับโหมดเต็มจอของเบราว์เซอร์ (ซ่อนแถบ URL / แท็บบนเดสก์ท็อป · Android Chrome)
- * ต้องกดปุ่มเอง — iOS Safari รองรับจำกัด
+ * ต้องกดปุ่มเอง — iOS / เบราว์เซอร์ที่ไม่รองรับ Fullscreen API ใช้โหมด CSS สำรอง
  */
 export function AppBrowserFullscreenButton({
   className,
   iconOnly = true,
 }: AppBrowserFullscreenButtonProps) {
-  const { pinned, supported, hideControl, toggle } = useAppBrowserFullscreen();
+  const { pinned, hideControl, toggle } = useAppBrowserFullscreen();
 
   if (hideControl) return null;
 
   const label = pinned ? "ออกจากโหมดเต็มจอ" : "แสดงเต็มจอ";
-  const hint = supported
-    ? pinned
-      ? "กดปุ่มนี้เพื่อออก — โหมดเต็มจอจะคงอยู่แม้พิมพ์เอกสาร"
-      : "ซ่อนแถบ URL และเมนูของเบราว์เซอร์"
-    : "เบราว์เซอร์นี้ไม่รองรับ — ลอง Chrome/Edge บน Android หรือติดตั้งแอป MAWELL";
+  const hint = pinned
+    ? "กดปุ่มนี้เพื่อออก — โหมดเต็มจอจะคงอยู่แม้พิมพ์เอกสาร"
+    : "ซ่อนแถบ URL และเมนูของเบราว์เซอร์ (มือถือบางเครื่องใช้โหมดขยายเต็มพื้นที่)";
 
   return (
     <button
@@ -65,7 +63,6 @@ export function AppBrowserFullscreenButton({
       className={cn(
         "inline-flex shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95 touch-manipulation",
         iconOnly ? "h-10 w-10 min-h-[40px] min-w-[40px]" : "min-h-[40px] gap-1.5 px-3 text-sm font-bold",
-        !supported && "opacity-80",
         className,
       )}
       aria-label={label}

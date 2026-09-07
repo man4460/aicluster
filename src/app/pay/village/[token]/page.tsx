@@ -1,9 +1,17 @@
 import { notFound } from "next/navigation";
+import { appSafeAreaPageContentTopPadClass } from "@/components/app-templates/safe-area-tokens";
+import { cn } from "@/lib/cn";
 import { formatVillageAmountStable } from "@/lib/village/format-display-stable";
 import { getVillagePublicInvoiceDto } from "@/lib/village/village-invoice-sheet";
 import { VillagePublicSlipForm } from "@/systems/village/components/VillagePublicSlipForm";
 
 type Props = { params: Promise<{ token: string }> };
+
+const publicPayShellClass = cn(
+  "mx-auto max-w-md px-4",
+  appSafeAreaPageContentTopPadClass,
+  "pb-[max(2.5rem,calc(1.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+);
 
 export default async function VillagePublicSlipPage({ params }: Props) {
   const { token } = await params;
@@ -13,7 +21,7 @@ export default async function VillagePublicSlipPage({ params }: Props) {
   const invoice = await getVillagePublicInvoiceDto(t);
   if (!invoice) {
     return (
-      <div className="mx-auto max-w-md px-4 py-12 text-center">
+      <div className={cn(publicPayShellClass, "text-center")}>
         <h1 className="text-lg font-semibold text-slate-900">ลิงก์ใช้งานไม่ได้</h1>
         <p className="mt-2 text-sm text-slate-600">ลิงก์ไม่ถูกต้องหรือหมดอายุ</p>
       </div>
@@ -22,7 +30,7 @@ export default async function VillagePublicSlipPage({ params }: Props) {
 
   if (invoice.alreadyPaid) {
     return (
-      <div className="mx-auto max-w-md px-4 py-12 text-center">
+      <div className={cn(publicPayShellClass, "text-center")}>
         <h1 className="text-lg font-semibold text-slate-900">รายการนี้ชำระครบแล้ว</h1>
         <p className="mt-2 text-sm text-slate-600">
           บ้าน {invoice.houseNo} · งวด {invoice.periodMonth}
@@ -32,7 +40,7 @@ export default async function VillagePublicSlipPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
+    <div className={publicPayShellClass}>
       <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-medium tracking-wide text-slate-500">แจ้งชำระค่าส่วนกลาง</p>
         <p className="mt-1 text-lg font-bold text-slate-900">{invoice.villageName}</p>

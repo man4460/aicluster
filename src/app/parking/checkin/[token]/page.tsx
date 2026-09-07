@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { appSafeAreaPageContentTopPadClass } from "@/components/app-templates/safe-area-tokens";
+import { cn } from "@/lib/cn";
 import { ParkingPublicCheckInClient } from "@/systems/parking/components/ParkingPublicCheckInClient";
 
 type Props = { params: Promise<{ token: string }> };
@@ -14,7 +16,13 @@ export default async function ParkingPublicCheckInPage({ params }: Props) {
   if (!token || token.length < 8 || token.length > 64) notFound();
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-slate-100 to-slate-200/80 px-4 py-10">
+    <div
+      className={cn(
+        "min-h-[100dvh] bg-gradient-to-b from-slate-100 to-slate-200/80 px-4",
+        appSafeAreaPageContentTopPadClass,
+        "pb-[max(2.5rem,calc(1.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+      )}
+    >
       <div className="mx-auto w-full max-w-lg">
         <ParkingPublicCheckInClient token={decodeURIComponent(token)} />
       </div>

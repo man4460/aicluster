@@ -6,6 +6,7 @@ import {
   AppEmptyState,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
+  appSafeAreaFixedBottomBarPadClass,
   appSafeAreaLandingHeaderPadClass,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -33,7 +34,7 @@ import {
 } from "@/systems/laundry/lib/portal-booking";
 import {
   laundryDashboardSegmentBtnClass,
-  laundryDashboardSegmentShellClass,
+  laundryPrimaryTabShellClass,
   laundryCompactOutlineButtonClass,
   laundryIconButtonClass,
   laundryInlineAlertErrorClass,
@@ -819,7 +820,11 @@ export function LaundryPickupPublicClient({
         : null}
 
         {embeddedInPortal ?
-          <div className={cn(laundryDashboardSegmentShellClass, "mt-4 w-full")} role="tablist" aria-label="ขั้นตอนขอบริการรับ-ส่ง">
+          <div
+            className={cn(laundryPrimaryTabShellClass, "mt-4 w-full p-0.5")}
+            role="tablist"
+            aria-label="ขั้นตอนขอบริการรับ-ส่ง"
+          >
             {customerTabs.map((t, idx) => {
               const active = tab === t.id;
               return (
@@ -831,15 +836,21 @@ export function LaundryPickupPublicClient({
                   onClick={() => setTab(t.id)}
                   className={cn(
                     laundryDashboardSegmentBtnClass(active),
-                    "min-h-9 flex-1 px-2 text-[11px] sm:min-h-9 sm:px-3 sm:text-xs",
+                    "min-h-9 min-w-0 grow basis-[calc(50%-4px)] px-2 text-[11px] sm:grow-0 sm:basis-auto sm:px-3 sm:text-xs",
                   )}
                 >
-                  {idx + 1}. {t.label}
+                  <span className="truncate">
+                    {idx + 1}. {t.label}
+                  </span>
                 </button>
               );
             })}
           </div>
-        : <div className={laundryDashboardSegmentShellClass} role="tablist" aria-label="เมนูขอบริการรับ-ส่ง">
+        : <div
+            className={cn(laundryPrimaryTabShellClass, "w-full p-0.5")}
+            role="tablist"
+            aria-label="เมนูขอบริการรับ-ส่ง"
+          >
             {customerTabs.map((t) => (
               <button
                 key={t.id}
@@ -847,9 +858,12 @@ export function LaundryPickupPublicClient({
                 role="tab"
                 aria-selected={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={cn(laundryDashboardSegmentBtnClass(tab === t.id), "min-h-9 flex-1 px-2 sm:px-3")}
+                className={cn(
+                  laundryDashboardSegmentBtnClass(tab === t.id),
+                  "min-h-9 min-w-0 grow basis-[calc(50%-4px)] px-2 sm:grow-0 sm:basis-auto sm:px-3",
+                )}
               >
-                {t.label}
+                <span className="truncate">{t.label}</span>
               </button>
             ))}
           </div>
@@ -1110,7 +1124,8 @@ export function LaundryPickupPublicClient({
         >
           <div
             className={cn(
-              "mx-auto flex items-center justify-between gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+              "mx-auto flex items-center justify-between gap-3 px-4 pt-3",
+              appSafeAreaFixedBottomBarPadClass,
               embeddedInPortal ? "max-w-6xl sm:px-6" : "max-w-lg",
             )}
           >
@@ -1211,7 +1226,12 @@ export function LaundryPickupPublicClient({
                 </>
               : null}
             </div>
-            <div className="flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+            <div
+              className={cn(
+                "flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 pt-3 sm:px-5",
+                appSafeAreaFixedBottomBarPadClass,
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setReviewOpen(false)}

@@ -18,11 +18,15 @@ type FullscreenDocument = Document & {
 /** ผู้ใช้กดปุ่มเต็มจอ — คงไว้จนกว่าจะกดปุ่มออก (dialog พิมพ์/โฟกัสหายไม่ถือว่าออก) */
 export const APP_BROWSER_FULLSCREEN_RESTORE_MESSAGE = "mawell-restore-fullscreen";
 
+/** คลาส CSS สำรองเมื่อ Fullscreen API ใช้ไม่ได้ (เช่น iOS Safari) */
+export const APP_BROWSER_CSS_FULLSCREEN_CLASS = "mawell-browser-css-fs";
+
 let fullscreenWanted = false;
 let intentionalExit = false;
 let listenersInstalled = false;
 let restoreTimer: ReturnType<typeof setTimeout> | null = null;
 let restoreAttempts = 0;
+let cssFullscreenOn = false;
 
 function getFullscreenElement(): Element | null {
   if (typeof document === "undefined") return null;
@@ -32,10 +36,30 @@ function getFullscreenElement(): Element | null {
 
 function isBrowserFullscreenSupported(): boolean {
   if (typeof document === "undefined") return false;
+  const doc = document as Document & {
+    fullscreenEnabled?: boolean;
+    webkitFullscreenEnabled?: boolean;
+  };
+  if (doc.fullscreenEnabled === false && doc.webkitFullscreenEnabled === false) return false;
   const el = document.documentElement as FullscreenElement;
-  return Boolean(
-    el.requestFullscreen ?? el.webkitRequestFullscreen ?? el.msRequestFullscreen,
+  return Boolean(el.requestFullscreen ?? el.webkitRequestFullscreen ?? el.msRequestFullscreen);
+}
+
+function setCssFullscreen(on: boolean): void {
+  if (typeof document === "undefined") return;
+  cssFullscreenOn = on;
+  document.documentElement.classList.toggle(APP_BROWSER_CSS_FULLSCREEN_CLASS, on);
+}
+
+function isCssFullscreenActive(): boolean {
+  if (typeof document === "undefined") return false;
+  return (
+    cssFullscreenOn || document.documentElement.classList.contains(APP_BROWSER_CSS_FULLSCREEN_CLASS)
   );
+}
+
+function isAnyFullscreenActive(): boolean {
+  return Boolean(getFullscreenElement()) || isCssFullscreenActive();
 }
 
 async function requestBrowserFullscreen(): Promise<boolean> {
@@ -71,19 +95,30 @@ async function exitBrowserFullscreen(): Promise<boolean> {
 async function restoreBrowserFullscreenNow(): Promise<boolean> {
   if (!fullscreenWanted || intentionalExit) return false;
   if (getFullscreenElement()) return true;
-  if (!isBrowserFullscreenSupported()) return false;
-  return requestBrowserFullscreen();
+  if (isCssFullscreenActive()) return true;
+  if (!isBrowserFullscreenSupported()) {
+    setCssFullscreen(true);
+    return true;
+  }
+  const ok = await requestBrowserFullscreen();
+  if (!ok) {
+    setCssFullscreen(true);
+    return true;
+  }
+  return true;
 }
 
 function scheduleRestoreBrowserFullscreen(): void {
   if (!fullscreenWanted || intentionalExit) return;
-  if (getFullscreenElement()) return;
+  if (getFullscreenElement() || isCssFullscreenActive()) return;
 
   if (restoreTimer) clearTimeout(restoreTimer);
   restoreAttempts = 0;
 
   const tryRestore = () => {
-    if (!fullscreenWanted || intentionalExit || getFullscreenElement()) return;
+    if (!fullscreenWanted || intentionalExit || getFullscreenElement() || isCssFullscreenActive()) {
+      return;
+    }
     restoreAttempts += 1;
     void restoreBrowserFullscreenNow().then((ok) => {
       if (ok || !fullscreenWanted || intentionalExit) return;
@@ -103,7 +138,7 @@ export function restoreAppBrowserFullscreenIfWanted(): void {
 
 function onFullscreenChange(): void {
   if (!fullscreenWanted || intentionalExit) return;
-  if (!getFullscreenElement()) scheduleRestoreBrowserFullscreen();
+  if (!getFullscreenElement() && !isCssFullscreenActive()) scheduleRestoreBrowserFullscreen();
 }
 
 function installPersistentFullscreenListeners(): void {
@@ -122,11 +157,11 @@ function installPersistentFullscreenListeners(): void {
 }
 
 export type AppBrowserFullscreenState = {
-  /** อยู่ในโหมดเต็มจอของเบราว์เซอร์ (DOM จริง) */
+  /** อยู่ในโหมดเต็มจอ (DOM native หรือ CSS สำรอง) */
   isFullscreen: boolean;
   /** ผู้ใช้เปิดโหมดเต็มจอไว้ — คงจนกว่าจะกดปุ่มออก (รวมช่วง dialog พิมพ์) */
   pinned: boolean;
-  /** เบราว์เซอร์รองรับ Fullscreen API */
+  /** เบราว์เซอร์รองรับ Fullscreen API หรือมีโหมด CSS สำรอง */
   supported: boolean;
   /** แอป native / PWA standalone — ไม่ต้องมีปุ่ม */
   hideControl: boolean;
@@ -138,17 +173,18 @@ export type AppBrowserFullscreenState = {
 export function useAppBrowserFullscreen(): AppBrowserFullscreenState {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [supported, setSupported] = useState(true);
   const [hideControl, setHideControl] = useState(false);
 
   useEffect(() => {
     installPersistentFullscreenListeners();
-    setSupported(isBrowserFullscreenSupported());
+    /** ปุ่มใช้ได้เสมอ — native หรือ CSS สำรอง */
+    setSupported(true);
     setHideControl(isStandaloneMode());
     setPinned(fullscreenWanted);
-    setIsFullscreen(Boolean(getFullscreenElement()));
+    setIsFullscreen(isAnyFullscreenActive());
 
-    const sync = () => setIsFullscreen(Boolean(getFullscreenElement()));
+    const sync = () => setIsFullscreen(isAnyFullscreenActive());
     document.addEventListener("fullscreenchange", sync);
     document.addEventListener("webkitfullscreenchange", sync as EventListener);
     return () => {
@@ -160,9 +196,20 @@ export function useAppBrowserFullscreen(): AppBrowserFullscreenState {
   const enter = useCallback(async () => {
     fullscreenWanted = true;
     setPinned(true);
+    if (!isBrowserFullscreenSupported()) {
+      setCssFullscreen(true);
+      setIsFullscreen(true);
+      return true;
+    }
     const ok = await requestBrowserFullscreen();
+    if (!ok) {
+      setCssFullscreen(true);
+      setIsFullscreen(true);
+      return true;
+    }
+    setCssFullscreen(false);
     setIsFullscreen(Boolean(getFullscreenElement()));
-    return ok;
+    return true;
   }, []);
 
   const exit = useCallback(async () => {
@@ -170,9 +217,12 @@ export function useAppBrowserFullscreen(): AppBrowserFullscreenState {
     setPinned(false);
     intentionalExit = true;
     try {
-      const ok = await exitBrowserFullscreen();
-      setIsFullscreen(Boolean(getFullscreenElement()));
-      return ok;
+      setCssFullscreen(false);
+      if (getFullscreenElement()) {
+        await exitBrowserFullscreen();
+      }
+      setIsFullscreen(isAnyFullscreenActive());
+      return !isAnyFullscreenActive();
     } finally {
       intentionalExit = false;
     }

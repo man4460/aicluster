@@ -110,6 +110,21 @@ html.capacitor-native body {
 }
 
 /**
+ * โหมดเต็มจอ CSS สำรอง (ปุ่มเต็มจอแดชบอร์ด เมื่อ Fullscreen API ไม่รองรับ เช่น iOS)
+ */
+html.mawell-browser-css-fs,
+html.mawell-browser-css-fs body {
+  height: 100%;
+  overflow: hidden;
+}
+html.mawell-browser-css-fs body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/**
  * พื้นหลังการ์ดมาตรฐาน — ใช้คู่กับ rounded-3xl ในโค้ด
  */
 .mawell-card-surface {

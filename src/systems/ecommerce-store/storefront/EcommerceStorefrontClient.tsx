@@ -14,6 +14,7 @@ import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcomme
 import {
   ecommerceStoreOutlineButtonClass,
   ecommerceStorePortalCategoryChipClass,
+  ecommerceStorePortalPageShellClass,
   ecommerceStorePortalProductGridClass,
   ecommerceStorePortalShopNameClass,
   ecommerceStorePortalStickyHeaderClass,
@@ -133,8 +134,8 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-dvh bg-[#faf9ff] pb-28" aria-hidden>
-        <div className="border-b border-slate-200/80 bg-white px-4 py-4">
+      <div className={cn(ecommerceStorePortalPageShellClass, "bg-[#faf9ff]")} aria-hidden>
+        <div className={cn("border-b border-slate-200/80 bg-white px-4 py-4", ecommerceStorePortalStickyHeaderClass)}>
           <div className="mx-auto h-12 max-w-6xl animate-pulse rounded-xl bg-slate-100" />
         </div>
         <div className={cn("mx-auto max-w-6xl px-4 py-8", ecommerceStorePortalProductGridClass)}>
@@ -150,7 +151,7 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
     data.categories.length > 0 || hasUncategorized || hasRecommended || hasBestseller;
 
   return (
-    <div className="min-h-dvh bg-[#faf9ff] pb-28">
+    <div className={cn(ecommerceStorePortalPageShellClass, "bg-[#faf9ff]")}>
       <header className={ecommerceStorePortalStickyHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
           {data.store.logoUrl ? (
@@ -211,7 +212,7 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
 
           {showCategoryBar ? (
             <div
-              className="mt-3 flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="mt-3 flex flex-wrap content-start gap-2 sm:flex-nowrap sm:overflow-x-auto sm:overscroll-x-contain sm:pb-1 sm:[-ms-overflow-style:none] sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden"
               role="tablist"
               aria-label="หมวดหมู่สินค้า"
             >

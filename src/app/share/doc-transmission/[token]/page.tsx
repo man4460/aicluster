@@ -43,7 +43,11 @@ export default async function PublicDocSharePage({
   });
   if (setting && !setting.publicShareEnabled) {
     return (
-      <main className="mx-auto max-w-2xl p-6">
+      <main className={cn(
+        "mx-auto max-w-2xl px-4",
+        "pt-[max(1.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]",
+        "pb-[max(1.5rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]",
+      )}>
         <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-center">
           <h1 className="text-lg font-bold text-rose-800">องค์กรปิดการแชร์ลิงก์ภายนอก</h1>
           <p className="mt-2 text-sm text-rose-700">
@@ -59,8 +63,13 @@ export default async function PublicDocSharePage({
   const priority = DOC_PRIORITY_BY_KEY[record.priority];
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl bg-gradient-to-b from-[#f7f5ff] via-white to-[#eef2ff] p-4 sm:p-8">
-      <div className="rounded-[2rem] border border-white/60 bg-white/85 p-5 shadow-[0_20px_60px_-30px_rgba(76,70,178,0.5)] ring-1 ring-white/55 sm:p-7">
+    <main
+      className={cn(
+        "mx-auto min-h-screen max-w-3xl bg-gradient-to-b from-[#f7f5ff] via-white to-[#eef2ff] px-4 sm:px-8",
+        "pt-[max(1rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:pt-8",
+        "pb-[max(1.5rem,calc(1rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))] sm:pb-8",
+      )}
+    >      <div className="rounded-[2rem] border border-white/60 bg-white/85 p-5 shadow-[0_20px_60px_-30px_rgba(76,70,178,0.5)] ring-1 ring-white/55 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#66638c]">

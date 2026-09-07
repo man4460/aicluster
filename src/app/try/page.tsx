@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cn } from "@/lib/cn";
 import { isDemoAccountConfiguredForEntry } from "@/lib/auth/demo-account";
 import { MODULE_TRY_ALL_DASHBOARD_HREF } from "@/lib/modules/try-link";
 
@@ -22,8 +23,12 @@ export default function TryAllModulesPage() {
   }
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-100/50 px-4 py-10">
-      <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-8">
+    <main
+      className={cn(
+        "flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-100/50 px-4",
+        "pt-[max(2.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] pb-[max(2.5rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]",
+      )}
+    >      <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-8">
         <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-[#5b61ff]">ทดลองใช้งาน</p>
         <h1 className="mt-2 text-center text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ระบบทั้งหมด</h1>
         <p className="mt-2 text-center text-sm leading-relaxed text-[#5f5a8a]">

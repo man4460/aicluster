@@ -1,6 +1,8 @@
 "use client";
 
 import { jsPDF } from "jspdf";
+import { cn } from "@/lib/cn";
+import { appSafeAreaPageContentTopPadClass } from "@/components/app-templates/safe-area-tokens";
 import { shopQrTemplatePageBgClass } from "@/lib/shop-qr-template-theme";
 
 export { shopQrTemplatePageBgClass };
@@ -9,12 +11,17 @@ export const shopQrTemplateCardClass =
 
 /** ความกว้างเนื้อหาหลัก — ใช้ร่วมกันหน้าสั่งอาหารและหน้าลิงก์พนักงาน */
 export const shopQrTemplateMaxWidthClass = "mx-auto max-w-lg sm:max-w-xl";
-/** padding หน้าสั่งอาหาร (มีแถบล่าง fixed) */
-export const shopQrTemplateOrderPagePaddingClass =
-  "px-4 pb-32 pt-6 sm:px-5 sm:pb-36 sm:pt-8";
+/** padding หน้าสั่งอาหาร (มีแถบล่าง fixed) — รวม safe-area บน/ล่าง */
+export const shopQrTemplateOrderPagePaddingClass = cn(
+  "px-4 sm:px-5",
+  appSafeAreaPageContentTopPadClass,
+  "pb-[max(8rem,calc(7rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))] sm:pb-[max(9rem,calc(8rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+);
 /** padding หน้า QR ในแดชบอร์ด (ไม่มีแถบล่าง fixed) */
-export const shopQrTemplateDashboardQrPaddingClass =
-  "px-4 pb-10 pt-4 sm:px-5 sm:pb-12 sm:pt-6";
+export const shopQrTemplateDashboardQrPaddingClass = cn(
+  "px-4 pb-10 sm:px-5 sm:pb-12",
+  "pt-[max(1rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:pt-6",
+);
 
 export const shopQrTemplateHeadKickerClass =
   "text-center text-[11px] font-medium uppercase tracking-[0.2em] text-indigo-600";
