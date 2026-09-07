@@ -3,6 +3,10 @@ import {
   appDashboardBrandGradientBarClass,
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates/dashboard-tokens";
+import {
+  appSafeAreaBottomPadClass,
+  appSafeAreaStickyHeaderPadClass,
+} from "@/components/app-templates/safe-area-tokens";
 
 /**
  * ปุ่มโมดูลร้านออนไลน์ — ความสูง · ความมน · padding ชุดเดียว (แม่แบบซักผ้า)
@@ -242,17 +246,24 @@ export const ecommerceStorePortalPageBodyClass = cn(
 );
 
 /** เปลือกหน้า cart / checkout / track — กว้างเท่าหน้าร้าน */
-export const ecommerceStorePortalPageShellClass =
-  "min-h-dvh bg-[#faf9ff] pb-[calc(5.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] sm:pb-10";
+export const ecommerceStorePortalPageShellClass = cn(
+  "min-h-dvh bg-[#faf9ff] sm:pb-10",
+  "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]",
+);
 
 export const ecommerceStorePortalPageInnerClass = "mx-auto max-w-6xl px-4 sm:px-6";
 
-export const ecommerceStorePortalStickyHeaderClass =
-  "sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))] backdrop-blur-md";
+export const ecommerceStorePortalStickyHeaderClass = cn(
+  "border-b border-slate-200/80 bg-white/95 backdrop-blur-md",
+  "sticky top-0 z-30",
+  appSafeAreaStickyHeaderPadClass,
+);
 
 /** แถบสรุปล่างมือถือ (cart / checkout) */
-export const ecommerceStorePortalBottomDockClass =
-  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md lg:hidden";
+export const ecommerceStorePortalBottomDockClass = cn(
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden",
+  appSafeAreaBottomPadClass,
+);
 
 export const ecommerceStorePortalHeaderNavShellClass =
   "hidden items-center gap-0.5 rounded-lg border border-white/35 bg-white/15 p-0.5 backdrop-blur-md md:inline-flex";

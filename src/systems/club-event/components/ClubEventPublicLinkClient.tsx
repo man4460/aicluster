@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
+  appSafeAreaPortalHeaderClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -212,12 +213,7 @@ export function ClubEventPublicLinkClient({
 
   const headerAndHero = (ctaLabel: string, ctaAction?: () => void, ctaHref?: string) => (
     <>
-      <header className="absolute inset-x-0 top-0 z-30">
-        <div
-          className="h-[env(safe-area-inset-top,0px)] w-full"
-          style={{ minHeight: "env(safe-area-inset-top, 0px)" }}
-          aria-hidden
-        />
+      <header className={appSafeAreaPortalHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <a
             href={homeHref}

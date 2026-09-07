@@ -8,7 +8,14 @@ import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
-import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass, AppBrowserFullscreenButton } from "@/components/app-templates";
+import {
+  AppBrowserFullscreenButton,
+  appDashboardBrandGradientBarClass,
+  appDashboardBrandGradientFillClass,
+  appSafeAreaBottomPadClass,
+  appSafeAreaDashboardHeaderPadClass,
+  appSafeAreaStickyHeaderPadClass,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import {
@@ -1408,7 +1415,7 @@ export function DashboardShell({
         "flex min-h-[100dvh] flex-col text-[#2e2a58]",
         onPosOrderPage && "lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden",
         moduleStaffKiosk &&
-          "h-[100dvh] max-h-[100dvh] overflow-hidden pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]",
+          cn("h-[100dvh] max-h-[100dvh] overflow-hidden", appSafeAreaStickyHeaderPadClass),
       )}
     >
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
@@ -1418,7 +1425,7 @@ export function DashboardShell({
           className="pointer-events-none absolute inset-x-0 top-0 bottom-0 border-b border-slate-200/60 bg-gradient-to-b from-white/98 via-slate-50/96 to-slate-100/90 shadow-[0_10px_28px_-20px_rgba(51,65,85,0.28)] backdrop-blur-2xl"
           aria-hidden
         />
-        <div className="relative z-[1] w-full px-3 pb-1 pt-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:px-4 sm:pb-1.5 sm:pt-[max(0.75rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]">
+        <div className={cn("relative z-[1] w-full px-3 pb-1 sm:px-4 sm:pb-1.5", appSafeAreaDashboardHeaderPadClass)}>
         <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-[1.15rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:h-14 sm:gap-2.5 sm:px-5 lg:px-6">
           <button
             type="button"
@@ -2224,7 +2231,7 @@ function MobileBottomNav({
         className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent"
         aria-hidden
       />
-      <div className="relative mx-auto w-full max-w-[36rem] px-3 pb-[env(safe-area-inset-bottom,0px)] pt-1.5">
+      <div className={cn("relative mx-auto w-full max-w-[36rem] px-3 pt-1.5", appSafeAreaBottomPadClass)}>
         <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
           {items.map((item) => (
             <MobileBottomNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />

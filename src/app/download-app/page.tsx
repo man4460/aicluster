@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function DownloadAppPage() {
   return (
     <AppPublicCheckInGlassPage>
-      <div className="mx-auto max-w-lg space-y-6 px-1 pb-16 pt-[max(1rem,env(safe-area-inset-top,0px))] sm:px-0 sm:pt-8">
+      <div className="mx-auto max-w-lg space-y-6 px-1 pb-16 sm:px-0 sm:pt-2">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/"

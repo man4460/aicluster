@@ -1,0 +1,32 @@
+# Safe-area กลาง — หัว / ล่าง มือถือ · ทางลัดหน้าจอ · พอร์ทัลสาธารณะ
+
+เมื่อทำหรือแก้ **หัวหน้าเว็บสาธารณะ** · **แถบสถานะ iPhone** · **ทางลัดหน้าจอโฮม** · **dock ล่าง** · **โมดัลเต็มจอ**:
+
+## บังคับ
+
+1. Import จาก **`@/components/app-templates`** (หรือ `safe-area-tokens`) — **ห้าม** คัดลอก `env(safe-area-inset-*)` / `var(--mawell-safe-*)` กระจายในโมดูล
+2. เลือกโทเค็นตามบทบาท:
+
+| บทบาท | โทเค็น |
+|-----|-----|
+| หัวพอร์ทัล absolute ทับแบนเนอร์ | `appSafeAreaPortalHeaderClass` |
+| หัว sticky สาธารณะ | `appSafeAreaStickyPublicHeaderClass` / `appSafeAreaStickyHeaderPadClass` |
+| Hero ใต้หัว absolute | `appSafeAreaPortalHeroTopPadClass` |
+| แถบม่วงแดชบอร์ด | `appSafeAreaDashboardHeaderPadClass` |
+| Landing / หัวสาธารณะใหญ่ | `appSafeAreaLandingHeaderPadClass` |
+| หน้าแก้ว | รวมใน `AppPublicCheckInGlassPage` / `appSafeAreaGlassPage*PadClass` |
+| Dock / CTA ล่าง | `appSafeAreaBottomPadClass` (+ `AppMobileDockShell`) |
+| โมดัลเต็มจอ | `appSafeAreaOverlayPadYClass` / `Compact` |
+
+3. ต้องการ spacer แยกใน sticky header → `AppSafeAreaTopSpacer`
+4. CSS vars ต้นทาง: `--mawell-safe-top/bottom` ใน `globals.css`
+
+## ห้าม
+
+- เขียน `pt-[env(safe-area-inset-top)]` ใหม่ในพอร์ทัล / ลิงก์เว็บ / หน้าทางลัด
+- บวกช่องว่างล่างเกิน home indicator บน dock (ใช้ `appSafeAreaBottomPadClass` อย่างเดียว)
+
+## อ้างอิง
+
+- `src/components/app-templates/safe-area-tokens.ts`
+- `AppSafeAreaTopSpacer.tsx` · `mobile-dock-tokens.ts`

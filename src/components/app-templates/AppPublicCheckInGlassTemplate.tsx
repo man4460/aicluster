@@ -2,9 +2,23 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import {
+  appSafeAreaGlassPageBottomPadClass,
+  appSafeAreaGlassPageTopPadClass,
+} from "./safe-area-tokens";
 
-export const appPublicCheckInGlassPageClass =
-  "relative min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(ellipse_120%_80%_at_60%_-10%,_#ddd6fe_0%,_#ede9fe_30%,_#f5f3ff_60%,_#faf9ff_100%)] px-3 pb-[max(5rem,calc(4rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))] pt-[max(2rem,calc(1.5rem+var(--mawell-safe-top,env(safe-area-inset-top,0px))))] sm:px-4 sm:pt-[max(3rem,calc(2rem+var(--mawell-safe-top,env(safe-area-inset-top,0px))))]";
+/**
+ * หน้าแก้วสาธารณะ — รวม safe-area บน/ล่างในโทเค็นเดียว
+ * พอร์ทัลที่หัว absolute ทับแบนเนอร์: ส่ง `className="!px-0 !pt-0 sm:!px-0"` แล้วเว้นสถานะที่หัวด้วย `appSafeAreaPortalHeaderClass`
+ */
+export const appPublicCheckInGlassPageClass = cn(
+  "relative min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(ellipse_120%_80%_at_60%_-10%,_#ddd6fe_0%,_#ede9fe_30%,_#f5f3ff_60%,_#faf9ff_100%)] px-3 sm:px-4",
+  appSafeAreaGlassPageBottomPadClass,
+  appSafeAreaGlassPageTopPadClass,
+);
+
+/** พอร์ทัลเต็มจอ (หัว absolute) — ตัด pt ของหน้า */
+export const appPublicPortalBleedPageClass = cn(appPublicCheckInGlassPageClass, "!px-0 !pt-0 sm:!px-0");
 
 export const appPublicCheckInGlassCardClass = cn(
   "overflow-hidden rounded-[2rem] border border-white/60",

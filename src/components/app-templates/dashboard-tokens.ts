@@ -31,13 +31,11 @@ export const appDashboardHistoryListShellClass =
 /** พื้นที่เนื้อหาใต้หัวโมดูล — ไม่ใส่ overflow-y/overscroll ที่นี่ (เลื่อนทั้งหน้า) กันล้อเมาส์ติดกลางหน้า */
 export const appModuleShellMainScrollClass = "min-h-0 w-full flex-1";
 
-/** เว้นแถบสถานะมือถือ (เวลา · แบต · ไวไฟ) — ใช้กับ sticky/fixed header ที่ top-0 */
-export const appSafeAreaStickyHeaderPadClass =
-  "pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]";
-
-/** padding บนทั่วไปรวม safe-area (หน้าสาธารณะ / staff kiosk) */
-export const appSafeAreaTopPadClass =
-  "pt-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]";
+/** @deprecated ใช้จาก `@/components/app-templates` → `safe-area-tokens` */
+export {
+  appSafeAreaStickyHeaderPadClass,
+  appSafeAreaTopPadClass,
+} from "./safe-area-tokens";
 
 /** เลื่อนรายการภายในการ์ด — ใช้ scrollbar-gutter ได้เฉพาะชั้นใน */
 export const appDashboardInnerScrollClass =

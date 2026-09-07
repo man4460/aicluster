@@ -5,6 +5,8 @@ import { Search, Users } from "lucide-react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
+  appSafeAreaPortalHeaderClass,
+  appSafeAreaPortalHeroTopPadClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -85,12 +87,7 @@ export function ClubEventPublicClient({
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
-      <header className="absolute inset-x-0 top-0 z-30">
-        <div
-          className="h-[env(safe-area-inset-top,0px)] w-full"
-          style={{ minHeight: "env(safe-area-inset-top, 0px)" }}
-          aria-hidden
-        />
+      <header className={appSafeAreaPortalHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div className={clubEventPortalHeaderBrandPillClass}>
             {profile.logoUrl ? (
@@ -159,7 +156,12 @@ export function ClubEventPublicClient({
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-[#faf9ff]/85" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[48vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-[calc(6rem+var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:min-h-[56vh] sm:px-6 sm:pb-10">
+        <div
+          className={cn(
+            "relative z-10 mx-auto flex min-h-[48vh] max-w-6xl flex-col justify-end px-4 pb-8 sm:min-h-[56vh] sm:px-6 sm:pb-10",
+            appSafeAreaPortalHeroTopPadClass,
+          )}
+        >
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5f5a8a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
               Club

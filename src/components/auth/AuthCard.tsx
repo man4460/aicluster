@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import { PAGE_GUTTER_X } from "@/components/ui/page-container";
+import { appSafeAreaAuthFramePadClass } from "@/components/app-templates/safe-area-tokens";
 
 export function AuthCard({
   title,
@@ -25,7 +26,8 @@ export function AuthPageFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "flex min-h-[100dvh] flex-col items-center justify-center bg-transparent py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]",
+        "flex min-h-[100dvh] flex-col items-center justify-center bg-transparent",
+        appSafeAreaAuthFramePadClass,
         PAGE_GUTTER_X,
       )}
     >

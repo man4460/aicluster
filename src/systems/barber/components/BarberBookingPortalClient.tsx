@@ -12,6 +12,7 @@ import {
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
+  appSafeAreaPortalHeaderClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { bangkokDateKey } from "@/lib/time/bangkok";
@@ -586,7 +587,7 @@ export function BarberBookingPortalClient({
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
-      <header className="absolute inset-x-0 top-0 z-30 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]">
+      <header className={appSafeAreaPortalHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             {shop.logoUrl ? (

@@ -6,6 +6,7 @@ import {
   AppEmptyState,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
+  appSafeAreaLandingHeaderPadClass,
   useAppNoticePopup,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -782,7 +783,7 @@ export function LaundryPickupPublicClient({
       )}
     >
       {!embeddedInPortal ?
-        <header className="shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-center">
+        <header className={cn("shrink-0 px-4 pb-3 text-center", appSafeAreaLandingHeaderPadClass)}>
           <div
             className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70"
             aria-hidden

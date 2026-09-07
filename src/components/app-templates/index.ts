@@ -33,12 +33,31 @@ export {
   appDashboardSectionVioletClass,
   appDashboardHistoryListShellClass,
   appModuleShellMainScrollClass,
-  appSafeAreaStickyHeaderPadClass,
-  appSafeAreaTopPadClass,
   appTemplateOutlineButtonClass,
   appTemplatePickGalleryImageButtonClass,
   appTemplateTakePhotoButtonClass,
 } from "./dashboard-tokens";
+
+export {
+  appSafeAreaBottomPadClass,
+  appSafeAreaDashboardHeaderPadClass,
+  appSafeAreaAuthFramePadClass,
+  appSafeAreaGlassPageBottomPadClass,
+  appSafeAreaGlassPageTopPadClass,
+  appSafeAreaLandingHeaderPadClass,
+  appSafeAreaOverlayPadYClass,
+  appSafeAreaOverlayPadYCompactClass,
+  appSafeAreaPageContentTopPadClass,
+  appSafeAreaPortalHeaderClass,
+  appSafeAreaPortalHeroTopPadClass,
+  appSafeAreaStickyHeaderPadClass,
+  appSafeAreaStickyPublicHeaderClass,
+  appSafeAreaTopPadClass,
+  appSafeAreaTopSpacerClass,
+  appSafeAreaBottomInset,
+  appSafeAreaTopInset,
+} from "./safe-area-tokens";
+export { AppSafeAreaTopSpacer } from "./AppSafeAreaTopSpacer";
 
 export {
   appSparkChartPanelClass,
@@ -56,6 +75,7 @@ export {
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   appPublicCheckInGlassPageClass,
+  appPublicPortalBleedPageClass,
 } from "./AppPublicCheckInGlassTemplate";
 export { AppSectionHeader, type AppSectionHeaderProps } from "./AppSectionHeader";
 export { AppEmptyState, type AppEmptyStateProps } from "./AppEmptyState";
