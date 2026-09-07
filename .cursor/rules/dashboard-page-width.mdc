@@ -11,7 +11,7 @@ alwaysApply: true
 
 | ชั้น | ไฟล์ | ขอบซ้าย–ขวา (ค่าเริ่ม) | หมายเหตุ |
 |------|------|------------------------|----------|
-| 1. แถวเนื้อหาใต้ header | `DashboardShell.tsx` ห่อ `main` | **`px-3 sm:px-4`** ทุกหน้า (ยกเว้น staff kiosk) | **ชั้นเดียวกับแถบ header ม่วง** (`px-3`) — ช่องว่างระหว่างขอบจอกับการ์ดหลัก |
+| 1. แถวเนื้อหาใต้ header | `DashboardShell.tsx` ห่อ `main` | **`px-3 sm:px-4`** ทุกหน้า (ยกเว้น staff kiosk) | ช่องว่างระหว่างขอบจอกับการ์ดหลัก — **แถบหัวเต็มขอบไม่ใส่ px นอก** (`dashboard-mobile-header-bar.mdc`) |
 | 2. `PageContainer` | `DashboardPagesShell` → `page-container.tsx` | ค่าเริ่ม **`PAGE_GUTTER_X`** · หน้าบ้าน/โมดูล wide/dock **`!px-0`** (ห้ามซ้อนกับชั้น 1) · **`PAGE_GUTTER_Y`** = `pt-2 pb-5 sm:pt-3 sm:pb-7` | ระยะใต้ Header ม่วงแนวตั้ง · แนวนอนให้ Shell อย่างเดียว |
 | 3. Shell / การ์ดโมดูล | เช่น `FootballTurfShell` | padding ในหัว `px-4 sm:px-8` — **ห้าม** ห่อ `children` ด้วย `px-*` ซ้ำทั้งหน้า | เนื้อหาไหลใต้ PageContainer |
 | 4. ชั้นในของการ์ด | เนื้อหาในการ์ด | ถ้าต้อง gutter ใน: **`PAGE_INNER_GUTTER_X`** = `px-4 sm:px-6 md:px-8` | ให้หัวข้อกับการ์ดเส้นตั้งเดียวกัน |

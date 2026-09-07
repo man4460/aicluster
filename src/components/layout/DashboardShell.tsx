@@ -12,8 +12,10 @@ import {
   AppBrowserFullscreenButton,
   appDashboardBrandGradientBarClass,
   appDashboardBrandGradientFillClass,
+  appDashboardHeaderBarClass,
+  appDashboardHeaderBarInnerClass,
+  appDashboardHeaderIconButtonClass,
   appSafeAreaBottomPadClass,
-  appSafeAreaDashboardHeaderPadClass,
   appSafeAreaStickyHeaderPadClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -1418,20 +1420,16 @@ export function DashboardShell({
           cn("h-[100dvh] max-h-[100dvh] overflow-hidden", appSafeAreaStickyHeaderPadClass),
       )}
     >
-      {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
+      {/* แถบบน — ชั้นเดียวเต็มขอบ (มือถือ/ไอแพดแนวตั้ง) · ไอคอน ไม่ซ้อนกล่อง */}
       {!moduleStaffKiosk ?
-        <header className="sticky top-0 z-30 w-full">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 bottom-0 border-b border-slate-200/60 bg-gradient-to-b from-white/98 via-slate-50/96 to-slate-100/90 shadow-[0_10px_28px_-20px_rgba(51,65,85,0.28)] backdrop-blur-2xl"
-          aria-hidden
-        />
-        <div className={cn("relative z-[1] w-full px-3 pb-1 sm:px-4 sm:pb-1.5", appSafeAreaDashboardHeaderPadClass)}>
-        <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-[1.15rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:h-14 sm:gap-2.5 sm:px-5 lg:px-6">
+        <header className={appDashboardHeaderBarClass}>
+        <div className={appDashboardHeaderBarInnerClass}>
           <button
             type="button"
             suppressHydrationWarning
             className={cn(
-              "hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 text-white shadow-sm transition-all hover:bg-white/30 active:scale-95 md:inline-flex",
+              appDashboardHeaderIconButtonClass,
+              "hidden md:inline-flex",
               systemFocusLayout && "!hidden",
               moduleStaffKiosk && "!hidden",
             )}
@@ -1448,11 +1446,13 @@ export function DashboardShell({
             type="button"
             suppressHydrationWarning
             className={cn(
-              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 text-white shadow-sm transition-all hover:bg-white/30 active:scale-95 md:hidden",
+              appDashboardHeaderIconButtonClass,
+              "md:hidden",
               systemFocusLayout && "hidden",
             )}
             aria-expanded={drawerOpen}
             aria-controls={menuId}
+            aria-label={drawerOpen ? "ปิดเมนู" : "เปิดเมนู"}
             onClick={() => setDrawerOpen((o) => !o)}
           >
             <span className="sr-only">เปิดเมนู</span>
@@ -2063,7 +2063,7 @@ export function DashboardShell({
               <button
                 type="button"
                 suppressHydrationWarning
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 p-1 text-white shadow-sm transition-all hover:bg-white/30"
+                className={cn(appDashboardHeaderIconButtonClass, "overflow-hidden")}
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
                 onClick={() => setAccountOpen((o) => !o)}
@@ -2101,10 +2101,9 @@ export function DashboardShell({
               ) : null}
             </div>
 
-            <AppBrowserFullscreenButton className="h-9 w-9 sm:h-10 sm:w-10" />
-            <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10 transition-all hover:rotate-12" />
+            <AppBrowserFullscreenButton className="h-10 w-10" />
+            <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
           </div>
-        </div>
         </div>
       </header>
       : null}

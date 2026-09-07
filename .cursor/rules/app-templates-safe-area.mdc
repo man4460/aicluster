@@ -1,6 +1,8 @@
-# Safe-area กลาง — หัว / ล่าง มือถือ · ทางลัดหน้าจอ · พอร์ทัลสาธารณะ
+# Safe-area กลาง — หัว / ล่าง มือถือ·ไอแพดแนวตั้ง · ทางลัดหน้าจอ · พอร์ทัลสาธารณะ
 
-เมื่อทำหรือแก้ **หัวหน้าเว็บสาธารณะ** · **แถบสถานะ iPhone** · **ทางลัดหน้าจอโฮม** · **dock ล่าง** · **โมดัลเต็มจอ**:
+เมื่อพูด **มือถือ** ให้รวม **ไอแพดแนวตั้ง** — `dashboard-mobile-viewport.mdc`
+
+เมื่อทำหรือแก้ **หัวหน้าเว็บสาธารณะ** · **แถบสถานะ iPhone/iPad** · **ทางลัดหน้าจอโฮม** · **dock ล่าง** · **แถบหัวแดชบอร์ด** · **โมดัลเต็มจอ**:
 
 ## บังคับ
 
@@ -12,7 +14,8 @@
 | หัวพอร์ทัล absolute ทับแบนเนอร์ | `appSafeAreaPortalHeaderClass` |
 | หัว sticky สาธารณะ | `appSafeAreaStickyPublicHeaderClass` / `appSafeAreaStickyHeaderPadClass` |
 | Hero ใต้หัว absolute | `appSafeAreaPortalHeroTopPadClass` |
-| แถบม่วงแดชบอร์ด | `appSafeAreaDashboardHeaderPadClass` |
+| แถบหัวแดชบอร์ดเต็มขอบ | `appDashboardHeaderBarClass` (+ inner / icon button) |
+| แถบม่วงแดชบอร์ด (legacy pad) | `appSafeAreaDashboardHeaderPadClass` — ใช้ในโทเค็นหัวแล้ว |
 | Landing / หัวสาธารณะใหญ่ | `appSafeAreaLandingHeaderPadClass` |
 | หน้าแก้ว | รวมใน `AppPublicCheckInGlassPage` / `appSafeAreaGlassPage*PadClass` |
 | Dock / CTA ล่าง | `appSafeAreaBottomPadClass` (+ `AppMobileDockShell`) |

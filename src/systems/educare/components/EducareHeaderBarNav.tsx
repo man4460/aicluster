@@ -71,7 +71,7 @@ export function EducareHeaderExpandButton({ onExpand }: { onExpand: () => void }
     <button
       type="button"
       onClick={onExpand}
-      className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95"
       aria-label="แสดงส่วนหัวโมดูล"
       title="แสดงส่วนหัวโมดูล"
       suppressHydrationWarning

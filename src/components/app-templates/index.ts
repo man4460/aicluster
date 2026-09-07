@@ -204,6 +204,13 @@ export {
 } from "./prepareUploadFile";
 
 export {
+  appDashboardHeaderBarClass,
+  appDashboardHeaderBarInnerClass,
+  appDashboardHeaderIconButtonActiveClass,
+  appDashboardHeaderIconButtonClass,
+} from "./dashboard-header-tokens";
+
+export {
   appMobileDockBackdropClass,
   appMobileDockContentClearanceClass,
   appMobileDockGridClass,

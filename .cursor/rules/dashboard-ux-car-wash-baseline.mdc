@@ -9,13 +9,16 @@ alwaysApply: true
 
 ---
 
-## 1) เมนูบนมือถือ — อยู่ด้านล่าง และโค้งมน
+## 1) เมนูบนมือถือ / ไอแพดแนวตั้ง — อยู่ด้านล่าง
 
-- แถบนำทางหลักของโมดูลบน viewport แคบ (**มือถือ / แท็บเล็ตแนวตั้งตาม breakpoint โปรเจกต์**) ต้องเป็น **แถบลอยด้านล่าง** (`fixed` / `sticky bottom`) — **ไม่** ใช้แถบบนหรือ hamburger แทนฐานนำทางหลักของโมดูล
-- **ความโค้งมน** ของ dock / pill ลอย: ใช้โทนเดียวกับแม่แบบ เช่น **`rounded-[2rem]`–`rounded-[2.5rem]`** + **`backdrop-blur`** + เส้นขอบโปร่ง
-- รองรับ **safe area** ด้านล่าง: `env(safe-area-inset-bottom)` บนแถบเมนูหรือ padding ของมัน
-- **พื้นที่เลื่อนเนื้อหา** ต้องมี padding-bottom เพื่อไม่ให้ถูก dock บัง (ดูแม่แบบในโค้ดจริง)
-- **อ้างอิงโค้ด:** `src/systems/car-wash/CarWashDashboard.tsx` (แท็บล่าง / สลับโซน), `src/systems/barber/components/BarberLayoutChrome.tsx`, `BarberModuleMobileDock` / `BarberModuleHeader.tsx`
+เมื่อพูด **มือถือ** ให้รวม **ไอแพดแนวตั้ง** — ดู `dashboard-mobile-viewport.mdc`
+
+- แถบนำทางหลักของโมดูลบน viewport แคบ (**มือถือ / ไอแพดแนวตั้ง · `lg:hidden`**) ต้องเป็น **แถบล่าง** (`fixed` / `sticky bottom`) — **ไม่** ใช้แถบบนหรือ hamburger แทนฐานนำทางหลักของโมดูล
+- **แถบล่าง:** ชั้นเดียวเต็มขอบ · ไม่ซ้อนกล่อง pill — `mobile-dock-tokens.ts` · เลือกแล้วเน้นสีไอคอน
+- **แถบหัว:** ชั้นเดียวชิดขอบซ้าย–ขวา–บน · ไอคอน · ไม่ซ้อนกล่อง — `dashboard-mobile-header-bar.mdc`
+- รองรับ **safe area** บน/ล่างผ่านโทเค็นกลาง (`safe-area-tokens` / dock / header)
+- **พื้นที่เลื่อนเนื้อหา** ต้องมี padding-bottom เพื่อไม่ให้ถูก dock บัง
+- **อ้างอิงโค้ด:** `AppMobileDockShell` · `DashboardShell` header · `src/systems/car-wash/…`
 - **แถวการ์ดสรุปตัวเลข (stat) บนมือถือ:** ต้องเป็น **2 คอลัมน์** (`grid-cols-2`) — ห้ามปล่อย `grid-cols-1` บน viewport แคบ — รายละเอียดการ์ดคี่/คู่: **`.cursor/rules/dashboard-mobile-summary-stat-grid.mdc`**
 - **รายการที่กรองได้ (แพ็กเกจ · เหมา · จอง ฯลฯ):** ต้องมีปุ่ม **แสดง/ซ่อนกรอง** — **`.cursor/rules/dashboard-module-list-filter.mdc`** · มือถือไอคอน: **`.cursor/rules/dashboard-mobile-filter-icon.mdc`**
 
@@ -33,7 +36,7 @@ alwaysApply: true
 | ปุ่ม / chip / input ในการ์ด | โค้งย่อยลงอีกขั้นให้สมดุล (เช่น `rounded-xl`) |
 
 - **โมดูลร้านตัดผม:** ใช้ token จาก `src/systems/barber/components/barber-ui-tokens.ts` (`barberCardSurfaceRadiusClass` ฯลฯ) เป็นตัวเลขมาตรฐาน
-- **แถบหัวภาพรวมโปรเจกต์:** `src/components/layout/DashboardShell.tsx` — แถบบน (sticky), **sidebar** เดสก์ท็อป และ `<main>` ใช้ **`rounded-[2.5rem]`** ให้สอดคล้อง drawer มือถือ (`rounded-[2.5rem]`) และเปลือกโมดูลคาร์แคร์/บาร์เบอร์
+- **แถบหัวภาพรวมโปรเจกต์:** `src/components/layout/DashboardShell.tsx` — แถบบน sticky **เต็มขอบ** (ไม่ซ้อน pill) · **sidebar** เดสก์ท็อป และ `<main>` ใช้มุมมนตามแม่แบบโมดูล
 
 ---
 

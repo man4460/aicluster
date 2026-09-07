@@ -1,0 +1,33 @@
+---
+description: แถบหัวแดชบอร์ดบนมือถือ/ไอแพดแนวตั้ง — ไอคอน · พื้นเต็มขอบ · ไม่ซ้อนกล่อง
+globs:
+  - "**/DashboardShell.tsx"
+  - "**/dashboard-header-tokens.ts"
+  - "**/AppMobileDockShell.tsx"
+alwaysApply: true
+---
+
+# แถบเมนูส่วนหัว — มือถือ / ไอแพดแนวตั้ง
+
+เมื่อพูด **มือถือ** ให้รวม **ไอแพดแนวตั้ง** ด้วย — `dashboard-mobile-viewport.mdc`
+
+## บังคับ
+
+1. **พื้นหลังชั้นเดียว** ชิดขอบ **ซ้าย · ขวา · บน** (รวม safe-area สถานะ) — **ห้าม** ซ้อนกล่องโค้งมน (pill / การ์ด) ภายในแถบหัว
+2. ปุ่มในหัวเป็น **ไอคอน** — มี `aria-label` / `title` ชัด · บนมือถือไม่บังคับข้อความข้างไอคอน
+3. ปุ่มไอคอน **ไม่มีกล่องซ้อน** (ไม่ใส่ `border` + `bg-white/20` + `rounded-*` เป็นการ์ดย่อย) — ใช้สีไอคอน/ตัวอักษรเมื่อ active (คู่กับแนว dock ล่าง)
+4. Import โทเค็นจาก **`@/components/app-templates`**:
+   - `appDashboardHeaderBarClass`
+   - `appDashboardHeaderBarInnerClass`
+   - `appDashboardHeaderIconButtonClass`
+
+## ห้าม
+
+- `rounded-*` + `border` + `shadow` เป็นกล่องเมนูซ้อนในหัวบนมือถือ
+- ชั้นแก้วขาวเต็มจอ + กล่องม่วงด้านใน (สองชั้น)
+
+## อ้างอิง
+
+- `src/components/layout/DashboardShell.tsx`
+- `src/components/app-templates/dashboard-header-tokens.ts`
+- แถบล่างคู่ขนาน: `mobile-dock-tokens.ts`

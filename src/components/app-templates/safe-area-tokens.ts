@@ -48,9 +48,9 @@ export const appSafeAreaBottomPadClass =
 export const appSafeAreaPortalHeroTopPadClass =
   "pt-[calc(6rem+var(--mawell-safe-top,env(safe-area-inset-top,0px)))]";
 
-/** Dashboard แถบม่วง — เว้นสถานะ + ระยะในหัว */
+/** Dashboard แถบหัวเต็มขอบ — เว้นสถานะด้วย pt บนแถบสีเอง (`appDashboardHeaderBarClass`) */
 export const appSafeAreaDashboardHeaderPadClass =
-  "pt-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:pt-[max(0.75rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]";
+  "pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]";
 
 /** Landing / หน้าสาธารณะหัวใหญ่ */
 export const appSafeAreaLandingHeaderPadClass =

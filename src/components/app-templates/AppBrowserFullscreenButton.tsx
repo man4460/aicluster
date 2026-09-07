@@ -63,7 +63,7 @@ export function AppBrowserFullscreenButton({
       type="button"
       suppressHydrationWarning
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-xl border border-white/65 bg-white/75 text-[#58547f] shadow-sm transition hover:border-[#5b61ff]/35 hover:bg-white hover:text-[#4d47b6] active:scale-[0.97] touch-manipulation",
+        "inline-flex shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95 touch-manipulation",
         iconOnly ? "h-10 w-10 min-h-[40px] min-w-[40px]" : "min-h-[40px] gap-1.5 px-3 text-sm font-bold",
         !supported && "opacity-80",
         className,

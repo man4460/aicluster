@@ -75,7 +75,7 @@ export function LoyaltyStampHeaderExpandButton({ onExpand }: { onExpand: () => v
     <button
       type="button"
       onClick={onExpand}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/35 bg-white/15 text-white transition-all hover:bg-white/25 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95"
       aria-label="แสดงส่วนหัวโมดูล"
       title="แสดงส่วนหัวโมดูล"
       suppressHydrationWarning
