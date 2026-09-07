@@ -19,6 +19,7 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
   const [mounted, setMounted] = useState(false);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [cssExpanded, setCssExpanded] = useState(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -26,7 +27,10 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setCssExpanded(false);
+      return;
+    }
     setIndex(0);
     setPlaying(true);
   }, [open, slides]);
@@ -44,7 +48,13 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (cssExpanded) {
+          setCssExpanded(false);
+          return;
+        }
+        onClose();
+      }
       if (e.key === "ArrowRight") setIndex((i) => (i + 1) % Math.max(slides.length, 1));
       if (e.key === "ArrowLeft") setIndex((i) => (i - 1 + slides.length) % Math.max(slides.length, 1));
       if (e.key === " ") {
@@ -57,11 +67,17 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose, slides.length]);
+  }, [open, onClose, slides.length, cssExpanded]);
 
   const enterFullscreen = useCallback(async () => {
     const el = stageRef.current;
     if (!el) return;
+    const doc = document as Document & { fullscreenEnabled?: boolean; webkitFullscreenEnabled?: boolean };
+    const supported = Boolean(doc.fullscreenEnabled ?? doc.webkitFullscreenEnabled);
+    if (!supported) {
+      setCssExpanded(true);
+      return;
+    }
     const anyEl = el as HTMLElement & {
       webkitRequestFullscreen?: () => Promise<void> | void;
       msRequestFullscreen?: () => Promise<void> | void;
@@ -70,8 +86,9 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
       if (el.requestFullscreen) await el.requestFullscreen();
       else if (anyEl.webkitRequestFullscreen) await anyEl.webkitRequestFullscreen();
       else if (anyEl.msRequestFullscreen) await anyEl.msRequestFullscreen();
+      else setCssExpanded(true);
     } catch {
-      /* ignore */
+      setCssExpanded(true);
     }
   }, []);
 
@@ -82,7 +99,12 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[250] flex items-center justify-center overflow-hidden bg-slate-950/85 p-[max(12px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5"
+      className={cn(
+        "fixed inset-0 z-[250] flex items-center justify-center overflow-hidden bg-slate-950/85",
+        cssExpanded
+          ? "p-0"
+          : "p-[max(12px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5",
+      )}
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "สไลด์โชว์"}
@@ -90,10 +112,20 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
     >
       <div
         ref={stageRef}
-        className="relative flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-black text-white shadow-2xl"
+        className={cn(
+          "relative flex flex-col overflow-hidden border border-white/20 bg-black text-white shadow-2xl",
+          cssExpanded
+            ? "h-[100dvh] max-h-[100dvh] w-full max-w-none rounded-none border-0"
+            : "max-h-full w-full max-w-5xl rounded-2xl",
+        )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2",
+            cssExpanded && "pt-[max(0.5rem,env(safe-area-inset-top))]",
+          )}
+        >
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white">{title ?? "สไลด์โชว์"}</p>
             <p className="text-[11px] font-semibold text-white/70">
@@ -103,7 +135,7 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
           <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
-              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+              className="inline-flex min-h-10 min-w-10 touch-manipulation items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
               aria-label={playing ? "หยุดชั่วคราว" : "เล่นต่อ"}
               title={playing ? "หยุดชั่วคราว" : "เล่นต่อ"}
               onClick={() => setPlaying((p) => !p)}
@@ -112,17 +144,21 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
             </button>
             <button
               type="button"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20"
-              aria-label="ดูเต็มจอ"
-              title="ดูเต็มจอ"
-              onClick={() => void enterFullscreen()}
+              className="inline-flex min-h-10 touch-manipulation items-center gap-1.5 rounded-lg bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20"
+              aria-label={cssExpanded ? "ย่อจากเต็มจอ" : "ดูเต็มจอ"}
+              aria-pressed={cssExpanded}
+              title={cssExpanded ? "ย่อ" : "ดูเต็มจอ"}
+              onClick={() => {
+                if (cssExpanded) setCssExpanded(false);
+                else void enterFullscreen();
+              }}
             >
               <Maximize2 className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">เต็มจอ</span>
+              <span className="hidden sm:inline">{cssExpanded ? "ย่อ" : "เต็มจอ"}</span>
             </button>
             <button
               type="button"
-              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+              className="inline-flex min-h-10 min-w-10 touch-manipulation items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
               aria-label="ปิดสไลด์โชว์"
               onClick={onClose}
             >
@@ -131,13 +167,21 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
           </div>
         </div>
 
-        <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black p-3 sm:p-4" style={{ minHeight: "min(70vh, 520px)" }}>
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 items-center justify-center bg-black p-3 sm:p-4",
+            !cssExpanded && "min-h-[min(70vh,520px)]",
+          )}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={current.id}
             src={current.imageUrl}
             alt={current.fileName ?? "ภาพกิจกรรม"}
-            className="max-h-[min(70vh,520px)] max-w-full object-contain transition-opacity duration-500"
+            className={cn(
+              "max-w-full object-contain transition-opacity duration-500",
+              cssExpanded ? "max-h-full" : "max-h-[min(70vh,520px)]",
+            )}
           />
           {slides.length > 1 ? (
             <>

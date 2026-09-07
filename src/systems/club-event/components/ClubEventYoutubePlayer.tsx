@@ -27,7 +27,7 @@ export function ClubEventYoutubePlayer({ youtubeEmbedUrl, title, className }: Pr
           src={embed}
           title={title}
           className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
         />
