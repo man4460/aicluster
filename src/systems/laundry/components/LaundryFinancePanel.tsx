@@ -35,6 +35,7 @@ import {
   laundryFinanceStatsGridClass,
   laundryInlineSubNavBtnClass,
   laundryInlineSubNavShellClass,
+  laundryMobileSelectClass,
   laundryPanelClass,
   laundryPanelDividerClass,
   laundryPanelSectionClass,
@@ -437,36 +438,32 @@ export function LaundryFinancePanel({
             role="group"
             aria-label="เครื่องมือการเงิน"
           >
-            <nav className={laundryInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeListTab === "sales"}
-                title="รายรับ"
-                aria-label="รายรับ"
-                className={laundryInlineSubNavBtnClass(activeListTab === "sales")}
-                onClick={() => setActiveListTab("sales")}
-              >
-                <span className="hidden sm:inline">รายรับ</span>
-                <span className="sm:hidden" aria-hidden>
-                  รับ
-                </span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeListTab === "costs"}
-                title="รายจ่าย"
-                aria-label="รายจ่าย"
-                className={laundryInlineSubNavBtnClass(activeListTab === "costs")}
-                onClick={() => setActiveListTab("costs")}
-              >
-                <span className="hidden sm:inline">รายจ่าย</span>
-                <span className="sm:hidden" aria-hidden>
-                  จ่าย
-                </span>
-              </button>
-            </nav>
+            <div className="hidden sm:block">
+              <nav className={laundryInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeListTab === "sales"}
+                  title="รายรับ"
+                  aria-label="รายรับ"
+                  className={laundryInlineSubNavBtnClass(activeListTab === "sales")}
+                  onClick={() => setActiveListTab("sales")}
+                >
+                  <span>รายรับ</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeListTab === "costs"}
+                  title="รายจ่าย"
+                  aria-label="รายจ่าย"
+                  className={laundryInlineSubNavBtnClass(activeListTab === "costs")}
+                  onClick={() => setActiveListTab("costs")}
+                >
+                  <span>รายจ่าย</span>
+                </button>
+              </nav>
+            </div>
             {activeListTab === "sales" ?
               <div className={laundryInlineSubNavShellClass}>
                 <button
@@ -553,6 +550,22 @@ export function LaundryFinancePanel({
               />
             </div>
           </div>
+        </div>
+
+        <div className="mt-3 w-full sm:hidden">
+          <label htmlFor="laundry-finance-tab-mobile" className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+            รายรับหรือรายจ่าย
+          </label>
+          <select
+            id="laundry-finance-tab-mobile"
+            value={activeListTab}
+            onChange={(e) => setActiveListTab(e.target.value as "sales" | "costs")}
+            className={laundryMobileSelectClass}
+            aria-label="รายรับหรือรายจ่าย"
+          >
+            <option value="sales">รายรับ</option>
+            <option value="costs">รายจ่าย</option>
+          </select>
         </div>
 
         <ul className={cn(laundryFinanceStatsGridClass, "mt-4")} aria-label={`สรุปการเงิน ${rangeLabel}`}>

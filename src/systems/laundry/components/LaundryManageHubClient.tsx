@@ -18,6 +18,7 @@ import type { LaundryRepository } from "@/systems/laundry/laundry-service";
 import {
   laundryInlineSubNavBtnClass,
   laundryInlineSubNavShellClass,
+  laundryMobileSelectClass,
   laundryMutedLoadingNoticeClass,
   laundryPanelClass,
   laundryPanelDividerClass,
@@ -74,32 +75,27 @@ function LaundryManageHubTabs({ repo }: { repo?: LaundryRepository }) {
             role="group"
             aria-label="เครื่องมือการจัดการ"
           >
-            <nav className={laundryInlineSubNavShellClass} role="tablist" aria-label="แท็บการจัดการ">
-              {LAUNDRY_MANAGE_TAB_ITEMS.map((item) => {
-                const active = tab === item.key;
-                const short =
-                  item.key === "packages" ? "แพ็ก"
-                  : item.key === "members" ? "สมาชิก"
-                  : item.label;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    title={item.label}
-                    aria-label={item.label}
-                    className={laundryInlineSubNavBtnClass(active)}
-                    onClick={() => setTab(item.key)}
-                  >
-                    <span className="hidden sm:inline">{item.label}</span>
-                    <span className="sm:hidden" aria-hidden>
-                      {short}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="hidden sm:block">
+              <nav className={laundryInlineSubNavShellClass} role="tablist" aria-label="แท็บการจัดการ">
+                {LAUNDRY_MANAGE_TAB_ITEMS.map((item) => {
+                  const active = tab === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      title={item.label}
+                      aria-label={item.label}
+                      className={laundryInlineSubNavBtnClass(active)}
+                      onClick={() => setTab(item.key)}
+                    >
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
             {tab === "packages" ?
               <div className={laundryInlineSubNavShellClass}>
                 <button
@@ -181,6 +177,24 @@ function LaundryManageHubTabs({ repo }: { repo?: LaundryRepository }) {
               </>
             }
           </div>
+        </div>
+        <div className="mt-3 w-full sm:hidden">
+          <label htmlFor="laundry-manage-tab-mobile" className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+            เลือกหมวดการจัดการ
+          </label>
+          <select
+            id="laundry-manage-tab-mobile"
+            value={tab}
+            onChange={(e) => setTab(e.target.value as LaundryManageTabKey)}
+            className={laundryMobileSelectClass}
+            aria-label="เลือกหมวดการจัดการ"
+          >
+            {LAUNDRY_MANAGE_TAB_ITEMS.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

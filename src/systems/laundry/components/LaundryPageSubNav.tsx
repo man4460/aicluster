@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   laundryMobileSelectClass,
@@ -23,7 +23,9 @@ const tabBtnClass = (active: boolean) =>
     "inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 sm:flex-initial",
   );
 
-/** แถบเมนูย่อยของแต่ละหน้าหลัก — แยกจากเนื้อหา · ไม่ซ้อนในการ์ดข้อมูล */
+/** แถบเมนูย่อยของแต่ละหน้าหลัก — แยกจากเนื้อหา · ไม่ซ้อนในการ์ดข้อมูล
+ * แท็บ ≥2: มือถือใช้ select อัตโนมัติ (หรือส่ง mobileSelect) · sm+ แสดง pill
+ */
 export function LaundryPageSubNav({
   title,
   titleIcon,
@@ -37,7 +39,6 @@ export function LaundryPageSubNav({
   className,
 }: {
   title: string;
-  /** ไอคอนข้างหัวข้อหน้า — ตามกฎ dashboard-module-page-menu-icons */
   titleIcon?: ReactNode;
   description?: string;
   items: LaundryPageSubNavItem[];
@@ -48,9 +49,18 @@ export function LaundryPageSubNav({
   mobileSelect?: {
     id: string;
     label: string;
-  };
+  } | false;
   className?: string;
 }) {
+  const autoId = useId();
+  const resolvedMobileSelect =
+    mobileSelect === false
+      ? null
+      : mobileSelect ??
+        (items.length >= 2
+          ? { id: `laundry-subnav-${autoId}`, label: ariaLabel }
+          : null);
+
   return (
     <div className={cn(laundryPanelClass, laundryPanelSectionClass, "print:hidden", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -76,17 +86,17 @@ export function LaundryPageSubNav({
             </div>
           ) : null}
 
-          {mobileSelect ? (
+          {resolvedMobileSelect ? (
             <div className="order-1 w-full sm:hidden">
-              <label htmlFor={mobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
-                {mobileSelect.label}
+              <label htmlFor={resolvedMobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+                {resolvedMobileSelect.label}
               </label>
               <select
-                id={mobileSelect.id}
+                id={resolvedMobileSelect.id}
                 value={activeKey}
                 onChange={(e) => onSelect(e.target.value)}
                 className={laundryMobileSelectClass}
-                aria-label={mobileSelect.label}
+                aria-label={resolvedMobileSelect.label}
               >
                 {items.map((item) => (
                   <option key={item.key} value={item.key}>
@@ -101,7 +111,7 @@ export function LaundryPageSubNav({
             className={cn(
               laundryPrimaryTabShellClass,
               "order-1 w-full min-w-0 sm:order-2 sm:w-auto",
-              mobileSelect && "hidden sm:inline-flex",
+              resolvedMobileSelect ? "hidden sm:inline-flex" : undefined,
             )}
             aria-label={ariaLabel}
             role="tablist"

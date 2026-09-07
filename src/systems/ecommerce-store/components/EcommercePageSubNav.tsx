@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   ecommerceStoreInlineSubNavBtnClass,
@@ -21,6 +21,7 @@ export type EcommercePageSubNavItem = {
 
 /**
  * การ์ดเดียว: หัวข้อ + แท็บย่อย + เนื้อหา (แม่แบบชมรม/ซักผ้า)
+ * แท็บ ≥2: มือถือใช้ select อัตโนมัติ · sm+ แสดง pill
  */
 export function EcommercePageSubNav({
   title,
@@ -43,14 +44,22 @@ export function EcommercePageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  mobileSelect?: { id: string; label: string };
+  mobileSelect?: { id: string; label: string } | false;
   children?: ReactNode;
   className?: string;
 }) {
+  const autoId = useId();
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
   const activeItem = items?.find((i) => i.key === activeKey);
   const sub = subtitle ?? activeItem?.label;
-  const useMobileSelect = Boolean(hasTabs && mobileSelect);
+  const autoMobileSelect =
+    mobileSelect === false
+      ? null
+      : mobileSelect ??
+        (hasTabs && (items?.length ?? 0) >= 2
+          ? { id: `ecommerce-subnav-${autoId}`, label: ariaLabel ?? "เลือกเมนู" }
+          : null);
+  const useMobileSelect = Boolean(hasTabs && autoMobileSelect);
 
   return (
     <div className={cn(ecommerceStorePanelClass, className)}>
@@ -68,8 +77,18 @@ export function EcommercePageSubNav({
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
-                <span className="h-4 w-px shrink-0 bg-slate-200/90" aria-hidden />
-                <p className="min-w-0 truncate text-sm font-semibold text-[#66638c]">{sub}</p>
+                <span
+                  className={cn("h-4 w-px shrink-0 bg-slate-200/90", useMobileSelect && "hidden sm:block")}
+                  aria-hidden
+                />
+                <p
+                  className={cn(
+                    "min-w-0 truncate text-sm font-semibold text-[#66638c]",
+                    useMobileSelect && "hidden sm:block",
+                  )}
+                >
+                  {sub}
+                </p>
               </>
             ) : null}
           </div>
@@ -155,17 +174,17 @@ export function EcommercePageSubNav({
           </div>
         </div>
 
-        {useMobileSelect && mobileSelect ? (
+        {useMobileSelect && autoMobileSelect ? (
           <div className="mt-3 w-full sm:hidden">
-            <label htmlFor={mobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
-              {mobileSelect.label}
+            <label htmlFor={autoMobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+              {autoMobileSelect.label}
             </label>
             <select
-              id={mobileSelect.id}
+              id={autoMobileSelect.id}
               value={activeKey}
               onChange={(e) => onSelect?.(e.target.value)}
               className={ecommerceStoreMobileSelectClass}
-              aria-label={mobileSelect.label}
+              aria-label={autoMobileSelect.label}
             >
               {items!.map((item) => (
                 <option key={item.key} value={item.key}>

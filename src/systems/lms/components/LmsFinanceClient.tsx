@@ -47,6 +47,7 @@ import {
   lmsFinanceStatsGridClass,
   lmsInlineSubNavBtnClass,
   lmsInlineSubNavShellClass,
+  lmsMobileSelectClass,
   lmsOutlineButtonClass,
   lmsPanelClass,
   lmsPanelDividerClass,
@@ -401,48 +402,44 @@ export function LmsFinanceClient() {
               role="group"
               aria-label="เครื่องมือการเงิน"
             >
-              <nav className={lmsInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listTab === "INCOME"}
-                  title="รายรับ"
-                  aria-label="รายรับ"
-                  className={lmsInlineSubNavBtnClass(listTab === "INCOME")}
-                  onClick={() => {
-                    setListTab("INCOME");
-                    setCategoryFilter("");
-                  }}
-                >
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-                    {lmsFinanceTabIcon("INCOME")}
-                  </span>
-                  <span className="hidden sm:inline">รายรับ</span>
-                  <span className="sm:hidden" aria-hidden>
-                    รับ
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listTab === "EXPENSE"}
-                  title="รายจ่าย"
-                  aria-label="รายจ่าย"
-                  className={lmsInlineSubNavBtnClass(listTab === "EXPENSE")}
-                  onClick={() => {
-                    setListTab("EXPENSE");
-                    setCategoryFilter("");
-                  }}
-                >
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-                    {lmsFinanceTabIcon("EXPENSE")}
-                  </span>
-                  <span className="hidden sm:inline">รายจ่าย</span>
-                  <span className="sm:hidden" aria-hidden>
-                    จ่าย
-                  </span>
-                </button>
-              </nav>
+              <div className="hidden sm:block">
+                <nav className={lmsInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={listTab === "INCOME"}
+                    title="รายรับ"
+                    aria-label="รายรับ"
+                    className={lmsInlineSubNavBtnClass(listTab === "INCOME")}
+                    onClick={() => {
+                      setListTab("INCOME");
+                      setCategoryFilter("");
+                    }}
+                  >
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                      {lmsFinanceTabIcon("INCOME")}
+                    </span>
+                    <span>รายรับ</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={listTab === "EXPENSE"}
+                    title="รายจ่าย"
+                    aria-label="รายจ่าย"
+                    className={lmsInlineSubNavBtnClass(listTab === "EXPENSE")}
+                    onClick={() => {
+                      setListTab("EXPENSE");
+                      setCategoryFilter("");
+                    }}
+                  >
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                      {lmsFinanceTabIcon("EXPENSE")}
+                    </span>
+                    <span>รายจ่าย</span>
+                  </button>
+                </nav>
+              </div>
 
               <div className={lmsInlineSubNavShellClass}>
                 <button
@@ -518,6 +515,25 @@ export function LmsFinanceClient() {
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="mt-3 w-full sm:hidden">
+            <label htmlFor="lms-finance-tab-mobile" className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+              รายรับหรือรายจ่าย
+            </label>
+            <select
+              id="lms-finance-tab-mobile"
+              value={listTab}
+              onChange={(e) => {
+                setListTab(e.target.value as "INCOME" | "EXPENSE");
+                setCategoryFilter("");
+              }}
+              className={lmsMobileSelectClass}
+              aria-label="รายรับหรือรายจ่าย"
+            >
+              <option value="INCOME">รายรับ</option>
+              <option value="EXPENSE">รายจ่าย</option>
+            </select>
           </div>
 
           <ul className={cn(lmsFinanceStatsGridClass, "mt-4")} aria-label={`สรุปการเงิน ${rangeBounds.label}`}>

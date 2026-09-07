@@ -407,36 +407,15 @@ export function ClubEventFinanceClient() {
         title="การเงิน"
         titleIcon={clubEventPageTitleIcon("finance")}
         titleTone={clubEventPageTitleTone("finance")}
-        subtitle={CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]}
+        items={[
+          { key: "INCOME", label: "รายรับ", shortLabel: "รับ" },
+          { key: "EXPENSE", label: "รายจ่าย", shortLabel: "จ่าย" },
+        ]}
+        activeKey={listTab}
+        onSelect={(key) => setListTab(key as "INCOME" | "EXPENSE")}
+        ariaLabel="รายรับหรือรายจ่าย"
         action={
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
-            <nav className={clubEventInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={listTab === "INCOME"}
-                className={clubEventInlineSubNavBtnClass(listTab === "INCOME")}
-                onClick={() => setListTab("INCOME")}
-              >
-                <span className="hidden sm:inline">รายรับ</span>
-                <span className="sm:hidden" aria-hidden>
-                  รับ
-                </span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={listTab === "EXPENSE"}
-                className={clubEventInlineSubNavBtnClass(listTab === "EXPENSE")}
-                onClick={() => setListTab("EXPENSE")}
-              >
-                <span className="hidden sm:inline">รายจ่าย</span>
-                <span className="sm:hidden" aria-hidden>
-                  จ่าย
-                </span>
-              </button>
-            </nav>
-            <span className={clubEventNavDividerClass} aria-hidden />
             <div className={clubEventInlineSubNavShellClass}>
               <button
                 type="button"
@@ -449,7 +428,7 @@ export function ClubEventFinanceClient() {
                 <span className="hidden sm:inline">{listTab === "INCOME" ? "รายรับเพิ่ม" : "รายจ่ายเพิ่ม"}</span>
               </button>
             </div>
-            <span className={clubEventNavDividerClass} aria-hidden />
+            <span className={cn(clubEventNavDividerClass, "hidden sm:block")} aria-hidden />
             <div className={clubEventInlineSubNavShellClass}>
               <button
                 type="button"

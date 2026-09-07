@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   clubEventCardIconTileClass,
@@ -27,7 +27,7 @@ export type ClubEventPageSubNavItem = {
 
 /**
  * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
- * แท็บหลายตัว: มือถือใช้ select (ส่ง mobileSelect) · sm+ แสดง pill มุมขวา
+ * แท็บ ≥2: มือถือใช้ select อัตโนมัติ (หรือส่ง mobileSelect) · sm+ แสดง pill
  */
 export function ClubEventPageSubNav({
   title,
@@ -44,28 +44,34 @@ export function ClubEventPageSubNav({
   className,
 }: {
   title: string;
-  /** ไอคอนข้างหัวข้อหน้า (บังคับตามแม่แบบเมนู) */
   titleIcon?: ReactNode;
   titleTone?: ClubEventCardTone;
-  /** ถ้าไม่ส่ง จะใช้ label ของแท็บที่เลือก */
   subtitle?: string;
   items?: ClubEventPageSubNavItem[];
   activeKey?: string;
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** เมื่อมีหลายแท็บ — dropdown บนมือถือ + ซ่อน pill (กฎ dashboard-primary-secondary-menu-tabs) */
+  /** override ป้าย/id — ส่ง false เพื่อบังคับ pill บนมือถือ */
   mobileSelect?: {
     id: string;
     label: string;
-  };
+  } | false;
   children?: ReactNode;
   className?: string;
 }) {
+  const autoId = useId();
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
   const activeItem = items?.find((i) => i.key === activeKey);
   const sub = subtitle ?? activeItem?.label;
-  const useMobileSelect = Boolean(hasTabs && mobileSelect);
+  const autoMobileSelect =
+    mobileSelect === false
+      ? null
+      : mobileSelect ??
+        (hasTabs && (items?.length ?? 0) >= 2
+          ? { id: `club-event-subnav-${autoId}`, label: ariaLabel ?? "เลือกเมนู" }
+          : null);
+  const useMobileSelect = Boolean(hasTabs && autoMobileSelect);
 
   return (
     <div className={cn(clubEventPanelClass, className)}>
@@ -80,8 +86,18 @@ export function ClubEventPageSubNav({
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
-                <span className="h-4 w-px shrink-0 bg-slate-200/90" aria-hidden />
-                <p className="min-w-0 truncate text-sm font-semibold text-[#66638c]">{sub}</p>
+                <span
+                  className={cn("h-4 w-px shrink-0 bg-slate-200/90", useMobileSelect && "hidden sm:block")}
+                  aria-hidden
+                />
+                <p
+                  className={cn(
+                    "min-w-0 truncate text-sm font-semibold text-[#66638c]",
+                    useMobileSelect && "hidden sm:block",
+                  )}
+                >
+                  {sub}
+                </p>
               </>
             ) : null}
           </div>
@@ -163,17 +179,17 @@ export function ClubEventPageSubNav({
           </div>
         </div>
 
-        {useMobileSelect && mobileSelect ? (
+        {useMobileSelect && autoMobileSelect ? (
           <div className="mt-3 w-full sm:hidden">
-            <label htmlFor={mobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
-              {mobileSelect.label}
+            <label htmlFor={autoMobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+              {autoMobileSelect.label}
             </label>
             <select
-              id={mobileSelect.id}
+              id={autoMobileSelect.id}
               value={activeKey}
               onChange={(e) => onSelect?.(e.target.value)}
               className={clubEventMobileSelectClass}
-              aria-label={mobileSelect.label}
+              aria-label={autoMobileSelect.label}
             >
               {items!.map((item) => (
                 <option key={item.key} value={item.key}>
@@ -211,7 +227,7 @@ export function ClubEventPageBlock({
   return (
     <div className={cn(!first && cn(clubEventPanelDividerClass, "mt-4 pt-4"), className)}>
       {title || action ? (
-        <div className="mb-3 flex flex-row items-start justify-between gap-3">
+        <div className="mb-3 flex flex-row flex-wrap items-start justify-between gap-2 sm:gap-3">
           {title ? (
             <h3 className={clubEventSectionHeadingClass}>
               {titleIcon ? (

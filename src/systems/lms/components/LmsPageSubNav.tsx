@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   lmsBlockTitleIconTileClass,
@@ -10,6 +10,7 @@ import {
 import {
   lmsInlineSubNavBtnClass,
   lmsInlineSubNavShellClass,
+  lmsMobileSelectClass,
   lmsPanelClass,
   lmsPanelDividerClass,
   lmsPanelSectionClass,
@@ -19,13 +20,14 @@ import {
 export type LmsPageSubNavItem = {
   key: string;
   label: string;
-  /** ป้ายสั้นบนมือถือ */
+  /** ป้ายสั้นบนมือถือ (เมื่อไม่ใช้ dropdown) */
   shortLabel?: string;
   icon?: ReactNode;
 };
 
 /**
  * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
+ * แท็บ ≥2: มือถือใช้ select อัตโนมัติ (หรือส่ง mobileSelect) · sm+ แสดง pill
  */
 export function LmsPageSubNav({
   title,
@@ -37,26 +39,39 @@ export function LmsPageSubNav({
   onSelect,
   ariaLabel,
   action,
+  mobileSelect,
   children,
   className,
 }: {
   title: string;
-  /** ไอคอนข้างหัวข้อหน้า (บังคับตามแม่แบบเมนู) */
   titleIcon?: ReactNode;
   titleTone?: LmsCardTone;
-  /** ถ้าไม่ส่ง จะใช้ label ของแท็บที่เลือก */
   subtitle?: string;
   items?: LmsPageSubNavItem[];
   activeKey?: string;
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
+  /** override ป้าย/id ของ dropdown มือถือ — ถ้าไม่ส่งและมีแท็บ ≥2 จะเปิดอัตโนมัติ */
+  mobileSelect?: {
+    id: string;
+    label: string;
+  } | false;
   children?: ReactNode;
   className?: string;
 }) {
+  const autoId = useId();
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
   const activeItem = items?.find((i) => i.key === activeKey);
   const sub = subtitle ?? activeItem?.label;
+  const autoMobileSelect =
+    mobileSelect === false
+      ? null
+      : mobileSelect ??
+        (hasTabs && (items?.length ?? 0) >= 2
+          ? { id: `lms-subnav-${autoId}`, label: ariaLabel ?? "เลือกเมนู" }
+          : null);
+  const useMobileSelect = Boolean(hasTabs && autoMobileSelect);
 
   return (
     <div className={cn(lmsPanelClass, className)}>
@@ -71,8 +86,18 @@ export function LmsPageSubNav({
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
-                <span className="h-4 w-px shrink-0 bg-slate-200/90" aria-hidden />
-                <p className="min-w-0 truncate text-sm font-semibold text-[#66638c]">{sub}</p>
+                <span
+                  className={cn("h-4 w-px shrink-0 bg-slate-200/90", useMobileSelect && "hidden sm:block")}
+                  aria-hidden
+                />
+                <p
+                  className={cn(
+                    "min-w-0 truncate text-sm font-semibold text-[#66638c]",
+                    useMobileSelect && "hidden sm:block",
+                  )}
+                >
+                  {sub}
+                </p>
               </>
             ) : null}
           </div>
@@ -83,42 +108,100 @@ export function LmsPageSubNav({
             aria-label={ariaLabel ?? "เครื่องมือหน้า"}
           >
             {hasTabs ? (
-              <nav className={lmsInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
-                {items!.map((item) => {
-                  const active = activeKey === item.key;
-                  const short = item.shortLabel ?? item.label;
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      aria-current={active ? "page" : undefined}
-                      title={item.label}
-                      aria-label={item.label}
-                      onClick={() => onSelect?.(item.key)}
-                      className={lmsInlineSubNavBtnClass(active)}
-                    >
-                      {item.icon ? (
-                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-                          {item.icon}
+              useMobileSelect ? (
+                <div className="hidden sm:block">
+                  <nav
+                    className={lmsInlineSubNavShellClass}
+                    role="tablist"
+                    aria-label={ariaLabel ?? "เมนูย่อย"}
+                  >
+                    {items!.map((item) => {
+                      const active = activeKey === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          aria-current={active ? "page" : undefined}
+                          title={item.label}
+                          aria-label={item.label}
+                          onClick={() => onSelect?.(item.key)}
+                          className={lmsInlineSubNavBtnClass(active)}
+                        >
+                          {item.icon ? (
+                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                              {item.icon}
+                            </span>
+                          ) : null}
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ) : (
+                <nav className={lmsInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
+                  {items!.map((item) => {
+                    const active = activeKey === item.key;
+                    const short = item.shortLabel ?? item.label;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        aria-current={active ? "page" : undefined}
+                        title={item.label}
+                        aria-label={item.label}
+                        onClick={() => onSelect?.(item.key)}
+                        className={lmsInlineSubNavBtnClass(active)}
+                      >
+                        {item.icon ? (
+                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                            {item.icon}
+                          </span>
+                        ) : null}
+                        <span className="hidden sm:inline">{item.label}</span>
+                        <span className="sm:hidden" aria-hidden>
+                          {short}
                         </span>
-                      ) : null}
-                      <span className="hidden sm:inline">{item.label}</span>
-                      <span className="sm:hidden" aria-hidden>
-                        {short}
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
+                      </button>
+                    );
+                  })}
+                </nav>
+              )
             ) : null}
             {hasTabs && action ? (
-              <span className="h-5 w-px shrink-0 bg-slate-200/90" aria-hidden />
+              <span
+                className={cn("h-5 w-px shrink-0 bg-slate-200/90", useMobileSelect && "hidden sm:block")}
+                aria-hidden
+              />
             ) : null}
             {action}
           </div>
         </div>
+
+        {useMobileSelect && autoMobileSelect ? (
+          <div className="mt-3 w-full sm:hidden">
+            <label htmlFor={autoMobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+              {autoMobileSelect.label}
+            </label>
+            <select
+              id={autoMobileSelect.id}
+              value={activeKey}
+              onChange={(e) => onSelect?.(e.target.value)}
+              className={lmsMobileSelectClass}
+              aria-label={autoMobileSelect.label}
+            >
+              {items!.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {children != null ? (
@@ -149,7 +232,7 @@ export function LmsPageBlock({
   return (
     <div className={cn(!first && cn(lmsPanelDividerClass, "mt-4 pt-4"), className)}>
       {title || action ? (
-        <div className="mb-3 flex flex-row items-start justify-between gap-3">
+        <div className="mb-3 flex flex-row flex-wrap items-start justify-between gap-2 sm:gap-3">
           {title ? (
             <h3 className={cn(lmsSectionHeadingClass, "gap-2")}>
               {titleIcon ? (
