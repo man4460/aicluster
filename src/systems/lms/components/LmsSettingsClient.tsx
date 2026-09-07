@@ -253,12 +253,9 @@ export function LmsSettingsClient({
 
         {tab === "portal" ? (
           <div className="space-y-4">
-            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+            <div className="space-y-1.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
               <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บ LMS สาธารณะ</p>
-              <p className="break-all text-sm font-semibold text-[#1e1b4b]">{form.publicUrl}</p>
-              <p className="text-xs text-[#66638c]">
-                พอร์ทัลนักเรียนอยู่ที่ /lms/{form.slug} — สร้าง QR ด้านล่างเพื่อพิมพ์หรือแชร์
-              </p>
+              <p className="break-all text-xs font-semibold text-[#1e1b4b] sm:text-sm">{form.publicUrl}</p>
             </div>
             <ModulePublicLinkQrPanel
               moduleSlug={LMS_MODULE_SLUG}
@@ -267,7 +264,6 @@ export function LmsSettingsClient({
               logoUrl={form.logoUrl}
               trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
               tagline="สแกนเพื่อเข้าเรียน / ดูคอร์สออนไลน์"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าเว็บ LMS"
               openPrimaryLabel="เปิดเว็บ LMS"
               openSecondaryLabel="เปิดเว็บ"
               qrAlt="QR เว็บ LMS สาธารณะ"

@@ -259,7 +259,7 @@ export function MassageStaffQrDashboardSection({
             onDownloadPng={() => void downloadStaffQrPng()}
             onDownloadPdfA5={() => void downloadStaffQrPdf("a5")}
             posterTintClass="shadow-lg shadow-indigo-950/10"
-            mobileBannerText="เน้นมือถือ — พนักงานสแกน QR หรือกดเปิดหน้าพนักงานบนเครื่องตัวเอง"
+            mobileBannerText=""
             qrAlt="QR เข้าหน้าพนักงานร้านนวด"
             openPrimaryLabel="เปิดหน้าพนักงานบนเครื่องนี้"
             openSecondaryLabel="เปิดหน้าพนักงาน"

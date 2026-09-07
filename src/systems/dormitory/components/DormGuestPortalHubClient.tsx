@@ -171,7 +171,7 @@ export function DormGuestPortalHubClient({
           logoUrl={logoUrl}
           trialExportBlocked={trialExportBlocked}
           tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · จัดการห้อง"
-          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน"
+          mobileBannerText=""
           openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>

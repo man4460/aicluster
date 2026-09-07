@@ -320,12 +320,9 @@ export function ClubEventSettingsClient({
 
         {tab === "portal" ? (
           <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
-            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+            <div className="space-y-1.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
               <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บชมรมสาธารณะ</p>
-              <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
-              <p className="text-xs text-[#66638c]">
-                พอร์ทัลชมรมอยู่ที่ /club/{form.slug} — สร้าง QR ด้านล่างเพื่อพิมพ์หรือแชร์
-              </p>
+              <p className="break-all text-xs font-semibold text-[#1e1b4b] sm:text-sm">{portalPath}</p>
             </div>
             <ModulePublicLinkQrPanel
               moduleSlug={CLUB_EVENT_MODULE_SLUG}
@@ -334,16 +331,12 @@ export function ClubEventSettingsClient({
               logoUrl={form.logoUrl}
               trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
               tagline="สแกนเพื่อเข้าเว็บชมรม / ดูกิจกรรม"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าเว็บชมรม"
               openPrimaryLabel="เปิดเว็บชมรม"
               openSecondaryLabel="เปิดเว็บ"
               qrAlt="QR เว็บชมรมสาธารณะ"
               posterAlt="โปสเตอร์ QR เว็บชมรม"
               downloadFilePrefix={`club-portal-${form.slug || "portal"}`}
             />
-            <p className="text-xs font-semibold text-[#66638c]">
-              ลิงก์ RSVP / สำรวจ / เก็บค่า — สร้างและจัดการจากหน้ากำหนดการของแต่ละกิจกรรม
-            </p>
             <ClubEventPortalMediaSettings
               bannerUrl={form.portalBannerUrl ?? ""}
               gallery={form.portalGallery ?? []}

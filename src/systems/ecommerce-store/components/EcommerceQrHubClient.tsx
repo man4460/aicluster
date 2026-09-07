@@ -256,7 +256,7 @@ export function EcommerceQrHubClient({
             shopLabel={storeName || "ร้านออนไลน์"}
             logoUrl={logoUrl}
             tagline="สแกนเข้าหน้าพนักงาน — เมนูแดชบอร์ด + เว็บร้าน"
-            mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน"
+            mobileBannerText=""
             openPrimaryLabel="เปิดหน้าพนักงาน"
           />
         </FormModal>

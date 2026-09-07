@@ -34,7 +34,7 @@ export function BarberQrPreviewFrame({
 
   return (
     <div className={cn("mt-8 min-w-0", className)}>
-      <div className="mb-4 flex flex-col items-center gap-1 text-center">
+      <div className="mb-3 flex flex-col items-center text-center">
         <span
           className={cn(
             "bg-gradient-to-r bg-clip-text text-[11px] font-black uppercase tracking-[0.22em] text-transparent",
@@ -42,11 +42,6 @@ export function BarberQrPreviewFrame({
           )}
         >
           {accent === "staff" ? "โปสเตอร์ · พิมพ์ / ติดป้าย" : "ตัวอย่างโปสเตอร์"}
-        </span>
-        <span className="max-w-md text-xs font-medium leading-snug text-[#8b87ad]">
-          {accent === "staff" ?
-            "ออกแบบให้พนักงานใช้บนมือถือเป็นหลัก — สแกน QR หรือเปิดลิงก์ · โปสเตอร์ด้านล่างสำหรับติดป้าย"
-          : "สำหรับวางที่ร้าน — ลูกค้าสแกนเข้าพอร์ทัล"}
         </span>
       </div>
 

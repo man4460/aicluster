@@ -54,7 +54,7 @@ function ModuleStaffTokenQrPanelInner({
   logoUrl = null,
   trialExportBlocked = false,
   tagline = "สแกนเข้าหน้าพนักงาน — ไม่มีวันหมดอายุ · หมุนโทเค็นใหม่เมื่อต้องการยกเลิก",
-  mobileBannerText = "สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงาน (ไม่มีวันหมดอายุ)",
+  mobileBannerText = "",
   openPrimaryLabel = "เปิดหน้าพนักงาน",
   openSecondaryLabel = "เปิดหน้า",
   posterTintClass = "shadow-amber-950/10",

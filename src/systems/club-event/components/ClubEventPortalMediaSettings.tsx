@@ -105,9 +105,6 @@ export function ClubEventPortalMediaSettings({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#5f5a8a]">
-        ปรับแต่งหน้าเว็บสาธารณะของชมรม — แบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ (โครงเดียวกับแม่แบบพอร์ทัล)
-      </p>
       {err ? <p className="text-sm font-semibold text-rose-600">{err}</p> : null}
 
       <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">

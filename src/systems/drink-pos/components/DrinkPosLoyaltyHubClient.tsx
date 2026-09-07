@@ -373,7 +373,7 @@ export function DrinkPosLoyaltyHubClient({
           logoUrl={logoUrl}
           trialExportBlocked={trialExportBlocked}
           tagline="สแกนเข้าหน้าพนักงาน — ไม่มีวันหมดอายุ · ไม่ต้องล็อกอินเจ้าของ"
-          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานบันทึกขาย"
+          mobileBannerText=""
           openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>

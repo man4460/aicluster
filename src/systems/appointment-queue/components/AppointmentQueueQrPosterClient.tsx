@@ -255,10 +255,6 @@ export function AppointmentQueueQrPosterClient({
           <p className="break-all rounded-xl border border-dashed border-[#dcd8f0] bg-white/50 px-3 py-2 text-xs text-[#66638c]">
             {portalUrl}
           </p>
-        ) : compactForModal ? (
-          <p className="rounded-xl border border-dashed border-[#dcd8f0] px-3 py-2 text-xs text-[#8b87ad]">
-            ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot;
-          </p>
         ) : null}
 
         <MassageQrPreviewFrame className={compactForModal ? "mt-4" : "mt-6"} accent="customer">

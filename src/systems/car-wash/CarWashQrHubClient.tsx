@@ -335,11 +335,7 @@ export function CarWashQrHubClient({
             <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
               {portalUrl || "-"}
             </p>
-          ) : (
-            <p className="rounded-xl border border-dashed border-white/45 bg-white/25 px-3 py-2 text-xs font-medium text-slate-600 backdrop-blur-sm">
-              ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot; เมื่อต้องการ
-            </p>
-          )}
+          ) : null}
           <div className="overflow-x-auto rounded-2xl border border-white/50 bg-white/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] backdrop-blur-md">
             {posterPreviewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -382,7 +378,7 @@ export function CarWashQrHubClient({
           shopLabel={shopLabel.trim() || "คาร์แคร์"}
           logoUrl={resolvedLogoUrl}
           tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · แพ็ก"
-          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานคาร์แคร์"
+          mobileBannerText=""
           openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>

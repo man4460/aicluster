@@ -32,11 +32,12 @@ globs:
 ## โครงสร้าง UX (ห้ามแหวกโดยไม่ปรับทั้งคอมโพเนนต์กลาง)
 
 1. **มือถือ (`max-sm`)**
-   - แถบข้อความ indigo (`mobileBannerText`) — `sm:hidden`
-   - รูป QR จาก data URL — `max-w-[min(96vw,440px)]`, พื้นขาว + ขอบ — `sm:hidden`
-   - ปุ่มหลักเต็มความกว้าง `app-btn-primary` min-h 52px — `location.assign(pageUrl)` — `sm:hidden`
+   - แถบข้อความ indigo (`mobileBannerText`) — **ว่าง = ไม่แสดง** (ค่าเริ่มว่าง)
+   - รูป QR จาก data URL — `max-w-[min(88vw,300px)]`, พื้นขาว + ขอบ — `sm:hidden`
+   - ปุ่มหลักเต็มความกว้าง `app-btn-primary` **`min-h-9` · `text-xs`** — `location.assign(pageUrl)` — `sm:hidden`
    - คอลัมน์: คัดลอกลิงก์เต็มความกว้าง → กริด 2 ช่อง **แสดง/ซ่อนลิงก์** + **เปิดหน้า** (ข้อความปุ่มผ่าน props)
-   - ปุ่มในแถวมือถือต้องใช้ **`cw-btn cw-btn-stack`** — อย่าใช้ `cw-btn` ล้วน (บนมือถือ CSS จะย่อเหลือไอคอน 36×36 ทำให้ปุ่มกระจัดกระจาย)
+   - ปุ่มในแถวมือถือต้องใช้ **`cw-btn cw-btn-stack`** + ขนาด template (`min-h-9` · `text-xs` · ดู `globals.css`)
+   - เมื่อซ่อนลิงก์ — **ไม่**แสดงข้อความอธิบาย dashed (โชว์ URL เฉพาะตอนกดแสดงลิงก์)
    - `<details>` หัวข้อ **「ดาวน์โหลดและโปสเตอร์」**: PDF A4 → (ถ้ามี) PDF A5 → PNG → พื้นที่พรีวิวโปสเตอร์ในกล่อง scroll
 
 2. **เดสก์ท็อป (`sm+`)**

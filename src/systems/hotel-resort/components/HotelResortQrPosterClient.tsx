@@ -22,7 +22,7 @@ import {
 const TAGLINE = "สแกน ดูสถานะการจอง";
 
 const toolbarBtnSoft =
-  "min-h-[44px] rounded-xl border border-white/60 bg-white/80 px-4 text-sm font-bold text-[#4d47b6] disabled:opacity-45";
+  "min-h-9 rounded-lg border border-white/60 bg-white/80 px-3 text-xs font-semibold text-[#4d47b6] disabled:opacity-45 sm:min-h-9 sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold";
 
 export function HotelResortQrPosterClient({
   ownerId,
@@ -220,16 +220,10 @@ export function HotelResortQrPosterClient({
                 {copyMsg}
               </p>
             ) : null}
-            {portalUrl ? (
-              linkVisible ? (
-                <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
-                  {portalUrl}
-                </p>
-              ) : (
-                <p className="rounded-xl border border-dashed border-white/45 bg-white/25 px-3 py-2 text-xs font-medium text-slate-600 backdrop-blur-sm">
-                  ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot; เมื่อต้องการ
-                </p>
-              )
+            {portalUrl && linkVisible ? (
+              <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
+                {portalUrl}
+              </p>
             ) : null}
           </>
         ) : (
@@ -238,7 +232,7 @@ export function HotelResortQrPosterClient({
               type="button"
               onClick={() => void copyLink()}
               disabled={!portalUrl}
-              className="app-btn-primary min-h-[44px] rounded-xl px-4 text-sm font-bold"
+              className="app-btn-primary min-h-9 rounded-lg px-3 text-xs font-semibold sm:min-h-[44px] sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
             >
               คัดลอกลิงก์
             </HotelResortButton>

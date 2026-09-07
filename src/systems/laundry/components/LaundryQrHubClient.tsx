@@ -176,11 +176,7 @@ function LaundryQrPosterPanel({
         <p className="break-all rounded-xl border border-slate-200/90 bg-slate-50/80 px-3 py-2 text-xs font-medium text-[#4d47b6]">
           {pageUrl || "-"}
         </p>
-      : (
-        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-600">
-          ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot; เมื่อต้องการ
-        </p>
-      )}
+      : null}
       <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-slate-50/50 p-4">
         {posterPreview ?
           // eslint-disable-next-line @next/next/no-img-element
@@ -269,10 +265,7 @@ export function LaundryQrHubClient({
   const [customerCopyMsg, setCustomerCopyMsg] = useState<string | null>(null);
 
   const staffQrTagline = "สแกนเข้าหน้าพนักงานรับ-ส่งผ้า (ต้องล็อกอินร้าน)";
-  /** โมดัล — สั้น · บนมือถือซ่อนบรรทัดนี้ใน FormModal */
-  const staffQrModalDescription = "เน้นมือถือ — สแกน QR หรือเปิดหน้าพนักงาน (เหมือนคาร์แคร์)";
   const customerPickupTagline = "สแกนเพื่อขอให้มารับผ้าที่บ้าน";
-  const customerQrModalDescription = "ลูกค้าสแกนเพื่อขอบริการรับ-ส่งที่บ้าน";
 
   const staffPageUrl = useMemo(() => {
     const root =
@@ -559,7 +552,6 @@ export function LaundryQrHubClient({
         mobileCentered
         onClose={() => setShowCustomerQrModal(false)}
         title="QR ลูกค้า"
-        description="ลูกค้าสแกนเพื่อกรอกข้อมูลขอบริการรับ-ส่งที่บ้าน — ระบบสร้างงานสถานะรอรับผ้า"
         footer={<ModalCloseFooter onClose={() => setShowCustomerQrModal(false)} />}
       >
         <LaundryQrPosterPanel
@@ -588,7 +580,6 @@ export function LaundryQrHubClient({
         mobileCentered
         onClose={() => setShowStaffQrModal(false)}
         title="QR พนักงาน"
-        description={staffQrModalDescription}
         footer={<ModalCloseFooter onClose={() => setShowStaffQrModal(false)} />}
       >
         {trialExportBlocked ?
@@ -609,7 +600,7 @@ export function LaundryQrHubClient({
           onDownloadPdfA4={() => void downloadStaffQrPdf()}
           onDownloadPng={() => void downloadStaffQrPng()}
           posterTintClass="shadow-lg shadow-amber-950/10"
-          mobileBannerText="เน้นมือถือ — พนักงานสแกน QR หรือกดเปิดหน้างานบนเครื่องตัวเอง"
+          mobileBannerText=""
           qrAlt={staffQrTagline}
           openPrimaryLabel="เปิดหน้าพนักงานบนเครื่องนี้"
           openSecondaryLabel="เปิดหน้าพนักงาน"

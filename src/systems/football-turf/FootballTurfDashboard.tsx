@@ -7361,7 +7361,6 @@ export function FootballTurfDashboard({
             glassTint="violet"
             mobileCentered
             title="QR / ลิงก์ลูกค้า"
-            description="ลิงก์จองสนามสำหรับลูกค้า — คัดลอก · สแกน QR · ดาวน์โหลดโปสเตอร์"
             footer={
               <div className="flex justify-end">
                 <button
@@ -7381,7 +7380,6 @@ export function FootballTurfDashboard({
               shopLabel={settings.venueName || "สนามฟุตบอล"}
               logoUrl={settings.logoUrl || null}
               tagline="สแกนเข้าหน้าจองสนาม — เลือกวัน · ช่วงเวลา · ชำระมัดจำ/เต็ม"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อจองสนามฟุตบอล"
               openPrimaryLabel="เปิดหน้าจองลูกค้า"
               openSecondaryLabel="เปิดหน้า"
               downloadFilePrefix="football-turf-customer-qr"
@@ -7396,7 +7394,6 @@ export function FootballTurfDashboard({
             glassTint="amber"
             mobileCentered
             title="QR พนักงาน"
-            description="สร้างลิงก์ถาวรให้พนักงานใช้ภาพรวม · จอง · โปร — ตั้งรหัสประจำวันได้ที่ตั้งค่า → ชำระเงิน"
             footer={
               <div className="flex justify-end">
                 <button
@@ -7416,8 +7413,7 @@ export function FootballTurfDashboard({
               shopLabel={settings.venueName || "สนามฟุตบอล"}
               logoUrl={settings.logoUrl || null}
               tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · จอง · โปร"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานสนามฟุตบอล"
-              openPrimaryLabel="เปิดหน้าพนักงาน"
+openPrimaryLabel="เปิดหน้าพนักงาน"
             />
           </FormModal>
         </div>

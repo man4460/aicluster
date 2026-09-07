@@ -55,7 +55,7 @@ function ModulePublicLinkQrPanelInner({
   logoUrl = null,
   trialExportBlocked = false,
   tagline = "สแกนเพื่อเปิดหน้าจองออนไลน์",
-  mobileBannerText = "สแกน QR หรือเปิดลิงก์เพื่อจอง",
+  mobileBannerText = "",
   openPrimaryLabel = "เปิดหน้าจอง",
   openSecondaryLabel = "เปิดหน้า",
   posterTintClass = "shadow-indigo-950/10",
@@ -188,11 +188,10 @@ function ModulePublicLinkQrPanelInner({
   return (
     <div className="space-y-3">
       {trialExportBlocked ? (
-        <p className="rounded-xl border border-amber-200/90 bg-amber-50/95 px-3 py-2 text-sm text-amber-950">
+        <p className="rounded-lg border border-amber-200/90 bg-amber-50/95 px-2.5 py-1.5 text-xs text-amber-950">
           โหมดทดลอง — ดาวน์โหลดโปสเตอร์ปิดชั่วคราว
         </p>
       ) : null}
-      <p className="text-xs font-medium text-[#66638c]">ลิงก์จองพร้อมใช้ — สแกนหรือคัดลอกได้ทันที</p>
       <ShopStaffQrPanel
         pageUrl={url}
         qrPng={qrPng}

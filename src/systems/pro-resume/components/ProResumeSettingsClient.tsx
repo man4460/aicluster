@@ -187,7 +187,6 @@ export function ProResumeSettingsClient({
               logoUrl={form.profileImageUrl}
               trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
               tagline="สแกนเพื่อดูเรซูเม่และพอร์ตโฟลิโอ"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อดูโปรไฟล์"
               openPrimaryLabel="เปิดโปรไฟล์"
               openSecondaryLabel="เปิดหน้า"
               qrAlt="QR เรซูเม่สาธารณะ"
