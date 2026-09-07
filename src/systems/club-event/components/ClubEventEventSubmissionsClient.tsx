@@ -44,6 +44,7 @@ export function ClubEventEventSubmissionsClient({ eventId }: { eventId: string }
   const [tab, setTab] = useState<ClubEventSubmissionsTab>("summary");
   const [filterOpen, setFilterOpen] = useState(true);
   const [query, setQuery] = useState("");
+  const [slipFilter, setSlipFilter] = useState<"all" | "verified" | "pending">("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,15 +89,32 @@ export function ClubEventEventSubmissionsClient({ eventId }: { eventId: string }
   }, [load]);
 
   const q = query.trim().toLowerCase();
-  const filtersActive = q.length > 0;
+  const slipCounts = useMemo(() => {
+    let verified = 0;
+    let pending = 0;
+    for (const r of rows) {
+      if (!r.slipUrl) continue;
+      if (r.slipVerified ?? r.slipVerifiedAt) verified += 1;
+      else pending += 1;
+    }
+    return { all: rows.length, verified, pending };
+  }, [rows]);
+
   const filtered = useMemo(() => {
-    if (!q) return rows;
     return rows.filter((r) => {
+      if (slipFilter === "verified") {
+        if (!(r.slipVerified ?? r.slipVerifiedAt)) return false;
+      } else if (slipFilter === "pending") {
+        if (!r.slipUrl || (r.slipVerified ?? r.slipVerifiedAt)) return false;
+      }
+      if (!q) return true;
       const name = (r.respondentName ?? "").toLowerCase();
       const phone = (r.respondentPhone ?? "").toLowerCase();
       return name.includes(q) || phone.includes(q);
     });
-  }, [q, rows]);
+  }, [q, rows, slipFilter]);
+
+  const filtersActive = q.length > 0 || slipFilter !== "all";
 
   return (
     <>
@@ -179,10 +197,34 @@ export function ClubEventEventSubmissionsClient({ eventId }: { eventId: string }
             </nav>
 
             <div id="club-event-submissions-filter" className={cn("space-y-3", filterOpen ? "block" : "hidden")}>
-              <div className={clubEventFilterChipShellClass} role="status">
-                <span className={clubEventFilterChipClass(true)}>
+              <div
+                className={cn(clubEventFilterChipShellClass, "items-center")}
+                role="group"
+                aria-label="สรุปและกรองสถานะสลิป"
+              >
+                <span className={clubEventFilterChipClass(true)} role="status">
                   {linkTitle || link.title} · {filtered.length}/{rows.length} คน
                 </span>
+                {tab === "list"
+                  ? (
+                      [
+                        { key: "all" as const, label: "ทั้งหมด", count: slipCounts.all },
+                        { key: "verified" as const, label: "ตรวจแล้ว", count: slipCounts.verified },
+                        { key: "pending" as const, label: "รอตรวจ", count: slipCounts.pending },
+                      ] as const
+                    ).map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={slipFilter === item.key}
+                        className={clubEventFilterChipClass(slipFilter === item.key)}
+                        onClick={() => setSlipFilter(item.key)}
+                      >
+                        {item.label} ({item.count})
+                      </button>
+                    ))
+                  : null}
               </div>
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#4d47b6]">ค้นหาชื่อหรือเบอร์</span>
@@ -194,7 +236,14 @@ export function ClubEventEventSubmissionsClient({ eventId }: { eventId: string }
                 />
               </label>
               {filtersActive ? (
-                <button type="button" className={clubEventOutlineButtonClass} onClick={() => setQuery("")}>
+                <button
+                  type="button"
+                  className={clubEventOutlineButtonClass}
+                  onClick={() => {
+                    setQuery("");
+                    setSlipFilter("all");
+                  }}
+                >
                   ล้างกรอง
                 </button>
               ) : null}
@@ -205,7 +254,14 @@ export function ClubEventEventSubmissionsClient({ eventId }: { eventId: string }
             ) : filtered.length === 0 ? (
               <AppEmptyState>ไม่พบคำตอบที่ตรงการค้นหา</AppEmptyState>
             ) : (
-              <ClubEventLinkSubmissionsView rows={filtered} fields={fields} tab={tab} />
+              <ClubEventLinkSubmissionsView
+                rows={filtered}
+                fields={fields}
+                tab={tab}
+                onPatchSubmission={(id, patch) =>
+                  setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+                }
+              />
             )}
           </div>
         )}

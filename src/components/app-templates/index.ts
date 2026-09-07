@@ -8,6 +8,11 @@
 export { AppImageLightbox, type AppImageLightboxProps } from "./AppImageLightbox";
 export { AppImageThumb, type AppImageThumbProps } from "./AppImageThumb";
 export { AppSlipImageThumb, type AppSlipImageThumbProps } from "./AppSlipImageThumb";
+export {
+  AppLabeledImageThumb,
+  type AppLabeledImageThumbKind,
+  type AppLabeledImageThumbProps,
+} from "./AppLabeledImageThumb";
 export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLightbox";
 export { AppYoutubeLightbox, type AppYoutubeLightboxProps } from "./AppYoutubeLightbox";
 export { useAppYoutubeLightbox, type AppYoutubeLightboxState } from "./useAppYoutubeLightbox";

@@ -8,6 +8,9 @@ export type ClubSubmissionRow = {
   amountBaht: number | null;
   paymentMethod: string | null;
   slipUrl: string | null;
+  /** ISO — เมื่อเจ้าของตรวจสลิปแล้ว */
+  slipVerifiedAt?: string | null;
+  slipVerified?: boolean;
   createdAt: string;
   payload: Record<string, unknown>;
 };

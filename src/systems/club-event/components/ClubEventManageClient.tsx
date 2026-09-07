@@ -30,6 +30,7 @@ import {
   parseClubEventManageTab,
   type ClubEventManageTabKey,
 } from "@/systems/club-event/club-event-module-nav";
+import { ClubEventCommitteePanel } from "@/systems/club-event/components/ClubEventCommitteePanel";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import {
   clubEventCardIconTileClass,
@@ -37,6 +38,7 @@ import {
   clubEventTonedRowCardClass,
 } from "@/systems/club-event/lib/card-tones";
 import type {
+  ClubCommitteeMember,
   ClubEventAssetDto,
   ClubEventMemberDto,
   ClubMemberCustomField,
@@ -47,11 +49,6 @@ import {
   clubEventPageTitleIcon,
   clubEventPageTitleTone,
 } from "@/systems/club-event/lib/page-menu-icons";
-
-const MANAGE_TAB_ITEMS = CLUB_EVENT_MANAGE_TAB_ITEMS.map((item) => ({
-  ...item,
-  icon: clubEventManageTabIcon(item.key),
-}));
 import {
   CLUB_EVENT_MEMBER_GENDER_OPTIONS,
   clubEventMemberGenderLabel,
@@ -66,6 +63,11 @@ import {
   clubEventPrimaryButtonClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
+
+const MANAGE_TAB_ITEMS = CLUB_EVENT_MANAGE_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: clubEventManageTabIcon(item.key),
+}));
 
 function IconPlus({ className }: { className?: string }) {
   return (
@@ -122,7 +124,13 @@ function emptyMemberForm(): MemberFormState {
   };
 }
 
-export function ClubEventManageClient() {
+export function ClubEventManageClient({
+  initialCommittee = [],
+  publicUrl = null,
+}: {
+  initialCommittee?: ClubCommitteeMember[];
+  publicUrl?: string | null;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
@@ -167,6 +175,10 @@ export function ClubEventManageClient() {
   );
 
   const load = useCallback(async () => {
+    if (tab === "committee") {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       if (tab === "members") {
@@ -446,6 +458,7 @@ export function ClubEventManageClient() {
         onSelect={setTab}
         ariaLabel="แท็บการจัดการ"
         action={
+          tab === "committee" ? null : (
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
             {tab === "members" ? (
               <>
@@ -509,6 +522,7 @@ export function ClubEventManageClient() {
               </button>
             </div>
           </div>
+          )
         }
       >
         {tab === "members" && filterOpen ? (
@@ -520,7 +534,9 @@ export function ClubEventManageClient() {
           />
         ) : null}
 
-        {loading ? (
+        {tab === "committee" ? (
+          <ClubEventCommitteePanel initialCommittee={initialCommittee} publicUrl={publicUrl} />
+        ) : loading ? (
           <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : tab === "members" ? (
           filteredMembers.length === 0 ? (

@@ -7572,6 +7572,10 @@ model ClubEventLinkSubmission {
   amountBaht     Int?                 @map("amount_baht")
   paymentMethod  String?              @map("payment_method") @db.VarChar(32)
   slipUrl        String?              @map("slip_url") @db.VarChar(512)
+  /**
+   * เมื่อเจ้าของตรวจสลิปแล้ว — null = ยังไม่ตรวจ / ไม่มีสลิป
+   */
+  slipVerifiedAt DateTime?            @map("slip_verified_at")
   createdAt      DateTime             @default(now()) @map("created_at")
 
   @@index([linkId, createdAt], map: "club_event_link_sub_link_created_idx")

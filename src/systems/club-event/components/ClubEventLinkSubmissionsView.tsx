@@ -1,8 +1,15 @@
 "use client";
 
 import { CircleDot, Hash, MessageSquareText, UserRound } from "lucide-react";
-import { AppEmptyState, AppImageThumb, useAppImageLightbox, AppImageLightbox } from "@/components/app-templates";
+import {
+  AppEmptyState,
+  AppImageLightbox,
+  AppLabeledImageThumb,
+  useAppImageLightbox,
+  useAppNoticePopup,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { ClubEventSlipVerifyButton } from "@/systems/club-event/components/ClubEventSlipVerifyButton";
 import type { ClubDynamicLinkField } from "@/systems/club-event/lib/mappers";
 import {
   clubEventCardIconTileClass,
@@ -139,11 +146,15 @@ function PersonSubmissionCard({
   fields,
   tone,
   onOpenSlip,
+  onPatchSubmission,
+  onVerifyError,
 }: {
   s: ClubSubmissionRow;
   fields: ClubDynamicLinkField[];
   tone: ClubEventCardTone;
   onOpenSlip: (url: string) => void;
+  onPatchSubmission?: (id: string, patch: Partial<ClubSubmissionRow>) => void;
+  onVerifyError?: (message: string) => void;
 }) {
   const answers =
     s.payload.answers && typeof s.payload.answers === "object"
@@ -165,31 +176,37 @@ function PersonSubmissionCard({
     : legacyAnswer
       ? [["answer", legacyAnswer] as const]
       : [];
-  const cardTone: ClubEventCardTone =
-    typeof s.amountBaht === "number" && s.amountBaht > 0 ? "emerald" : tone;
+  const slipVerified = Boolean(s.slipVerified ?? s.slipVerifiedAt);
+  const cardTone: ClubEventCardTone = slipVerified
+    ? "emerald"
+    : typeof s.amountBaht === "number" && s.amountBaht > 0
+      ? "emerald"
+      : tone;
 
   return (
     <article className={clubEventTonedGridCardClass(cardTone)}>
       <div className="flex min-w-0 items-start gap-2">
         {s.slipUrl ? (
-          <AppImageThumb
+          <AppLabeledImageThumb
             src={s.slipUrl}
-            alt="สลิป"
+            kind="slip"
+            alt={s.respondentName || "ผู้ตอบ"}
             onOpen={() => onOpenSlip(s.slipUrl!)}
-            className="h-10 w-10 shrink-0"
-            objectFit="contain" />
+          />
         ) : (
-          <span className={clubEventCardIconTileClass(cardTone)} aria-hidden>
-            <UserRound className="h-4 w-4" strokeWidth={2.25} />
+          <span className={clubEventCardIconTileClass(cardTone, "lg")} aria-hidden>
+            <UserRound className="h-5 w-5" strokeWidth={2.25} />
           </span>
         )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-[#1e1b4b]">{s.respondentName || "ไม่ระบุชื่อ"}</p>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">
+            {s.respondentName || "ไม่ระบุชื่อ"}
+          </p>
           {s.respondentPhone ? (
             <p className="truncate text-[11px] font-semibold text-[#66638c]">{s.respondentPhone}</p>
           ) : null}
           {s.amountBaht != null ? (
-            <p className="mt-0.5 text-xs font-black tabular-nums text-emerald-700">
+            <p className="text-xs font-black tabular-nums text-emerald-700">
               ฿{s.amountBaht.toLocaleString("th-TH")}
               {s.paymentMethod ? (
                 <span className="ml-1 font-semibold text-[#8b87b8]">{s.paymentMethod}</span>
@@ -197,6 +214,16 @@ function PersonSubmissionCard({
             </p>
           ) : null}
         </div>
+        {s.slipUrl && onPatchSubmission ? (
+          <ClubEventSlipVerifyButton
+            className="self-start"
+            submissionId={s.id}
+            hasSlip={Boolean(s.slipUrl)}
+            verified={slipVerified}
+            onPatched={(next) => onPatchSubmission(s.id, next)}
+            onError={onVerifyError}
+          />
+        ) : null}
       </div>
 
       {answerEntries.length > 0 ? (
@@ -227,17 +254,21 @@ export function ClubEventLinkSubmissionsView({
   rows,
   fields = [],
   tab,
+  onPatchSubmission,
 }: {
   rows: ClubSubmissionRow[];
   fields?: ClubDynamicLinkField[];
   tab: ClubEventSubmissionsTab;
+  onPatchSubmission?: (id: string, patch: Partial<ClubSubmissionRow>) => void;
 }) {
   const lb = useAppImageLightbox();
+  const notice = useAppNoticePopup();
   const summary = summarizeClubLinkSubmissions(rows, fields);
 
   if (rows.length === 0) {
     return (
       <>
+        {notice.popup}
         <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
         <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิป" />
       </>
@@ -246,6 +277,7 @@ export function ClubEventLinkSubmissionsView({
 
   return (
     <>
+      {notice.popup}
       {tab === "summary" ? (
         <div className={cn(clubEventSubmissionsCardGridClass)} role="tabpanel">
           {summary.questions.length === 0 ? (
@@ -267,6 +299,8 @@ export function ClubEventLinkSubmissionsView({
                 fields={fields}
                 tone={PERSON_TONES[idx % PERSON_TONES.length]!}
                 onOpenSlip={(url) => lb.open(url)}
+                onPatchSubmission={onPatchSubmission}
+                onVerifyError={(msg) => notice.error(msg)}
               />
             </li>
           ))}

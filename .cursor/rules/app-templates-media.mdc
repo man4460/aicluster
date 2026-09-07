@@ -1,5 +1,5 @@
 ---
-description: Template กลาง app-templates — รูป/lightbox, แดชบอร์ด, กราฟ, พิมพ์, อัปโหลดสลิป (กล้อง/แกลเลอรี)
+description: Template กลาง app-templates — รูป/lightbox, สลิป+ป้าย (AppLabeledImageThumb), แดชบอร์ด, กราฟ, พิมพ์, อัปโหลด (กล้อง/แกลเลอรี)
 alwaysApply: true
 ---
 
@@ -11,7 +11,8 @@ alwaysApply: true
 
 - Import จาก **`@/components/app-templates`** เท่านั้น:
   - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64 · `object-cover`) + `onOpen`
-  - **`AppSlipImageThumb`** — รูปย่อ**สลิป / ใบเสร็จ / หลักฐานโอน** (กรอบเดิม · `object-contain` เห็นรูปครบ ไม่ตัด) — **บังคับใช้แทน `AppImageThumb` เมื่อเป็นสลิป**
+  - **`AppSlipImageThumb`** — รูปย่อ**สลิป / ใบเสร็จ / หลักฐานโอน** (กรอบเดิม · `object-contain` เห็นรูปครบ ไม่ตัด) — ใช้เมื่อ**ไม่ต้องการป้ายข้อความ** (พรีวิวอัปโหลด · แถวการเงินสลิปเดี่ยว)
+  - **`AppLabeledImageThumb`** — รูปย่อ + **ป้ายมุมล่างบนรูป** (`slip` = «สลิป» · `product` = «สินค้า» · `photo` = «รูป») — **บังคับในรายการ/การ์ด** ที่ต้องรู้ชนิดรูปทันที (ออเดอร์ · คำตอบกิจกรรม · จ่ายค่าบำรุง)
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
   - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ (ไอคอนล้วน · ไม่มีลิงก์ watch)
@@ -21,19 +22,40 @@ alwaysApply: true
 - **ห้าม** คัดลอก/เลียนแบบ `HomeFinanceImageLightbox` หรือ `HomeFinanceThumb` เป็นไฟล์ใหม่ในโมดูลอื่น
 - **ห้าม** สร้าง lightbox ใหม่ด้วย `fixed inset-0` + `img` เองถ้าเป้าหมายคือ “ดูรูปแนบแบบเดียวกับระบบเดิม” — ขยายที่ `AppImageLightbox` ถ้าต้องการพฤติกรรมเพิ่ม (แล้วได้ทุกหน้าพร้อมกัน)
 - **ห้าม** สร้าง iframe/โมดัล YouTube เองเมื่อมี `AppYoutubeLightbox` / `AppSecureYoutubePlayer`
+- **ห้าม** วาดป้าย «สลิป» ใต้รูป/ข้างชื่อเอง (กินที่ · ทับชื่อ) — ใช้ **`AppLabeledImageThumb`**
 
 ## แพทเทิร์นมาตรฐาน
 
 ```tsx
-import { AppImageLightbox, AppImageThumb, AppSlipImageThumb, useAppImageLightbox } from "@/components/app-templates";
+import {
+  AppImageLightbox,
+  AppImageThumb,
+  AppLabeledImageThumb,
+  AppSlipImageThumb,
+  useAppImageLightbox,
+} from "@/components/app-templates";
 
 const lb = useAppImageLightbox();
 
 {/* รูปทั่วไป / แกลเลอรี / โลโก้ */}
 <AppImageThumb src={url} alt="คำอธิบาย" onOpen={() => url && lb.open(url)} />
 
-{/* สลิปชำระ · ใบเสร็จ · หลักฐานโอน — เห็นรูปครบในกรอบ */}
+{/* พรีวิวอัปโหลด / แถวการเงินที่มีแค่สลิป — ไม่มีป้าย */}
 <AppSlipImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => slipUrl && lb.open(slipUrl)} />
+
+{/* รายการ/การ์ด — ป้าย «สลิป» ทับมุมล่างรูป · ชื่ออยู่ข้างรูป (gap-3) */}
+<div className="flex min-w-0 items-start gap-3">
+  <AppLabeledImageThumb
+    src={slipUrl}
+    kind="slip"
+    alt={personName}
+    onOpen={() => lb.open(slipUrl)}
+  />
+  <div className="min-w-0 flex-1 space-y-0.5">
+    <p className="truncate text-sm font-black text-[#1e1b4b]">{personName}</p>
+    {/* เบอร์ · ยอด · เมตา */}
+  </div>
+</div>
 
 <AppImageLightbox src={lb.src} onClose={lb.close} alt="คำอธิบาย" />
 ```
@@ -45,12 +67,12 @@ const lb = useAppImageLightbox();
 1. **กำหนดขนาดที่ wrapper** (`<button>` / กรอบคลิก) — เช่น `h-16 w-16` + `overflow-hidden` + `rounded-xl` + `ring-2` — ไม่ใช่กำหนดแค่ที่ `<img>` อย่างเดียว เพื่อไม่ให้กรอบกับรูปคนละขนาด
 2. **`<img>`** ใช้ **`object-cover`** (ค่าเริ่ม) สำหรับแกลเลอรี/โลโก้/รูปโปรไฟล์ — หรือส่ง **`objectFit="contain"`** เมื่อต้องเห็นรูปครบ
 3. **สถานะไม่มีรูป** (`emptyLabel`) — ใช้ **ขนาดเดียวกับมีรูป** (`h-16 w-16` ฯลฯ) + `ring` สอดคล้องกรอบมีรูป
-4. **ขนาดอื่น** — ส่ง **`className`** ให้ `AppImageThumb` / `AppSlipImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"`
+4. **ขนาดอื่น** — ส่ง **`className`** ให้ `AppImageThumb` / `AppSlipImageThumb` / `AppLabeledImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"`
 5. **Lightbox ทับโมดัล** — `AppImageLightbox` ใช้ **`z-[240]`** เหนือ `FormModal` (`z-[200]`) และ `AppCameraCaptureModal` (`z-[220]`) — ถ้าแก้ z-index โมดัล ต้องเช็คลำดับซ้อนกับ lightbox
 
-## AppSlipImageThumb — สลิป (บังคับ)
+## AppSlipImageThumb — สลิปไม่มีป้าย
 
-เมื่อมี **อัปโหลด/แสดงสลิปชำระ · ใบเสร็จ · หลักฐานโอน · สลิปรายจ่าย**:
+เมื่อมี **พรีวิวหลังอัปโหลด · แถวการเงินที่มีสลิปอย่างเดียว · แผงชำระ**:
 
 1. ใช้ **`AppSlipImageThumb`** จาก `@/components/app-templates` (ห่อ `AppImageThumb` + `objectFit="contain"`)
 2. **ห้าม** ใช้ `AppImageThumb` แบบ `object-cover` สำหรับสลิป — จะตัดขอบใบเสร็จ
@@ -58,10 +80,44 @@ const lb = useAppImageLightbox();
 4. กดเปิด **`AppImageLightbox`** เหมือนรูปอื่น
 5. แผงชำระกลาง: `AppPaymentMethodPanel` ใช้ `AppSlipImageThumb` แล้ว
 
+## AppLabeledImageThumb — สลิป/สินค้าพร้อมป้าย (บังคับในรายการ)
+
+ไฟล์: `src/components/app-templates/AppLabeledImageThumb.tsx`
+
+ใช้เมื่อ**การ์ดรายการ**ต้องแยกรูปสลิปจากรูปอื่น หรือให้รู้ทันทีว่าเป็นหลักฐานโอน:
+
+| `kind` | ป้าย | ใช้เมื่อ |
+|--------|------|----------|
+| `slip` | สลิป (เขียว) | หลักฐานโอน · คำตอบลิงก์ชำระ · ค่าบำรุง · ออเดอร์ |
+| `product` | สินค้า (ม่วง) | รูปสินค้าคู่สลิปในรายการออเดอร์ |
+| `photo` | รูป (เทา) | รูปทั่วไปที่ต้องมีป้ายสั้น |
+
+### บังคับ
+
+1. Import **`AppLabeledImageThumb`** จาก `@/components/app-templates` — **ห้าม** คัดลอก badge ทับรูปเองในโมดูล
+2. เลย์เอาต์การ์ด: **`flex items-start gap-3`** — thumb (`shrink-0`) ซ้าย · ชื่อ/เมตา (`min-w-0 flex-1`) ขวา
+3. ป้ายอยู่ **`absolute` มุมล่างของรูป** (`pointer-events-none`) — **ห้าม** วางข้อความ «สลิป» ใต้รูปหรือใต้ชื่อจนทับ/ดันเนื้อหา
+4. `kind="slip"` ค่าเริ่ม **`objectFit="contain"`** — เห็นใบเสร็จครบ
+5. ขนาดค่าเริ่ม `h-14 w-14` · `sm:h-16 sm:w-16` · `rounded-lg` (override ด้วย `className` ได้)
+6. ถ้ามีทั้งสลิปและรูปสินค้าในแถวเดียว — ใช้ **`AppLabeledImageThumb` คู่กัน** (`slip` + `product`) ใน `flex gap-1.5`
+
+### อ้างอิงที่ทำแล้ว
+
+| โมดูล | ไฟล์ |
+|-------|------|
+| ร้านออนไลน์ | `EcommerceOrdersClient` · wrapper เก่า `EcommerceLabeledImageThumb` → re-export กลาง |
+| ชมรม | `ClubEventLinkSubmissionsView` (คำตอบรายคน) · `ClubEventDuesStatusPanel` |
+
+### ห้าม
+
+- ป้าย «สลิป» เป็นข้อความใต้ thumb ในคอลัมน์แคบ (ทับชื่อ)
+- Hardcode `absolute … bg-emerald-600` ซ้ำนอก `AppLabeledImageThumb`
+- ใช้ `EcommerceLabeledImageThumb` ใหม่ในโมดูลอื่น — ใช้ `AppLabeledImageThumb` โดยตรง
+
 ## ความเข้ากันได้
 
 - ชื่อเก่า `HomeFinanceImageLightbox` / `HomeFinanceThumb` ยัง re-export ได้ — โค้ดใหม่ให้ใช้ **`AppImage*`** จาก `app-templates` โดยตรง
-
+- `EcommerceLabeledImageThumb` = wrapper บาง ๆ ไปที่ `AppLabeledImageThumb` (legacy import ร้านออนไลน์)
 ## แดชบอร์ด / กราฟ / พิมพ์ / อัปโหลดรูป
 
 โมดูลรายรับ–รายจ่าย, POS, หรือรายงานที่ต้องการ UI สอดคล้องกัน:
@@ -85,6 +141,7 @@ const lb = useAppImageLightbox();
 
 1. ได้ไฟล์ → **`prepareImageFileForUpload`** (หรือเทียบเท่า) → `FormData` → API
 2. แกลเลอรีหลายใบ → `multiple` / `galleryMultiple` + วน prepare ทีละไฟล์
-3. แสดง → `AppImageThumb` + lightbox — **ห้าม**ส่งไฟล์ดิบโดยไม่ย่อ
+3. แสดง → `AppImageThumb` / `AppSlipImageThumb` / **`AppLabeledImageThumb`** (รายการที่มีป้ายสลิป) + lightbox — **ห้าม**ส่งไฟล์ดิบโดยไม่ย่อ
 
 รายละเอียดบังคับ: **`.cursor/rules/app-templates-image-upload.mdc`**
+รายละเอียดป้ายสลิปบนการ์ด: **§ AppLabeledImageThumb** ด้านบน · ไฟล์ `AppLabeledImageThumb.tsx`

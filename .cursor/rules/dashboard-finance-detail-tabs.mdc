@@ -48,10 +48,11 @@ alwaysApply: false
 
 | เงื่อนไข | พฤติกรรม |
 |----------|----------|
-| **มี URL สลิป** | แสดง **`AppSlipImageThumb`** (`h-14 w-14` · `object-contain`) · กดเปิด **`AppImageLightbox`** ผ่าน `useAppImageLightbox` |
+| **มี URL สลิป** (แถวการเงินสลิปเดี่ยว) | **`AppSlipImageThumb`** (`h-14 w-14` · `object-contain`) · กดเปิด **`AppImageLightbox`** |
+| **มี URL สลิป** (การ์ดรายการที่ต้องมีป้ายชัด · หรือคู่กับรูปสินค้า) | **`AppLabeledImageThumb`** `kind="slip"` — ป้าย «สลิป» มุมล่างรูป · เลย์เอาต์ `flex items-start gap-3` กับชื่อ |
 | **ไม่มีสลิป** | **ไม่แสดง** ช่องว่าง / empty / ข้อความ «ไม่มีสลิป» |
 
-ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย**
+ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย** — รายละเอียดป้าย: **`app-templates-media.mdc`** § AppLabeledImageThumb
 
 ### เลย์เอาต์แถว (มือถือ + เดสก์ท็อป)
 
@@ -72,8 +73,14 @@ alwaysApply: false
 - Import จาก `@/components/app-templates` เท่านั้น
 
 ```tsx
+{/* แถวการเงิน — สลิปเดี่ยว ไม่บังคับป้าย */}
 {slipUrl ? (
   <AppSlipImageThumb src={slipUrl} alt="สลิป …" onOpen={() => lb.open(slipUrl)} className="h-14 w-14 shrink-0" />
+) : null}
+
+{/* การ์ดออเดอร์ / คำตอบ / ค่าบำรุง — มีป้าย */}
+{slipUrl ? (
+  <AppLabeledImageThumb src={slipUrl} kind="slip" alt={label} onOpen={() => lb.open(slipUrl)} />
 ) : null}
 ```
 
@@ -84,7 +91,7 @@ alwaysApply: false
 - `window.open` เป็นทางหลักเมื่อมี lightbox แล้ว
 - แสดงเฉพาะลิงก์ข้อความโดยไม่มีรูปย่อ (อนุญาตเป็นทางสำรองเพิ่มจาก thumb ได้)
 - ยอดรายรับเป็นม่วง/`slate-900` เป็นสีหลัก
-
+- วางป้าย «สลิป» เป็นข้อความใต้รูปจนทับชื่อ — ใช้ `AppLabeledImageThumb`
 ---
 
 ## 2b) แท็บ **ประวัติ / รายรับ** — แก้ไข + ลบ (บังคับ)
@@ -172,4 +179,4 @@ if (!ok) return;
 - [ ] ลบใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
 - [ ] ฟอร์มรายจ่ายครบ 5 ช่องตามต้นแบบร้านอาหาร
 - [ ] CTA รายจ่ายอยู่แท็บรายจ่ายเท่านั้น
-- [ ] `AppSlipImageThumb` / `AppImageLightbox` จาก `app-templates`
+- [ ] `AppSlipImageThumb` (แถวการเงิน) / `AppLabeledImageThumb kind="slip"` (การ์ดที่มีป้าย) / `AppImageLightbox` จาก `app-templates`

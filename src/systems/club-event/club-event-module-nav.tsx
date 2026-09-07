@@ -37,11 +37,11 @@ export const CLUB_EVENT_HEADER_COLLAPSE_EVENT = "mawell-club-event-header-collap
 /** เมนูหลัก: แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า */
 export type ClubEventModuleNavKey = "dashboard" | "finance" | "manage" | "settings";
 
-/** แท็บย่อยแดชบอร์ด: กำหนดการ · ย้อนหลัง · โครงสร้าง */
-export type ClubEventDashboardTabKey = "upcoming" | "past" | "committee";
+/** แท็บย่อยแดชบอร์ด: กำหนดการ · ย้อนหลัง · ค่าบำรุง */
+export type ClubEventDashboardTabKey = "upcoming" | "past" | "dues";
 
-/** แท็บย่อยการจัดการ: สมาชิก · ทรัพย์สิน */
-export type ClubEventManageTabKey = "members" | "assets";
+/** แท็บย่อยการจัดการ: สมาชิก · โครงสร้าง · ทรัพย์สิน */
+export type ClubEventManageTabKey = "members" | "committee" | "assets";
 
 /** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · ค่าบำรุง · เว็ปลิงค์ลูกค้า */
 export type ClubEventSettingsTab = "basic" | "finance" | "dues" | "portal";
@@ -72,7 +72,7 @@ export const CLUB_EVENT_DASHBOARD_TAB_ITEMS: {
 }[] = [
   { key: "upcoming", label: "กำหนดการ", shortLabel: "กำหนด" },
   { key: "past", label: "ย้อนหลัง", shortLabel: "ย้อน" },
-  { key: "committee", label: "โครงสร้าง", shortLabel: "โครง" },
+  { key: "dues", label: "ค่าบำรุง", shortLabel: "บำรุง" },
 ];
 
 export const CLUB_EVENT_MANAGE_TAB_ITEMS: {
@@ -81,6 +81,7 @@ export const CLUB_EVENT_MANAGE_TAB_ITEMS: {
   shortLabel?: string;
 }[] = [
   { key: "members", label: "สมาชิก" },
+  { key: "committee", label: "โครงสร้าง", shortLabel: "โครง" },
   { key: "assets", label: "ทรัพย์สิน", shortLabel: "ทรัพย์" },
 ];
 
@@ -122,8 +123,13 @@ export function isClubEventModuleNavItemActive(pathname: string, key: ClubEventM
 
 export function parseClubEventDashboardTab(raw: string | null | undefined): ClubEventDashboardTabKey {
   if (raw === "past") return "past";
-  if (raw === "committee") return "committee";
+  if (raw === "dues") return "dues";
   return "upcoming";
+}
+
+/** URL เก่า dashboard?tab=committee → การจัดการโครงสร้าง */
+export function isClubEventDashboardCommitteeLegacyTab(raw: string | null | undefined): boolean {
+  return raw === "committee";
 }
 
 export function clubEventDashboardTabHref(tab: ClubEventDashboardTabKey): string {
@@ -133,6 +139,7 @@ export function clubEventDashboardTabHref(tab: ClubEventDashboardTabKey): string
 
 export function parseClubEventManageTab(raw: string | null | undefined): ClubEventManageTabKey {
   if (raw === "assets") return "assets";
+  if (raw === "committee") return "committee";
   return "members";
 }
 

@@ -69,7 +69,8 @@ fd.set("file", file);
 
 ## 5) แสดงผลหลังอัปโหลด
 
-- ย่อ: **`AppImageThumb`** · เต็มจอ: **`AppImageLightbox`** + **`useAppImageLightbox`**
+- ย่อทั่วไป: **`AppImageThumb`** · สลิปไม่มีป้าย: **`AppSlipImageThumb`** · **รายการ/การ์ดที่ต้องรู้ว่าเป็นสลิป:** **`AppLabeledImageThumb`** `kind="slip"` (ป้ายมุมล่างรูป · ดู **`app-templates-media.mdc`**)
+- เต็มจอ: **`AppImageLightbox`** + **`useAppImageLightbox`**
 - แถวการเงิน: สลิป**เฉพาะเมื่อมี URL** — ดู `dashboard-finance-detail-tabs.mdc`
 
 ---
@@ -86,4 +87,4 @@ fd.set("file", file);
 - [ ] ก่อน `FormData` มี `prepare*`
 - [ ] ใช้ปุ่ม/input จาก `app-templates` เมื่อเป็นแกลเลอรี+กล้อง
 - [ ] แกลเลอรีหลายรูป → `multiple` + วน prepare
-- [ ] API คืน path ใต้ `/uploads/…` · แสดงด้วย `AppImageThumb`
+- [ ] API คืน path ใต้ `/uploads/…` · แสดงด้วย `AppImageThumb` / `AppSlipImageThumb` / `AppLabeledImageThumb` ตามบริบท

@@ -17,6 +17,7 @@ import {
   Youtube,
   Building2,
   Calendar,
+  Banknote,
 } from "lucide-react";
 import type {
   ClubEventDashboardTabKey,
@@ -81,8 +82,8 @@ export function clubEventDashboardTabIcon(key: ClubEventDashboardTabKey): ReactN
       return <Calendar className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "past":
       return <History className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "committee":
-      return <UserCog className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "dues":
+      return <Banknote className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:
       return null;
   }
@@ -92,6 +93,8 @@ export function clubEventManageTabIcon(key: ClubEventManageTabKey): ReactNode {
   switch (key) {
     case "members":
       return <UserRound className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "committee":
+      return <UserCog className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "assets":
       return <Package className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:

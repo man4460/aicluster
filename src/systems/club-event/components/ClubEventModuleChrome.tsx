@@ -270,7 +270,8 @@ function ClubEventModuleChromeInner({
                   ขนาดสลิป/เอกสาร
                 </li>
                 <li>
-                  <strong className="font-semibold text-[#2e2a58]">ค่าบำรุงประจำปี</strong> — กำหนดยอด · รอบปี · ใช้เก็บ/ติดตามสมาชิก
+                  <strong className="font-semibold text-[#2e2a58]">ค่าบำรุงประจำปี</strong> — กำหนดยอด · รอบเก็บ · ลิงก์ชำระที่ตั้งค่า ·
+                  ติดตามผู้จ่าย/ตรวจสลิปที่แดชบอร์ด → ค่าบำรุง
                 </li>
                 <li>
                   <strong className="font-semibold text-[#2e2a58]">ตั้งค่าเว็ปลิงค์ลูกค้า</strong> — slug · แบนเนอร์ · แกลเลอรี ·

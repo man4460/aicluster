@@ -51,3 +51,19 @@ export function clubEventDuesPeriodForDate(
       };
   }
 }
+
+/** ตรวจว่าวันที่อยู่ในรอบเก็บค่าบำรุงที่ระบุหรือไม่ */
+export function clubEventDuesDateInPeriod(
+  period: ClubEventDuesPeriodKey,
+  periodKey: string,
+  at: Date,
+): boolean {
+  return clubEventDuesPeriodForDate(period, at).periodKey === periodKey;
+}
+
+export function normalizeClubPersonName(raw: string | null | undefined): string {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}

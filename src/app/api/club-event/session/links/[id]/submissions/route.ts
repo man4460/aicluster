@@ -43,6 +43,8 @@ export async function GET(_req: Request, ctx: Ctx) {
           amountBaht: r.amountBaht,
           paymentMethod: r.paymentMethod,
           slipUrl: r.slipUrl,
+          slipVerifiedAt: r.slipVerifiedAt?.toISOString() ?? null,
+          slipVerified: Boolean(r.slipVerifiedAt),
           createdAt: r.createdAt.toISOString(),
           payload,
         };

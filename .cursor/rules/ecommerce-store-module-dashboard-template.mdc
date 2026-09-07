@@ -84,7 +84,8 @@ alwaysApply: false
 - **checkout:** การ์ดเดียว — ที่อยู่จัดส่ง + แนบสลิป (ห้ามหัวข้อซ้ำ «ข้อมูลจัดส่ง» / «แนบสลิป» เมื่อมีหัวหน้า «ชำระเงิน» แล้ว)  
 - **สรุปรายการ:** สถานะ+รายการ+ที่อยู่ซ้าย · ยอด/สลิปขวา (`lg`) · dock «ติดตาม / ซื้อต่อ» บนมือถือ  
 - ช่องกรอก: `ecommerceStoreFieldClass` / `ecommerceStoreTextareaClass`  
-- ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
+- ปุ่ม: outline/primary โมดูล · สลิปผ่าน `AppImagePickCameraButtons` + `prepareImageFileForUpload`
+- **รายการออเดอร์แดชบอร์ด:** รูปสลิป/สินค้าใช้ **`AppLabeledImageThumb`** (`kind="slip"` / `"product"`) — ป้ายมุมล่างรูป · `flex items-start gap-3` กับรหัสออเดอร์ — **ห้าม** ป้ายข้อความใต้รูปทับชื่อ · ดู **`app-templates-media.mdc`** · wrapper เก่า `EcommerceLabeledImageThumb`  
 - **หลังยืนยันออเดอร์:** `router.push(/shop/{storeId}/order/{trackingCode})` — หน้าสรุปรายการ (`EcommerceOrderSummaryClient`) ห้ามค้างที่ checkout  
 - อ้างอิง: `EcommerceCartClient.tsx` · `EcommerceCheckoutClient.tsx` · `EcommerceOrderSummaryClient.tsx`
 

@@ -1,7 +1,9 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { clubEventDashboardTabHref } from "@/systems/club-event/club-event-module-nav";
 import {
   CLUB_EVENT_DUES_PERIOD_LABELS,
   type ClubEventDuesPeriodKey,
@@ -114,6 +116,16 @@ export function ClubEventDuesSettingsPanel({
           เปิดเก็บค่าบำรุงแล้วกดบันทึก เพื่อสร้างลิงก์สาธารณะ
         </p>
       )}
+
+      <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2.5 text-xs font-semibold text-[#66638c]">
+        ติดตามผู้จ่าย / สลิป / ยังไม่ชำระอยู่ที่{" "}
+        <Link
+          href={clubEventDashboardTabHref("dues")}
+          className="font-bold text-[#0000BF] underline underline-offset-2"
+        >
+          แดชบอร์ด → ค่าบำรุง
+        </Link>
+      </p>
     </div>
   );
 }
