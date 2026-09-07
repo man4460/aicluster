@@ -30,29 +30,25 @@ export const appDashboardHeaderIconButtonActiveClass = "text-white";
 
 /**
  * เมนูโมดูลเมื่อยุบหัว → ขึ้นบน header ม่วง (เดสก์ท็อป)
- * โทนเดียวกับชิปทดลองใช้งาน: กล่องแก้ว + แท็บมน + active ขาว
+ * ไม่มีกล่องซ้อน — เลือกแล้วเน้นสีไอคอน/ข้อความเท่านั้น (คู่กับ dock)
  */
 
 /** แถวห่อเมนู + ชื่อโมดูล + ปุ่มขยาย */
 export const appDashboardModuleHeaderNavRowClass =
   "flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2";
 
-/** เปลือกแก้วรอบแท็บเมนู */
+/** แถบแท็บเมนู — เลื่อนได้ · ไม่มีพื้น/ขอบกล่อง */
 export const appDashboardModuleHeaderNavShellClass = cn(
-  "flex min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto p-0.5",
-  "rounded-full border border-white/30 bg-white/12",
-  "shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-md",
+  "flex min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto sm:gap-1",
   "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 );
 
-/** ลิงก์แท็บในเปลือกแก้ว */
+/** ลิงก์แท็บ — active = สีขาวชัด · idle = ขาวจาง (ไม่มีพื้นกล่อง) */
 export function appDashboardModuleHeaderNavLinkClass(active: boolean) {
   return cn(
-    "inline-flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-full px-2",
-    "text-[10px] font-bold tracking-tight transition-colors sm:h-8 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
-    active
-      ? "bg-white font-black text-[#5b3ac2] shadow-sm"
-      : "text-white/85 hover:bg-white/15 hover:text-white",
+    "inline-flex h-8 min-w-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5",
+    "text-[10px] font-bold tracking-tight transition-colors sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[11px]",
+    active ? "font-black text-white" : "text-white/65 hover:text-white/90",
   );
 }
 
