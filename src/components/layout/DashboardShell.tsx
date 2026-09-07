@@ -2071,9 +2071,13 @@ export function DashboardShell({
               <button
                 type="button"
                 suppressHydrationWarning
-                className={cn(appDashboardHeaderIconButtonClass, "overflow-hidden")}
+                className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible")}
                 aria-expanded={accountOpen}
-                aria-label="เมนูบัญชี"
+                aria-label={
+                  demoSession
+                    ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
+                    : "เมนูบัญชี"
+                }
                 onClick={() => setAccountOpen((o) => !o)}
               >
                 {avatarUrl ? (
@@ -2090,10 +2094,19 @@ export function DashboardShell({
                     {username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
+                {demoSession ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
+                    title="บัญชีทดลอง"
+                    aria-hidden
+                  >
+                    ทด
+                  </span>
+                ) : null}
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-52 rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  className="absolute right-0 z-40 mt-2 w-[min(18rem,calc(100vw-1.25rem))] rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
                   role="menu"
                 >
                   {demoSession ? (
