@@ -286,10 +286,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             <p className="text-xs text-slate-500">ตั้งค่าบริษัท/ร้านอยู่ที่แท็บด้านบน</p>
           </div>
         ) : (
-          <form
-            onSubmit={saveProfile}
-            className="space-y-3 pb-[calc(7.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] md:space-y-3.5 md:pb-0"
-          >
+          <form onSubmit={saveProfile} className="space-y-3 md:space-y-3.5">
             {err ? (
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" aria-live="polite">
                 {err}
@@ -423,39 +420,12 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
               </div>
             </section>
 
-            <div>
+            <div className="border-t border-slate-200 pt-3">
               <button
                 suppressHydrationWarning
                 type="submit"
                 disabled={loading}
-                className={cn(
-                  "app-tap-feedback rounded-lg bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60",
-                  "hidden min-h-[46px] w-full md:inline-flex md:w-auto md:items-center md:justify-center",
-                )}
-              >
-                {loading ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="app-inline-spinner" aria-hidden />
-                    กำลังบันทึก...
-                  </span>
-                ) : (
-                  "บันทึกโปรไฟล์"
-                )}
-              </button>
-            </div>
-
-            {/* มือถือ: ติดเหนือเมนูล่าง (dock) — เดิม bottom-0 ถูกเมนูบังจนหาปุ่มไม่เจอ */}
-            <div
-              className={cn(
-                "fixed inset-x-0 z-50 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden",
-                "bottom-[calc(3.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]",
-              )}
-            >
-              <button
-                suppressHydrationWarning
-                type="submit"
-                disabled={loading}
-                className="app-tap-feedback inline-flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
+                className="app-tap-feedback inline-flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60 md:w-auto"
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-1.5">
