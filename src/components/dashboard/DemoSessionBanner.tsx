@@ -6,40 +6,26 @@ import { cn } from "@/lib/cn";
 const chipClass =
   "inline-flex h-6 shrink-0 items-center justify-center rounded-md px-1.5 text-[10px] font-black leading-none tracking-tight text-white shadow-sm sm:px-2 sm:text-[11px]";
 
-/**
- * แสดงในแถบ Header เมื่อล็อกอินบัญชีทดลอง —
- * มือถือ: ลิงก์ «สมัคร» อย่างเดียว (ไม่ซ้อนป้ายโหมดทดลอง)
- * lg+: ชิปแดง + ชิป «สนใจสมัคร»
- */
-export function DemoSessionBanner() {
+function useDemoLoginNext() {
   const pathname = usePathname() || "/dashboard";
   const nextQ = encodeURIComponent(pathname.startsWith("/") ? pathname : "/dashboard");
-  const loginNext = `/login?next=${nextQ}`;
+  return `/login?next=${nextQ}`;
+}
+
+/**
+ * ชิปในแถบหัว — เฉพาะ lg+ (มือถือย้ายไปเมนูบัญชี เพื่อไม่แย่งที่ยอดโทเคน)
+ */
+export function DemoSessionBanner() {
+  const loginNext = useDemoLoginNext();
 
   return (
     <div
       role="status"
-      className="flex h-6 shrink-0 items-center gap-1.5 self-center sm:gap-2"
+      className="hidden h-6 shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:flex"
       title="บัญชีทดลอง — ข้อมูลตัวอย่าง"
     >
-      <form action="/api/auth/demo/exit" method="POST" className="m-0 inline-flex h-6 items-center p-0 lg:hidden">
-        <input type="hidden" name="next" value={loginNext} />
-        <button
-          type="submit"
-          className="inline-flex h-6 items-center gap-0.5 text-[11px] font-bold text-white underline-offset-2 transition hover:underline active:scale-95"
-          title="โหมดทดลอง — กดเพื่อไปสมัคร / เข้าสู่ระบบ"
-          aria-label="สมัครใช้งาน (ออกจากโหมดทดลอง)"
-          suppressHydrationWarning
-        >
-          สมัคร
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </form>
-
-      <span className={cn(chipClass, "hidden bg-red-600 ring-1 ring-red-950/25 lg:inline-flex")}>โหมดทดลอง</span>
-      <form action="/api/auth/demo/exit" method="POST" className="m-0 hidden h-6 items-center p-0 lg:inline-flex">
+      <span className={cn(chipClass, "bg-red-600 ring-1 ring-red-950/25")}>โหมดทดลอง</span>
+      <form action="/api/auth/demo/exit" method="POST" className="m-0 inline-flex h-6 items-center p-0">
         <input type="hidden" name="next" value={loginNext} />
         <button
           type="submit"
@@ -56,5 +42,28 @@ export function DemoSessionBanner() {
         </button>
       </form>
     </div>
+  );
+}
+
+/** รายการในเมนูบัญชีมือถือ — สมัคร / ออกจากโหมดทดลอง */
+export function DemoSessionAccountMenuItem({ onNavigate }: { onNavigate?: () => void }) {
+  const loginNext = useDemoLoginNext();
+
+  return (
+    <form action="/api/auth/demo/exit" method="POST" className="m-0" onSubmit={() => onNavigate?.()}>
+      <input type="hidden" name="next" value={loginNext} />
+      <button
+        type="submit"
+        role="menuitem"
+        className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-[#0000BF] transition-colors hover:bg-[#5b61ff]/10"
+        title="ออกจากบัญชีทดลองแล้วไปหน้าเข้าสู่ระบบ / สมัคร"
+        suppressHydrationWarning
+      >
+        <span className="text-lg" aria-hidden>
+          ✨
+        </span>
+        สนใจสมัคร
+      </button>
+    </form>
   );
 }

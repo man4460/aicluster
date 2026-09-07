@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, Suspense } from "react";
-import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
+import { DemoSessionAccountMenuItem, DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
@@ -397,21 +397,23 @@ function HeaderAccountSummary({
     .filter(Boolean)
     .join(" · ");
   return (
-    <p className={className} title={title}>
-      <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-      <span className="font-medium text-white/70">โทเคน</span>
-      {packageLabel ? (
-        <>
-          <span className="mx-1.5 text-white/30" aria-hidden>
-            |
-          </span>
-          <span className="font-bold text-white">{packageLabel}</span>
-        </>
-      ) : null}
-      <span className="mx-1.5 text-white/30" aria-hidden>
-        |
+    <p className={cn("min-w-0 truncate", className)} title={title}>
+      <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>
+      <span className="font-medium text-white/70"> โทเคน</span>
+      <span className="hidden lg:inline">
+        {packageLabel ? (
+          <>
+            <span className="mx-1.5 text-white/30" aria-hidden>
+              |
+            </span>
+            <span className="font-bold text-white">{packageLabel}</span>
+          </>
+        ) : null}
+        <span className="mx-1.5 text-white/30" aria-hidden>
+          |
+        </span>
+        <span className="font-medium text-white/90">{displayName}</span>
       </span>
-      <span className="font-medium text-white/90">{displayName}</span>
     </p>
   );
 }
@@ -1532,8 +1534,8 @@ export function DashboardShell({
             </div>
           ) : null}
 
-          {/* กลาง: เมนูโมดูลเมื่อย่อหัว (เดสก์ท็อป) / โทเคน · มือถือไม่โชว์แท็บใน header */}
-          <div className="min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1">
+          {/* กลาง: ยอดโทเคน (มือถือย่อเหลือตัวเลข) / เมนูโมดูลเมื่อย่อหัว */}
+          <div className="min-w-[5.75rem] flex-1 overflow-hidden px-0.5 sm:min-w-0 sm:px-1">
             {showDrinkPosHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -2089,9 +2091,12 @@ export function DashboardShell({
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-48 rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  className="absolute right-0 z-40 mt-2 w-52 rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
                   role="menu"
                 >
+                  {demoSession ? (
+                    <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
+                  ) : null}
                   <Link
                     href="/dashboard/profile"
                     className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
@@ -2105,7 +2110,7 @@ export function DashboardShell({
               ) : null}
             </div>
 
-            <AppBrowserFullscreenButton className="h-10 w-10" />
+            <AppBrowserFullscreenButton className="hidden h-10 w-10 sm:inline-flex" />
             <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
           </div>
         </div>
