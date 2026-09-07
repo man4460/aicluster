@@ -398,7 +398,7 @@ export function ClubEventSettingsClient({
                     เปิดเผยข้อมูลสมาชิกใดบ้าง
                   </legend>
                   <p className="text-xs font-semibold text-[#66638c]">
-                    ชื่อเต็มเปิดเสมอ · เลือกฟิลด์เพิ่มด้านล่าง (ค่าเริ่มต้นปิดเบอร์โทรและอีเมล)
+                    ชื่อเต็มเปิดเสมอ · เลือกฟิลด์เพิ่มด้านล่าง (ค่าเริ่มต้นปิดเบอร์โทรและอีเมล · เปิดช่องเพิ่มเติมจากฟอร์มสมาชิก)
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {CLUB_PORTAL_MEMBER_FIELD_OPTIONS.map((opt) => {

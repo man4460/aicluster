@@ -150,6 +150,7 @@ export async function seedClubEventProdDemoForOwner(
         email: false,
         social: false,
         gender: false,
+        customFields: true,
       }),
       paymentRulesNote:
         "โอนค่าบำรุงหรือมัดจำกิจกรรมแล้วแนบสลิปทุกครั้ง · ตรวจสอบภายใน 1–2 วันทำการ",

@@ -198,7 +198,7 @@ export function ClubEventPortalMemberSearch({
           <input
             type="search"
             className="min-h-[40px] min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold leading-none text-[#1e1b4b] outline-none ring-0 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-            placeholder="ค้นหาชื่อ · ชื่อเล่น · รหัสสมาชิก…"
+            placeholder="ค้นหาชื่อ · ชื่อเล่น · รหัส · ช่องเพิ่มเติม…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             autoComplete="off"
@@ -256,6 +256,14 @@ export function ClubEventPortalMemberSearch({
                         เพศ: {GENDER_LABEL[m.gender] ?? m.gender}
                       </p>
                     ) : null}
+                    {m.position ? (
+                      <p className="text-sm font-semibold text-[#66638c]">ตำแหน่ง: {m.position}</p>
+                    ) : null}
+                    {m.customFields?.map((cf) => (
+                      <p key={`${m.id}-${cf.label}`} className="text-sm font-semibold text-[#66638c]">
+                        {cf.label}: {cf.value}
+                      </p>
+                    ))}
                   </div>
                   {hasContact ? (
                     <MemberContactActions phone={m.phone} social={m.social} email={m.email} />

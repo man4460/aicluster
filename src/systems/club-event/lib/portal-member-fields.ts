@@ -8,6 +8,8 @@ export type ClubPortalMemberPublicFields = {
   email: boolean;
   social: boolean;
   gender: boolean;
+  /** ช่องเพิ่มเติมจากฟอร์มสมาชิก (ป้าย + ค่า) — ค้นหาและแสดงบนเว็บ */
+  customFields: boolean;
 };
 
 export const DEFAULT_CLUB_PORTAL_MEMBER_FIELDS: ClubPortalMemberPublicFields = {
@@ -19,6 +21,7 @@ export const DEFAULT_CLUB_PORTAL_MEMBER_FIELDS: ClubPortalMemberPublicFields = {
   email: false,
   social: false,
   gender: false,
+  customFields: true,
 };
 
 export const CLUB_PORTAL_MEMBER_FIELD_OPTIONS: {
@@ -34,6 +37,11 @@ export const CLUB_PORTAL_MEMBER_FIELD_OPTIONS: {
   { key: "email", label: "อีเมล", hint: "ข้อมูลติดต่อส่วนตัว — ระวังก่อนเปิด" },
   { key: "social", label: "โซเชียล / LINE", hint: "" },
   { key: "gender", label: "เพศ", hint: "" },
+  {
+    key: "customFields",
+    label: "ช่องเพิ่มเติมจากฟอร์มสมาชิก",
+    hint: "ค้นหาและแสดงป้าย/ค่าที่เพิ่มในหน้าจัดการสมาชิก (เช่น ไซส์เสื้อ)",
+  },
 ];
 
 export function parsePortalMemberFieldsJson(raw: string | null | undefined): ClubPortalMemberPublicFields {
@@ -46,6 +54,8 @@ export function parsePortalMemberFieldsJson(raw: string | null | undefined): Clu
     for (const key of Object.keys(base) as (keyof ClubPortalMemberPublicFields)[]) {
       if (typeof o[key] === "boolean") base[key] = o[key];
     }
+    // JSON เก่าที่ยังไม่มีคีย์ — ค่าเริ่มเปิด เพื่อให้ช่องเพิ่มค้นหาได้ทันที
+    if (typeof o.customFields !== "boolean") base.customFields = true;
     return base;
   } catch {
     return base;
@@ -62,8 +72,14 @@ export function serializePortalMemberFields(fields: ClubPortalMemberPublicFields
     email: Boolean(fields.email),
     social: Boolean(fields.social),
     gender: Boolean(fields.gender),
+    customFields: Boolean(fields.customFields),
   });
 }
+
+export type ClubPortalPublicMemberCustomField = {
+  label: string;
+  value: string;
+};
 
 export type ClubPortalPublicMember = {
   id: string;
@@ -76,6 +92,7 @@ export type ClubPortalPublicMember = {
   email?: string;
   social?: string;
   gender?: string;
+  customFields?: ClubPortalPublicMemberCustomField[];
 };
 
 type MemberRow = {
@@ -91,7 +108,42 @@ type MemberRow = {
   email: string;
   social: string;
   memberCode: string;
+  customFieldsJson?: string | null;
 };
+
+function parseMemberCustomFieldsForPublic(
+  raw: string | null | undefined,
+): ClubPortalPublicMemberCustomField[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: ClubPortalPublicMemberCustomField[] = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== "object") continue;
+      const label = String((row as { label?: unknown }).label ?? "").trim();
+      const value = String((row as { value?: unknown }).value ?? "").trim();
+      if (!label || !value) continue;
+      out.push({ label: label.slice(0, 80), value: value.slice(0, 200) });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** คำค้นตรงกับป้ายหรือค่าในช่องเพิ่มเติมหรือไม่ */
+export function memberCustomFieldsMatchQuery(
+  customFieldsJson: string | null | undefined,
+  q: string,
+): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return false;
+  const fields = parseMemberCustomFieldsForPublic(customFieldsJson);
+  return fields.some(
+    (f) => f.label.toLowerCase().includes(needle) || f.value.toLowerCase().includes(needle),
+  );
+}
 
 export function projectPublicMember(
   row: MemberRow,
@@ -107,5 +159,9 @@ export function projectPublicMember(
   if (fields.email && row.email.trim()) out.email = row.email.trim();
   if (fields.social && row.social.trim()) out.social = row.social.trim();
   if (fields.gender && row.gender.trim()) out.gender = row.gender.trim();
+  if (fields.customFields) {
+    const custom = parseMemberCustomFieldsForPublic(row.customFieldsJson);
+    if (custom.length > 0) out.customFields = custom;
+  }
   return out;
 }

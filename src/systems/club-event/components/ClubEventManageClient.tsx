@@ -874,6 +874,9 @@ export function ClubEventManageClient() {
                   + เพิ่มช่อง
                 </button>
               </div>
+              <p className="text-[11px] font-semibold text-[#8b87b8]">
+                ถ้าเปิดค้นหาสมาชิกบนเว็บไซต์ (ตั้งค่า → เว็ปลิงค์ลูกค้า) ป้ายและค่าในช่องนี้จะค้นหาและแสดงได้เมื่อติ๊ก «ช่องเพิ่มเติมจากฟอร์มสมาชิก»
+              </p>
               {memberForm.customFields.length === 0 ? (
                 <p className="text-xs text-[#8b87b8]">ยังไม่มีช่องเพิ่ม — กด «เพิ่มช่อง» เพื่อกำหนดป้ายและค่า</p>
               ) : (

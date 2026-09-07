@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
 import {
+  memberCustomFieldsMatchQuery,
   parsePortalMemberFieldsJson,
   projectPublicMember,
 } from "@/systems/club-event/lib/portal-member-fields";
@@ -33,7 +34,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const fields = parsePortalMemberFieldsJson(profile.portalMemberFieldsJson);
     const digits = q.replace(/\D/g, "");
 
-    const members = await prisma.clubEventMember.findMany({
+    const rows = await prisma.clubEventMember.findMany({
       where: {
         profileId: profile.id,
         isActive: true,
@@ -44,6 +45,7 @@ export async function GET(req: Request, ctx: Ctx) {
           { nickname: { contains: q } },
           { memberCode: { contains: q } },
           { position: { contains: q } },
+          ...(fields.customFields ? [{ customFieldsJson: { contains: q } }] : []),
           ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
         ],
       },
@@ -60,14 +62,33 @@ export async function GET(req: Request, ctx: Ctx) {
         email: true,
         social: true,
         memberCode: true,
+        customFieldsJson: true,
       },
-      take: 24,
+      take: 40,
       orderBy: { name: "asc" },
     });
 
+    const members = rows
+      .filter((m) => {
+        if (!fields.customFields) return true;
+        // ถ้าตรงชื่อ/รหัสอยู่แล้ว เก็บไว้; ถ้ามาจาก JSON contains อาจเป็น false positive — ยืนยันอีกชั้น
+        const baseHit =
+          m.name.includes(q) ||
+          m.firstName.includes(q) ||
+          m.lastName.includes(q) ||
+          m.nickname.includes(q) ||
+          m.memberCode.includes(q) ||
+          m.position.includes(q) ||
+          (digits.length >= 3 && m.phone.includes(digits));
+        if (baseHit) return true;
+        return memberCustomFieldsMatchQuery(m.customFieldsJson, q);
+      })
+      .slice(0, 24)
+      .map((m) => projectPublicMember(m, fields));
+
     return NextResponse.json({
       fields,
-      members: members.map((m) => projectPublicMember(m, fields)),
+      members,
     });
   } catch (e) {
     console.error("[club-event/public members search]", e);
