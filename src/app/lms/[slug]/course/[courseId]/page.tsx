@@ -5,7 +5,7 @@ type Props = { params: Promise<{ slug: string; courseId: string }> };
 export default async function LmsStudyRoomPage({ params }: Props) {
   const { slug, courseId } = await params;
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-[100dvh] bg-slate-50">
       <LmsStudyRoomClient slug={slug} courseId={courseId} />
     </main>
   );

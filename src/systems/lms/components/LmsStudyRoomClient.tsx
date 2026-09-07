@@ -1,14 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
-import { useAppNoticePopup, appSafeAreaPageContentTopPadClass } from "@/components/app-templates";
+import { ArrowLeft, CheckCircle2, Circle, List } from "lucide-react";
+import {
+  appSafeAreaStickyHeaderPadClass,
+  useAppNoticePopup,
+} from "@/components/app-templates";
+import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { LmsCertificateDownload } from "@/systems/lms/components/LmsCertificateDownload";
 import { LmsExamPanel } from "@/systems/lms/components/LmsExamPanel";
 import { LmsSecureYoutubePlayer } from "@/systems/lms/components/LmsSecureYoutubePlayer";
+import { lmsIconButtonClass, lmsOutlineButtonClass } from "@/systems/lms/lib/ui-tokens";
 
 type Lesson = {
   id: string;
@@ -26,6 +31,50 @@ type Progress = {
 
 type Props = { slug: string; courseId: string };
 
+function LessonList({
+  lessons,
+  progress,
+  activeLessonId,
+  onSelect,
+}: {
+  lessons: Lesson[];
+  progress: Progress[];
+  activeLessonId: string | null;
+  onSelect: (lessonId: string) => void;
+}) {
+  return (
+    <ul className="space-y-1">
+      {lessons.map((l, i) => {
+        const done = progress.some((p) => p.lessonId === l.id && p.completed);
+        const active = l.id === activeLessonId;
+        return (
+          <li key={l.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(l.id)}
+              className={cn(
+                "flex w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left text-sm touch-manipulation",
+                active ? "bg-indigo-50 text-indigo-900" : "text-slate-700 hover:bg-slate-50",
+              )}
+            >
+              {done ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+              )}
+              <span className="min-w-0">
+                <span className="block font-medium line-clamp-2">
+                  {i + 1}. {l.title}
+                </span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function LmsStudyRoomClient({ slug, courseId }: Props) {
   const router = useRouter();
   const notice = useAppNoticePopup();
@@ -35,6 +84,7 @@ export function LmsStudyRoomClient({ slug, courseId }: Props) {
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
   const [examUnlocked, setExamUnlocked] = useState(false);
+  const [lessonMenuOpen, setLessonMenuOpen] = useState(false);
   const [exam, setExam] = useState<{
     title: string;
     passingScorePercent: number;
@@ -95,7 +145,6 @@ export function LmsStudyRoomClient({ slug, courseId }: Props) {
       setCertificateId(data.certificate?.id ?? null);
       setActiveLessonId((prev) => {
         if (prev && ls.some((l) => l.id === prev)) return prev;
-        // เปิดบทแรกที่ยังไม่จบ ถ้ามี
         const firstIncomplete = ls.find(
           (l) => !(data.progress || []).some((p) => p.lessonId === l.id && p.completed),
         );
@@ -191,111 +240,157 @@ export function LmsStudyRoomClient({ slug, courseId }: Props) {
     [saveProgress, goToLesson],
   );
 
+  const pageShell = (children: ReactNode) => (
+    <div className="min-h-[100dvh] bg-slate-50">
+      {notice.popup}
+      {children}
+    </div>
+  );
+
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
+    return pageShell(
+      <div
+        className={cn(
+          "flex min-h-[50vh] items-center justify-center px-4 text-sm text-slate-500",
+          appSafeAreaStickyHeaderPadClass,
+        )}
+      >
         กำลังโหลดห้องเรียน…
-      </div>
+      </div>,
     );
   }
 
-  return (
-    <div
-      className={cn(
-        "mx-auto w-full max-w-6xl space-y-4 px-3 sm:px-4",
-        appSafeAreaPageContentTopPadClass,
-        "pb-[max(1.5rem,calc(1rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
-      )}
-    >      {notice.popup}
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href={`/lms/${encodeURIComponent(slug)}/dashboard`}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          แดชบอร์ด
-        </Link>
-        <h1 className="text-xl font-black tracking-tight text-slate-900">{title}</h1>
-        {certificateId ? (
-          <LmsCertificateDownload slug={slug} certificateId={certificateId} />
-        ) : null}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
-        <div className="space-y-4">
-          {activeLesson ? (
-            <LmsSecureYoutubePlayer
-              key={activeLesson.id}
-              youtubeUrl={activeLesson.youtubeUrl}
-              title={activeLesson.title}
-              autoPlay={autoPlayNext}
-              onProgress={onPlayerProgress}
-            />
-          ) : (
-            <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
-              ยังไม่มีบทเรียนในคอร์สนี้
-            </div>
-          )}
-          {activeLesson ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <h2 className="font-bold text-slate-900">{activeLesson.title}</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                ความคืบหน้าบทนี้{" "}
-                {progress.find((p) => p.lessonId === activeLesson.id)?.watchedPercent ?? 0}%
-                {progress.find((p) => p.lessonId === activeLesson.id)?.completed ? " · เรียนจบแล้ว" : ""}
-              </p>
-            </div>
-          ) : null}
-
-          {exam ? (
-            <LmsExamPanel
-              slug={slug}
-              courseId={courseId}
-              examTitle={exam.title}
-              passingScorePercent={exam.passingScorePercent}
-              questions={exam.questions}
-              unlocked={examUnlocked}
-              onPassed={(r) => {
-                if (r.certificateId) setCertificateId(r.certificateId);
-                void load();
-              }}
-            />
-          ) : null}
+  return pageShell(
+    <>
+      <header
+        className={cn(
+          "sticky top-0 z-30 border-b border-slate-200/80 bg-slate-50/95 backdrop-blur-md",
+          appSafeAreaStickyHeaderPadClass,
+        )}
+      >
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4">
+          <Link
+            href={`/lms/${encodeURIComponent(slug)}/dashboard`}
+            className={cn(lmsOutlineButtonClass, "shrink-0")}
+            aria-label="กลับแดชบอร์ด"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">แดชบอร์ด</span>
+          </Link>
+          <h1 className="min-w-0 flex-1 truncate text-base font-black tracking-tight text-slate-900 sm:text-lg">
+            {title}
+          </h1>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {certificateId ? (
+              <LmsCertificateDownload slug={slug} certificateId={certificateId} />
+            ) : null}
+            <button
+              type="button"
+              className={cn(lmsIconButtonClass, "lg:hidden")}
+              aria-label="เปิดรายการบทเรียน"
+              title="บทเรียน"
+              aria-expanded={lessonMenuOpen}
+              onClick={() => setLessonMenuOpen(true)}
+            >
+              <List className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
+      </header>
 
-        <aside className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <h2 className="mb-2 px-1 text-sm font-bold text-slate-800">รายการบทเรียน</h2>
-          <ul className="space-y-1">
-            {lessons.map((l, i) => {
-              const done = progress.some((p) => p.lessonId === l.id && p.completed);
-              const active = l.id === activeLessonId;
-              return (
-                <li key={l.id}>
+      <div
+        className={cn(
+          "mx-auto w-full max-w-6xl space-y-4 px-3 pt-3 sm:px-4 sm:pt-4",
+          "pb-[max(1.5rem,calc(1rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+        )}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
+          <div className="space-y-4">
+            {activeLesson ? (
+              <LmsSecureYoutubePlayer
+                key={activeLesson.id}
+                youtubeUrl={activeLesson.youtubeUrl}
+                title={activeLesson.title}
+                autoPlay={autoPlayNext}
+                onProgress={onPlayerProgress}
+              />
+            ) : (
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
+                ยังไม่มีบทเรียนในคอร์สนี้
+              </div>
+            )}
+            {activeLesson ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-slate-900">{activeLesson.title}</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      ความคืบหน้าบทนี้{" "}
+                      {progress.find((p) => p.lessonId === activeLesson.id)?.watchedPercent ?? 0}%
+                      {progress.find((p) => p.lessonId === activeLesson.id)?.completed
+                        ? " · เรียนจบแล้ว"
+                        : ""}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => goToLesson(l.id, { autoPlay: false })}
-                    className={cn(
-                      "flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm",
-                      active ? "bg-indigo-50 text-indigo-900" : "hover:bg-slate-50 text-slate-700",
-                    )}
+                    className={cn(lmsOutlineButtonClass, "shrink-0 lg:hidden")}
+                    onClick={() => setLessonMenuOpen(true)}
+                    aria-label="เลือกบทเรียน"
                   >
-                    {done ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                    ) : (
-                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" aria-hidden />
-                    )}
-                    <span className="min-w-0">
-                      <span className="block font-medium line-clamp-2">
-                        {i + 1}. {l.title}
-                      </span>
-                    </span>
+                    <List className="h-4 w-4" aria-hidden />
+                    <span>บทเรียน</span>
                   </button>
-                </li>
-              );
-            })}
-          </ul>
-        </aside>
+                </div>
+              </div>
+            ) : null}
+
+            {exam ? (
+              <LmsExamPanel
+                slug={slug}
+                courseId={courseId}
+                examTitle={exam.title}
+                passingScorePercent={exam.passingScorePercent}
+                questions={exam.questions}
+                unlocked={examUnlocked}
+                onPassed={(r) => {
+                  if (r.certificateId) setCertificateId(r.certificateId);
+                  void load();
+                }}
+              />
+            ) : null}
+          </div>
+
+          <aside className="hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:block">
+            <h2 className="mb-2 px-1 text-sm font-bold text-slate-800">รายการบทเรียน</h2>
+            <LessonList
+              lessons={lessons}
+              progress={progress}
+              activeLessonId={activeLessonId}
+              onSelect={(id) => goToLesson(id, { autoPlay: false })}
+            />
+          </aside>
+        </div>
       </div>
-    </div>
+
+      <FormModal
+        open={lessonMenuOpen}
+        onClose={() => setLessonMenuOpen(false)}
+        title="รายการบทเรียน"
+        description="เลือกบทเพื่อดูวิดีโอ — ไม่บังพื้นที่เล่นบนมือถือ"
+        size="md"
+        mobileCentered
+      >
+        <LessonList
+          lessons={lessons}
+          progress={progress}
+          activeLessonId={activeLessonId}
+          onSelect={(id) => {
+            goToLesson(id, { autoPlay: false });
+            setLessonMenuOpen(false);
+          }}
+        />
+      </FormModal>
+    </>,
   );
 }
