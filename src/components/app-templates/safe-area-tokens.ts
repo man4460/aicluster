@@ -44,6 +44,10 @@ export const appSafeAreaTopPadClass =
 export const appSafeAreaBottomPadClass =
   "pb-[var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))]";
 
+/** แถบ CTA ล่างคงที่ — เว้น home indicator + padding อ่านง่าย */
+export const appSafeAreaFixedBottomBarPadClass =
+  "pb-[max(0.75rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]";
+
 /** โซน hero ใต้ absolute header — เว้นโลโก้+เมนู+status bar */
 export const appSafeAreaPortalHeroTopPadClass =
   "pt-[calc(6rem+var(--mawell-safe-top,env(safe-area-inset-top,0px)))]";

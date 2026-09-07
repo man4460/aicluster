@@ -13,6 +13,7 @@ import {
   useAppCameraCapture,
   useAppImageLightbox,
   appSafeAreaPortalHeaderClass,
+  appSafeAreaPortalHeroTopPadClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { hotelResortPublicBookingUrl } from "@/lib/hotel-resort/public-url";
@@ -556,7 +557,10 @@ export function HotelResortPortalClient({
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/25 via-[#1e1b4b]/5 to-[#faf9ff]/90" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-28 sm:min-h-[80vh] sm:px-6 sm:pb-12">
+        <div className={cn(
+            "relative z-10 mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-8 sm:min-h-[80vh] sm:px-6 sm:pb-12",
+            appSafeAreaPortalHeroTopPadClass,
+          )}>
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/80 drop-shadow">
               Hotel booking

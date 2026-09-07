@@ -19,6 +19,7 @@ import {
   ecommerceStorePortalStickyHeaderClass,
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { appSafeAreaFixedBottomBarPadClass } from "@/components/app-templates/safe-area-tokens";
 
 export const ECOMMERCE_CATEGORY_ALL = "__all__" as const;
 export const ECOMMERCE_CATEGORY_NONE = "__none__" as const;
@@ -379,8 +380,12 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
         ) : null}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl gap-2">
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 pt-3 backdrop-blur-md",
+          appSafeAreaFixedBottomBarPadClass,
+        )}
+      >        <div className="mx-auto flex max-w-6xl gap-2">
           <Link
             href={`/shop/${data.store.id}/cart`}
             className={cn(ecommerceStoreOutlineButtonClass, "flex-1")}

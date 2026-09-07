@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
+import { appSafeAreaBottomPadClass } from "@/components/app-templates/safe-area-tokens";
 
 export const proResumeBtnRadiusClass = "rounded-lg";
 export const proResumeBtnHeightClass = "box-border h-9 min-h-9 max-h-9";
@@ -75,7 +76,7 @@ export function proResumePrimaryTabPillClass(active: boolean): string {
 /** เปลือกแถบเมนูมือถือ+ไอแพดแนวตั้ง — ชิดล่างสุด · พื้นขาวเต็ม รวม safe area */
 export const proResumePortalTabDockMobileShellClass = cn(
   "fixed inset-x-0 bottom-0 z-40 bg-white lg:hidden",
-  "pb-[env(safe-area-inset-bottom,0px)]",
+  appSafeAreaBottomPadClass,
   "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-32 after:bg-white",
 );
 

@@ -4,7 +4,7 @@ import {
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates/dashboard-tokens";
 import {
-  appSafeAreaBottomPadClass,
+  appSafeAreaFixedBottomBarPadClass,
   appSafeAreaStickyHeaderPadClass,
 } from "@/components/app-templates/safe-area-tokens";
 
@@ -248,7 +248,7 @@ export const ecommerceStorePortalPageBodyClass = cn(
 /** เปลือกหน้า cart / checkout / track — กว้างเท่าหน้าร้าน */
 export const ecommerceStorePortalPageShellClass = cn(
   "min-h-dvh bg-[#faf9ff] sm:pb-10",
-  "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]",
+  "pb-[calc(5.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]",
 );
 
 export const ecommerceStorePortalPageInnerClass = "mx-auto max-w-6xl px-4 sm:px-6";
@@ -261,8 +261,8 @@ export const ecommerceStorePortalStickyHeaderClass = cn(
 
 /** แถบสรุปล่างมือถือ (cart / checkout) */
 export const ecommerceStorePortalBottomDockClass = cn(
-  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden",
-  appSafeAreaBottomPadClass,
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 pt-3 backdrop-blur-md lg:hidden",
+  appSafeAreaFixedBottomBarPadClass,
 );
 
 export const ecommerceStorePortalHeaderNavShellClass =

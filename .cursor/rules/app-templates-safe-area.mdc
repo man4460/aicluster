@@ -18,7 +18,7 @@
 | แถบม่วงแดชบอร์ด (legacy pad) | `appSafeAreaDashboardHeaderPadClass` — ใช้ในโทเค็นหัวแล้ว |
 | Landing / หัวสาธารณะใหญ่ | `appSafeAreaLandingHeaderPadClass` |
 | หน้าแก้ว | รวมใน `AppPublicCheckInGlassPage` / `appSafeAreaGlassPage*PadClass` |
-| Dock / CTA ล่าง | `appSafeAreaBottomPadClass` (+ `AppMobileDockShell`) |
+| Dock / CTA ล่าง | `appSafeAreaBottomPadClass` · แถบคงที่ `appSafeAreaFixedBottomBarPadClass` (+ `AppMobileDockShell`) |
 | โมดัลเต็มจอ | `appSafeAreaOverlayPadYClass` / `Compact` / `PadAll` · หัวขยาย `appSafeAreaOverlayExpandedHeaderPadClass` |
 
 3. ต้องการ spacer แยกใน sticky header → `AppSafeAreaTopSpacer`

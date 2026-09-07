@@ -17,6 +17,7 @@ import {
   ecommerceStorePrimaryButtonClass,
   ecommerceStoreRowIconButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { appSafeAreaFixedBottomBarPadClass } from "@/components/app-templates/safe-area-tokens";
 
 type Product = {
   id: string;
@@ -270,8 +271,12 @@ export function EcommerceSalePageClient({
         {err ? <p className="text-sm text-rose-600">{err}</p> : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-xl">
-        <button
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 pt-3 backdrop-blur-xl",
+          appSafeAreaFixedBottomBarPadClass,
+        )}
+      >        <button
           type="button"
           disabled={busy}
           onClick={() => void submit()}

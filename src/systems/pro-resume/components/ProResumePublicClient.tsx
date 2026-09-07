@@ -6,6 +6,7 @@ import {
   AppImageLightbox,
   AppImageThumb,
   AppYoutubeLightbox,
+  appSafeAreaLandingHeaderPadClass,
   useAppImageLightbox,
   useAppYoutubeLightbox,
 } from "@/components/app-templates";
@@ -195,14 +196,20 @@ export function ProResumePublicClient({
     <div
       className={cn(
         "min-h-screen bg-gradient-to-b from-violet-50/80 via-white to-slate-50",
-        showTabNav ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:pb-24" : "pb-24",
+        showTabNav
+          ? "pb-[calc(5.75rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] lg:pb-24"
+          : "pb-24",
       )}
     >
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูป" />
       <AppYoutubeLightbox youtubeUrl={yt.youtubeUrl} title={yt.title} onClose={yt.close} />
 
-      <header className="relative overflow-hidden px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-12">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(91,97,255,0.12),transparent_55%)]" aria-hidden />
+      <header
+        className={cn(
+          "relative overflow-hidden px-4 pb-8 sm:px-6 sm:pb-10",
+          appSafeAreaLandingHeaderPadClass,
+        )}
+      >        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(91,97,255,0.12),transparent_55%)]" aria-hidden />
         <div className={cn(proResumeGlassShellClass, proResumePortalContainerClass, "relative p-6 sm:p-10")}>
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
             <div className="relative flex w-full max-w-[11rem] flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:items-stretch">

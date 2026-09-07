@@ -7,6 +7,7 @@ import {
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
   appSafeAreaPortalHeaderClass,
+  appSafeAreaPortalHeroTopPadClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { DormPortalRemoteImage } from "@/systems/dormitory/components/DormPortalRemoteImage";
@@ -154,7 +155,10 @@ export function VillagePortalClient({
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/25 via-[#1e1b4b]/5 to-[#faf9ff]/90" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#faf9ff]" />
-        <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-10 pt-24 sm:min-h-[80vh] sm:px-6">
+        <div className={cn(
+            "relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-10 sm:min-h-[80vh] sm:px-6",
+            appSafeAreaPortalHeroTopPadClass,
+          )}>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-white/90">หมู่บ้าน / โครงการ</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-white drop-shadow sm:text-5xl md:text-6xl">
             {info.villageLabel}

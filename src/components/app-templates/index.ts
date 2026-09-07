@@ -40,6 +40,7 @@ export {
 
 export {
   appSafeAreaBottomPadClass,
+  appSafeAreaFixedBottomBarPadClass,
   appSafeAreaDashboardHeaderPadClass,
   appSafeAreaAuthFramePadClass,
   appSafeAreaGlassPageBottomPadClass,
