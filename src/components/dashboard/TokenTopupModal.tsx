@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import QRCode from "qrcode";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
-import { PasswordInput } from "@/components/auth/PasswordInput";
 import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 
@@ -27,7 +26,6 @@ export function TokenTopupModal({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amountBaht, setAmountBaht] = useState<number | "">(100);
-  const [accountPassword, setAccountPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -44,10 +42,6 @@ export function TokenTopupModal({
       setErr("กรุณาระบุยอด 1-100000 บาท");
       return;
     }
-    if (!accountPassword.trim()) {
-      setErr("กรุณายืนยันรหัสผ่านบัญชีก่อนสร้าง QR (ความปลอดภัยชั้นที่ 2)");
-      return;
-    }
     setErr(null);
     setLoading(true);
     try {
@@ -55,7 +49,7 @@ export function TokenTopupModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ amountBaht: amt, accountPassword }),
+        body: JSON.stringify({ amountBaht: amt }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -70,7 +64,6 @@ export function TokenTopupModal({
       setOrderId(data.orderId ?? null);
       setQrCodeContent(data.qrCodeContent ?? null);
       setExpiresAtIso(data.expiresAt ?? null);
-      setAccountPassword("");
     } finally {
       setLoading(false);
     }
@@ -104,7 +97,6 @@ export function TokenTopupModal({
       setCountdownText("");
       setErr(null);
       setDownloading(false);
-      setAccountPassword("");
     }
   }, [open]);
 
@@ -228,8 +220,7 @@ export function TokenTopupModal({
 
   return (
     <>
-      <button
-        suppressHydrationWarning
+      <button suppressHydrationWarning
         type="button"
         className={triggerClassName ?? `${appDashboardBrandCtaPillButtonClass} app-tap-feedback`}
         onClick={() => setOpen(true)}
@@ -246,8 +237,7 @@ export function TokenTopupModal({
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold">เติมโทเคนด้วยพร้อมเพย์</h3>
               {!orderId ? (
-                <button
-                  suppressHydrationWarning
+                <button suppressHydrationWarning
                   type="button"
                   className="app-tap-feedback rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
                   onClick={() => setOpen(false)}
@@ -273,8 +263,7 @@ export function TokenTopupModal({
                 />
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[100, 200, 500, 1000, 2000, 5000].map((preset) => (
-                    <button
-                      suppressHydrationWarning
+                    <button suppressHydrationWarning
                       key={preset}
                       type="button"
                       onClick={() => setAmountBaht(preset)}
@@ -284,23 +273,8 @@ export function TokenTopupModal({
                     </button>
                   ))}
                 </div>
-                <label className="mt-4 block text-sm font-medium text-slate-700">
-                  ยืนยันรหัสผ่านบัญชี <span className="font-normal text-slate-500">(ชั้นที่ 2)</span>
-                </label>
-                <PasswordInput
-                  value={accountPassword}
-                  onChange={(e) => setAccountPassword(e.target.value)}
-                  autoComplete="current-password"
-                  placeholder="รหัสผ่านที่ใช้เข้าสู่ระบบ"
-                  className="mt-1"
-                  inputClassName="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-10 text-sm text-slate-900"
-                />
-                <p className="mt-1.5 text-xs text-slate-500">
-                  ความปลอดภัย 2 ชั้น: (1) ล็อกอินแล้ว · (2) ยืนยันรหัสผ่านก่อนสร้าง QR — โทเคนเข้าเมื่อชำระผ่าน QR สำเร็จเท่านั้น
-                </p>
                 <div className="mt-4 flex gap-2">
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     disabled={loading}
                     onClick={() => void createOrder()}
@@ -315,8 +289,7 @@ export function TokenTopupModal({
                       "สร้าง QR Code"
                     )}
                   </button>
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => setOpen(false)}
                     className="app-tap-feedback rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -331,8 +304,7 @@ export function TokenTopupModal({
             {orderId ? (
               <div className="mt-4">
                 <div className="mb-3 flex items-center justify-end gap-2">
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => {
                       setOrderId(null);
@@ -341,15 +313,13 @@ export function TokenTopupModal({
                       setExpiresAtIso(null);
                       setCountdownText("");
                       setErr(null);
-                      setAccountPassword("");
                     }}
                     className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100"
                     title="แก้ไขจำนวนเงิน"
                   >
                     ✎
                   </button>
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     className="app-tap-feedback rounded-lg p-2 text-sky-600 transition-colors hover:bg-sky-50"
                     onClick={() => void downloadCard()}
@@ -358,8 +328,7 @@ export function TokenTopupModal({
                   >
                     ⬇
                   </button>
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     className="app-tap-feedback rounded-lg p-2 text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => setOpen(false)}
@@ -401,8 +370,7 @@ export function TokenTopupModal({
                   </p>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button
-                    suppressHydrationWarning
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => void downloadCard()}
                     disabled={downloading}
@@ -418,8 +386,7 @@ export function TokenTopupModal({
                     )}
                   </button>
                 </div>
-                <button
-                  suppressHydrationWarning
+                <button suppressHydrationWarning
                   type="button"
                   onClick={() => setOpen(false)}
                   className="app-tap-feedback mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -438,3 +405,4 @@ export function TokenTopupModal({
     </>
   );
 }
+
