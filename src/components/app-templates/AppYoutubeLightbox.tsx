@@ -5,6 +5,10 @@ import { createPortal } from "react-dom";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { extractYoutubeVideoId, youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/youtube-url";
+import {
+  appSafeAreaOverlayExpandedHeaderPadClass,
+  appSafeAreaOverlayPadAllClass,
+} from "@/components/app-templates/safe-area-tokens";
 
 export type AppYoutubeLightboxProps = {
   /** watch / embed / youtu.be / video id */
@@ -160,7 +164,7 @@ export function AppYoutubeLightbox({
         "fixed inset-0 z-[240] flex items-center justify-center overflow-hidden bg-slate-950/90",
         expanded
           ? "p-0"
-          : "p-[max(8px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5",
+          : cn(appSafeAreaOverlayPadAllClass),
       )}
       role="dialog"
       aria-modal="true"
@@ -179,7 +183,7 @@ export function AppYoutubeLightbox({
         <div
           className={cn(
             "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2",
-            expanded && "pt-[max(0.5rem,env(safe-area-inset-top))]",
+            expanded && appSafeAreaOverlayExpandedHeaderPadClass,
           )}
         >
           <p className="min-w-0 truncate text-sm font-bold text-white">{title}</p>

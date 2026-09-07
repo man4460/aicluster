@@ -77,3 +77,22 @@ export const appSafeAreaOverlayPadYClass =
 
 export const appSafeAreaOverlayPadYCompactClass =
   "pt-[max(0.375rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] pb-[max(0.375rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))]";
+
+/**
+ * overlay เต็มจอ (lightbox / สไลด์โชว์) — เว้นทุกด้านก่อนขยาย
+ * ใช้แทนการเขียน env(safe-area-inset-*) ตรงในโมดูล
+ */
+export const appSafeAreaOverlayPadAllClass =
+  "p-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)),var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)),var(--mawell-safe-left,env(safe-area-inset-left,0px)),var(--mawell-safe-right,env(safe-area-inset-right,0px)))] sm:p-5";
+
+/** แถบหัวเมื่อขยายเต็มจอ (lightbox / สไลด์โชว์) */
+export const appSafeAreaOverlayExpandedHeaderPadClass =
+  "pt-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]";
+
+/** ปุ่ม/ชิป absolute มุมบนของ overlay */
+export const appSafeAreaOverlayTopEdgeClass =
+  "top-[max(12px,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:top-5";
+export const appSafeAreaOverlayRightEdgeClass =
+  "right-[max(12px,var(--mawell-safe-right,env(safe-area-inset-right,0px)))] sm:right-5";
+export const appSafeAreaOverlayLeftEdgeClass =
+  "left-[max(8px,var(--mawell-safe-left,env(safe-area-inset-left,0px)))] sm:left-5";

@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/cn";
+import {
+  appSafeAreaOverlayLeftEdgeClass,
+  appSafeAreaOverlayPadAllClass,
+  appSafeAreaOverlayRightEdgeClass,
+  appSafeAreaOverlayTopEdgeClass,
+} from "@/components/app-templates/safe-area-tokens";
 
 export type AppImageLightboxProps = {
   src: string | null;
@@ -75,7 +82,10 @@ export function AppImageLightbox({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[240] flex items-center justify-center overflow-hidden bg-slate-950/85 p-[max(12px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5"
+      className={cn(
+        "fixed inset-0 z-[240] flex items-center justify-center overflow-hidden bg-slate-950/85",
+        appSafeAreaOverlayPadAllClass,
+      )}
       role="dialog"
       aria-modal="true"
       aria-label={alt}
@@ -84,13 +94,22 @@ export function AppImageLightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-[max(12px,env(safe-area-inset-right))] top-[max(12px,env(safe-area-inset-top))] z-10 rounded-full bg-white/95 px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-lg hover:bg-white sm:right-5 sm:top-5"
+        className={cn(
+          "absolute z-10 rounded-full bg-white/95 px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-lg hover:bg-white",
+          appSafeAreaOverlayTopEdgeClass,
+          appSafeAreaOverlayRightEdgeClass,
+        )}
       >
         ปิด
       </button>
 
       {multi ? (
-        <p className="absolute left-1/2 top-[max(12px,env(safe-area-inset-top))] z-10 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs font-bold text-white sm:top-5">
+        <p
+          className={cn(
+            "absolute left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs font-bold text-white",
+            appSafeAreaOverlayTopEdgeClass,
+          )}
+        >
           {index + 1} / {gallery.length}
         </p>
       ) : null}
@@ -103,7 +122,10 @@ export function AppImageLightbox({
               e.stopPropagation();
               goPrev();
             }}
-            className="absolute left-[max(8px,env(safe-area-inset-left))] top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-lg hover:bg-white sm:left-5"
+            className={cn(
+              "absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-lg hover:bg-white",
+              appSafeAreaOverlayLeftEdgeClass,
+            )}
             aria-label="รูปก่อนหน้า"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -116,7 +138,10 @@ export function AppImageLightbox({
               e.stopPropagation();
               goNext();
             }}
-            className="absolute right-[max(8px,env(safe-area-inset-right))] top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-lg hover:bg-white sm:right-5"
+            className={cn(
+              "absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-lg hover:bg-white",
+              appSafeAreaOverlayRightEdgeClass,
+            )}
             aria-label="รูปถัดไป"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>

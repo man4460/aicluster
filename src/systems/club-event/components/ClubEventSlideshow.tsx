@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Maximize2, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import {
+  appSafeAreaOverlayExpandedHeaderPadClass,
+  appSafeAreaOverlayPadAllClass,
+} from "@/components/app-templates/safe-area-tokens";
 
 type Slide = { id: string; imageUrl: string; fileName?: string };
 
@@ -103,7 +107,7 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
         "fixed inset-0 z-[250] flex items-center justify-center overflow-hidden bg-slate-950/85",
         cssExpanded
           ? "p-0"
-          : "p-[max(12px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5",
+          : appSafeAreaOverlayPadAllClass,
       )}
       role="dialog"
       aria-modal="true"
@@ -123,7 +127,7 @@ export function ClubEventSlideshow({ slides, open, onClose, title, intervalMs = 
         <div
           className={cn(
             "flex items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2",
-            cssExpanded && "pt-[max(0.5rem,env(safe-area-inset-top))]",
+            cssExpanded && appSafeAreaOverlayExpandedHeaderPadClass,
           )}
         >
           <div className="min-w-0">

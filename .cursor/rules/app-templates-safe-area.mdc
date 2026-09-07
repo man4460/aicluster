@@ -19,7 +19,7 @@
 | Landing / หัวสาธารณะใหญ่ | `appSafeAreaLandingHeaderPadClass` |
 | หน้าแก้ว | รวมใน `AppPublicCheckInGlassPage` / `appSafeAreaGlassPage*PadClass` |
 | Dock / CTA ล่าง | `appSafeAreaBottomPadClass` (+ `AppMobileDockShell`) |
-| โมดัลเต็มจอ | `appSafeAreaOverlayPadYClass` / `Compact` |
+| โมดัลเต็มจอ | `appSafeAreaOverlayPadYClass` / `Compact` / `PadAll` · หัวขยาย `appSafeAreaOverlayExpandedHeaderPadClass` |
 
 3. ต้องการ spacer แยกใน sticky header → `AppSafeAreaTopSpacer`
 4. CSS vars ต้นทาง: `--mawell-safe-top/bottom` ใน `globals.css`

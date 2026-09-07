@@ -5,6 +5,7 @@ import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
   appSafeAreaPortalHeaderClass,
+  appSafeAreaPortalHeroTopPadClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -253,7 +254,12 @@ export function ClubEventPublicLinkClient({
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-[#faf9ff]/85" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[42vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[50vh] sm:px-6 sm:pb-10">
+        <div
+          className={cn(
+            "relative z-10 mx-auto flex min-h-[42vh] max-w-6xl flex-col justify-end px-4 pb-8 sm:min-h-[50vh] sm:px-6 sm:pb-10",
+            appSafeAreaPortalHeroTopPadClass,
+          )}
+        >
           <div className="max-w-2xl">
             <p
               className={cn(

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  AppPublicCheckInGlassPage,
   AppSignaturePad,
   type AppSignaturePadHandle,
   useAppNoticePopup,
@@ -156,28 +157,28 @@ export function ClubEventPublicCheckInClient({
 
   if (bootError) {
     return (
-      <>
+      <AppPublicCheckInGlassPage>
         {notice.popup}
         <div className={cn(clubEventGlassShellClass, "mx-auto max-w-lg p-6 text-center")}>
           <p className="font-bold text-rose-700">{bootError}</p>
         </div>
-      </>
+      </AppPublicCheckInGlassPage>
     );
   }
 
   if (!ready) {
     return (
-      <>
+      <AppPublicCheckInGlassPage>
         {notice.popup}
         <div className={cn(clubEventGlassShellClass, "mx-auto max-w-lg p-6 text-center")}>
           <p className="text-sm font-semibold text-[#66638c]">กำลังโหลด…</p>
         </div>
-      </>
+      </AppPublicCheckInGlassPage>
     );
   }
 
   return (
-    <>
+    <AppPublicCheckInGlassPage>
       {notice.popup}
       <div className={cn(clubEventGlassShellClass, "mx-auto max-w-lg space-y-4 p-4 sm:p-6")}>
       <header className="space-y-1 text-center">
@@ -329,6 +330,6 @@ export function ClubEventPublicCheckInClient({
         </>
       )}
     </div>
-    </>
+    </AppPublicCheckInGlassPage>
   );
 }
