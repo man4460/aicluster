@@ -8,6 +8,11 @@
 /* Design system source of truth: design-system/MASTER.md */
 
 :root {
+  /* Safe area — มือถือเต็มจอ / Capacitor / PWA (เวลา · แบต · โฮม) */
+  --mawell-safe-top: env(safe-area-inset-top, 0px);
+  --mawell-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mawell-safe-left: env(safe-area-inset-left, 0px);
+  --mawell-safe-right: env(safe-area-inset-right, 0px);
   --background: #f7f6ff;
   --foreground: #1e1b3a;
   --surface: #ffffffcc;
@@ -78,10 +83,30 @@ body {
   min-height: 100dvh;
 }
 
-/* โหมดติดตั้งบนหน้าจอโฮม (standalone) — safe-area บนอยู่ที่ header backdrop */
-html.pwa-standalone body {
+/* Capacitor / PWA เต็มจอ — เว้นแถบสถานะบน + โฮมบาร์ล่าง */
+html.capacitor-native,
+html.pwa-standalone {
+  --mawell-safe-top: env(safe-area-inset-top, 0px);
+  --mawell-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html.pwa-standalone body,
+html.capacitor-native body {
   min-height: 100dvh;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* ล่าง: กันเนื้อหาทับโฮมบาร์ — บนปล่อยให้ sticky header / โทเค็นเว้นเอง */
+  padding-bottom: var(--mawell-safe-bottom);
+}
+
+/**
+ * Sticky / fixed หัวที่ชิด top-0 — เว้นส่วนสถานะ (เวลา แบต ไวไฟ)
+ * ใช้คลาสนี้กับ header ที่อยู่นอก DashboardShell หรือ staff kiosk
+ */
+.mawell-safe-top-pad {
+  padding-top: max(0.5rem, var(--mawell-safe-top));
+}
+
+.mawell-safe-sticky-header {
+  padding-top: var(--mawell-safe-top);
 }
 
 /**

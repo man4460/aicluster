@@ -1407,7 +1407,8 @@ export function DashboardShell({
       className={cn(
         "flex min-h-[100dvh] flex-col text-[#2e2a58]",
         onPosOrderPage && "lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden",
-        moduleStaffKiosk && "h-[100dvh] max-h-[100dvh] overflow-hidden",
+        moduleStaffKiosk &&
+          "h-[100dvh] max-h-[100dvh] overflow-hidden pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]",
       )}
     >
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
@@ -1417,7 +1418,7 @@ export function DashboardShell({
           className="pointer-events-none absolute inset-x-0 top-0 bottom-0 border-b border-slate-200/60 bg-gradient-to-b from-white/98 via-slate-50/96 to-slate-100/90 shadow-[0_10px_28px_-20px_rgba(51,65,85,0.28)] backdrop-blur-2xl"
           aria-hidden
         />
-        <div className="relative z-[1] w-full px-3 pb-1 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4 sm:pb-1.5 sm:pt-3">
+        <div className="relative z-[1] w-full px-3 pb-1 pt-[max(0.5rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:px-4 sm:pb-1.5 sm:pt-[max(0.75rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))]">
         <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-[1.15rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:h-14 sm:gap-2.5 sm:px-5 lg:px-6">
           <button
             type="button"

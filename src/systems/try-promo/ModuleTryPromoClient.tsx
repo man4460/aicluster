@@ -166,7 +166,7 @@ export function ModuleTryPromoClient({
         </div>
       ) : null}
 
-      <header className="absolute inset-x-0 top-0 z-30">
+      <header className="absolute inset-x-0 top-0 z-30 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
             MAWELL · {moduleTitle}

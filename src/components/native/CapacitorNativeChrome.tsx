@@ -7,8 +7,10 @@ import { useEffect } from "react";
 const MAWELL_NATIVE_STATUS_BAR_COLOR = "#f7f6ff";
 
 /**
- * ตั้งแถบสถานะในแอป Capacitor — เนื้อหาไม่ทับไอคอนระบบ
- * ใช้สีเดียวกับพื้นหลังหน้าเว็บ ไอคอนระบบโทนเข้ม (Light style)
+ * ตั้งแถบสถานะในแอป Capacitor
+ * - overlay = true ให้ WebView เต็มจอ แล้วเว้นพื้นที่ด้วย CSS `env(safe-area-inset-*)`
+ *   (ไม่ทับไอคอนเวลา / แบต / ไวไฟ)
+ * - พื้นหลังแถบสถานะโทนเดียวกับหน้าเว็บ · ไอคอนระบบโทนเข้ม (Light style)
  */
 export function CapacitorNativeChrome() {
   useEffect(() => {
@@ -21,7 +23,7 @@ export function CapacitorNativeChrome() {
       try {
         const { StatusBar, Style } = await import("@capacitor/status-bar");
         if (cancelled) return;
-        await StatusBar.setOverlaysWebView({ overlay: false });
+        await StatusBar.setOverlaysWebView({ overlay: true });
         await StatusBar.setBackgroundColor({ color: MAWELL_NATIVE_STATUS_BAR_COLOR });
         await StatusBar.setStyle({ style: Style.Light });
       } catch {

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -187,7 +187,7 @@ export function DrinkPosPortalClient({
       {revCamera.cameraModal}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูป" />
 
-      <header className="absolute inset-x-0 top-0 z-30">
+      <header className="absolute inset-x-0 top-0 z-30 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             {info.logoUrl ? (

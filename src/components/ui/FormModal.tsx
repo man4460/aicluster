@@ -101,10 +101,10 @@ export function FormModal({
       className={cn(
         "fixed inset-0 z-[200] flex justify-center",
         isFull
-          ? "items-stretch p-1.5 sm:items-center sm:p-2"
+          ? "items-stretch p-1.5 pt-[max(0.375rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] pb-[max(0.375rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] sm:items-center sm:p-2"
           : mobileCentered
-            ? "items-center p-3 sm:p-4"
-            : "items-end sm:items-center sm:p-4",
+            ? "items-center p-3 pt-[max(0.75rem,var(--mawell-safe-top,env(safe-area-inset-top,0px)))] pb-[max(0.75rem,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] sm:p-4"
+            : "items-end pb-[max(0px,var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px)))] sm:items-center sm:p-4",
       )}
       role="presentation"
     >

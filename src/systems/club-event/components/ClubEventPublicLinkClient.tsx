@@ -212,7 +212,7 @@ export function ClubEventPublicLinkClient({
 
   const headerAndHero = (ctaLabel: string, ctaAction?: () => void, ctaHref?: string) => (
     <>
-      <header className="absolute inset-x-0 top-0 z-30">
+      <header className="absolute inset-x-0 top-0 z-30 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <a
             href={homeHref}

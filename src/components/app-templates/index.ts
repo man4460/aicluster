@@ -33,6 +33,8 @@ export {
   appDashboardSectionVioletClass,
   appDashboardHistoryListShellClass,
   appModuleShellMainScrollClass,
+  appSafeAreaStickyHeaderPadClass,
+  appSafeAreaTopPadClass,
   appTemplateOutlineButtonClass,
   appTemplatePickGalleryImageButtonClass,
   appTemplateTakePhotoButtonClass,

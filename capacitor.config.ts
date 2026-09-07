@@ -24,7 +24,12 @@ const config: CapacitorConfig = {
   },
   plugins: {
     StatusBar: {
-      overlaysWebView: false,
+      /**
+       * true = WebView เต็มจอใต้แถบสถานะ → `env(safe-area-inset-top)` มีค่าจริง
+       * คู่กับ ios.contentInset "never" และ padding ใน CSS / DashboardShell
+       * (false + never ทำให้ inset = 0 แล้วเนื้อหาทับเวลา/แบตบน iPhone)
+       */
+      overlaysWebView: true,
       style: "LIGHT",
       backgroundColor: "#f7f6ff",
     },

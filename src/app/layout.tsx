@@ -40,6 +40,12 @@ export const metadata: Metadata = {
   description: siteDescription,
   /** ไม่ลิงก์ webmanifest — เลิกชวน Install / Add to Home Screen ของเบราว์เซอร์ (ใช้ Capacitor APK) */
   applicationName: "MAWELL PLATFORM",
+  appleWebApp: {
+    capable: true,
+    title: "MAWELL",
+    /** ให้เนื้อหาขยายใต้แถบสถานะ แล้วเว้นด้วย env(safe-area-inset-*) */
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: "/icons/mawell-32.png", sizes: "32x32", type: "image/png" },
