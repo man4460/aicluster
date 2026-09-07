@@ -19,6 +19,7 @@ type YTPlayer = {
   getCurrentTime: () => number;
   getDuration: () => number;
   getPlayerState: () => number;
+  setSize?: (width: number, height: number) => void;
   destroy: () => void;
 };
 
@@ -188,6 +189,7 @@ export function AppSecureYoutubePlayer({
   /** โหมดเต็มจอ — ซ่อนแถบควบคุมอัตโนมัติเวลาเล่น เพื่อไม่บังเนื้อหา */
   const [fsControlsVisible, setFsControlsVisible] = useState(true);
   const hideFsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const videoId = extractYoutubeVideoId(youtubeUrl.trim());
   const embedFallback = normalizeSecureYoutubeEmbedUrl(youtubeUrl);
   const expanded = cssExpanded || nativeFs;
@@ -268,6 +270,33 @@ export function AppSecureYoutubePlayer({
       if (hideFsTimerRef.current) clearTimeout(hideFsTimerRef.current);
     };
   }, [expanded, playing, bumpFsControls]);
+
+  /** iOS: หลังขยาย/ย่อ จัดขนาด iframe ให้เท่ากล่อง 16:9 ที่จัดกลาง */
+  useEffect(() => {
+    const syncSize = () => {
+      const stage = stageRef.current;
+      const p = playerRef.current;
+      if (!stage || !p?.setSize) return;
+      const w = Math.max(1, Math.round(stage.clientWidth));
+      const h = Math.max(1, Math.round(stage.clientHeight));
+      try {
+        p.setSize(w, h);
+      } catch {
+        /* ignore */
+      }
+    };
+    syncSize();
+    const t = window.setTimeout(syncSize, 50);
+    const t2 = window.setTimeout(syncSize, 250);
+    window.addEventListener("resize", syncSize);
+    window.visualViewport?.addEventListener("resize", syncSize);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", syncSize);
+      window.visualViewport?.removeEventListener("resize", syncSize);
+    };
+  }, [expanded, ready, videoId]);
 
   const seekWithinWatched = useCallback(
     (target: number) => {
@@ -550,79 +579,104 @@ export function AppSecureYoutubePlayer({
     );
   };
 
+  const shell = (
+    <div
+      ref={shellRef}
+      className={cn(
+        "relative isolate overflow-hidden bg-black",
+        cssExpanded
+          ? "fixed inset-0 z-[9999] flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none"
+          : "aspect-video rounded-xl",
+        nativeFs && !cssExpanded && "flex aspect-auto h-full min-h-full w-full flex-col rounded-none",
+      )}
+    >
+      {/* โหมดเต็มจอ: จัดกลางกล่อง 16:9 — กัน iframe ติดขอบล่างบน iOS แนวตั้ง */}
+      <div
+        className={cn(
+          "z-0 bg-black",
+          expanded
+            ? "relative flex min-h-0 flex-1 items-center justify-center"
+            : "absolute inset-0 overflow-hidden",
+        )}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => {
+          if (expanded) {
+            if (fsControlsVisible && playing) setFsControlsVisible(false);
+            else bumpFsControls();
+          }
+        }}
+      >
+        <div
+          ref={stageRef}
+          className={cn(
+            "relative overflow-hidden bg-black",
+            expanded ? "max-h-full max-w-full shrink" : "h-full w-full",
+          )}
+          style={
+            expanded
+              ? {
+                  /* บังคับกล่อง 16:9 กึ่งกลางจอ — กัน iframe ยืดเต็มสูงแล้วติดล่างบน iOS */
+                  width: "min(100vw, calc(100dvh * 16 / 9))",
+                  height: "min(100dvh, calc(100vw * 9 / 16))",
+                }
+              : undefined
+          }
+        >
+          <div
+            ref={hostRef}
+            className="absolute inset-0 h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
+            title={title}
+          />
+          {/* ทับ iframe — กันแตะโลโก้/เปิดแอป YouTube */}
+          <div className="absolute inset-0 z-10" aria-hidden />
+        </div>
+      </div>
+
+      {expanded ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 z-20 transition-opacity duration-300",
+            fsControlsVisible ? "opacity-100" : "opacity-0",
+          )}
+          aria-hidden={!fsControlsVisible}
+        >
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-0 flex justify-end px-2",
+              appSafeAreaOverlayExpandedHeaderPadClass,
+            )}
+          >
+            <button
+              type="button"
+              className={cn(controlIconOnVideoClass, fsControlsVisible && "pointer-events-auto")}
+              tabIndex={fsControlsVisible ? 0 : -1}
+              onClick={() => void toggleFullscreen()}
+              aria-label="ออกจากเต็มจอ"
+              title="ย่อ"
+            >
+              <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
+            </button>
+          </div>
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-0 bottom-0 space-y-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-14",
+              appSafeAreaFixedBottomBarPadClass,
+              fsControlsVisible && "pointer-events-auto",
+            )}
+          >
+            {seekBar("onVideo")}
+            {transportButtons("onVideo")}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
       {cssExpanded ? <div className="aspect-video w-full" aria-hidden /> : null}
       <div className={cn(!expanded && "space-y-2", className)}>
-        <div
-          ref={shellRef}
-          className={cn(
-            "relative isolate overflow-hidden bg-black",
-            cssExpanded
-              ? "fixed inset-0 z-[300] h-[100dvh] max-h-[100dvh] w-full rounded-none"
-              : "aspect-video rounded-xl",
-            nativeFs && !cssExpanded && "aspect-auto h-full min-h-full w-full rounded-none",
-          )}
-        >
-          <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-            <div
-              ref={hostRef}
-              className="h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
-              title={title}
-            />
-          </div>
-          <div
-            className="absolute inset-0 z-10"
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={() => {
-              if (expanded) {
-                if (fsControlsVisible && playing) setFsControlsVisible(false);
-                else bumpFsControls();
-              }
-            }}
-            aria-hidden
-          />
-
-          {expanded ? (
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-0 z-20 transition-opacity duration-300",
-                fsControlsVisible ? "opacity-100" : "opacity-0",
-              )}
-              aria-hidden={!fsControlsVisible}
-            >
-              <div
-                className={cn(
-                  "pointer-events-none absolute inset-x-0 top-0 flex justify-end px-2",
-                  appSafeAreaOverlayExpandedHeaderPadClass,
-                )}
-              >
-                <button
-                  type="button"
-                  className={cn(controlIconOnVideoClass, fsControlsVisible && "pointer-events-auto")}
-                  tabIndex={fsControlsVisible ? 0 : -1}
-                  onClick={() => void toggleFullscreen()}
-                  aria-label="ออกจากเต็มจอ"
-                  title="ย่อ"
-                >
-                  <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
-                </button>
-              </div>
-              <div
-                className={cn(
-                  "pointer-events-none absolute inset-x-0 bottom-0 space-y-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-14",
-                  appSafeAreaFixedBottomBarPadClass,
-                  fsControlsVisible && "pointer-events-auto",
-                )}
-              >
-                {seekBar("onVideo")}
-                {transportButtons("onVideo")}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {/* โหมดปกติ — เส้นเวลา/ปุ่มอยู่ใต้จอ ไม่ทับเนื้อหาวิดีโอ */}
+        {shell}
         {!expanded ? (
           <div className="space-y-1.5 px-0.5">
             {seekBar("below")}
