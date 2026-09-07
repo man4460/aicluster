@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronsLeft, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -190,9 +191,20 @@ export function AppSecureYoutubePlayer({
   const [fsControlsVisible, setFsControlsVisible] = useState(true);
   const hideFsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const resumePlayRef = useRef(false);
+  const resumeSecRef = useRef(0);
+  const [portalReady, setPortalReady] = useState(false);
+  /** ขนาดกล่อง 16:9 แบบ cover — เต็มจอทุกด้าน (อาจครอปขอบ) */
+  const [coverBox, setCoverBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  /** visualViewport — บน iOS ต้องล็อกตำแหน่ง/ขนาดตามนี้ */
+  const [vpBox, setVpBox] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const videoId = extractYoutubeVideoId(youtubeUrl.trim());
   const embedFallback = normalizeSecureYoutubeEmbedUrl(youtubeUrl);
   const expanded = cssExpanded || nativeFs;
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     onProgressRef.current = onProgress;
@@ -234,6 +246,12 @@ export function AppSecureYoutubePlayer({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopImmediatePropagation();
+        try {
+          resumeSecRef.current = playerRef.current?.getCurrentTime?.() ?? 0;
+        } catch {
+          /* ignore */
+        }
+        resumePlayRef.current = true;
         setCssExpanded(false);
       }
     };
@@ -271,30 +289,54 @@ export function AppSecureYoutubePlayer({
     };
   }, [expanded, playing, bumpFsControls]);
 
-  /** iOS: หลังขยาย/ย่อ จัดขนาด iframe ให้เท่ากล่อง 16:9 ที่จัดกลาง */
+  /** เต็มจอมือถือ: cover เต็ม visualViewport ซ้าย–ขวา–บน–ล่าง */
   useEffect(() => {
-    const syncSize = () => {
-      const stage = stageRef.current;
-      const p = playerRef.current;
-      if (!stage || !p?.setSize) return;
-      const w = Math.max(1, Math.round(stage.clientWidth));
-      const h = Math.max(1, Math.round(stage.clientHeight));
+    if (!expanded) {
+      setCoverBox({ w: 0, h: 0 });
+      setVpBox({ top: 0, left: 0, width: 0, height: 0 });
+      return;
+    }
+
+    const syncCover = () => {
+      const vv = window.visualViewport;
+      const width = Math.max(1, Math.round(vv?.width ?? window.innerWidth));
+      const height = Math.max(1, Math.round(vv?.height ?? window.innerHeight));
+      const top = Math.round(vv?.offsetTop ?? 0);
+      const left = Math.round(vv?.offsetLeft ?? 0);
+      setVpBox({ top, left, width, height });
+
+      const ratio = 16 / 9;
+      let w: number;
+      let h: number;
+      if (width / height > ratio) {
+        w = width;
+        h = Math.ceil(width / ratio);
+      } else {
+        h = height;
+        w = Math.ceil(height * ratio);
+      }
+      setCoverBox({ w, h });
       try {
-        p.setSize(w, h);
+        playerRef.current?.setSize?.(w, h);
       } catch {
         /* ignore */
       }
     };
-    syncSize();
-    const t = window.setTimeout(syncSize, 50);
-    const t2 = window.setTimeout(syncSize, 250);
-    window.addEventListener("resize", syncSize);
-    window.visualViewport?.addEventListener("resize", syncSize);
+
+    syncCover();
+    const t1 = window.setTimeout(syncCover, 50);
+    const t2 = window.setTimeout(syncCover, 300);
+    window.addEventListener("resize", syncCover);
+    window.addEventListener("orientationchange", syncCover);
+    window.visualViewport?.addEventListener("resize", syncCover);
+    window.visualViewport?.addEventListener("scroll", syncCover);
     return () => {
-      window.clearTimeout(t);
+      window.clearTimeout(t1);
       window.clearTimeout(t2);
-      window.removeEventListener("resize", syncSize);
-      window.visualViewport?.removeEventListener("resize", syncSize);
+      window.removeEventListener("resize", syncCover);
+      window.removeEventListener("orientationchange", syncCover);
+      window.visualViewport?.removeEventListener("resize", syncCover);
+      window.visualViewport?.removeEventListener("scroll", syncCover);
     };
   }, [expanded, ready, videoId]);
 
@@ -337,9 +379,21 @@ export function AppSecureYoutubePlayer({
       return;
     }
     if (cssExpanded) {
+      try {
+        resumeSecRef.current = playerRef.current?.getCurrentTime?.() ?? currentSec;
+      } catch {
+        resumeSecRef.current = currentSec;
+      }
+      resumePlayRef.current = playing;
       setCssExpanded(false);
       return;
     }
+    try {
+      resumeSecRef.current = playerRef.current?.getCurrentTime?.() ?? currentSec;
+    } catch {
+      resumeSecRef.current = currentSec;
+    }
+    resumePlayRef.current = playing;
     /** iOS: ขยาย CSS เท่านั้น — อย่าเรียก requestFullscreen (iframe หาย/เพี้ยน) */
     if (preferCssFullscreenOnly() || !nativeFullscreenSupported()) {
       setCssExpanded(true);
@@ -356,7 +410,7 @@ export function AppSecureYoutubePlayer({
     } catch {
       setCssExpanded(true);
     }
-  }, [cssExpanded, nativeFs]);
+  }, [cssExpanded, nativeFs, playing, currentSec]);
 
   useEffect(() => {
     if (!videoId || !hostRef.current) return;
@@ -393,7 +447,17 @@ export function AppSecureYoutubePlayer({
             } catch {
               /* ignore */
             }
-            if (autoPlayRef.current) {
+            const resumeAt = resumeSecRef.current;
+            if (resumeAt > 0.25) {
+              try {
+                e.target.seekTo(resumeAt, true);
+                setCurrentSec(resumeAt);
+              } catch {
+                /* ignore */
+              }
+            }
+            if (autoPlayRef.current || resumePlayRef.current) {
+              resumePlayRef.current = false;
               try {
                 e.target.playVideo();
               } catch {
@@ -458,7 +522,7 @@ export function AppSecureYoutubePlayer({
       setReady(false);
       setPlaying(false);
     };
-  }, [videoId]);
+  }, [videoId, cssExpanded]);
 
   if (!videoId || !embedFallback) {
     return (
@@ -584,19 +648,28 @@ export function AppSecureYoutubePlayer({
       ref={shellRef}
       className={cn(
         "relative isolate overflow-hidden bg-black",
-        cssExpanded
-          ? "fixed inset-0 z-[9999] flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none"
-          : "aspect-video rounded-xl",
-        nativeFs && !cssExpanded && "flex aspect-auto h-full min-h-full w-full flex-col rounded-none",
+        cssExpanded ? "rounded-none" : "aspect-video rounded-xl",
+        nativeFs && !cssExpanded && "aspect-auto h-full min-h-full w-full rounded-none",
       )}
+      style={
+        cssExpanded
+          ? {
+              position: "fixed",
+              top: vpBox.top || 0,
+              left: vpBox.left || 0,
+              width: vpBox.width || "100vw",
+              height: vpBox.height || "100dvh",
+              zIndex: 99999,
+              margin: 0,
+            }
+          : undefined
+      }
     >
-      {/* โหมดเต็มจอ: จัดกลางกล่อง 16:9 — กัน iframe ติดขอบล่างบน iOS แนวตั้ง */}
+      {/* โหมดเต็มจอ: cover เต็มจอทุกด้าน · ครอปขอบถ้าจอไม่ใช่ 16:9 */}
       <div
         className={cn(
-          "z-0 bg-black",
-          expanded
-            ? "relative flex min-h-0 flex-1 items-center justify-center"
-            : "absolute inset-0 overflow-hidden",
+          "z-0 overflow-hidden bg-black",
+          expanded ? "absolute inset-0" : "absolute inset-0",
         )}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => {
@@ -609,17 +682,17 @@ export function AppSecureYoutubePlayer({
         <div
           ref={stageRef}
           className={cn(
-            "relative overflow-hidden bg-black",
-            expanded ? "max-h-full max-w-full shrink" : "h-full w-full",
+            "overflow-hidden bg-black",
+            expanded
+              ? "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              : "relative h-full w-full",
           )}
           style={
-            expanded
-              ? {
-                  /* บังคับกล่อง 16:9 กึ่งกลางจอ — กัน iframe ยืดเต็มสูงแล้วติดล่างบน iOS */
-                  width: "min(100vw, calc(100dvh * 16 / 9))",
-                  height: "min(100dvh, calc(100vw * 9 / 16))",
-                }
-              : undefined
+            expanded && coverBox.w > 0
+              ? { width: coverBox.w, height: coverBox.h }
+              : expanded
+                ? { width: "100%", height: "100%" }
+                : undefined
           }
         >
           <div
@@ -627,7 +700,6 @@ export function AppSecureYoutubePlayer({
             className="absolute inset-0 h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
             title={title}
           />
-          {/* ทับ iframe — กันแตะโลโก้/เปิดแอป YouTube */}
           <div className="absolute inset-0 z-10" aria-hidden />
         </div>
       </div>
@@ -676,7 +748,7 @@ export function AppSecureYoutubePlayer({
     <>
       {cssExpanded ? <div className="aspect-video w-full" aria-hidden /> : null}
       <div className={cn(!expanded && "space-y-2", className)}>
-        {shell}
+        {cssExpanded && portalReady ? createPortal(shell, document.body) : shell}
         {!expanded ? (
           <div className="space-y-1.5 px-0.5">
             {seekBar("below")}

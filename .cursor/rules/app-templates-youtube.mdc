@@ -36,7 +36,7 @@ alwaysApply: false
 4. **เต็มจอ:**  
    - **iOS / iPad (และ Mac touch):** ขยายด้วย **CSS** (`fixed` / `100dvh`) — **ห้าม** พึ่ง `requestFullscreen` บน wrapper รอบ iframe เป็นหลัก  
    - เดสก์ท็อปอื่น: native fullscreen ได้ ถ้าใช้ได้ ไม่เช่นนั้น fallback CSS  
-   - โหมดเต็มจอแนวตั้ง: กล่องวิดีโอ **16:9 จัดกึ่งกลาง** ในพื้นดำ — ห้ามยืด iframe เต็มความสูงจอ (บน iOS จะติดขอบล่าง)  
+   - โหมดเต็มจอมือถือ: **cover เต็ม visualViewport** ซ้าย–ขวา–บน–ล่าง (ครอปขอบถ้าจอไม่ใช่ 16:9) · portal ไป `document.body`  
 5. Embed ใช้พารามิเตอร์ secure (`controls:0`, `modestbranding`, `playsinline`, `rel:0`, `fs:0`, …) + **ชั้นทับ iframe** กันแตะโลโก้/เปิดแอป YouTube  
 6. แปลง URL → embed: **`secureYoutubeEmbedUrl`** / **`normalizeSecureYoutubeEmbedUrl`** ใน `@/lib/youtube-url`
 
