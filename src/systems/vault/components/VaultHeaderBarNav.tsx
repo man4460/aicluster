@@ -1,8 +1,15 @@
 "use client";
 
+import {
+  appDashboardModuleHeaderExpandButtonClass,
+  appDashboardModuleHeaderNavLinkClass,
+  appDashboardModuleHeaderNavRowClass,
+  appDashboardModuleHeaderNavShellClass,
+  appDashboardModuleHeaderTitleClass,
+} from "@/components/app-templates";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/cn";
 import {
   VAULT_MODULE_DISPLAY_NAME,
   VAULT_NAV_ITEMS,
@@ -55,7 +62,7 @@ export function VaultHeaderExpandButton({ onExpand }: { onExpand: () => void }) 
     <button
       type="button"
       onClick={onExpand}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95"
+      className={appDashboardModuleHeaderExpandButtonClass}
       aria-label="แสดงส่วนหัวโมดูล"
       title="แสดงส่วนหัวโมดูล"
       suppressHydrationWarning
@@ -69,9 +76,9 @@ export function VaultHeaderBarNav({ onExpand }: { onExpand: () => void }) {
   const pathname = usePathname() ?? "";
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+    <div className={appDashboardModuleHeaderNavRowClass}>
       <nav
-        className="flex min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden"
+        className={appDashboardModuleHeaderNavShellClass}
         aria-label="เมนูโมดูลคลังรหัสผ่าน"
       >
         {VAULT_NAV_ITEMS.map((item) => {
@@ -80,12 +87,7 @@ export function VaultHeaderBarNav({ onExpand }: { onExpand: () => void }) {
             <Link
               key={item.key}
               href={item.href}
-              className={cn(
-                "inline-flex h-8 min-w-[2rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[10px] font-black transition-all sm:h-9 sm:gap-1.5 sm:rounded-xl sm:px-2.5 sm:text-xs",
-                active
-                  ? "bg-white text-[#4d47b6] shadow-md"
-                  : "text-white/85 hover:bg-white/15 hover:text-white",
-              )}
+              className={appDashboardModuleHeaderNavLinkClass(active)}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
               title={item.label}
@@ -98,7 +100,7 @@ export function VaultHeaderBarNav({ onExpand }: { onExpand: () => void }) {
           );
         })}
       </nav>
-      <span className="hidden max-w-[12rem] shrink-0 truncate text-right text-sm font-black tracking-tight text-white md:inline lg:max-w-[16rem]">
+      <span className={appDashboardModuleHeaderTitleClass}>
         {VAULT_MODULE_DISPLAY_NAME}
       </span>
       <VaultHeaderExpandButton onExpand={onExpand} />

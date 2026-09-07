@@ -27,3 +27,38 @@ export const appDashboardHeaderIconButtonClass = cn(
 
 /** ปุ่มไอคอนเมื่อกดแล้ว / เปิดเมนู */
 export const appDashboardHeaderIconButtonActiveClass = "text-white";
+
+/**
+ * เมนูโมดูลเมื่อยุบหัว → ขึ้นบน header ม่วง (เดสก์ท็อป)
+ * โทนเดียวกับชิปทดลองใช้งาน: กล่องแก้ว + แท็บมน + active ขาว
+ */
+
+/** แถวห่อเมนู + ชื่อโมดูล + ปุ่มขยาย */
+export const appDashboardModuleHeaderNavRowClass =
+  "flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2";
+
+/** เปลือกแก้วรอบแท็บเมนู */
+export const appDashboardModuleHeaderNavShellClass = cn(
+  "flex min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto p-0.5",
+  "rounded-full border border-white/30 bg-white/12",
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-md",
+  "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+);
+
+/** ลิงก์แท็บในเปลือกแก้ว */
+export function appDashboardModuleHeaderNavLinkClass(active: boolean) {
+  return cn(
+    "inline-flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-full px-2",
+    "text-[10px] font-bold tracking-tight transition-colors sm:h-8 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
+    active
+      ? "bg-white font-black text-[#5b3ac2] shadow-sm"
+      : "text-white/85 hover:bg-white/15 hover:text-white",
+  );
+}
+
+/** ชื่อโมดูลด้านขวาเมนู */
+export const appDashboardModuleHeaderTitleClass =
+  "hidden max-w-[12rem] shrink-0 truncate text-right text-xs font-bold tracking-tight text-white/90 md:inline lg:max-w-[16rem] lg:text-sm";
+
+/** ปุ่มขยายหัวโมดูล (ไอคอนเส้น) — โทนเดียวกับปุ่มไอคอนหัว */
+export const appDashboardModuleHeaderExpandButtonClass = appDashboardHeaderIconButtonClass;

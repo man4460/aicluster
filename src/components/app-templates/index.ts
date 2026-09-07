@@ -208,6 +208,11 @@ export {
   appDashboardHeaderBarInnerClass,
   appDashboardHeaderIconButtonActiveClass,
   appDashboardHeaderIconButtonClass,
+  appDashboardModuleHeaderExpandButtonClass,
+  appDashboardModuleHeaderNavLinkClass,
+  appDashboardModuleHeaderNavRowClass,
+  appDashboardModuleHeaderNavShellClass,
+  appDashboardModuleHeaderTitleClass,
 } from "./dashboard-header-tokens";
 
 export {
