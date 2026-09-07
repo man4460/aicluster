@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2, Pause, Play, RotateCcw } from "lucide-react";
+import { ChevronsLeft, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   appSafeAreaOverlayExpandedHeaderPadClass,
@@ -140,7 +140,7 @@ function loadYoutubeApi(): Promise<void> {
 
 /** ไอคอนล้วน — ไม่มีกรอบ/พื้นกล่อง */
 const controlIconBtnClass =
-  "pointer-events-auto inline-flex h-11 w-11 touch-manipulation items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition active:scale-95 active:opacity-80 disabled:opacity-35";
+  "pointer-events-auto inline-flex h-9 w-9 touch-manipulation items-center justify-center text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] transition active:scale-95 active:opacity-80 disabled:opacity-35";
 
 type Props = {
   youtubeUrl: string;
@@ -439,7 +439,7 @@ export function LmsSecureYoutubePlayer({
               aria-label="ออกจากเต็มจอ"
               title="ย่อ"
             >
-              <Minimize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
+              <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
             </button>
           </div>
         ) : null}
@@ -478,7 +478,7 @@ export function LmsSecureYoutubePlayer({
               <span>{formatTime(durationSec)}</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-2">
             <button
               type="button"
               className={controlIconBtnClass}
@@ -487,7 +487,7 @@ export function LmsSecureYoutubePlayer({
               aria-label="ย้อนกลับ 10 วินาที"
               title="ย้อนกลับ 10 วินาที"
             >
-              <RotateCcw className="h-6 w-6" aria-hidden strokeWidth={2.25} />
+              <ChevronsLeft className="h-4 w-4" aria-hidden strokeWidth={2.5} />
             </button>
             <button
               type="button"
@@ -503,9 +503,9 @@ export function LmsSecureYoutubePlayer({
               title={playing ? "หยุด" : "เล่น"}
             >
               {playing ? (
-                <Pause className="h-7 w-7" aria-hidden strokeWidth={2.25} />
+                <Pause className="h-5 w-5" aria-hidden strokeWidth={2.25} />
               ) : (
-                <Play className="h-7 w-7" aria-hidden strokeWidth={2.25} />
+                <Play className="h-5 w-5" aria-hidden strokeWidth={2.25} />
               )}
             </button>
             <button
@@ -517,9 +517,9 @@ export function LmsSecureYoutubePlayer({
               aria-pressed={expanded}
             >
               {expanded ? (
-                <Minimize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
+                <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
               ) : (
-                <Maximize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
+                <Maximize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
               )}
             </button>
           </div>
