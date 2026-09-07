@@ -674,6 +674,8 @@ export function DashboardShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount · โหมดทดลองเริ่มซ่อน */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => demoSession);
+  /** md+ = จอที่ใช้ sidebar · ต่ำกว่านั้นใช้ drawer — ปุ่มแฮมเบอร์เกอร์ตัวเดียว */
+  const [isMdUp, setIsMdUp] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [moduleMenuOpen, setModuleMenuOpen] = useState(false);
   const [drinkPosHeaderCollapsed, setDrinkPosHeaderCollapsed] = useState(false);
@@ -827,6 +829,14 @@ export function DashboardShell({
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const packageLabel = headerPackageLabel(subscriptionType, subscriptionTier);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsMdUp(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const toggleDesktopSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
@@ -1429,34 +1439,28 @@ export function DashboardShell({
             suppressHydrationWarning
             className={cn(
               appDashboardHeaderIconButtonClass,
-              "hidden md:inline-flex",
-              systemFocusLayout && "!hidden",
-              moduleStaffKiosk && "!hidden",
-            )}
-            aria-pressed={sidebarCollapsed}
-            aria-label={sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}
-            title={sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}
-            onClick={toggleDesktopSidebar}
-          >
-            <span className="sr-only">{sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}</span>
-            <DesktopSidebarToggleGlyph collapsed={sidebarCollapsed} />
-          </button>
-
-          <button
-            type="button"
-            suppressHydrationWarning
-            className={cn(
-              appDashboardHeaderIconButtonClass,
-              "md:hidden",
               systemFocusLayout && "hidden",
+              moduleStaffKiosk && "hidden",
             )}
-            aria-expanded={drawerOpen}
-            aria-controls={menuId}
-            aria-label={drawerOpen ? "ปิดเมนู" : "เปิดเมนู"}
-            onClick={() => setDrawerOpen((o) => !o)}
+            aria-expanded={isMdUp ? !sidebarCollapsed : drawerOpen}
+            aria-controls={isMdUp ? undefined : menuId}
+            aria-pressed={isMdUp ? !sidebarCollapsed : undefined}
+            aria-label={
+              isMdUp
+                ? sidebarCollapsed
+                  ? "แสดงเมนูด้านข้าง"
+                  : "ซ่อนเมนูด้านข้าง"
+                : drawerOpen
+                  ? "ปิดเมนู"
+                  : "เปิดเมนู"
+            }
+            title={isMdUp ? (sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง") : "เมนู"}
+            onClick={() => {
+              if (isMdUp) toggleDesktopSidebar();
+              else setDrawerOpen((o) => !o);
+            }}
           >
-            <span className="sr-only">เปิดเมนู</span>
-            <MenuIcon open={drawerOpen} />
+            <MenuIcon open={isMdUp ? false : drawerOpen} />
           </button>
 
           <Link
@@ -2275,19 +2279,7 @@ function MobileBottomNavLink({
   );
 }
 
-/** เดสก์ท็อป: สลับซ่อน sidebar — ลูกศรชี้ซ้ายเมื่อเมนูเปิดอยู่ (กดเพื่อซ่อน), ชี้ขวาเมื่อซ่อนแล้ว (กดเพื่อแสดง) */
-function DesktopSidebarToggleGlyph({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-current" aria-hidden>
-      {collapsed ? (
-        <path d="M10 7l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <path d="M14 7l-5 5 5 5" strokeLinecap="round" strokeLinejoin="round" />
-      )}
-    </svg>
-  );
-}
-
+/** แฮมเบอร์เกอร์ / ปิด — ใช้ปุ่มเมนูซ้ายสุดตัวเดียวทั้งมือถือและเดสก์ท็อป */
 function MenuIcon({ open }: { open: boolean }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-current" aria-hidden>
