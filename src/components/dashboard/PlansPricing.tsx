@@ -12,6 +12,7 @@ import {
   AppSectionHeader,
   useAppNoticePopup,
 } from "@/components/app-templates";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
@@ -51,6 +52,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
   const [topUpBusy, setTopUpBusy] = useState(false);
   const [topUpErr, setTopUpErr] = useState<string | null>(null);
   const [amountBahtInput, setAmountBahtInput] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
 
   const arrears = tokenArrearsToClear(tokens);
   const locked = isTokenDebtLocked(tokens);
@@ -85,6 +87,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
     setTopUpWaiting(false);
     setTopUpErr(null);
     setAmountBahtInput("");
+    setAccountPassword("");
   }, []);
 
   const closeTopUpModal = useCallback(() => {
@@ -105,6 +108,10 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
       setTopUpErr("กรอกยอดเติม 1–100000 บาท (1 บาท = 1 โทเคน)");
       return;
     }
+    if (!accountPassword.trim()) {
+      setTopUpErr("กรุณายืนยันรหัสผ่านบัญชีก่อนสร้าง QR (ความปลอดภัยชั้นที่ 2)");
+      return;
+    }
     setTopUpBusy(true);
     setTopUpErr(null);
     try {
@@ -112,7 +119,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ amountBaht: n }),
+        body: JSON.stringify({ amountBaht: n, accountPassword }),
       });
       const data = (await res.json()) as { error?: string; orderId?: string; qrCodeContent?: string | null };
       if (!res.ok) {
@@ -123,6 +130,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
       setTopUpQr(data.qrCodeContent ?? null);
       setTopUpQrImg(null);
       setTopUpWaiting(Boolean(data.orderId));
+      setAccountPassword("");
     } finally {
       setTopUpBusy(false);
     }
@@ -511,32 +519,50 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
       >
         <div className="space-y-4 text-sm">
           {!topUpOrderId ? (
-            <label className="block">
-              <span className="text-xs font-semibold text-slate-600">ยอดเติม (บาท)</span>
-              <input
-                type="number"
-                min={1}
-                max={100_000}
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 tabular-nums outline-none focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/15"
-                value={amountBahtInput}
-                onChange={(e) => setAmountBahtInput(e.target.value)}
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                {[arrears > 0 ? arrears : null, 100, 199, 300, 500]
-                  .filter((n): n is number => n != null)
-                  .filter((n, i, arr) => arr.indexOf(n) === i)
-                  .map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setAmountBahtInput(String(preset))}
-                      className="app-tap-feedback rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      +{preset}
-                    </button>
-                  ))}
-              </div>
-            </label>
+            <>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">ยอดเติม (บาท)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100_000}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 tabular-nums outline-none focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/15"
+                  value={amountBahtInput}
+                  onChange={(e) => setAmountBahtInput(e.target.value)}
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[arrears > 0 ? arrears : null, 100, 199, 300, 500]
+                    .filter((n): n is number => n != null)
+                    .filter((n, i, arr) => arr.indexOf(n) === i)
+                    .map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setAmountBahtInput(String(preset))}
+                        className="app-tap-feedback rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        +{preset}
+                      </button>
+                    ))}
+                </div>
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">
+                  ยืนยันรหัสผ่านบัญชี (ชั้นที่ 2)
+                </span>
+                <PasswordInput
+                  value={accountPassword}
+                  onChange={(e) => setAccountPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="รหัสผ่านที่ใช้เข้าสู่ระบบ"
+                  className="mt-1"
+                  inputClassName="w-full rounded-xl border border-slate-200 py-2.5 pl-3 pr-10 text-sm outline-none focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/15"
+                />
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  ล็อกอินแล้ว + ยืนยันรหัสผ่านก่อนสร้าง QR — โทเคนเข้าเมื่อชำระสำเร็จเท่านั้น
+                </span>
+              </label>
+            </>
           ) : null}
           {topUpErr ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">

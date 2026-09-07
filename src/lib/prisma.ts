@@ -43,7 +43,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 82: ClubEvent portal fields + submissions */
 /** 83: Lms* LMS online course module */
 /** 84: LmsCoursePurchase — learner buy + slip review */
-const PRISMA_SINGLETON_VERSION = 87;
+/** 87: SiteSetting.adminTokenTopUpPinHash — รหัสเติมโทเคนแอดมิน */
+const PRISMA_SINGLETON_VERSION = 88;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/api-auth";
 import { hashPassword } from "@/lib/auth/password";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
+import { assertAdminTopUpPin } from "@/lib/tokens/admin-topup-pin";
 
 const tierEnum = z.enum([
   "NONE",
@@ -26,6 +27,8 @@ const patchSchema = z.object({
   tokens: z.number().int().min(0).max(999_999_999).optional(),
   /** บวก/ลบโทเคน (เติมเป็นบวก) — ใช้แยกจาก tokens ทีละคำขอ */
   tokensAdd: z.number().int().min(-999_999_999).max(999_999_999).optional(),
+  /** รหัสเติมโทเคนที่แอดมินตั้ง — จำเป็นเมื่อปรับ tokens / tokensAdd */
+  topUpPin: z.string().min(1).max(64).optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -58,6 +61,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
       { error: "ตั้งค่าได้ทีละอย่าง: โทเคนรวม หรือ เติม/หักโทเคน" },
       { status: 400 },
     );
+  }
+
+  const touchesTokens =
+    parsed.data.tokens !== undefined || parsed.data.tokensAdd !== undefined;
+  if (touchesTokens) {
+    const pinCheck = await assertAdminTopUpPin(parsed.data.topUpPin);
+    if (!pinCheck.ok) {
+      return NextResponse.json({ error: pinCheck.error }, { status: pinCheck.status });
+    }
   }
 
   const target = await prisma.user.findUnique({

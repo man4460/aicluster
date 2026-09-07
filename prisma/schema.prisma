@@ -8133,6 +8133,10 @@ model ResumeViewAnalytics {
 model SiteSetting {
   id               String   @id @db.VarChar(32)
   landingBannerUrl String?  @map("landing_banner_url") @db.VarChar(512)
+  /**
+   * รหัสยืนยันก่อนแอดมินเติม/ปรับโทเคนผู้ใช้ (bcrypt) — แอดมินตั้งเอง
+   */
+  adminTokenTopUpPinHash String? @map("admin_token_topup_pin_hash") @db.VarChar(255)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

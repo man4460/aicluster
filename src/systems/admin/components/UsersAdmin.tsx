@@ -79,8 +79,18 @@ export function UsersAdmin() {
 
   const [topUpUser, setTopUpUser] = useState<UserRow | null>(null);
   const [topUpAmount, setTopUpAmount] = useState("10");
+  const [topUpPin, setTopUpPin] = useState("");
   const [topUpError, setTopUpError] = useState<string | null>(null);
   const [topUpLoading, setTopUpLoading] = useState(false);
+
+  const [pinConfigured, setPinConfigured] = useState<boolean | null>(null);
+  const [pinCurrent, setPinCurrent] = useState("");
+  const [pinNew, setPinNew] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinMsg, setPinMsg] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinSaving, setPinSaving] = useState(false);
+  const [editTopUpPin, setEditTopUpPin] = useState("");
 
   /** ฟอร์มเพิ่ม / แผงกรอง — แสดงเมื่อกดปุ่มเท่านั้น */
   const [createFormOpen, setCreateFormOpen] = useState(false);
@@ -123,14 +133,21 @@ export function UsersAdmin() {
 
   const load = useCallback(async () => {
     setLoadError(null);
-    const res = await fetch("/api/admin/users", { credentials: "include" });
-    if (!res.ok) {
+    const [usersRes, pinRes] = await Promise.all([
+      fetch("/api/admin/users", { credentials: "include" }),
+      fetch("/api/admin/token-topup-pin", { credentials: "include" }),
+    ]);
+    if (!usersRes.ok) {
       setLoadError("โหลดข้อมูลไม่สำเร็จ");
       setUsers([]);
       return;
     }
-    const data = (await res.json()) as { users: UserRow[] };
+    const data = (await usersRes.json()) as { users: UserRow[] };
     setUsers(data.users);
+    if (pinRes.ok) {
+      const pinData = (await pinRes.json()) as { configured?: boolean };
+      setPinConfigured(Boolean(pinData.configured));
+    }
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -187,14 +204,49 @@ export function UsersAdmin() {
     setEditPassword("");
     setEditRole(u.role as "USER" | "ADMIN");
     setEditTokens(u.tokens);
+    setEditTopUpPin("");
     setEditSubscriptionType((u.subscriptionType ?? "DAILY") === "BUFFET" ? "BUFFET" : "DAILY");
     setEditSubscriptionTier(u.subscriptionTier);
   }
 
-  function openTopUp(u: UserRow) {
+  function openTopUp(u: UserRow, preset?: number) {
     setTopUpError(null);
     setTopUpUser(u);
-    setTopUpAmount("10");
+    setTopUpAmount(String(preset ?? 10));
+    setTopUpPin("");
+  }
+
+  async function onSavePin(e: React.FormEvent) {
+    e.preventDefault();
+    setPinError(null);
+    setPinMsg(null);
+    if (pinNew.trim() !== pinConfirm.trim()) {
+      setPinError("รหัสใหม่กับยืนยันไม่ตรงกัน");
+      return;
+    }
+    setPinSaving(true);
+    try {
+      const body: Record<string, string> = { newPin: pinNew.trim() };
+      if (pinConfigured) body.currentPin = pinCurrent.trim();
+      const res = await fetch("/api/admin/token-topup-pin", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setPinError(data.error ?? "บันทึกรหัสไม่สำเร็จ");
+        return;
+      }
+      setPinConfigured(true);
+      setPinCurrent("");
+      setPinNew("");
+      setPinConfirm("");
+      setPinMsg(pinConfigured ? "เปลี่ยนรหัสเติมโทเคนแล้ว" : "ตั้งรหัสเติมโทเคนแล้ว");
+    } finally {
+      setPinSaving(false);
+    }
   }
 
   async function onSaveEdit(e: React.FormEvent) {
@@ -209,7 +261,14 @@ export function UsersAdmin() {
       subscriptionTier: editSubscriptionTier,
     };
     if (editPassword.trim()) body.password = editPassword;
-    if (editTokens !== editing.tokens) body.tokens = editTokens;
+    if (editTokens !== editing.tokens) {
+      body.tokens = editTokens;
+      if (!editTopUpPin.trim()) {
+        setEditError("กรุณาใส่รหัสเติมโทเคนก่อนปรับยอด");
+        return;
+      }
+      body.topUpPin = editTopUpPin.trim();
+    }
 
     setEditSaving(true);
     try {
@@ -240,13 +299,17 @@ export function UsersAdmin() {
       setTopUpError("กรุณากรอกจำนวนโทเคน (ไม่ใช่ศูนย์)");
       return;
     }
+    if (!topUpPin.trim()) {
+      setTopUpError("กรุณาใส่รหัสเติมโทเคน");
+      return;
+    }
     setTopUpLoading(true);
     try {
       const res = await fetch(`/api/admin/users/${topUpUser.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokensAdd: n }),
+        body: JSON.stringify({ tokensAdd: n, topUpPin: topUpPin.trim() }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -254,26 +317,11 @@ export function UsersAdmin() {
         return;
       }
       setTopUpUser(null);
+      setTopUpPin("");
       await load();
     } finally {
       setTopUpLoading(false);
     }
-  }
-
-  async function quickTopUp(u: UserRow, amount: number) {
-    setListBanner(null);
-    const res = await fetch(`/api/admin/users/${u.id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokensAdd: amount }),
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setListBanner(data.error ?? "เติมโทเคนไม่สำเร็จ");
-      return;
-    }
-    await load();
   }
 
   async function onDelete(id: string) {
@@ -350,6 +398,70 @@ export function UsersAdmin() {
           </ul>
         ) : null}
       </section>
+
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader tone="violet" title="รหัสเติมโทเคน (แอดมิน)" />
+        <form onSubmit={onSavePin} className="mt-4 space-y-3">
+          {pinConfigured === false ? (
+            <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-sm text-amber-900">
+              ยังไม่ได้ตั้งรหัส — ต้องตั้งก่อนจึงจะเติมโทเคนผู้ใช้ได้
+            </p>
+          ) : pinConfigured ? (
+            <p className="rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+              มีรหัสแล้ว — ต้องใส่ทุกครั้งก่อนเติมหรือปรับโทเคน
+            </p>
+          ) : null}
+          {pinError ? (
+            <p className="rounded-xl border border-rose-200/80 bg-rose-50/90 px-3 py-2 text-sm text-rose-800">{pinError}</p>
+          ) : null}
+          {pinMsg ? (
+            <p className="rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-800">{pinMsg}</p>
+          ) : null}
+          {pinConfigured ? (
+            <Field label="รหัสเดิม">
+              <PasswordInput
+                value={pinCurrent}
+                onChange={(e) => setPinCurrent(e.target.value)}
+                autoComplete="off"
+                className="w-full"
+                inputClassName={passwordInputClass}
+                required
+              />
+            </Field>
+          ) : null}
+          <Field label={pinConfigured ? "รหัสใหม่" : "ตั้งรหัส (4–64 ตัวอักษร)"}>
+            <PasswordInput
+              value={pinNew}
+              onChange={(e) => setPinNew(e.target.value)}
+              autoComplete="new-password"
+              className="w-full"
+              inputClassName={passwordInputClass}
+              required
+              minLength={4}
+              maxLength={64}
+            />
+          </Field>
+          <Field label="ยืนยันรหัส">
+            <PasswordInput
+              value={pinConfirm}
+              onChange={(e) => setPinConfirm(e.target.value)}
+              autoComplete="new-password"
+              className="w-full"
+              inputClassName={passwordInputClass}
+              required
+              minLength={4}
+              maxLength={64}
+            />
+          </Field>
+          <button
+            type="submit"
+            disabled={pinSaving}
+            className={cn(appDashboardBrandCtaPillButtonClass, "disabled:opacity-50")}
+          >
+            {pinSaving ? "กำลังบันทึก…" : pinConfigured ? "เปลี่ยนรหัส" : "ตั้งรหัส"}
+          </button>
+        </form>
+      </AppDashboardSection>
 
       {listBanner ? (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
@@ -584,7 +696,7 @@ export function UsersAdmin() {
                       <div className="flex flex-wrap items-center justify-between gap-1.5 border-t border-[#f0eefc]/90 pt-2">
                         <div className="flex flex-wrap gap-1">
                           {[10, 50, 100].map((n) => (
-                            <button key={n} type="button" onClick={() => void quickTopUp(u, n)} className={quickChipClass}>
+                            <button key={n} type="button" onClick={() => openTopUp(u, n)} className={quickChipClass}>
                               +{n}
                             </button>
                           ))}
@@ -671,6 +783,18 @@ export function UsersAdmin() {
               className={inputClass}
             />
           </Field>
+          {editing && editTokens !== editing.tokens ? (
+            <Field label="รหัสเติมโทเคน (จำเป็นเมื่อเปลี่ยนยอด)">
+              <PasswordInput
+                value={editTopUpPin}
+                onChange={(e) => setEditTopUpPin(e.target.value)}
+                autoComplete="off"
+                inputClassName={passwordInputClass}
+                placeholder="รหัสที่แอดมินตั้งไว้"
+                required
+              />
+            </Field>
+          ) : null}
           <Field label="รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)">
             <PasswordInput
               minLength={8}
@@ -721,7 +845,10 @@ export function UsersAdmin() {
       <FormModal
         open={topUpUser != null}
         onClose={() => {
-          if (!topUpLoading) setTopUpUser(null);
+          if (!topUpLoading) {
+            setTopUpUser(null);
+            setTopUpPin("");
+          }
         }}
         title="เติมโทเคน"
         description={
@@ -735,7 +862,10 @@ export function UsersAdmin() {
             <button
               type="button"
               disabled={topUpLoading}
-              onClick={() => setTopUpUser(null)}
+              onClick={() => {
+                setTopUpUser(null);
+                setTopUpPin("");
+              }}
               className="flex-1 rounded-2xl border border-white/50 bg-white/50 px-6 py-3 text-sm font-bold text-[#5f5a8a] backdrop-blur-md transition hover:bg-white/80 disabled:opacity-50 sm:flex-none sm:px-8"
             >
               ยกเลิก
@@ -763,6 +893,16 @@ export function UsersAdmin() {
               onChange={(e) => setTopUpAmount(e.target.value)}
               className={inputClass}
               placeholder="เช่น 10 หรือ -5"
+            />
+          </Field>
+          <Field label="รหัสเติมโทเคน">
+            <PasswordInput
+              value={topUpPin}
+              onChange={(e) => setTopUpPin(e.target.value)}
+              autoComplete="off"
+              inputClassName={passwordInputClass}
+              placeholder="รหัสที่แอดมินตั้งไว้"
+              required
             />
           </Field>
           <div className="flex flex-wrap gap-2">
