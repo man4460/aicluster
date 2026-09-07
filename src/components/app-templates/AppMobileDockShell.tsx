@@ -14,7 +14,7 @@ type Props = {
   pillClassName?: string;
 };
 
-/** โครงเมนูล่างมาตรฐาน — พื้นขาวเต็มจอ + กล่องเมนูโค้งมนด้านใน */
+/** โครงเมนูล่างมาตรฐาน — แถบเดียวเต็มขอบ · ไม่ซ้อนกล่อง pill */
 export function AppMobileDockShell({ ariaLabel, children, slot, className, pillClassName }: Props) {
   return (
     <nav aria-label={ariaLabel} className={cn(appMobileDockBackdropClass, className)}>

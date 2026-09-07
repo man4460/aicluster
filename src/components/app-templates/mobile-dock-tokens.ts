@@ -1,33 +1,38 @@
 import { cn } from "@/lib/cn";
 import { appSafeAreaBottomPadClass } from "@/components/app-templates/safe-area-tokens";
 
-/** แถบพื้นขาวเต็มความกว้างชิดขอบซ้ายขวา — เว้นเฉพาะ home indicator (โทเค็นกลาง) */
+/**
+ * แถบเมนูล่างมือถือ / ไอแพดแนวตั้ง — ชั้นเดียวเต็มขอบ
+ * (ไม่ซ้อนกล่อง pill ด้านใน — active ใช้สีไอคอน/ตัวอักษร)
+ */
 export const appMobileDockBackdropClass = cn(
-  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/75 bg-gradient-to-b from-white/98 via-white/95 to-slate-50/92 px-3 pt-1.5 shadow-[0_-14px_44px_-20px_rgba(30,27,75,0.24)] backdrop-blur-2xl lg:hidden print:hidden",
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/70 bg-white/95 px-2 pt-1 shadow-[0_-8px_28px_-18px_rgba(30,27,75,0.18)] backdrop-blur-xl lg:hidden print:hidden",
   appSafeAreaBottomPadClass,
 );
 
-/** กล่องเมนูโค้งมนภายในแถบล่าง */
-export const appMobileDockPillClass =
-  "mx-auto w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/75 bg-white/88 p-1.5 shadow-[0_16px_42px_-22px_rgba(91,97,255,0.38)] ring-1 ring-inset ring-white/85 backdrop-blur-xl";
+/**
+ * โซนรายการเมนูภายในแถบ — ไม่มีขอบ/เงา/พื้นแยก (กันกล่องซ้อน)
+ * `pillClassName` จากโมดูลยังส่งได้แต่ควรเป็น layout เท่านั้น
+ */
+export const appMobileDockPillClass = "mx-auto w-full max-w-6xl";
 
-/** โซนเนื้อหาเสริมเหนือเมนู (เช่น สรุปบิลรอบันทึก) */
+/** โซนเนื้อหาเสริมเหนือเมนู (เช่น สรุปบิลรอบันทึก) — การ์ดเบาได้เพราะไม่ใช่ชั้นเมนูซ้ำ */
 export const appMobileDockUnifiedSlotClass =
-  "mx-auto mb-2 w-full max-w-6xl rounded-[1.35rem] border border-white/70 bg-white/75 px-3 py-2 shadow-sm ring-1 ring-inset ring-white/60 backdrop-blur-md";
+  "mx-auto mb-1.5 w-full max-w-6xl rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 shadow-sm";
 
-export const appMobileDockGridClass = "grid gap-1.5";
+export const appMobileDockGridClass = "grid gap-0.5";
 
 /** เว้นที่เลื่อนเนื้อหาเหนือแถบ dock มือถือ / ไอแพดแนวตั้ง */
 export const appMobileDockContentClearanceClass = "pb-24 lg:pb-0";
 
-export const appMobileDockItemActiveClass =
-  "bg-white/90 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm";
+/** เลือกแล้ว — เน้นสีไอคอน/ข้อความ ไม่ใส่พื้นกล่อง */
+export const appMobileDockItemActiveClass = "font-bold text-[#5b61ff]";
 
-export const appMobileDockItemIdleClass = "text-slate-500 hover:bg-white/55 hover:text-slate-700";
+export const appMobileDockItemIdleClass = "font-semibold text-slate-500 hover:text-slate-700";
 
 export function appMobileDockLinkClass(active: boolean) {
   return cn(
-    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
+    "flex min-h-[48px] w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-center transition-colors active:scale-[0.96]",
     active ? appMobileDockItemActiveClass : appMobileDockItemIdleClass,
   );
 }

@@ -2226,17 +2226,17 @@ function MobileBottomNav({
 }) {
   if (items.length === 0) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden" aria-label="เมนูด้านล่าง">
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent"
-        aria-hidden
-      />
-      <div className={cn("relative mx-auto w-full max-w-[36rem] px-3 pt-1.5", appSafeAreaBottomPadClass)}>
-        <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
-          {items.map((item) => (
-            <MobileBottomNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
-          ))}
-        </div>
+    <nav
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/70 bg-white/95 px-2 pt-1 shadow-[0_-8px_28px_-18px_rgba(30,27,75,0.18)] backdrop-blur-xl md:hidden print:hidden",
+        appSafeAreaBottomPadClass,
+      )}
+      aria-label="เมนูด้านล่าง"
+    >
+      <div className="mx-auto flex w-full max-w-[36rem] items-stretch justify-between gap-0.5">
+        {items.map((item) => (
+          <MobileBottomNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+        ))}
       </div>
     </nav>
   );
@@ -2256,22 +2256,20 @@ function MobileBottomNavLink({
     <Link
       href={href}
       className={cn(
-        "flex min-h-[3.35rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-center transition sm:px-1",
-        active ? "bg-[#0000BF]/10 text-[#2e2a58]" : "text-slate-500 hover:bg-slate-100",
+        "flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-center transition-colors sm:px-1",
+        active ? "font-black text-[#5b61ff]" : "font-semibold text-slate-500 hover:text-slate-700",
       )}
     >
       <span
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 transition",
-          active
-            ? cn(appDashboardBrandGradientFillClass, "text-white ring-0 shadow-[0_10px_18px_-14px_rgba(91,97,255,0.9)]")
-            : "bg-white text-slate-500 ring-slate-200",
+          "flex h-7 w-7 shrink-0 items-center justify-center transition-colors",
+          active ? "text-[#5b61ff]" : "text-slate-500",
         )}
         aria-hidden
       >
         {dashboardNavIconForHref(href)}
       </span>
-      <span className="max-w-full px-0.5 text-[9px] font-black leading-tight tracking-tight line-clamp-2">
+      <span className="max-w-full px-0.5 text-[9px] leading-tight tracking-tight line-clamp-2">
         {label}
       </span>
     </Link>
