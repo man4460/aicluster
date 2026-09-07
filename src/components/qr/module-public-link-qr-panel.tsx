@@ -35,7 +35,7 @@ type InnerProps = Omit<Props, "moduleSlug" | "planGateAllowed">;
 
 /**
  * แผง QR ลิงก์สาธารณะ (ลูกค้า) — UX เดียวกับ ModuleStaffTokenQrPanel / ShopStaffQrPanel
- * ใช้ URL คงที่ ไม่ต้องสร้างโทเค็น · สายรายวันล็อก (ยกเว้นโมดูลฟรี)
+ * ใช้ URL คงที่ ไม่ต้องสร้างโทเค็น · สายรายวันล็อก (ยกเว้นโมดูลฟรี / LMS)
  */
 export function ModulePublicLinkQrPanel({ moduleSlug, planGateAllowed, ...rest }: Props) {
   return (

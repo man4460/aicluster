@@ -34,7 +34,7 @@ type InnerProps = Omit<Props, "moduleSlug" | "planGateAllowed">;
 
 /**
  * แผงสร้าง/แสดง QR พนักงานแบบโทเค็น (เหมือนร้านอาหาร) — ใช้ ShopStaffQrPanel
- * สายรายวันล็อก (ยกเว้นโมดูลฟรี)
+ * สายรายวันล็อก (ยกเว้นโมดูลฟรี / LMS)
  */
 export function ModuleStaffTokenQrPanel({ moduleSlug, planGateAllowed, ...rest }: Props) {
   return (

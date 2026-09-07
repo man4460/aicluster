@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
 import { cn } from "@/lib/cn";
-import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
+import { isQrLinkAllowedOnDailyPlan } from "@/lib/modules/config";
 
 type Props = {
   moduleSlug: string;
@@ -15,7 +15,7 @@ type Props = {
 };
 
 /**
- * ห่อแผงลิงก์/QR — สายรายวันแสดงล็อก + ปุ่มอัปเกรด · รายเดือน/ฟรีแสดง children
+ * ห่อแผงลิงก์/QR — สายรายวันแสดงล็อก + ปุ่มอัปเกรด · รายเดือน/ฟรี/LMS แสดง children
  */
 export function ModuleQrMonthlyGate({
   moduleSlug,
@@ -24,13 +24,13 @@ export function ModuleQrMonthlyGate({
   allowed: allowedProp,
   title = "ลิงก์ QR",
 }: Props) {
-  const free = isDailyTokenExemptModuleSlug(moduleSlug);
+  const dailyAllowed = isQrLinkAllowedOnDailyPlan(moduleSlug);
   const [allowed, setAllowed] = useState<boolean | null>(
-    allowedProp !== undefined ? allowedProp : free ? true : null,
+    allowedProp !== undefined ? allowedProp : dailyAllowed ? true : null,
   );
 
   const reload = useCallback(async () => {
-    if (free) {
+    if (dailyAllowed) {
       setAllowed(true);
       return;
     }
@@ -48,19 +48,19 @@ export function ModuleQrMonthlyGate({
     } catch {
       setAllowed(false);
     }
-  }, [allowedProp, free, moduleSlug]);
+  }, [allowedProp, dailyAllowed, moduleSlug]);
 
   useEffect(() => {
     if (allowedProp !== undefined) {
       setAllowed(allowedProp);
       return;
     }
-    if (free) {
+    if (dailyAllowed) {
       setAllowed(true);
       return;
     }
     void reload();
-  }, [allowedProp, free, reload]);
+  }, [allowedProp, dailyAllowed, reload]);
 
   if (allowed === null) {
     return (

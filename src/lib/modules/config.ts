@@ -188,6 +188,19 @@ export function isDailyTokenExemptModuleSlug(slug: string): boolean {
   return DAILY_TOKEN_EXEMPT_MODULE_SLUGS.has(slug);
 }
 
+/**
+ * โมดูลที่เปิดลิงก์ / QR สาธารณะได้แม้เป็นสายรายวัน
+ * (ยังหักโทเคนรายวันตามปกติ — ไม่ใช่โมดูลฟรี)
+ */
+export const QR_LINK_DAILY_ALLOWED_MODULE_SLUGS: ReadonlySet<string> = new Set([
+  LMS_MODULE_SLUG,
+]);
+
+/** ลิงก์/QR ใช้ได้บนสายรายวัน — โมดูลฟรี หรือรายการยกเว้น (เช่น LMS) */
+export function isQrLinkAllowedOnDailyPlan(slug: string): boolean {
+  return isDailyTokenExemptModuleSlug(slug) || QR_LINK_DAILY_ALLOWED_MODULE_SLUGS.has(slug);
+}
+
 /** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
 export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === ATTENDANCE_MODULE_SLUG) return "เช็คอินอัจฉริยะ";

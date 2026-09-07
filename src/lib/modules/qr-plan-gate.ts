@@ -1,9 +1,10 @@
 import { hasMonthly199ForModule, type UserAccessFields } from "@/lib/modules/access";
-import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
+import { isQrLinkAllowedOnDailyPlan } from "@/lib/modules/config";
 
 /**
  * ลิงก์ / QR สาธารณะและพนักงานของโมดูล
- * — สายรายวัน: ปิด · แพ็กรายเดือน (199) / โมดูลฟรี / แอดมิน: เปิด
+ * — สายรายวัน: ปิด (ยกเว้นโมดูลฟรี + LMS ฯลฯ ใน `isQrLinkAllowedOnDailyPlan`)
+ * — แพ็กรายเดือน (199) / แอดมิน: เปิด
  */
 export function canUseModuleQrLinks(
   access: Pick<UserAccessFields, "role" | "monthly199Slugs">,
@@ -11,6 +12,6 @@ export function canUseModuleQrLinks(
 ): boolean {
   if (!moduleSlug) return false;
   if (access.role === "ADMIN") return true;
-  if (isDailyTokenExemptModuleSlug(moduleSlug)) return true;
+  if (isQrLinkAllowedOnDailyPlan(moduleSlug)) return true;
   return hasMonthly199ForModule(access, moduleSlug);
 }
