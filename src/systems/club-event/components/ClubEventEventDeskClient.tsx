@@ -785,7 +785,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
             <p className="py-10 text-sm text-[#9490c0]">กำลังสร้าง QR…</p>
           )}
           <p className="break-all text-[11px] font-semibold text-[#8b87b8]">{publicUrl}</p>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
             <button
               type="button"
               className={clubEventPrimaryButtonClass}

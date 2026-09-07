@@ -231,11 +231,11 @@ export function HotelResortStaffQrPosterClient({
               </HotelResortButton>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <HotelResortButton
                 type="button"
                 onClick={() => void copyLink()}
-                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
+                className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
                 aria-label="คัดลอกลิงก์"
               >
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -247,7 +247,7 @@ export function HotelResortStaffQrPosterClient({
               <HotelResortButton
                 type="button"
                 onClick={() => setLinkVisible((v) => !v)}
-                className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
+                className="cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
                 aria-label={linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}
               >
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -266,7 +266,7 @@ export function HotelResortStaffQrPosterClient({
                 type="button"
                 onClick={() => void downloadPdf()}
                 disabled={dlBusy || !qrDataUrl || trialExportBlocked}
-                className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
                 aria-label="ดาวน์โหลด PDF (A4)"
               >
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -280,7 +280,7 @@ export function HotelResortStaffQrPosterClient({
                 type="button"
                 onClick={() => void downloadPng()}
                 disabled={dlBusy || !qrDataUrl || trialExportBlocked}
-                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+                className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
                 aria-label="ดาวน์โหลด PNG"
               >
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>

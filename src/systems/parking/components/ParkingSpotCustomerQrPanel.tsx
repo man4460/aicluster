@@ -162,7 +162,7 @@ export function ParkingSpotCustomerQrPanel({
         <button
           type="button"
           onClick={() => void copyPortalLink()}
-          className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
+          className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
         >
           <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -173,7 +173,7 @@ export function ParkingSpotCustomerQrPanel({
         <button
           type="button"
           onClick={() => setQrLinkVisible((v) => !v)}
-          className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
+          className="cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
         >
           <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             {qrLinkVisible ? (
@@ -191,7 +191,7 @@ export function ParkingSpotCustomerQrPanel({
           type="button"
           disabled={qrBusy || !checkInUrl || !portalQr}
           onClick={() => void downloadQrPdf()}
-          className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+          className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
         >
           <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M12 3v12" />
@@ -204,7 +204,7 @@ export function ParkingSpotCustomerQrPanel({
           type="button"
           disabled={qrBusy || !checkInUrl || !portalQr}
           onClick={() => void downloadQrPng()}
-          className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+          className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
         >
           <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <rect x="3" y="3" width="18" height="18" rx="2" />

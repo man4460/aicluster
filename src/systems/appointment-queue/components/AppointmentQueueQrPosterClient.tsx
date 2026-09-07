@@ -180,12 +180,12 @@ export function AppointmentQueueQrPosterClient({
       <div className={cn("space-y-3", compactForModal ? "mt-0" : "mt-6")}>
         {copyMsg ? <p className="text-sm font-medium text-[#5b61ff]">{copyMsg}</p> : null}
         {compactForModal ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               disabled={!portalUrl}
               onClick={() => void copyPortalLink()}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-45"
+              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-45"
               aria-label="คัดลอกลิงก์จองคิว"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -198,7 +198,7 @@ export function AppointmentQueueQrPosterClient({
               type="button"
               disabled={!portalUrl}
               onClick={() => setLinkVisible((v) => !v)}
-              className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-45"
+              className="cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-45"
               aria-label={linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}
             >
               <span className="cw-btn-label">{linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
@@ -207,7 +207,7 @@ export function AppointmentQueueQrPosterClient({
               type="button"
               disabled={busy || !qrDataUrl || trialExportBlocked}
               onClick={() => void downloadPdf("a4")}
-              className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+              className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
               aria-label="ดาวน์โหลด PDF A4"
             >
               <span className="cw-btn-label">PDF A4</span>
@@ -216,7 +216,7 @@ export function AppointmentQueueQrPosterClient({
               type="button"
               disabled={busy || !qrDataUrl || trialExportBlocked}
               onClick={() => void downloadPng()}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
               aria-label="ดาวน์โหลด PNG"
             >
               <span className="cw-btn-label">PNG</span>

@@ -258,7 +258,7 @@ select:focus {
   background: #ffffff;
 }
 
-/* Car-wash button standard: icon + label (mobile icon-only) */
+/* Car-wash button standard: icon + label (mobile icon-only for toolbars) */
 .cw-btn {
   display: inline-flex;
   align-items: center;
@@ -272,8 +272,16 @@ select:focus {
   flex-shrink: 0;
 }
 
+/**
+ * แถวปุ่มเต็มความกว้าง / มีข้อความชัด (แผงลิงก์ QR) — ห้ามย่อเหลือไอคอนบนมือถือ
+ * ใส่คู่กับ .cw-btn เมื่อต้องการ label ตลอด (เช่น ShopStaffQrPanel)
+ */
+.cw-btn-stack {
+  /* marker — media query ด้านล่างข้ามปุ่มที่มีคลาสนี้ */
+}
+
 @media (max-width: 639px) {
-  .cw-btn {
+  .cw-btn:not(.cw-btn-stack) {
     width: 2.25rem;
     height: 2.25rem;
     min-width: 2.25rem;
@@ -281,7 +289,7 @@ select:focus {
     padding: 0 !important;
   }
 
-  .cw-btn-label {
+  .cw-btn:not(.cw-btn-stack) .cw-btn-label {
     display: none;
   }
 }

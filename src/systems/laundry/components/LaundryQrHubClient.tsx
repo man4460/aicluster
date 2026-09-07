@@ -86,9 +86,9 @@ function LaundryQrPosterPanel({
   posterTintClass: string;
   compactActions?: boolean;
 }) {
-  const outlineBtn = compactActions ? laundryCompactOutlineButtonClass : "cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-45";
-  const ghostBtn = compactActions ? laundryCompactOutlineButtonClass : "cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55 disabled:opacity-45";
-  const primaryBtn = compactActions ? cn(laundryDashboardSegmentBtnClass(true), "min-h-8 px-3 disabled:opacity-60") : "cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60";
+  const outlineBtn = compactActions ? laundryCompactOutlineButtonClass : "cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-45";
+  const ghostBtn = compactActions ? laundryCompactOutlineButtonClass : "cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55 disabled:opacity-45";
+  const primaryBtn = compactActions ? cn(laundryDashboardSegmentBtnClass(true), "min-h-8 px-3 disabled:opacity-60") : "cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60";
 
   return (
     <div className="space-y-3">
@@ -97,12 +97,12 @@ function LaundryQrPosterPanel({
           โหมดทดลอง — ดาวน์โหลดโปสเตอร์ปิดชั่วคราว
         </p>
       : null}
-      <div className="flex flex-wrap gap-2">
+      <div className={cn(compactActions ? "flex flex-wrap gap-2" : "flex flex-col gap-2 sm:flex-row sm:flex-wrap")}>
         <button
           type="button"
           disabled={!pageUrl}
           onClick={() => void onCopyLink()}
-          className={cn(outlineBtn, !compactActions && "cw-btn")}
+          className={outlineBtn}
           aria-label="คัดลอกลิงก์"
         >
           {!compactActions ? (
@@ -117,7 +117,7 @@ function LaundryQrPosterPanel({
           type="button"
           disabled={!pageUrl}
           onClick={() => setLinkVisible((v) => !v)}
-          className={cn(ghostBtn, !compactActions && "cw-btn")}
+          className={ghostBtn}
           aria-label={linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}
         >
           {!compactActions ? (
@@ -138,7 +138,7 @@ function LaundryQrPosterPanel({
           type="button"
           disabled={downloadBusy || !qrPng || trialExportBlocked}
           onClick={() => void onDownloadPdf()}
-          className={cn(primaryBtn, !compactActions && "cw-btn")}
+          className={primaryBtn}
           aria-label="ดาวน์โหลด PDF (A4)"
         >
           {!compactActions ? (
@@ -154,7 +154,7 @@ function LaundryQrPosterPanel({
           type="button"
           disabled={downloadBusy || !qrPng || trialExportBlocked}
           onClick={() => void onDownloadPng()}
-          className={cn(outlineBtn, !compactActions && "cw-btn", !compactActions && "disabled:opacity-60")}
+          className={cn(outlineBtn, !compactActions && "disabled:opacity-60")}
           aria-label="ดาวน์โหลด PNG"
         >
           {!compactActions ? (

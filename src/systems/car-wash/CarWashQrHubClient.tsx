@@ -260,7 +260,7 @@ export function CarWashQrHubClient({
             <button
               type="button"
               onClick={() => setShowCustomerQrModal(false)}
-              className="cw-btn app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
+              className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
               <span className="cw-btn-label">ปิด</span>
@@ -269,14 +269,14 @@ export function CarWashQrHubClient({
         }
       >
         <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <a
               href={customerPortalPath || undefined}
               target="_blank"
               rel="noopener noreferrer"
               aria-disabled={!customerPortalPath}
               className={cn(
-                "cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold",
+              "cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold",
                 !customerPortalPath && "pointer-events-none opacity-60",
               )}
               aria-label="เปิดลิงก์พอร์ทัลลูกค้าบนโฮสต์นี้"
@@ -292,7 +292,7 @@ export function CarWashQrHubClient({
               type="button"
               onClick={() => void copyPortalLink()}
               disabled={!portalUrl}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-60"
+              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-60"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="9" y="9" width="13" height="13" rx="2" /><rect x="2" y="2" width="13" height="13" rx="2" /></svg>
               <span className="cw-btn-label">คัดลอกลิงก์</span>
@@ -300,7 +300,7 @@ export function CarWashQrHubClient({
             <button
               type="button"
               onClick={() => setQrLinkVisible((v) => !v)}
-              className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
+              className="cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 {qrLinkVisible ? <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.84-2 2.2-3.75 3.94-5.06M9.9 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a10.96 10.96 0 0 1-4.07 5.09M1 1l22 22" /> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></>}
@@ -311,7 +311,7 @@ export function CarWashQrHubClient({
               type="button"
               disabled={qrBusy || !portalUrl}
               onClick={() => void downloadQrPdf()}
-              className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+              className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
               <span className="cw-btn-label">ดาวน์โหลด PDF (A4)</span>
@@ -320,7 +320,7 @@ export function CarWashQrHubClient({
               type="button"
               disabled={qrBusy || !portalUrl}
               onClick={() => void downloadQrPng()}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
               <span className="cw-btn-label">ดาวน์โหลด PNG</span>
@@ -367,7 +367,7 @@ export function CarWashQrHubClient({
             <button
               type="button"
               onClick={() => setShowStaffQrModal(false)}
-              className="cw-btn app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
+              className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
             >
               <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
               <span className="cw-btn-label">ปิด</span>

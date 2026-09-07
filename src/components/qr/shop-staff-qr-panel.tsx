@@ -5,6 +5,8 @@ import { cn } from "@/lib/cn";
 /**
  * UX/UI QR พนักงานมาตรฐาน MAWELL — อ้างอิงจากคาร์แคร์ (มือถือก่อน + เดสก์ท็อปแถวปุ่ม + พรีวิวโปสเตอร์)
  * ใช้ใน FormModal / แผงในหน้า QR hub ของโมดูลที่มีพอร์ทัลพนักงาน
+ *
+ * มือถือ: ปุ่มเต็มความกว้าง + ข้อความชัด — ใช้ `cw-btn-stack` (อย่าย่อเหลือไอคอน)
  */
 export type ShopStaffQrPanelProps = {
   pageUrl: string;
@@ -30,6 +32,9 @@ export type ShopStaffQrPanelProps = {
   openSecondaryLabel: string;
   posterAlt: string;
 };
+
+const mobileStackBtn =
+  "cw-btn cw-btn-stack inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold touch-manipulation";
 
 export function ShopStaffQrPanel({
   pageUrl,
@@ -86,7 +91,10 @@ export function ShopStaffQrPanel({
         <button
           type="button"
           onClick={() => void onCopyLink()}
-          className="cw-btn app-btn-soft min-h-[48px] w-full justify-center rounded-xl px-3 py-2.5 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
+          className={cn(
+            mobileStackBtn,
+            "app-btn-soft text-[#4d47b6] shadow-sm ring-1 ring-white/40",
+          )}
         >
           <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -98,29 +106,47 @@ export function ShopStaffQrPanel({
           <button
             type="button"
             onClick={() => setLinkVisible((v) => !v)}
-            className="cw-btn min-h-[48px] rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
+            className={cn(
+              mobileStackBtn,
+              "border border-slate-200/90 bg-white px-3 py-2 text-slate-700 shadow-sm",
+            )}
           >
+            <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              {linkVisible ?
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.84-2 2.2-3.75 3.94-5.06M9.9 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a10.96 10.96 0 0 1-4.07 5.09M1 1l22 22" />
+              : (
+                <>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </>
+              )}
+            </svg>
             <span className="cw-btn-label">{linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
           </button>
           <button
             type="button"
             disabled={openDisabled}
-            className="cw-btn app-btn-primary min-h-[48px] rounded-xl px-3 py-2 text-sm font-bold disabled:opacity-45"
+            className={cn(mobileStackBtn, "app-btn-primary px-3 py-2 font-bold disabled:opacity-45")}
             onClick={assignPage}
           >
+            <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <path d="M15 3h6v6" />
+              <path d="M10 14 21 3" />
+            </svg>
             <span className="cw-btn-label">{openSecondaryLabel}</span>
           </button>
         </div>
-        <details className="rounded-2xl border border-white/50 bg-white/25 backdrop-blur-sm">
+        <details className="rounded-2xl border border-slate-200/90 bg-white shadow-sm">
           <summary className="cursor-pointer list-none px-3 py-3 text-center text-sm font-bold text-[#4d47b6] [&::-webkit-details-marker]:hidden">
             ดาวน์โหลดและโปสเตอร์
           </summary>
-          <div className="flex flex-col gap-2 border-t border-white/40 px-3 pb-3 pt-2">
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-3 pb-3 pt-2">
             <button
               type="button"
               disabled={downloadsDisabled}
               onClick={() => void onDownloadPdfA4()}
-              className="cw-btn app-btn-primary min-h-[48px] w-full justify-center rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+              className={cn(mobileStackBtn, "app-btn-primary disabled:opacity-60")}
             >
               <span className="cw-btn-label">ดาวน์โหลด PDF (A4)</span>
             </button>
@@ -129,7 +155,7 @@ export function ShopStaffQrPanel({
                 type="button"
                 disabled={downloadsDisabled}
                 onClick={() => void onDownloadPdfA5()}
-                className="cw-btn app-btn-soft min-h-[48px] w-full justify-center rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+                className={cn(mobileStackBtn, "app-btn-soft text-[#4d47b6] disabled:opacity-60")}
               >
                 <span className="cw-btn-label">ดาวน์โหลด PDF (A5)</span>
               </button>
@@ -138,11 +164,11 @@ export function ShopStaffQrPanel({
               type="button"
               disabled={downloadsDisabled}
               onClick={() => void onDownloadPng()}
-              className="cw-btn app-btn-soft min-h-[48px] w-full justify-center rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+              className={cn(mobileStackBtn, "app-btn-soft text-[#4d47b6] disabled:opacity-60")}
             >
               <span className="cw-btn-label">ดาวน์โหลด PNG</span>
             </button>
-            <div className="overflow-x-auto rounded-2xl border border-white/40 bg-white/25 p-3">
+            <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
               {posterPreview ?
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -151,11 +177,11 @@ export function ShopStaffQrPanel({
                   className={cn("mx-auto w-full max-w-[min(92vw,340px)] rounded-3xl shadow-lg", posterTintClass)}
                 />
               : pageUrl ?
-                <div className="mx-auto flex min-h-[180px] max-w-[min(92vw,340px)] items-center justify-center rounded-3xl border border-white/45 bg-white/40 text-xs font-medium text-slate-600 backdrop-blur-sm">
+                <div className="mx-auto flex min-h-[180px] max-w-[min(92vw,340px)] items-center justify-center rounded-3xl border border-slate-200/90 bg-white text-xs font-medium text-slate-600">
                   กำลังเรนเดอร์ตัวอย่าง...
                 </div>
               : (
-                <div className="mx-auto flex min-h-[160px] max-w-[min(92vw,340px)] items-center justify-center rounded-3xl border border-amber-300/50 bg-amber-100/35 px-4 text-center text-xs font-medium text-amber-950 backdrop-blur-sm">
+                <div className="mx-auto flex min-h-[160px] max-w-[min(92vw,340px)] items-center justify-center rounded-3xl border border-amber-300/50 bg-amber-100/35 px-4 text-center text-xs font-medium text-amber-950">
                   ตั้งค่า NEXT_PUBLIC_APP_URL ให้เป็น URL เว็บจริง
                 </div>
               )}

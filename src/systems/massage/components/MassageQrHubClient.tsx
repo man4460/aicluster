@@ -24,7 +24,7 @@ function ModalCloseFooter({ onClose }: { onClose: () => void }) {
       <button
         type="button"
         onClick={onClose}
-        className="cw-btn app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
+        className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
         aria-label="ปิด"
       >
         <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
