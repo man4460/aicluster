@@ -154,7 +154,7 @@ export function ClubEventPublicClient({
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-[#faf9ff]/85" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[48vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[56vh] sm:px-6 sm:pb-10">
+        <div className="relative z-10 mx-auto flex min-h-[48vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-[calc(6rem+var(--mawell-safe-top,env(safe-area-inset-top,0px)))] sm:min-h-[56vh] sm:px-6 sm:pb-10">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5f5a8a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
               Club
