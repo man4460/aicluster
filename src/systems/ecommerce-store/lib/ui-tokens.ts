@@ -252,7 +252,7 @@ export const ecommerceStorePortalStickyHeaderClass =
 
 /** แถบสรุปล่างมือถือ (cart / checkout) */
 export const ecommerceStorePortalBottomDockClass =
-  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden";
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md lg:hidden";
 
 export const ecommerceStorePortalHeaderNavShellClass =
   "hidden items-center gap-0.5 rounded-lg border border-white/35 bg-white/15 p-0.5 backdrop-blur-md md:inline-flex";

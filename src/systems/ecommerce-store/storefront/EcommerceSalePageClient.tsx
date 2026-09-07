@@ -270,7 +270,7 @@ export function EcommerceSalePageClient({
         {err ? <p className="text-sm text-rose-600">{err}</p> : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/90 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-xl">
         <button
           type="button"
           disabled={busy}

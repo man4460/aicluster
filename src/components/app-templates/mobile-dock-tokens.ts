@@ -1,8 +1,8 @@
 import { cn } from "@/lib/cn";
 
-/** แถบพื้นขาวเต็มความกว้างชิดขอบซ้ายขวา — รองรับ safe area (มือถือ / ไอแพดแนวตั้ง) */
+/** แถบพื้นขาวเต็มความกว้างชิดขอบซ้ายขวา — เว้นเฉพาะ home indicator (ไม่บวกช่องว่างเกิน) */
 export const appMobileDockBackdropClass =
-  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/75 bg-gradient-to-b from-white/98 via-white/95 to-slate-50/92 px-3 pb-[max(calc(env(safe-area-inset-bottom,0px)+0.5rem),0.65rem)] pt-2 shadow-[0_-14px_44px_-20px_rgba(30,27,75,0.24)] backdrop-blur-2xl lg:hidden print:hidden";
+  "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/75 bg-gradient-to-b from-white/98 via-white/95 to-slate-50/92 px-3 pb-[env(safe-area-inset-bottom,0px)] pt-1.5 shadow-[0_-14px_44px_-20px_rgba(30,27,75,0.24)] backdrop-blur-2xl lg:hidden print:hidden";
 
 /** กล่องเมนูโค้งมนภายในแถบล่าง */
 export const appMobileDockPillClass =

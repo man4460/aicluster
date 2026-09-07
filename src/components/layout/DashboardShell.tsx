@@ -2224,7 +2224,7 @@ function MobileBottomNav({
         className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent"
         aria-hidden
       />
-      <div className="relative mx-auto w-full max-w-[36rem] px-3 pb-[max(calc(env(safe-area-inset-bottom,0px)+0.55rem),0.85rem)] pt-2">
+      <div className="relative mx-auto w-full max-w-[36rem] px-3 pb-[env(safe-area-inset-bottom,0px)] pt-1.5">
         <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
           {items.map((item) => (
             <MobileBottomNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />

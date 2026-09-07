@@ -613,7 +613,7 @@ export function FootballTurfWorkspaceDraftPreview() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] pt-1.5 lg:hidden">
         <div className="mx-auto max-w-lg overflow-x-auto rounded-[2rem] border border-white/55 bg-white/80 p-1.5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] backdrop-blur-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max gap-1">
             {FOOTBALL_TURF_TAB_ITEMS.map((item, index) => {

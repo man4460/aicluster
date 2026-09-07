@@ -378,7 +378,7 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
         ) : null}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl gap-2">
           <Link
             href={`/shop/${data.store.id}/cart`}
