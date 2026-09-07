@@ -399,19 +399,19 @@ function HeaderAccountSummary({
   return (
     <p className={className} title={title}>
       <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-      <span className="font-medium text-current/65">โทเคน</span>
+      <span className="font-medium text-white/70">โทเคน</span>
       {packageLabel ? (
         <>
-          <span className="mx-1.5 text-current/30" aria-hidden>
+          <span className="mx-1.5 text-white/30" aria-hidden>
             |
           </span>
-          <span className="font-bold text-current">{packageLabel}</span>
+          <span className="font-bold text-white">{packageLabel}</span>
         </>
       ) : null}
-      <span className="mx-1.5 text-current/30" aria-hidden>
+      <span className="mx-1.5 text-white/30" aria-hidden>
         |
       </span>
-      <span className="font-medium text-current/90">{displayName}</span>
+      <span className="font-medium text-white/90">{displayName}</span>
     </p>
   );
 }
@@ -1547,7 +1547,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <DrinkPosHeaderExpandButton onExpand={() => writeDrinkPosHeaderCollapsed(false)} />
                 </div>
@@ -1562,7 +1562,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
                 </div>
@@ -1577,7 +1577,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
                 </div>
@@ -1594,7 +1594,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
                 </div>
@@ -1609,7 +1609,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
                 </div>
@@ -1624,7 +1624,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <AttendanceHeaderExpandButton onExpand={() => writeAttendanceHeaderCollapsed(false)} />
                 </div>
@@ -1639,7 +1639,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <CarWashHeaderExpandButton onExpand={() => writeCarWashHeaderCollapsed(false)} />
                 </div>
@@ -1654,7 +1654,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
@@ -1669,7 +1669,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
                 </div>
@@ -1684,7 +1684,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <VaultHeaderExpandButton onExpand={() => writeVaultHeaderCollapsed(false)} />
                 </div>
@@ -1699,7 +1699,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <AssetHeaderExpandButton onExpand={() => writeAssetHeaderCollapsed(false)} />
                 </div>
@@ -1714,7 +1714,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <GeneralStorePosHeaderExpandButton onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
                 </div>
@@ -1729,7 +1729,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <EducareHeaderExpandButton onExpand={() => writeEducareHeaderCollapsed(false)} />
                 </div>
@@ -1744,7 +1744,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <CommunityCoopHeaderExpandButton onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
                 </div>
@@ -1759,7 +1759,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <HomeFinanceHeaderExpandButton onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
                 </div>
@@ -1774,7 +1774,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <EcommerceStoreHeaderExpandButton onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
                 </div>
@@ -1789,7 +1789,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <AppointmentQueueHeaderExpandButton onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
                 </div>
@@ -1804,7 +1804,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <SchoolBankHeaderExpandButton onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
                 </div>
@@ -1819,7 +1819,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <WaitQueueHeaderExpandButton onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
                 </div>
@@ -1834,7 +1834,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <ActivityLogsHeaderExpandButton onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
                 </div>
@@ -1849,7 +1849,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <PromptLibraryHeaderExpandButton onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
                 </div>
@@ -1864,7 +1864,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <DocTransmissionHeaderExpandButton onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
                 </div>
@@ -1879,7 +1879,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
                 </div>
@@ -1894,7 +1894,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <VillageHeaderExpandButton onExpand={() => writeVillageHeaderCollapsed(false)} />
                 </div>
@@ -1909,7 +1909,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
                 </div>
@@ -1924,7 +1924,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
                 </div>
@@ -1939,7 +1939,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <ProResumeHeaderExpandButton onExpand={() => writeProResumeHeaderCollapsed(false)} />
                 </div>
@@ -1954,7 +1954,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <LmsHeaderExpandButton onExpand={() => writeLmsHeaderCollapsed(false)} />
                 </div>
@@ -1969,7 +1969,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <ParkingHeaderExpandButton onExpand={() => writeParkingHeaderCollapsed(false)} />
                 </div>
@@ -1984,7 +1984,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <InventoryHeaderExpandButton onExpand={() => writeInventoryHeaderCollapsed(false)} />
                 </div>
@@ -1999,7 +1999,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <SmartPoliceHeaderExpandButton onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
                 </div>
@@ -2014,7 +2014,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <MediaRegistryHeaderExpandButton onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
                 </div>
@@ -2029,7 +2029,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-current"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
                   />
                   <AdminHubHeaderExpandButton onExpand={() => writeAdminHubHeaderCollapsed(false)} />
                 </div>
@@ -2039,13 +2039,13 @@ export function DashboardShell({
                 tokens={tokens}
                 packageLabel={packageLabel}
                 displayName={displayName}
-                className="truncate text-left text-[11px] leading-snug text-current sm:text-[13.5px] sm:leading-normal md:text-right"
+                className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
               />
             )}
           </div>
 
           {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-current/20 pl-2.5 sm:gap-2 sm:pl-3.5">
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2.5 sm:gap-2 sm:pl-3.5">
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
@@ -2053,11 +2053,11 @@ export function DashboardShell({
                   alt=""
                   width={36}
                   height={32}
-                  className="h-8 w-8 rounded-full border-2 border-slate-200 object-cover shadow-sm lg:border-white/60 lg:shadow-md"
+                  className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
                   unoptimized
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-200 bg-slate-100 text-xs font-black text-[#4d47b6] shadow-sm lg:border-white/40 lg:bg-white/20 lg:text-white lg:shadow-md">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
                   {username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -2078,7 +2078,7 @@ export function DashboardShell({
                     alt=""
                     width={28}
                     height={28}
-                    className="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover lg:border-white/60"
+                    className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
                     unoptimized
                   />
                 ) : (

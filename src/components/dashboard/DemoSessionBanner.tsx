@@ -26,7 +26,7 @@ export function DemoSessionBanner() {
       <span
         className={cn(
           "inline-flex h-6 items-center rounded-md px-1.5 text-[10px] font-bold tracking-tight lg:hidden",
-          "bg-amber-50 text-amber-800 ring-1 ring-amber-200/90",
+          "bg-white/20 text-white ring-1 ring-white/35",
         )}
       >
         ทดลอง
@@ -35,7 +35,7 @@ export function DemoSessionBanner() {
         <input type="hidden" name="next" value={loginNext} />
         <button
           type="submit"
-          className="inline-flex h-6 items-center gap-0.5 text-[11px] font-bold text-[#5b61ff] underline-offset-2 transition hover:text-[#4d47b6] hover:underline active:scale-95"
+          className="inline-flex h-6 items-center gap-0.5 text-[11px] font-bold text-white underline-offset-2 transition hover:underline active:scale-95"
           title="ออกจากบัญชีทดลองแล้วไปหน้าเข้าสู่ระบบ / สมัคร"
           aria-label="สมัครใช้งาน"
           suppressHydrationWarning

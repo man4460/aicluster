@@ -14,10 +14,9 @@ alwaysApply: true
 ## บังคับ
 
 1. **พื้นหลังชั้นเดียว** ชิดขอบ **ซ้าย · ขวา · บน** (รวม safe-area) — **ห้าม** ซ้อนกล่องโค้งมนในแถบหัว
-2. **มือถือ / ไอแพดแนวตั้ง (`max-lg`):** พื้น **ขาว** โทนเดียวกับ safe-area · ไอคอน/ข้อความสีเข้ม (`text-[#1e1b4b]`)
-3. **`lg+`:** ไล่สีม่วงแบรนด์ · ไอคอนขาว
-4. ปุ่มในหัวเป็น **ไอคอน** · ไม่มีกล่องซ้อน · สีตาม `text-current` ของแถบ
-5. Import จาก **`@/components/app-templates`**: `appDashboardHeaderBarClass` · `appDashboardHeaderBarInnerClass` · `appDashboardHeaderIconButtonClass`
+2. **สีแถบ:** ไล่ม่วงแบรนด์ (`from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899]`) · ไอคอน/ข้อความขาว
+3. ปุ่มในหัวเป็น **ไอคอน** · ไม่มีกล่องซ้อน
+4. Import จาก **`@/components/app-templates`**: `appDashboardHeaderBarClass` · `appDashboardHeaderBarInnerClass` · `appDashboardHeaderIconButtonClass`
 
 ## ห้าม
 
