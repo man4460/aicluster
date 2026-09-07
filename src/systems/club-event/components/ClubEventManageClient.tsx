@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Download, Package, Upload, UserRound } from "lucide-react";
 import {
   AppEmptyState,
+  AppGalleryCameraFileInputs,
   AppImageLightbox,
+  AppImagePickCameraButtons,
   AppImageThumb,
   prepareImageFileForUpload,
+  useAppCameraCapture,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -127,6 +130,10 @@ export function ClubEventManageClient() {
   const notice = useAppNoticePopup();
   const lb = useAppImageLightbox();
   const excelInputRef = useRef<HTMLInputElement>(null);
+  const memberPhotoGalleryRef = useRef<HTMLInputElement>(null);
+  const assetPhotoGalleryRef = useRef<HTMLInputElement>(null);
+  const memberPhotoCamera = useAppCameraCapture({ title: "ถ่ายรูปโปรไฟล์สมาชิก" });
+  const assetPhotoCamera = useAppCameraCapture({ title: "ถ่ายรูปทรัพย์สิน" });
   const [filterOpen, setFilterOpen] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [members, setMembers] = useState<ClubEventMemberDto[]>([]);
@@ -134,6 +141,7 @@ export function ClubEventManageClient() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
 
   const [memberForm, setMemberForm] = useState<MemberFormState>(emptyMemberForm);
@@ -197,20 +205,31 @@ export function ClubEventManageClient() {
   });
 
   const uploadImage = async (file: File, kind: "member" | "asset") => {
+    setUploadBusy(true);
     try {
       const prepared = await prepareImageFileForUpload(file);
       const formData = new FormData();
       formData.set("file", prepared);
-      const res = await fetch("/api/club-event/session/images/upload", { method: "POST", body: formData });
-      const data = (await res.json()) as { imageUrl?: string; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
-      if (kind === "member") {
-        setMemberForm((f) => ({ ...f, photoUrl: data.imageUrl ?? null }));
-      } else {
-        setAssetForm((f) => ({ ...f, imageUrl: data.imageUrl ?? null }));
+      const res = await fetch("/api/club-event/session/images/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const data = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+      if (!res.ok || typeof data.imageUrl !== "string" || !data.imageUrl.trim()) {
+        throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
       }
+      const imageUrl = data.imageUrl.trim();
+      if (kind === "member") {
+        setMemberForm((f) => ({ ...f, photoUrl: imageUrl }));
+      } else {
+        setAssetForm((f) => ({ ...f, imageUrl }));
+      }
+      notice.success("อัปโหลดรูปแล้ว");
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
+    } finally {
+      setUploadBusy(false);
     }
   };
 
@@ -661,40 +680,54 @@ export function ClubEventManageClient() {
       >
         {tab === "members" ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              {memberForm.photoUrl ? (
-                <AppImageThumb
-                  src={memberForm.photoUrl}
-                  alt="รูปโปรไฟล์"
-                  onOpen={() => lb.open(memberForm.photoUrl!)}
-                />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                  รูปโปรไฟล์
+            <div className="space-y-2">
+              <p className={labelText}>รูปโปรไฟล์</p>
+              <div className="flex flex-wrap items-center gap-3">
+                {memberForm.photoUrl ? (
+                  <AppImageThumb
+                    key={memberForm.photoUrl}
+                    src={memberForm.photoUrl}
+                    alt="รูปโปรไฟล์"
+                    onOpen={() => lb.open(memberForm.photoUrl!)}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                    รูปโปรไฟล์
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <AppGalleryCameraFileInputs
+                    galleryInputRef={memberPhotoGalleryRef}
+                    cameraInputRef={memberPhotoCamera.cameraInputRef}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      e.target.value = "";
+                      if (f) void uploadImage(f, "member");
+                    }}
+                  />
+                  <AppImagePickCameraButtons
+                    className="justify-start"
+                    busy={uploadBusy || saving}
+                    onPickGallery={() => memberPhotoGalleryRef.current?.click()}
+                    onPickCamera={() =>
+                      memberPhotoCamera.openCamera((file) => void uploadImage(file, "member"))
+                    }
+                    labels={{ gallery: "เลือกจากแกลเลอรี", camera: "ถ่ายรูป" }}
+                    buttonClassName={clubEventOutlineButtonClass}
+                  />
+                  {memberForm.photoUrl ? (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-rose-600"
+                      disabled={uploadBusy || saving}
+                      onClick={() => setMemberForm((f) => ({ ...f, photoUrl: null }))}
+                    >
+                      ลบรูป
+                    </button>
+                  ) : null}
                 </div>
-              )}
-              <label className={cn(clubEventOutlineButtonClass, "inline-flex cursor-pointer")}>
-                อัปโหลดรูปโปรไฟล์
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void uploadImage(f, "member");
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              {memberForm.photoUrl ? (
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-rose-600"
-                  onClick={() => setMemberForm((f) => ({ ...f, photoUrl: null }))}
-                >
-                  ลบรูป
-                </button>
-              ) : null}
+              </div>
+              {memberPhotoCamera.cameraModal}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -888,36 +921,54 @@ export function ClubEventManageClient() {
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              {assetForm.imageUrl ? (
-                <AppImageThumb src={assetForm.imageUrl} alt="รูปทรัพย์สิน" onOpen={() => lb.open(assetForm.imageUrl!)} />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                  รูป
+            <div className="space-y-2">
+              <p className={labelText}>รูปทรัพย์สิน</p>
+              <div className="flex flex-wrap items-center gap-3">
+                {assetForm.imageUrl ? (
+                  <AppImageThumb
+                    key={assetForm.imageUrl}
+                    src={assetForm.imageUrl}
+                    alt="รูปทรัพย์สิน"
+                    onOpen={() => lb.open(assetForm.imageUrl!)}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                    รูป
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <AppGalleryCameraFileInputs
+                    galleryInputRef={assetPhotoGalleryRef}
+                    cameraInputRef={assetPhotoCamera.cameraInputRef}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      e.target.value = "";
+                      if (f) void uploadImage(f, "asset");
+                    }}
+                  />
+                  <AppImagePickCameraButtons
+                    className="justify-start"
+                    busy={uploadBusy || saving}
+                    onPickGallery={() => assetPhotoGalleryRef.current?.click()}
+                    onPickCamera={() =>
+                      assetPhotoCamera.openCamera((file) => void uploadImage(file, "asset"))
+                    }
+                    labels={{ gallery: "เลือกจากแกลเลอรี", camera: "ถ่ายรูป" }}
+                    buttonClassName={clubEventOutlineButtonClass}
+                  />
+                  {assetForm.imageUrl ? (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-rose-600"
+                      disabled={uploadBusy || saving}
+                      onClick={() => setAssetForm((f) => ({ ...f, imageUrl: null }))}
+                    >
+                      ลบรูป
+                    </button>
+                  ) : null}
                 </div>
-              )}
-              <label className={cn(clubEventOutlineButtonClass, "inline-flex cursor-pointer")}>
-                อัปโหลดรูป
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void uploadImage(f, "asset");
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              {assetForm.imageUrl ? (
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-rose-600"
-                  onClick={() => setAssetForm((f) => ({ ...f, imageUrl: null }))}
-                >
-                  ลบรูป
-                </button>
-              ) : null}
+              </div>
+              {assetPhotoCamera.cameraModal}
             </div>
             <input
               className={clubEventFieldClass}

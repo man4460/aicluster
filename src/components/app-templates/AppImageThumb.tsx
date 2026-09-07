@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
 export type AppImageThumbProps = {
@@ -31,6 +31,10 @@ export function AppImageThumb({
   const s = typeof src === "string" ? src.trim() : "";
   const show = Boolean(s) && !failed;
   const contain = objectFit === "contain";
+
+  useEffect(() => {
+    setFailed(false);
+  }, [s]);
 
   if (show) {
     return (
