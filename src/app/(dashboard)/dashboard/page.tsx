@@ -96,7 +96,6 @@ export default async function DashboardHomePage() {
                   icon: "🤖",
                   badge: chatAiOff ? "พัฒนา" : undefined,
                 },
-                { label: "ทดสอบพิมพ์", href: "/dashboard/printer-test", icon: "🖨️" },
               ].map((link) => (
                 <Link
                   key={link.href}
