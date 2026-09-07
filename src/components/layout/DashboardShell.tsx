@@ -1537,7 +1537,7 @@ export function DashboardShell({
           ) : null}
 
           {/* กลาง: ยอดโทเคน (มือถือย่อ · basis-0 ให้ได้พื้นที่ก่อนไอคอนขวา) / เมนูโมดูลเมื่อย่อหัว */}
-          <div className="min-w-0 flex-1 basis-0 overflow-hidden px-0.5 sm:px-1">
+          <div className="min-w-0 flex-1 basis-0 overflow-hidden px-0.5 text-right sm:px-1">
             {showDrinkPosHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -1551,7 +1551,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DrinkPosHeaderExpandButton onExpand={() => writeDrinkPosHeaderCollapsed(false)} />
                 </div>
@@ -1566,7 +1566,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
                 </div>
@@ -1581,7 +1581,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
                 </div>
@@ -1598,7 +1598,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
                 </div>
@@ -1613,7 +1613,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
                 </div>
@@ -1628,7 +1628,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AttendanceHeaderExpandButton onExpand={() => writeAttendanceHeaderCollapsed(false)} />
                 </div>
@@ -1643,7 +1643,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <CarWashHeaderExpandButton onExpand={() => writeCarWashHeaderCollapsed(false)} />
                 </div>
@@ -1658,7 +1658,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
@@ -1673,7 +1673,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
                 </div>
@@ -1688,7 +1688,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <VaultHeaderExpandButton onExpand={() => writeVaultHeaderCollapsed(false)} />
                 </div>
@@ -1703,7 +1703,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AssetHeaderExpandButton onExpand={() => writeAssetHeaderCollapsed(false)} />
                 </div>
@@ -1718,7 +1718,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <GeneralStorePosHeaderExpandButton onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
                 </div>
@@ -1733,7 +1733,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <EducareHeaderExpandButton onExpand={() => writeEducareHeaderCollapsed(false)} />
                 </div>
@@ -1748,7 +1748,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <CommunityCoopHeaderExpandButton onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
                 </div>
@@ -1763,7 +1763,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <HomeFinanceHeaderExpandButton onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
                 </div>
@@ -1778,7 +1778,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <EcommerceStoreHeaderExpandButton onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
                 </div>
@@ -1793,7 +1793,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AppointmentQueueHeaderExpandButton onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
                 </div>
@@ -1808,7 +1808,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <SchoolBankHeaderExpandButton onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
                 </div>
@@ -1823,7 +1823,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <WaitQueueHeaderExpandButton onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
                 </div>
@@ -1838,7 +1838,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ActivityLogsHeaderExpandButton onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
                 </div>
@@ -1853,7 +1853,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <PromptLibraryHeaderExpandButton onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
                 </div>
@@ -1868,7 +1868,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DocTransmissionHeaderExpandButton onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
                 </div>
@@ -1883,7 +1883,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
                 </div>
@@ -1898,7 +1898,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <VillageHeaderExpandButton onExpand={() => writeVillageHeaderCollapsed(false)} />
                 </div>
@@ -1913,7 +1913,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
                 </div>
@@ -1928,7 +1928,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
                 </div>
@@ -1943,7 +1943,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ProResumeHeaderExpandButton onExpand={() => writeProResumeHeaderCollapsed(false)} />
                 </div>
@@ -1958,7 +1958,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LmsHeaderExpandButton onExpand={() => writeLmsHeaderCollapsed(false)} />
                 </div>
@@ -1973,7 +1973,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ParkingHeaderExpandButton onExpand={() => writeParkingHeaderCollapsed(false)} />
                 </div>
@@ -1988,7 +1988,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <InventoryHeaderExpandButton onExpand={() => writeInventoryHeaderCollapsed(false)} />
                 </div>
@@ -2003,7 +2003,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <SmartPoliceHeaderExpandButton onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
                 </div>
@@ -2018,7 +2018,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <MediaRegistryHeaderExpandButton onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
                 </div>
@@ -2033,7 +2033,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
-                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AdminHubHeaderExpandButton onExpand={() => writeAdminHubHeaderCollapsed(false)} />
                 </div>
@@ -2043,7 +2043,7 @@ export function DashboardShell({
                 tokens={tokens}
                 packageLabel={packageLabel}
                 displayName={displayName}
-                className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
+                className="truncate text-right text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal"
               />
             )}
           </div>
