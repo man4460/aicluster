@@ -41,6 +41,17 @@ function nativeFullscreenSupported(): boolean {
   return Boolean(doc.fullscreenEnabled ?? doc.webkitFullscreenEnabled);
 }
 
+/** iOS / iPad — requestFullscreen บน div มักพัง iframe YouTube */
+function preferCssFullscreenOnly(): boolean {
+  if (typeof navigator === "undefined") return true;
+  const ua = navigator.userAgent;
+  if (/iP(hone|ad|od)/i.test(ua)) return true;
+  if (/Macintosh/i.test(ua) && typeof document !== "undefined" && "ontouchend" in document) {
+    return true;
+  }
+  return false;
+}
+
 async function enterNativeFullscreen(el: HTMLElement): Promise<void> {
   const node = el as FullscreenElement;
   if (node.requestFullscreen) {
@@ -90,7 +101,9 @@ declare global {
         el: HTMLElement | string,
         opts: {
           videoId: string;
-          playerVars?: Record<string, number | string>;
+          width?: string | number;
+          height?: string | number;
+          playerVars?: Record<string, number | string | undefined>;
           events?: {
             onReady?: (e: { target: YTPlayer }) => void;
             onStateChange?: (e: { data: number; target: YTPlayer }) => void;
@@ -125,8 +138,9 @@ function loadYoutubeApi(): Promise<void> {
   return ytApiPromise;
 }
 
-const controlBtnClass =
-  "pointer-events-auto inline-flex h-9 min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-black/30 px-2.5 text-[11px] font-semibold text-white shadow-none backdrop-blur-[2px] transition hover:bg-black/45 disabled:opacity-40 sm:text-xs";
+/** ไอคอนล้วน — ไม่มีกรอบ/พื้นกล่อง */
+const controlIconBtnClass =
+  "pointer-events-auto inline-flex h-11 w-11 touch-manipulation items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition active:scale-95 active:opacity-80 disabled:opacity-35";
 
 type Props = {
   youtubeUrl: string;
@@ -192,14 +206,17 @@ export function LmsSecureYoutubePlayer({
 
   useEffect(() => {
     if (!cssExpanded) return;
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouch = document.body.style.touchAction;
     document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setCssExpanded(false);
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouch;
       window.removeEventListener("keydown", onKey);
     };
   }, [cssExpanded]);
@@ -244,8 +261,8 @@ export function LmsSecureYoutubePlayer({
       setCssExpanded(false);
       return;
     }
-    /** มือถือ/iOS ส่วนใหญ่ไม่รองรับ requestFullscreen บน div — ขยายด้วย CSS */
-    if (!nativeFullscreenSupported()) {
+    /** iOS: ขยาย CSS เท่านั้น — อย่าเรียก requestFullscreen (iframe หาย/เพี้ยน) */
+    if (preferCssFullscreenOnly() || !nativeFullscreenSupported()) {
       setCssExpanded(true);
       return;
     }
@@ -256,6 +273,7 @@ export function LmsSecureYoutubePlayer({
     }
     try {
       await enterNativeFullscreen(shell);
+      if (!getFullscreenElement()) setCssExpanded(true);
     } catch {
       setCssExpanded(true);
     }
@@ -273,6 +291,8 @@ export function LmsSecureYoutubePlayer({
       playerRef.current?.destroy();
       playerRef.current = new window.YT.Player(hostRef.current, {
         videoId,
+        width: "100%",
+        height: "100%",
         playerVars: {
           modestbranding: 1,
           controls: 0,
@@ -282,6 +302,7 @@ export function LmsSecureYoutubePlayer({
           enablejsapi: 1,
           playsinline: 1,
           fs: 0,
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
           onReady: (e) => {
@@ -327,7 +348,6 @@ export function LmsSecureYoutubePlayer({
         const dur = p.getDuration();
         if (!dur || dur <= 0) return;
         const cur = p.getCurrentTime();
-        // ห้ามกระโดดข้ามส่วนที่ยังไม่เคยดู — ถ้าเลย max ให้ดึงกลับ
         if (cur > maxWatchedRef.current + 1.25) {
           try {
             p.seekTo(maxWatchedRef.current, true);
@@ -383,14 +403,23 @@ export function LmsSecureYoutubePlayer({
       <div
         ref={shellRef}
         className={cn(
-          "relative aspect-video overflow-hidden rounded-xl bg-black",
-          expanded && "aspect-auto h-[100dvh] min-h-[100dvh] w-full rounded-none",
-          cssExpanded && "fixed inset-0 z-[220]",
+          "relative isolate overflow-hidden bg-black",
+          cssExpanded
+            ? "fixed inset-0 z-[300] h-[100dvh] max-h-[100dvh] w-full rounded-none"
+            : "aspect-video rounded-xl",
+          nativeFs && !cssExpanded && "aspect-auto h-full min-h-full w-full rounded-none",
           className,
         )}
       >
-        <div ref={hostRef} className="h-full w-full" title={title} />
-        {/* บล็อกคลิกบน iframe — ใช้แถบควบคุมด้านล่างแทน (ย้อนกลับได้ · ห้ามข้ามไปข้างหน้า) */}
+        {/* โซนวิดีโอ — absolute fill ให้ iframe YouTube ไม่พังตอนขยายบน iOS */}
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+          <div
+            ref={hostRef}
+            className="h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
+            title={title}
+          />
+        </div>
+        {/* บล็อกคลิกบน iframe — ใช้แถบควบคุมแทน */}
         <div
           className="absolute inset-0 z-10"
           onContextMenu={(e) => e.preventDefault()}
@@ -399,25 +428,24 @@ export function LmsSecureYoutubePlayer({
         {expanded ? (
           <div
             className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end bg-gradient-to-b from-black/55 to-transparent px-3 pb-8 pt-2",
+              "pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end px-2 pb-10",
               appSafeAreaOverlayExpandedHeaderPadClass,
             )}
           >
             <button
               type="button"
-              className={cn(controlBtnClass, "pointer-events-auto")}
+              className={controlIconBtnClass}
               onClick={() => void toggleFullscreen()}
               aria-label="ออกจากเต็มจอ"
               title="ย่อ"
             >
-              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
-              <span>ย่อ</span>
+              <Minimize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
             </button>
           </div>
         ) : null}
         <div
           className={cn(
-            "pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-2 bg-gradient-to-t from-black/70 via-black/35 to-transparent p-3 pt-10",
+            "pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-1.5 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-3 pb-3 pt-12",
             expanded && appSafeAreaFixedBottomBarPadClass,
           )}
         >
@@ -445,26 +473,25 @@ export function LmsSecureYoutubePlayer({
               aria-valuenow={Math.floor(currentSec)}
               aria-valuetext={`${formatTime(currentSec)} จาก ${formatTime(durationSec)}`}
             />
-            <div className="mt-1 flex justify-between text-[10px] font-semibold tabular-nums text-white/80">
+            <div className="mt-0.5 flex justify-between text-[10px] font-semibold tabular-nums text-white/80">
               <span>{formatTime(currentSec)}</span>
               <span>{formatTime(durationSec)}</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <div className="flex items-center justify-center gap-3">
             <button
               type="button"
-              className={controlBtnClass}
+              className={controlIconBtnClass}
               disabled={!ready || currentSec <= 0}
               onClick={() => rewind(10)}
               aria-label="ย้อนกลับ 10 วินาที"
               title="ย้อนกลับ 10 วินาที"
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-              <span>−10วิ</span>
+              <RotateCcw className="h-6 w-6" aria-hidden strokeWidth={2.25} />
             </button>
             <button
               type="button"
-              className={cn(controlBtnClass, "min-w-[4.5rem] px-3")}
+              className={controlIconBtnClass}
               disabled={!ready}
               onClick={() => {
                 const p = playerRef.current;
@@ -473,24 +500,27 @@ export function LmsSecureYoutubePlayer({
                 else p.playVideo();
               }}
               aria-label={playing ? "หยุดชั่วคราว" : "เล่น"}
+              title={playing ? "หยุด" : "เล่น"}
             >
-              {playing ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
-              <span>{playing ? "หยุด" : "เล่น"}</span>
+              {playing ? (
+                <Pause className="h-7 w-7" aria-hidden strokeWidth={2.25} />
+              ) : (
+                <Play className="h-7 w-7" aria-hidden strokeWidth={2.25} />
+              )}
             </button>
             <button
               type="button"
-              className={controlBtnClass}
+              className={controlIconBtnClass}
               onClick={() => void toggleFullscreen()}
               aria-label={expanded ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
-              title={expanded ? "ออกจากเต็มจอ" : "เต็มจอ"}
+              title={expanded ? "ย่อ" : "เต็มจอ"}
               aria-pressed={expanded}
             >
               {expanded ? (
-                <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+                <Minimize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
               ) : (
-                <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+                <Maximize2 className="h-6 w-6" aria-hidden strokeWidth={2.25} />
               )}
-              <span className="hidden sm:inline">{expanded ? "ย่อ" : "เต็มจอ"}</span>
             </button>
           </div>
         </div>
