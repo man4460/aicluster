@@ -34,7 +34,6 @@ import {
   clubEventPortalLinkTypeBadgeClass,
 } from "@/systems/club-event/lib/portal-link-icons";
 import {
-  clubEventOutlineButtonClass,
   clubEventPortalFlatBlockClass,
   clubEventPortalHeaderNavOnLightLinkClass,
   clubEventPortalHeaderNavOnLightShellClass,
@@ -212,6 +211,17 @@ export function ClubEventPublicLinkClient({
     </AppPublicCheckInGlassPage>
   );
 
+  const formSectionTitle =
+    link.type === "PAYMENT"
+      ? "ชำระเงิน"
+      : link.type === "RSVP"
+        ? "ลงทะเบียน"
+        : link.type === "SURVEY"
+          ? "ตอบแบบสำรวจ"
+          : link.type === "URL"
+            ? "เปิดลิงก์"
+            : "กรอกแบบฟอร์ม";
+
   const headerAndHero = (ctaLabel: string, ctaAction?: () => void, ctaHref?: string) => (
     <>
       <header className={appSafeAreaPortalHeaderClass}>
@@ -282,7 +292,6 @@ export function ClubEventPublicLinkClient({
             ) : null}
           </div>
           <div id="hero-cta" className={clubEventPortalHeroCompactShellClass}>
-            <p className="text-sm font-semibold text-[#5f5a8a] sm:pb-1">{title}</p>
             <div className="flex flex-wrap gap-2">
               {ctaHref ? (
                 <a href={ctaHref} className={clubEventPortalPrimaryBtnClass}>
@@ -293,9 +302,6 @@ export function ClubEventPublicLinkClient({
                   {ctaLabel}
                 </button>
               )}
-              <a href={homeHref} className={cn(clubEventOutlineButtonClass, "inline-flex items-center")}>
-                กลับเว็บชมรม
-              </a>
             </div>
           </div>
         </div>
@@ -309,7 +315,7 @@ export function ClubEventPublicLinkClient({
         <ClubEventExternalRedirect url={link.config.url} />
         {headerAndHero("เปิดลิงก์", undefined, link.config.url)}
         <main className="relative z-10 mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-2 sm:space-y-14 sm:px-6">
-          <ClubEventPortalSection id="form" title={link.title}>
+          <ClubEventPortalSection id="form" title={formSectionTitle}>
             <p className="text-sm font-semibold text-[#66638c]">กำลังเปิดลิงก์ภายนอก…</p>
             <a href={link.config.url} className={clubEventPortalPrimaryBtnClass}>
               เปิดเอง
@@ -405,11 +411,7 @@ export function ClubEventPublicLinkClient({
     <>
       {headerAndHero("กรอกแบบฟอร์ม", scrollToForm)}
       <main className="relative z-10 mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-2 sm:space-y-14 sm:px-6">
-        <ClubEventPortalSection
-          id="form"
-          title={link.title}
-          subtitle={link.eventTitle ? `กิจกรรม · ${link.eventTitle}` : null}
-        >
+        <ClubEventPortalSection id="form" title={formSectionTitle}>
           <div className={clubEventPortalFlatBlockClass}>
             {link.config.description ? (
               <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#1e1b4b]">
