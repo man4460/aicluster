@@ -222,53 +222,81 @@ export function ClubEventPortalMemberSearch({
       ) : null}
 
       {members && members.length > 0 ? (
-        <ul className="divide-y divide-slate-200/80 rounded-2xl border border-slate-200/80 bg-white/70">
+        <ul className="space-y-3">
           {members.map((m) => {
             const hasContact = Boolean(m.phone || m.social || m.email);
+            const metaRows: { key: string; label: string; value: string }[] = [];
+            if (m.nickname) metaRows.push({ key: "nickname", label: "ชื่อเล่น", value: m.nickname });
+            if (m.memberCode) metaRows.push({ key: "code", label: "รหัส", value: m.memberCode });
+            if (m.gender) {
+              metaRows.push({
+                key: "gender",
+                label: "เพศ",
+                value: GENDER_LABEL[m.gender] ?? m.gender,
+              });
+            }
+            if (m.position) metaRows.push({ key: "position", label: "ตำแหน่ง", value: m.position });
+            for (const cf of m.customFields ?? []) {
+              metaRows.push({
+                key: `cf-${cf.label}`,
+                label: cf.label,
+                value: cf.value,
+              });
+            }
             return (
-              <li key={m.id} className="flex items-start gap-3 p-3 sm:items-center sm:p-4">
-                {m.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.photoUrl}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white"
-                  />
-                ) : (
-                  <span
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-[#4d47b6]"
-                    aria-hidden
-                  >
-                    {(m.name || "?").slice(0, 1)}
-                  </span>
-                )}
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="font-bold text-[#1e1b4b]">{m.name}</p>
-                    {m.nickname ? (
-                      <p className="text-sm font-semibold text-[#66638c]">ชื่อเล่น: {m.nickname}</p>
-                    ) : null}
-                    {m.memberCode ? (
-                      <p className="text-sm font-semibold text-[#66638c]">รหัส: {m.memberCode}</p>
-                    ) : null}
-                    {m.gender ? (
-                      <p className="text-sm font-semibold text-[#66638c]">
-                        เพศ: {GENDER_LABEL[m.gender] ?? m.gender}
-                      </p>
-                    ) : null}
-                    {m.position ? (
-                      <p className="text-sm font-semibold text-[#66638c]">ตำแหน่ง: {m.position}</p>
-                    ) : null}
-                    {m.customFields?.map((cf) => (
-                      <p key={`${m.id}-${cf.label}`} className="text-sm font-semibold text-[#66638c]">
-                        {cf.label}: {cf.value}
-                      </p>
-                    ))}
+              <li
+                key={m.id}
+                className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm sm:p-5"
+              >
+                <div className="flex items-start gap-3 sm:gap-4">
+                  {m.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.photoUrl}
+                      alt=""
+                      className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white sm:h-16 sm:w-16"
+                    />
+                  ) : (
+                    <span
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-100 text-base font-black text-[#4d47b6] sm:h-16 sm:w-16 sm:text-lg"
+                      aria-hidden
+                    >
+                      {(m.name || "?").slice(0, 1)}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-black leading-snug text-[#1e1b4b] sm:text-lg">
+                      {m.name}
+                    </p>
                   </div>
-                  {hasContact ? (
-                    <MemberContactActions phone={m.phone} social={m.social} email={m.email} />
-                  ) : null}
                 </div>
+
+                {metaRows.length > 0 ? (
+                  <dl className="mt-3 grid grid-cols-1 gap-2.5 border-t border-slate-200/70 pt-3 sm:mt-4 sm:grid-cols-2 sm:gap-3 sm:pt-4">
+                    {metaRows.map((row) => (
+                      <div
+                        key={`${m.id}-${row.key}`}
+                        className="min-w-0 rounded-xl bg-slate-50/90 px-3 py-2.5 ring-1 ring-slate-200/60"
+                      >
+                        <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87a8]">
+                          {row.label}
+                        </dt>
+                        <dd className="mt-0.5 break-words text-sm font-semibold leading-snug text-[#1e1b4b]">
+                          {row.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+
+                {hasContact ? (
+                  <MemberContactActions
+                    phone={m.phone}
+                    social={m.social}
+                    email={m.email}
+                    className="mt-3 justify-start border-t border-slate-200/70 pt-3 sm:mt-4 sm:pt-4"
+                  />
+                ) : null}
               </li>
             );
           })}
