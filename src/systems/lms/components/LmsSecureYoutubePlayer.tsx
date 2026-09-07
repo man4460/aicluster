@@ -138,9 +138,13 @@ function loadYoutubeApi(): Promise<void> {
   return ytApiPromise;
 }
 
-/** ไอคอนล้วน — ไม่มีกรอบ/พื้นกล่อง */
-const controlIconBtnClass =
+/** ไอคอนล้วน — โหมดซ้อนบนวิดีโอ (ขาว) */
+const controlIconOnVideoClass =
   "pointer-events-auto inline-flex h-9 w-9 touch-manipulation items-center justify-center text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] transition active:scale-95 active:opacity-80 disabled:opacity-35";
+
+/** ไอคอนล้วน — แถบใต้จอ (ไม่บังเนื้อหา) */
+const controlIconBelowClass =
+  "inline-flex h-9 w-9 touch-manipulation items-center justify-center text-[#1e1b4b] transition active:scale-95 active:opacity-70 disabled:opacity-35";
 
 type Props = {
   youtubeUrl: string;
@@ -171,6 +175,9 @@ export function LmsSecureYoutubePlayer({
   const [currentSec, setCurrentSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
   const [maxWatchedSec, setMaxWatchedSec] = useState(0);
+  /** โหมดเต็มจอ — ซ่อนแถบควบคุมอัตโนมัติเวลาเล่น เพื่อไม่บังเนื้อหา */
+  const [fsControlsVisible, setFsControlsVisible] = useState(true);
+  const hideFsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoId = lmsYoutubeVideoId(youtubeUrl);
   const embedFallback = lmsSecureYoutubeEmbedSrc(youtubeUrl);
   const expanded = cssExpanded || nativeFs;
@@ -220,6 +227,31 @@ export function LmsSecureYoutubePlayer({
       window.removeEventListener("keydown", onKey);
     };
   }, [cssExpanded]);
+
+  const bumpFsControls = useCallback(() => {
+    setFsControlsVisible(true);
+    if (hideFsTimerRef.current) clearTimeout(hideFsTimerRef.current);
+    hideFsTimerRef.current = setTimeout(() => {
+      setFsControlsVisible(false);
+    }, 2600);
+  }, []);
+
+  useEffect(() => {
+    if (!expanded) {
+      setFsControlsVisible(true);
+      if (hideFsTimerRef.current) clearTimeout(hideFsTimerRef.current);
+      return;
+    }
+    if (!playing) {
+      setFsControlsVisible(true);
+      if (hideFsTimerRef.current) clearTimeout(hideFsTimerRef.current);
+      return;
+    }
+    bumpFsControls();
+    return () => {
+      if (hideFsTimerRef.current) clearTimeout(hideFsTimerRef.current);
+    };
+  }, [expanded, playing, bumpFsControls]);
 
   const seekWithinWatched = useCallback(
     (target: number) => {
@@ -397,133 +429,184 @@ export function LmsSecureYoutubePlayer({
   const progressPct = durationSec > 0 ? Math.min(100, (currentSec / durationSec) * 100) : 0;
   const watchedPct = durationSec > 0 ? Math.min(100, (maxWatchedSec / durationSec) * 100) : 0;
 
+  const seekBar = (tone: "onVideo" | "below") => {
+    const trackIdle = tone === "onVideo" ? "bg-white/25" : "bg-slate-200";
+    const timeClass =
+      tone === "onVideo" ? "text-white/80" : "text-slate-500";
+    return (
+      <div>
+        <label className="sr-only" htmlFor={`lms-yt-seek-${videoId}-${tone}`}>
+          ตำแหน่งวิดีโอ (ย้อนกลับได้ในส่วนที่ดูแล้ว)
+        </label>
+        <input
+          id={`lms-yt-seek-${videoId}-${tone}`}
+          type="range"
+          min={0}
+          max={Math.max(1, Math.floor(durationSec) || 1)}
+          step={1}
+          value={Math.min(Math.floor(currentSec), Math.floor(maxWatchedSec) || 0)}
+          disabled={!ready || durationSec <= 0}
+          className={cn(
+            "lms-yt-seek h-1.5 w-full cursor-pointer appearance-none rounded-full accent-[#5b61ff] disabled:opacity-40",
+            trackIdle,
+          )}
+          style={{
+            background:
+              tone === "onVideo"
+                ? `linear-gradient(to right, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) ${progressPct}%, rgba(255,255,255,0.35) ${progressPct}%, rgba(255,255,255,0.35) ${watchedPct}%, rgba(255,255,255,0.15) ${watchedPct}%, rgba(255,255,255,0.15) 100%)`
+                : `linear-gradient(to right, #5b61ff 0%, #5b61ff ${progressPct}%, #c4c2e0 ${progressPct}%, #c4c2e0 ${watchedPct}%, #e8e7f2 ${watchedPct}%, #e8e7f2 100%)`,
+          }}
+          onChange={(e) => {
+            seekWithinWatched(Number(e.target.value));
+            if (expanded) bumpFsControls();
+          }}
+          aria-valuemin={0}
+          aria-valuemax={Math.floor(durationSec) || 0}
+          aria-valuenow={Math.floor(currentSec)}
+          aria-valuetext={`${formatTime(currentSec)} จาก ${formatTime(durationSec)}`}
+        />
+        <div className={cn("mt-0.5 flex justify-between text-[10px] font-semibold tabular-nums", timeClass)}>
+          <span>{formatTime(currentSec)}</span>
+          <span>{formatTime(durationSec)}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const transportButtons = (tone: "onVideo" | "below") => {
+    const btn = tone === "onVideo" ? controlIconOnVideoClass : controlIconBelowClass;
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <button
+          type="button"
+          className={btn}
+          disabled={!ready || currentSec <= 0}
+          onClick={() => {
+            rewind(10);
+            if (expanded) bumpFsControls();
+          }}
+          aria-label="ย้อนกลับ 10 วินาที"
+          title="ย้อนกลับ 10 วินาที"
+        >
+          <ChevronsLeft className="h-4 w-4" aria-hidden strokeWidth={2.5} />
+        </button>
+        <button
+          type="button"
+          className={btn}
+          disabled={!ready}
+          onClick={() => {
+            const p = playerRef.current;
+            if (!p) return;
+            if (playing) p.pauseVideo();
+            else p.playVideo();
+            if (expanded) bumpFsControls();
+          }}
+          aria-label={playing ? "หยุดชั่วคราว" : "เล่น"}
+          title={playing ? "หยุด" : "เล่น"}
+        >
+          {playing ? (
+            <Pause className="h-5 w-5" aria-hidden strokeWidth={2.25} />
+          ) : (
+            <Play className="h-5 w-5" aria-hidden strokeWidth={2.25} />
+          )}
+        </button>
+        <button
+          type="button"
+          className={btn}
+          onClick={() => void toggleFullscreen()}
+          aria-label={expanded ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
+          title={expanded ? "ย่อ" : "เต็มจอ"}
+          aria-pressed={expanded}
+        >
+          {expanded ? (
+            <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
+          ) : (
+            <Maximize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       {cssExpanded ? <div className="aspect-video w-full" aria-hidden /> : null}
-      <div
-        ref={shellRef}
-        className={cn(
-          "relative isolate overflow-hidden bg-black",
-          cssExpanded
-            ? "fixed inset-0 z-[300] h-[100dvh] max-h-[100dvh] w-full rounded-none"
-            : "aspect-video rounded-xl",
-          nativeFs && !cssExpanded && "aspect-auto h-full min-h-full w-full rounded-none",
-          className,
-        )}
-      >
-        {/* โซนวิดีโอ — absolute fill ให้ iframe YouTube ไม่พังตอนขยายบน iOS */}
-        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-          <div
-            ref={hostRef}
-            className="h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
-            title={title}
-          />
-        </div>
-        {/* บล็อกคลิกบน iframe — ใช้แถบควบคุมแทน */}
+      <div className={cn(!expanded && "space-y-2", className)}>
         <div
-          className="absolute inset-0 z-10"
-          onContextMenu={(e) => e.preventDefault()}
-          aria-hidden
-        />
-        {expanded ? (
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end px-2 pb-10",
-              appSafeAreaOverlayExpandedHeaderPadClass,
-            )}
-          >
-            <button
-              type="button"
-              className={controlIconBtnClass}
-              onClick={() => void toggleFullscreen()}
-              aria-label="ออกจากเต็มจอ"
-              title="ย่อ"
-            >
-              <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
-            </button>
-          </div>
-        ) : null}
-        <div
+          ref={shellRef}
           className={cn(
-            "pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-1.5 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-3 pb-3 pt-12",
-            expanded && appSafeAreaFixedBottomBarPadClass,
+            "relative isolate overflow-hidden bg-black",
+            cssExpanded
+              ? "fixed inset-0 z-[300] h-[100dvh] max-h-[100dvh] w-full rounded-none"
+              : "aspect-video rounded-xl",
+            nativeFs && !cssExpanded && "aspect-auto h-full min-h-full w-full rounded-none",
           )}
         >
-          <div className="pointer-events-auto">
-            <label className="sr-only" htmlFor={`lms-yt-seek-${videoId}`}>
-              ตำแหน่งวิดีโอ (ย้อนกลับได้ในส่วนที่ดูแล้ว)
-            </label>
-            <input
-              id={`lms-yt-seek-${videoId}`}
-              type="range"
-              min={0}
-              max={Math.max(1, Math.floor(durationSec) || 1)}
-              step={1}
-              value={Math.min(Math.floor(currentSec), Math.floor(maxWatchedSec) || 0)}
-              disabled={!ready || durationSec <= 0}
-              className="lms-yt-seek h-2 w-full cursor-pointer appearance-none rounded-full bg-white/25 accent-white disabled:opacity-40"
-              style={{
-                background: `linear-gradient(to right, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.85) ${progressPct}%, rgba(255,255,255,0.35) ${progressPct}%, rgba(255,255,255,0.35) ${watchedPct}%, rgba(255,255,255,0.15) ${watchedPct}%, rgba(255,255,255,0.15) 100%)`,
-              }}
-              onChange={(e) => {
-                seekWithinWatched(Number(e.target.value));
-              }}
-              aria-valuemin={0}
-              aria-valuemax={Math.floor(durationSec) || 0}
-              aria-valuenow={Math.floor(currentSec)}
-              aria-valuetext={`${formatTime(currentSec)} จาก ${formatTime(durationSec)}`}
+          <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+            <div
+              ref={hostRef}
+              className="h-full w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
+              title={title}
             />
-            <div className="mt-0.5 flex justify-between text-[10px] font-semibold tabular-nums text-white/80">
-              <span>{formatTime(currentSec)}</span>
-              <span>{formatTime(durationSec)}</span>
+          </div>
+          <div
+            className="absolute inset-0 z-10"
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={() => {
+              if (expanded) {
+                if (fsControlsVisible && playing) setFsControlsVisible(false);
+                else bumpFsControls();
+              }
+            }}
+            aria-hidden
+          />
+
+          {expanded ? (
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-0 z-20 transition-opacity duration-300",
+                fsControlsVisible ? "opacity-100" : "opacity-0",
+              )}
+              aria-hidden={!fsControlsVisible}
+            >
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-x-0 top-0 flex justify-end px-2",
+                  appSafeAreaOverlayExpandedHeaderPadClass,
+                )}
+              >
+                <button
+                  type="button"
+                  className={cn(controlIconOnVideoClass, fsControlsVisible && "pointer-events-auto")}
+                  tabIndex={fsControlsVisible ? 0 : -1}
+                  onClick={() => void toggleFullscreen()}
+                  aria-label="ออกจากเต็มจอ"
+                  title="ย่อ"
+                >
+                  <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
+                </button>
+              </div>
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-x-0 bottom-0 space-y-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-14",
+                  appSafeAreaFixedBottomBarPadClass,
+                  fsControlsVisible && "pointer-events-auto",
+                )}
+              >
+                {seekBar("onVideo")}
+                {transportButtons("onVideo")}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              className={controlIconBtnClass}
-              disabled={!ready || currentSec <= 0}
-              onClick={() => rewind(10)}
-              aria-label="ย้อนกลับ 10 วินาที"
-              title="ย้อนกลับ 10 วินาที"
-            >
-              <ChevronsLeft className="h-4 w-4" aria-hidden strokeWidth={2.5} />
-            </button>
-            <button
-              type="button"
-              className={controlIconBtnClass}
-              disabled={!ready}
-              onClick={() => {
-                const p = playerRef.current;
-                if (!p) return;
-                if (playing) p.pauseVideo();
-                else p.playVideo();
-              }}
-              aria-label={playing ? "หยุดชั่วคราว" : "เล่น"}
-              title={playing ? "หยุด" : "เล่น"}
-            >
-              {playing ? (
-                <Pause className="h-5 w-5" aria-hidden strokeWidth={2.25} />
-              ) : (
-                <Play className="h-5 w-5" aria-hidden strokeWidth={2.25} />
-              )}
-            </button>
-            <button
-              type="button"
-              className={controlIconBtnClass}
-              onClick={() => void toggleFullscreen()}
-              aria-label={expanded ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
-              title={expanded ? "ย่อ" : "เต็มจอ"}
-              aria-pressed={expanded}
-            >
-              {expanded ? (
-                <Minimize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
-              ) : (
-                <Maximize2 className="h-4 w-4" aria-hidden strokeWidth={2.25} />
-              )}
-            </button>
-          </div>
+          ) : null}
         </div>
+
+        {/* โหมดปกติ — เส้นเวลา/ปุ่มอยู่ใต้จอ ไม่ทับเนื้อหาวิดีโอ */}
+        {!expanded ? (
+          <div className="space-y-1.5 px-0.5">
+            {seekBar("below")}
+            {transportButtons("below")}
+          </div>
+        ) : null}
       </div>
     </>
   );
