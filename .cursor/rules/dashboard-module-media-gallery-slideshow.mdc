@@ -35,7 +35,7 @@ alwaysApply: false
 
 1. แสดงเป็น **การ์ด thumb** (aspect-video + ปุ่ม Play ทับ) — **ห้าม** ฝัง iframe เล่นตรงในรายการยาวทั้งหน้า  
 2. **คลิกการ์ด** → เปิด **`AppYoutubeLightbox`** (ป๊อปอัปเล่น)  
-3. ใน lightbox: ปุ่ม **เต็มจอเป็นไอคอนล้วน** · iOS ใช้ขยาย CSS · **ห้าม** ลิงก์/ปุ่มเปิดหรือคัดลอก YouTube (ดู **`app-templates-youtube.mdc`**)  
+3. ใน lightbox: ใช้ **`AppSecureYoutubePlayer`** ภายใน (ไม่ฝัง iframe ดิบ) · ปุ่มเต็มจอไอคอน · iOS CSS · **ห้าม** ลิงก์/เปิดแอป YouTube (ดู **`app-templates-youtube.mdc`**)  
 4. โทเค็นกริดรวมใน `lib/ui-tokens.ts` ของโมดูล — อย่า copy `grid-cols-*` กระจายหลายไฟล์  
 
 ```tsx

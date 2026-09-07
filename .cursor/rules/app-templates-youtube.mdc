@@ -21,7 +21,7 @@ alwaysApply: false
 | กรณี | ใช้ |
 |------|-----|
 | เล่น **ในหน้า** (ห้องเรียน · บทเรียน · ฝังยาว) | **`AppSecureYoutubePlayer`** จาก `@/components/app-templates` |
-| เล่นจาก **การ์ด thumb → ป๊อปอัป** | **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox`** |
+| เล่นจาก **การ์ด thumb → ป๊อปอัป** | **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox`** (ภายใน = `AppSecureYoutubePlayer` — ห้าม iframe ดิบ) |
 | แปลง URL → embed ปลอดภัย | **`secureYoutubeEmbedUrl`** / **`normalizeSecureYoutubeEmbedUrl`** ใน `@/lib/youtube-url` |
 
 `LmsSecureYoutubePlayer` = re-export ของ `AppSecureYoutubePlayer` (อย่าคัดลอกไฟล์ LMS)
@@ -31,12 +31,13 @@ alwaysApply: false
 ## บังคับ — UX แบบ LMS
 
 1. **ห้าม** โชว์ลิงก์ `youtube.com/watch` / ปุ่ม «เปิดบน YouTube» / ปุ่มคัดลอกลิงก์ บน UI ผู้เรียน/ลูกค้า  
-2. **ห้าม** สร้าง iframe YouTube ดิบ + โมดัลเอง เมื่อเป้าหมายคือเล่นคลิปในแอป  
+2. **ห้าม** สร้าง iframe YouTube ดิบ + โมดัลเองเมื่อเป้าหมายคือเล่นคลิปในแอป — รวมถึง lightbox ต้องห่อด้วย `AppSecureYoutubePlayer`  
 3. ปุ่มควบคุมผู้เล่น / lightbox: **ไอคอนล้วน** (`aria-label` + `title`) — ไม่ใส่ข้อความ «เต็มจอ» / «ย่อ» ข้างไอคอน  
 4. **เต็มจอ:**  
    - **iOS / iPad (และ Mac touch):** ขยายด้วย **CSS** (`fixed` / `100dvh`) — **ห้าม** พึ่ง `requestFullscreen` บน wrapper รอบ iframe เป็นหลัก  
    - เดสก์ท็อปอื่น: native fullscreen ได้ ถ้าใช้ได้ ไม่เช่นนั้น fallback CSS  
-5. Embed ใช้พารามิเตอร์ secure (`controls:0`, `modestbranding`, `playsinline`, `rel:0`, …) — ผ่าน helper กลาง ไม่ hardcode คนละชุด
+5. Embed ใช้พารามิเตอร์ secure (`controls:0`, `modestbranding`, `playsinline`, `rel:0`, `fs:0`, …) + **ชั้นทับ iframe** กันแตะโลโก้/เปิดแอป YouTube  
+6. แปลง URL → embed: **`secureYoutubeEmbedUrl`** / **`normalizeSecureYoutubeEmbedUrl`** ใน `@/lib/youtube-url`
 
 ---
 

@@ -152,18 +152,24 @@ type Props = {
   className?: string;
   /** เล่นอัตโนมัติเมื่อพร้อม (เช่น หลังจบบทก่อนหน้า) */
   autoPlay?: boolean;
+  /**
+   * true = เลื่อนได้เฉพาะช่วงที่ดูแล้ว (LMS)
+   * false = เลื่อนอิสระ (lightbox ชมรม / โปรโมท)
+   */
+  lockSeekToWatched?: boolean;
   onProgress?: (watchedPercent: number, ended: boolean) => void;
 };
 
 /**
  * เล่น YouTube ในหน้า (inline) แบบ LMS — ปิด controls ของ YouTube · ไอคอนล้วน ·
- * เต็มจอ CSS บน iOS · ไม่มีลิงก์ watch / คัดลอกลิงก์
+ * เต็มจอ CSS บน iOS · ไม่มีลิงก์ watch / คัดลอกลิงก์ · ชั้นทับกัน iframe กันเปิดแอป YouTube
  */
 export function AppSecureYoutubePlayer({
   youtubeUrl,
   title,
   className,
   autoPlay = false,
+  lockSeekToWatched = true,
   onProgress,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
@@ -221,14 +227,20 @@ export function AppSecureYoutubePlayer({
     const prevTouch = document.body.style.touchAction;
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
+    document.documentElement.dataset.appYtCssFs = "1";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setCssExpanded(false);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setCssExpanded(false);
+      }
     };
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       document.body.style.overflow = prevOverflow;
       document.body.style.touchAction = prevTouch;
-      window.removeEventListener("keydown", onKey);
+      delete document.documentElement.dataset.appYtCssFs;
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [cssExpanded]);
 
@@ -262,8 +274,10 @@ export function AppSecureYoutubePlayer({
       const p = playerRef.current;
       if (!p) return;
       const dur = p.getDuration?.() || durationSec || 0;
-      const maxAllowed = Math.max(maxWatchedRef.current, 0);
-      const clamped = Math.max(0, Math.min(target, maxAllowed, dur || target));
+      const maxAllowed = lockSeekToWatched
+        ? Math.max(maxWatchedRef.current, 0)
+        : Math.max(dur, 0);
+      const clamped = Math.max(0, Math.min(target, maxAllowed || target, dur || target));
       try {
         p.seekTo(clamped, true);
         setCurrentSec(clamped);
@@ -271,7 +285,7 @@ export function AppSecureYoutubePlayer({
         /* ignore */
       }
     },
-    [durationSec],
+    [durationSec, lockSeekToWatched],
   );
 
   const rewind = useCallback(
@@ -448,7 +462,11 @@ export function AppSecureYoutubePlayer({
           min={0}
           max={Math.max(1, Math.floor(durationSec) || 1)}
           step={1}
-          value={Math.min(Math.floor(currentSec), Math.floor(maxWatchedSec) || 0)}
+          value={
+            lockSeekToWatched
+              ? Math.min(Math.floor(currentSec), Math.floor(maxWatchedSec) || 0)
+              : Math.floor(currentSec)
+          }
           disabled={!ready || durationSec <= 0}
           className={cn(
             "lms-yt-seek h-1.5 w-full cursor-pointer appearance-none rounded-full accent-[#5b61ff] disabled:opacity-40",
