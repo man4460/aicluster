@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
-import { useAppNoticePopup } from "@/components/app-templates";
+import { useAppNoticePopup, appSafeAreaPageContentTopPadClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { LmsCertificateDownload } from "@/systems/lms/components/LmsCertificateDownload";
 import { LmsExamPanel } from "@/systems/lms/components/LmsExamPanel";
@@ -200,8 +200,13 @@ export function LmsStudyRoomClient({ slug, courseId }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 px-3 py-6 sm:px-4">
-      {notice.popup}
+    <div
+      className={cn(
+        "mx-auto w-full max-w-6xl space-y-4 px-3 sm:px-4",
+        appSafeAreaPageContentTopPadClass,
+        "pb-[max(1.5rem,calc(1rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+      )}
+    >      {notice.popup}
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={`/lms/${encodeURIComponent(slug)}/dashboard`}

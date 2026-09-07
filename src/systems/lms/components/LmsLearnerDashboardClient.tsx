@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, ShoppingBag } from "lucide-react";
 import {
   AppImageLightbox,
+  appSafeAreaPageContentTopPadClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -17,6 +18,12 @@ import {
   type LmsPayMethod,
 } from "@/systems/lms/components/LmsPublicPaymentPanel";
 import { LMS_FAKE_SLIP_WARNING } from "@/systems/lms/lib/purchases-shared";
+import {
+  lmsIconButtonClass,
+  lmsOutlineButtonClass,
+  lmsPrimaryTabShellClass,
+  lmsLearnerTabPillClass,
+} from "@/systems/lms/lib/ui-tokens";
 
 type EnrollmentRow = {
   id: string;
@@ -215,51 +222,77 @@ export function LmsLearnerDashboardClient({ slug }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
+    <div
+      className={cn(
+        "mx-auto w-full max-w-5xl space-y-5 px-4 sm:space-y-6",
+        appSafeAreaPageContentTopPadClass,
+        "pb-[max(2rem,calc(1.5rem+var(--mawell-safe-bottom,env(safe-area-inset-bottom,0px))))]",
+      )}
+    >
       {notice.popup}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิป" />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-indigo-600">{institute}</p>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">สวัสดี {name}</h1>
-          <p className="text-sm text-slate-500">คอร์สที่กำลังเรียน · เรียนจบ · ซื้อเพิ่ม</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <div
-            role="tablist"
-            className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1"
-          >
-            {(
-              [
-                { key: "progress" as const, label: `กำลังเรียน (${inProgress.length})` },
-                { key: "done" as const, label: `เรียนจบแล้ว (${completed.length})` },
-                { key: "buy" as const, label: `ซื้อคอร์ส (${catalog.length})` },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.key}
-                className={cn(
-                  "min-h-9 rounded-lg px-3 text-sm font-semibold",
-                  tab === t.key ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600",
-                )}
-                onClick={() => setTab(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-indigo-600">{institute}</p>
+            <h1 className="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+              สวัสดี {name}
+            </h1>
+            <p className="mt-0.5 text-sm text-slate-500">คอร์สที่กำลังเรียน · เรียนจบ · ซื้อเพิ่ม</p>
           </div>
           <button
             type="button"
             onClick={() => void logout()}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+            className={cn(lmsIconButtonClass, "sm:hidden")}
+            aria-label="ออกจากระบบ"
+            title="ออกจากระบบ"
+          >
+            <LogOut className="h-4 w-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className={cn(lmsOutlineButtonClass, "hidden sm:inline-flex")}
             aria-label="ออกจากระบบ"
           >
             <LogOut className="h-4 w-4" aria-hidden />
             ออกจากระบบ
           </button>
+        </div>
+        <div role="tablist" aria-label="เมนูคอร์ส" className={lmsPrimaryTabShellClass}>
+          {(
+            [
+              {
+                key: "progress" as const,
+                short: `เรียน (${inProgress.length})`,
+                label: `กำลังเรียน (${inProgress.length})`,
+              },
+              {
+                key: "done" as const,
+                short: `จบแล้ว (${completed.length})`,
+                label: `เรียนจบแล้ว (${completed.length})`,
+              },
+              {
+                key: "buy" as const,
+                short: `ซื้อ (${catalog.length})`,
+                label: `ซื้อคอร์ส (${catalog.length})`,
+              },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              aria-label={t.label}
+              title={t.label}
+              className={lmsLearnerTabPillClass(tab === t.key)}
+              onClick={() => setTab(t.key)}
+            >
+              <span className="truncate sm:hidden">{t.short}</span>
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          ))}
         </div>
       </header>
 

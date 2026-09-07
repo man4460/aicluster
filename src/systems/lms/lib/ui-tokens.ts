@@ -77,6 +77,16 @@ export function lmsPrimaryTabPillClass(active: boolean): string {
   );
 }
 
+/** แท็บแดชบอร์ดผู้เรียนสาธารณะ — 3 ช่องเท่ากันบนมือถือ ไม่ล้น */
+export function lmsLearnerTabPillClass(active: boolean): string {
+  return cn(
+    "inline-flex min-h-8 min-w-0 flex-1 basis-0 items-center justify-center rounded-md px-1.5 text-center text-[11px] font-bold leading-tight sm:min-h-9 sm:flex-none sm:basis-auto sm:px-3 sm:text-xs",
+    active
+      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
+      : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",
+  );
+}
+
 /** เมนูย่อยแถบหัว — แบบซักผ้า (ปุ่ม h-9 คู่กับ action) */
 export const lmsInlineSubNavShellClass =
   "inline-flex shrink-0 flex-nowrap items-center gap-0.5";
