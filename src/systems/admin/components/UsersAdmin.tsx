@@ -7,6 +7,7 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
+  AppUsageGuideModal,
   appDashboardBrandCtaPillButtonClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
@@ -18,6 +19,83 @@ import {
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+
+const usersAdminGuideSections = [
+  {
+    title: "สิ่งที่เพิ่มใหม่ — รหัสเติมโทเคน",
+    content: (
+      <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
+        <li>
+          แอดมินต้องตั้ง <strong>รหัสเติมโทเคน</strong> ก่อน จึงจะเติมหรือปรับยอดโทเคนผู้ใช้ได้
+        </li>
+        <li>
+          รหัสนี้ <strong>คนละอันกับรหัสผ่านเข้าสู่ระบบ</strong> — ใช้เฉพาะตอนเติม/หัก/ตั้งยอดโทเคน
+        </li>
+        <li>
+          การเติมโทเคนด้วย QR ของผู้ใช้ที่หน้าโปรไฟล์ <strong>ไม่ใช้รหัสนี้</strong> (ทำงานแยกตามเดิม)
+        </li>
+      </ul>
+    ),
+  },
+  {
+    title: "ตั้งรหัสครั้งแรก",
+    content: (
+      <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>
+          เปิดหน้า <strong>ศูนย์แอดมิน → ผู้ใช้</strong>
+        </li>
+        <li>
+          ที่การ์ด <strong>รหัสเติมโทเคน (แอดมิน)</strong> กรอกรหัสใหม่ (ยาว 4–64 ตัว) แล้วยืนยันซ้ำ
+        </li>
+        <li>
+          กด <strong>ตั้งรหัส</strong> — เมื่อสำเร็จจะขึ้นสถานะว่ามีรหัสแล้ว
+        </li>
+      </ol>
+    ),
+  },
+  {
+    title: "เปลี่ยนรหัส",
+    content: (
+      <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+        <li>ใส่ <strong>รหัสเดิม</strong> ให้ถูกต้อง</li>
+        <li>ใส่ <strong>รหัสใหม่</strong> และยืนยันรหัสใหม่</li>
+        <li>กด <strong>เปลี่ยนรหัส</strong></li>
+      </ol>
+    ),
+  },
+  {
+    title: "เติมโทเคนให้ผู้ใช้ (ต้องใส่รหัสทุกครั้ง)",
+    content: (
+      <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
+        <li>
+          กดไอคอน <strong>เติมโทเคน</strong> บนการ์ดผู้ใช้ หรือชิปด่วน <strong>+10 / +50 / +100</strong> — จะเปิดโมดัลให้ใส่จำนวนและรหัส
+        </li>
+        <li>
+          กรอกจำนวน (บวก = เติม · ลบ = หัก) แล้วใส่ <strong>รหัสเติมโทเคน</strong> ก่อนกดยืนยัน
+        </li>
+        <li>
+          ถ้ายังไม่ตั้งรหัส หรือรหัสผิด ระบบจะปฏิเสธและแสดงข้อความชัดเจน
+        </li>
+      </ul>
+    ),
+  },
+  {
+    title: "แก้ยอดโทเคนตอนแก้ไขผู้ใช้",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>
+          กดไอคอนแก้ไข → เปลี่ยนช่อง <strong>โทเคน (ยอดรวม)</strong>
+        </li>
+        <li>
+          เมื่อยอดเปลี่ยนจากเดิม ระบบจะให้ใส่ <strong>รหัสเติมโทเคน</strong> ก่อนบันทึก
+        </li>
+        <li>
+          แก้เฉพาะอีเมล / ชื่อผู้ใช้ / บทบาท / แพ็ก โดยไม่แตะยอดโทเคน — ไม่ต้องใส่รหัสนี้
+        </li>
+      </ul>
+    ),
+  },
+];
 
 type UserRow = {
   id: string;
@@ -91,6 +169,7 @@ export function UsersAdmin() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSaving, setPinSaving] = useState(false);
   const [editTopUpPin, setEditTopUpPin] = useState("");
+  const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   /** ฟอร์มเพิ่ม / แผงกรอง — แสดงเมื่อกดปุ่มเท่านั้น */
   const [createFormOpen, setCreateFormOpen] = useState(false);
@@ -365,6 +444,24 @@ export function UsersAdmin() {
               </h1>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setUsageGuideOpen(true)}
+            className={cn(
+              appTemplateOutlineButtonClass,
+              "inline-flex min-h-[40px] items-center gap-1.5 border-[#dcd8f0] bg-white/80 px-3 text-[#4d47b6]",
+            )}
+            aria-label="คู่มือการใช้งาน"
+            aria-haspopup="dialog"
+            aria-expanded={usageGuideOpen}
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+              <circle cx="12" cy="17" r="1" />
+            </svg>
+            <span className="hidden sm:inline">คู่มือ</span>
+          </button>
         </div>
 
         {!loading && !loadError ? (
@@ -399,16 +496,48 @@ export function UsersAdmin() {
         ) : null}
       </section>
 
+      <AppUsageGuideModal
+        open={usageGuideOpen}
+        onClose={() => setUsageGuideOpen(false)}
+        title="คู่มือ — จัดการผู้ใช้"
+        subtitle="รหัสเติมโทเคนแอดมิน · เติม/หักโทเคน · แก้ยอดในหน้าแก้ไข"
+        sections={usersAdminGuideSections}
+        includeChromeGuide={false}
+        includeHomeScreenGuide={false}
+      />
+
       <AppDashboardSection tone="violet">
-        <AppSectionHeader tone="violet" title="รหัสเติมโทเคน (แอดมิน)" />
+        <AppSectionHeader
+          tone="violet"
+          title="รหัสเติมโทเคน (แอดมิน)"
+          action={
+            <button
+              type="button"
+              onClick={() => setUsageGuideOpen(true)}
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-[#dcd8f0] bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-1.5 sm:px-3",
+              )}
+              aria-label="เปิดคู่มือรหัสเติมโทเคน"
+              title="คู่มือ"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                <circle cx="12" cy="17" r="1" />
+              </svg>
+              <span className="hidden sm:inline">คู่มือ</span>
+            </button>
+          }
+        />
         <form onSubmit={onSavePin} className="mt-4 space-y-3">
           {pinConfigured === false ? (
             <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-sm text-amber-900">
-              ยังไม่ได้ตั้งรหัส — ต้องตั้งก่อนจึงจะเติมโทเคนผู้ใช้ได้
+              ยังไม่ได้ตั้งรหัส — ต้องตั้งก่อนจึงจะเติมโทเคนผู้ใช้ได้ (ยาว 4–64 ตัวอักษร)
             </p>
           ) : pinConfigured ? (
             <p className="rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
-              มีรหัสแล้ว — ต้องใส่ทุกครั้งก่อนเติมหรือปรับโทเคน
+              มีรหัสแล้ว — ทุกครั้งที่กดเติมโทเคน / ชิปด่วน / เปลี่ยนยอดในหน้าแก้ไข ต้องใส่รหัสนี้
             </p>
           ) : null}
           {pinError ? (

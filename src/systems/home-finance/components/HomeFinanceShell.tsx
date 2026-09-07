@@ -2,27 +2,33 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
-import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
+import {
+  AppMobileDockShell,
+  AppUsageGuideModal,
+  appMobileDockGridClass,
+  appMobileDockLinkClass,
+  appModuleShellMainScrollClass,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { HomeFinanceMobileBottomProvider } from "@/systems/home-finance/components/HomeFinanceMobileBottomChrome";
 import {
   HOME_FINANCE_HEADER_COLLAPSE_EVENT,
   HOME_FINANCE_MODULE_DISPLAY_NAME,
   HOME_FINANCE_NAV_ITEMS,
+  isHomeFinanceModulePath,
   isHomeFinanceNavItemActive,
   readHomeFinanceHeaderCollapsed,
   writeHomeFinanceHeaderCollapsed,
   type HomeFinanceNavKey,
 } from "@/systems/home-finance/home-finance-module-nav";
 import {
-  homeFinanceAccentBarClass,
-  homeFinanceGlassShellClass,
+  homeFinanceDesktopNavLinkClass,
+  homeFinanceIconButtonClass,
   homeFinanceMainPaddingBottomClass,
-  homeFinanceNavActiveClass,
-  homeFinanceNavIdleClass,
+  homeFinanceModuleShellClass,
+  homeFinanceOutlineButtonClass,
 } from "@/systems/home-finance/lib/ui-tokens";
 
 function IconOverview({ className }: { className?: string }) {
@@ -76,45 +82,10 @@ function navIcon(key: HomeFinanceNavKey, className?: string) {
   }
 }
 
-function TabLink({
-  href,
-  label,
-  active,
-  icon,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  icon: ReactNode;
-}) {
+function HeaderCollapseGlyph() {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
-        active ? homeFinanceNavActiveClass : homeFinanceNavIdleClass,
-      )}
-      aria-current={active ? "page" : undefined}
-    >
-      <span
-        className={cn("flex h-4 w-4 shrink-0 items-center justify-center", active ? "text-white" : "text-slate-400")}
-        aria-hidden
-      >
-        {icon}
-      </span>
-      {label}
-    </Link>
-  );
-}
-
-function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {collapsed ? (
-        <path d="M6 9l6 6 6-6" />
-      ) : (
-        <path d="M6 15l6-6 6 6" />
-      )}
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
     </svg>
   );
 }
@@ -124,11 +95,21 @@ const guideSections = [
     title: "ลำดับเริ่มต้นแนะนำ",
     content: (
       <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
-        <li>เมนู <strong>ตั้งค่า</strong> — สร้างหมวดรายรับและรายจ่าย (เช่น เงินเดือน · ค่าอาหาร · รายได้เสริม)</li>
-        <li>เมนู <strong>ภาพรวม</strong> — บันทึกรายการแรก · เลือกประเภท · หมวด · จำนวนเงิน · แนบสลิป</li>
-        <li>เมนู <strong>บันทึก</strong> — ตรวจย้อนหลัง · แก้ไข/ลบ · กรองช่วงวันที่</li>
-        <li>เมนู <strong>เอกสารหลักฐาน</strong> — เก็บบัตรประชาชน · สัญญา · ใบรับรอง แยกจากสลิปรายวัน</li>
-        <li>ทบทวนยอดสุทธิทุกสิ้นเดือนจากกราฟและการ์ดสรุปบนภาพรวม</li>
+        <li>
+          เมนู <strong>ตั้งค่า</strong> — สร้างหมวดรายรับและรายจ่ายให้ครบก่อนบันทึกรายการ
+        </li>
+        <li>
+          เมนู <strong>ภาพรวม</strong> — ดูสรุปเดือนนี้ · บันทึกรายการแรก · แนบสลิปได้
+        </li>
+        <li>
+          เมนู <strong>บันทึก</strong> — กรองช่วงเวลา · ค้นหา · แก้ไข/ลบ · กดดูสลิปเต็มจอ
+        </li>
+        <li>
+          เมนู <strong>เอกสารหลักฐาน</strong> — เก็บรูป/PDF เอกสารสำคัญแยกจากสลิปรายวัน
+        </li>
+        <li>
+          เมนูย่อยใต้ <strong>ภาพรวม</strong> — ใช้แท็บ <strong>รหัสผ่าน</strong> และ <strong>โน้ต</strong> สำหรับของส่วนตัวคู่กับการเงิน
+        </li>
       </ol>
     ),
   },
@@ -137,73 +118,120 @@ const guideSections = [
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>
-          <strong>ภาพรวม</strong> — สรุปรายรับ/รายจ่าย/คงเหลือ · ฟอร์มบันทึกเร็ว · กราฟรายเดือน
+          <strong>ภาพรวม</strong> — สรุปรายรับ–รายจ่าย · กราฟ · และเมนูย่อย รหัสผ่าน / โน้ต
         </li>
         <li>
-          <strong>บันทึก</strong> — ประวัติรายการทั้งหมด · กรอง · แก้ไข · ลบ · ดูสลิป
+          <strong>บันทึก</strong> — ประวัติรายการทั้งหมด · กรอง · แก้ไข · ลบ
         </li>
         <li>
-          <strong>เอกสารหลักฐาน</strong> — เก็บเอกสารสำคัญ · รูป/PDF · หมวดย่อย
+          <strong>เอกสารหลักฐาน</strong> — อัปโหลดและจัดเก็บเอกสารสำคัญ
         </li>
         <li>
-          <strong>ตั้งค่า</strong> — จัดการหมวดรายรับ–รายจ่าย · งบประมาณ (ถ้ามี)
+          <strong>ตั้งค่า</strong> — จัดการหมวดรายรับ / รายจ่าย
+        </li>
+        <li>
+          มือถือใช้ <strong>dock ล่าง</strong> · เดสก์ท็อปใช้แท็บในหัวโมดูล · กด <strong>ซ่อนส่วนหัว</strong> ได้ (จำค่าในเครื่อง)
         </li>
       </ul>
     ),
   },
   {
-    title: "เมนู: ภาพรวม",
+    title: "เมนูย่อยใต้ภาพรวม — สิ่งที่เพิ่มใหม่",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>การ์ดสรุป — รายรับ · รายจ่าย · คงเหลือสุทธิ (สีเขียว/ชมพู · กริด 2 คอลัมน์บนมือถือ)</li>
-        <li>ฟอร์มบันทึก — เลือกรายรับหรือรายจ่าย · หมวด · ชื่อรายการ · จำนวนเงิน · วันที่ · หมายเหตุ</li>
-        <li>แนบสลิป — เลือกรูปหรือถ่ายกล้อง · ย่อก่อนอัปโหลด · ดูขยายเต็มจอจากรายการ</li>
-        <li>กราฟรายเดือน — แนวโน้มรายรับ–รายจ่าย · ใช้โหมด compact จาก template กลาง</li>
-        <li>ไม่ผูกบิลร้านหรือรถ — เหมาะบันทึกครัวเรือนหรือธุรกิจเล็กแบบง่าย</li>
+      <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
+        <li>
+          ใต้เมนูหลัก <strong>ภาพรวม</strong> มีแถบย่อย 3 แท็บ: <strong>ภาพรวม</strong> · <strong>รหัสผ่าน</strong> ·{" "}
+          <strong>โน้ต</strong>
+        </li>
+        <li>
+          สลับแท็บได้จากแถบย่อยบนหน้า (มือถือและเดสก์ท็อป) — ไม่ต้องออกจากโมดูลรายรับ–รายจ่าย
+        </li>
+        <li>
+          ข้อมูลอยู่ภายใต้บัญชีคุณ — แยกจากสลิป/รายการเงินในแท็บภาพรวมและบันทึก
+        </li>
       </ul>
     ),
   },
   {
-    title: "เมนู: บันทึก",
+    title: "รหัสผ่าน (ใหม่) — วิธีใช้",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>รายการทั้งหมดเรียงตามวันที่ — รายรับสีเขียว · รายจ่ายสีชมพู</li>
-        <li>กรอง — ช่วงวันที่ · ประเภท · หมวด · คำค้น · ปุ่มแสดง/ซ่อนกรอง</li>
-        <li>แก้ไข — เปิดฟอร์ม · เปลี่ยนหมวด/ยอด/วันที่ · อัปเดตหรือลบสลิป</li>
-        <li>ลบ — ยืนยันผ่าน popup กลางจอก่อนลบถาวร</li>
-        <li>สลิป — แสดงรูปย่อเฉพาะเมื่อมี URL · ไม่มี placeholder ว่าง</li>
+      <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
+        <li>
+          เข้าทาง <strong>ภาพรวม → รหัสผ่าน</strong> (หรือเปิดตรง <code className="rounded bg-[#f3f2fa] px-1 text-[12px]">/dashboard/home-finance/passwords</code>)
+        </li>
+        <li>
+          กด <strong>เพิ่ม</strong> แล้วกรอก <strong>ชื่อบริการ</strong> · <strong>ชื่อผู้ใช้</strong> ·{" "}
+          <strong>รหัสผ่าน</strong> — บันทึกแล้วรหัสจะถูกเก็บเข้ารหัสในคลังรหัสของบัญชี
+        </li>
+        <li>
+          ในรายการ: กดไอคอน <strong>ตา</strong> เพื่อแสดง/ซ่อนรหัส · ไอคอน <strong>คัดลอก</strong> เพื่อคัดลอกรหัสไปคลิปบอร์ด
+        </li>
+        <li>
+          กดไอคอน <strong>แก้ไข</strong> เพื่อเปลี่ยนชื่อบริการ/ผู้ใช้ — ถ้าต้องการเปลี่ยนรหัส ให้กรอกรหัสใหม่ในฟอร์ม (เว้นว่าง = คงรหัสเดิม)
+        </li>
+        <li>
+          กดไอคอน <strong>ลบ</strong> แล้วยืนยันเพื่อลบรายการนั้นออกจากคลัง
+        </li>
+        <li>
+          ใช้ช่อง <strong>ค้นหา</strong> กรองตามชื่อบริการ / ผู้ใช้ / เว็บไซต์ได้ทันที
+        </li>
+        <li>
+          เหมาะเก็บบัญชีธนาคาร · อีเมล · แอปที่ใช้คู่กับการเงินบ้าน — ไม่ใช่แทนระบบคลังรหัสผ่านหลักทั้งแพลตฟอร์มถ้ามีโมดูลแยก
+        </li>
       </ul>
     ),
   },
   {
-    title: "เมนู: เอกสารหลักฐาน",
+    title: "โน้ต (ใหม่) — วิธีใช้",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>เก็บเอกสารระยะยาว — บัตรประชาชน · สัญญา · ใบรับรอง · ใบเสร็จสำคัญ</li>
-        <li>อัปโหลดรูปหรือ PDF — ตั้งชื่อและหมวดย่อยให้ค้นหาง่าย</li>
-        <li>แยกจากสลิปในรายการรายวัน — ไม่ปนกับบันทึกรายรับ–รายจ่าย</li>
-        <li>ดูเอกสารเต็มจอจากรายการ · ลบ/แก้ไขชื่อเมื่อหมดอายุหรือเปลี่ยนฉบับ</li>
+      <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
+        <li>
+          เข้าทาง <strong>ภาพรวม → โน้ต</strong> (หรือ{" "}
+          <code className="rounded bg-[#f3f2fa] px-1 text-[12px]">/dashboard/home-finance/notes</code>)
+        </li>
+        <li>
+          พิมพ์ข้อความในช่องด้านบน แล้วกด <strong>บันทึก</strong> เพื่อสร้างโน้ตใหม่ — แสดงวันเวลาตามโซนไทย
+        </li>
+        <li>
+          กดไอคอน <strong>แก้ไข</strong> บนการ์ดเพื่อแก้ข้อความ · ยืนยันด้วยปุ่มติ๊ก · ยกเลิกด้วยปุ่มกากบาท
+        </li>
+        <li>
+          กดไอคอน <strong>ลบ</strong> เพื่อลบโน้ตนั้น
+        </li>
+        <li>
+          เปิด/ปิด <strong>ตัวกรอง</strong> แล้วพิมพ์คำค้นเพื่อหาโน้ตที่มีข้อความตรงกัน
+        </li>
+        <li>
+          ปุ่ม <strong>รีเฟรช</strong> โหลดรายการล่าสุดจากเซิร์ฟเวอร์อีกครั้ง
+        </li>
+        <li>
+          ใช้จดเตือนสั้น ๆ คู่การเงิน เช่น งวดบิล · สัญญา · รายละเอียดที่ยังไม่อยากทำเป็นรายการเงิน
+        </li>
       </ul>
     ),
   },
   {
-    title: "เมนู: ตั้งค่า",
+    title: "ภาพรวม · บันทึก · เอกสาร · ตั้งค่า",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>หมวดรายรับ — เช่น เงินเดือน · ดอกเบี้ย · รายได้เสริม</li>
-        <li>หมวดรายจ่าย — เช่น ค่าอาหาร · ค่าเช่า · สาธารณูปโภค · ผ่อน</li>
-        <li>เรียงลำดับหมวด · ปิดหมวดที่ไม่ใช้แล้วแทนลบถ้ามีประวัติ</li>
-        <li>ตั้งงบประมาณรายเดือนต่อหมวด (ถ้าเปิดใช้) — ดู progress บนภาพรวม</li>
+        <li>
+          <strong>ภาพรวม</strong> — สรุปเดือนนี้ · กราฟ · เพิ่มรายรับ/รายจ่ายเร็ว · แนบสลิปแล้วดูเต็มจอได้
+        </li>
+        <li>
+          <strong>บันทึก</strong> — ประวัติเต็ม · กรองช่วง/ค้นหา · แก้ไขหรือลบรายการ · สลิปแสดงเฉพาะเมื่อมีรูป
+        </li>
+        <li>
+          <strong>เอกสารหลักฐาน</strong> — เก็บเอกสารระยะยาวแยกจากสลิปรายวัน
+        </li>
+        <li>
+          <strong>ตั้งค่า</strong> — เพิ่ม/แก้/ลบหมวดรายรับและรายจ่ายก่อนบันทึกรายการใหม่
+        </li>
       </ul>
     ),
   },
 ];
 
-export function HomeFinanceShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function HomeFinanceShellInner({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
@@ -225,31 +253,28 @@ export function HomeFinanceShell({
 
   return (
     <HomeFinanceMobileBottomProvider>
-      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
+      <div className={cn("flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6", homeFinanceMainPaddingBottomClass)}>
         <header
           className={cn(
-            homeFinanceGlassShellClass,
-            "flex shrink-0 flex-col px-4 py-4 sm:px-8 sm:py-6 print:hidden",
+            homeFinanceModuleShellClass,
+            "flex shrink-0 flex-col px-4 py-4 sm:px-6 sm:py-5",
             headerCollapsed && "hidden",
           )}
         >
-          <div className={homeFinanceAccentBarClass} aria-hidden />
-          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 gap-y-2">
-            <div className="flex min-w-0 items-start gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+            <div className="flex min-w-0 items-center gap-3">
               <div
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-fuchsia-500/20",
-                  appDashboardBrandGradientFillClass,
-                )}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-[#5b61ff] text-white shadow-sm"
+                aria-hidden
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 18h16M7 14l3-3 3 2 4-5" />
                   <circle cx="12" cy="12" r="9" strokeOpacity="0.35" />
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6]">โมดูล</p>
-                <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4d47b6]">โมดูล</p>
+                <h1 className="mt-0.5 truncate text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
                   {HOME_FINANCE_MODULE_DISPLAY_NAME}
                 </h1>
               </div>
@@ -258,7 +283,7 @@ export function HomeFinanceShell({
               <button
                 type="button"
                 onClick={() => setUsageGuideOpen(true)}
-                className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+                className={cn(homeFinanceOutlineButtonClass, "w-9 min-w-9 px-0 sm:w-auto sm:min-w-0 sm:px-3")}
                 aria-label="คู่มือการใช้งาน"
                 aria-haspopup="dialog"
                 aria-expanded={usageGuideOpen}
@@ -274,32 +299,39 @@ export function HomeFinanceShell({
               <button
                 type="button"
                 onClick={toggleHeaderCollapse}
-                className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+                className={homeFinanceIconButtonClass}
                 aria-pressed={headerCollapsed}
                 aria-label="ซ่อนส่วนหัวโมดูล"
                 title="ซ่อนส่วนหัวโมดูล"
                 suppressHydrationWarning
               >
-                <HeaderCollapseGlyph collapsed={headerCollapsed} />
+                <HeaderCollapseGlyph />
               </button>
             </div>
           </div>
 
           <nav
-            className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
+            className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden"
             aria-label="เมนูระบบรายรับรายจ่าย"
           >
-            <ul className="grid grid-cols-4 gap-2">
-              {HOME_FINANCE_NAV_ITEMS.map((item) => (
-                <li key={item.key} className="min-w-0">
-                  <TabLink
-                    href={item.href}
-                    label={item.label}
-                    active={isHomeFinanceNavItemActive(pathname, item.key)}
-                    icon={navIcon(item.key, "h-4 w-4")}
-                  />
-                </li>
-              ))}
+            <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {HOME_FINANCE_NAV_ITEMS.map((item) => {
+                const active = isHomeFinanceNavItemActive(pathname, item.key);
+                return (
+                  <li key={item.key} className="min-w-0 shrink-0 flex-[1_1_0%]">
+                    <Link
+                      href={item.href}
+                      className={homeFinanceDesktopNavLinkClass(active)}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+                        {navIcon(item.key, "h-4 w-4")}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         </header>
@@ -308,11 +340,49 @@ export function HomeFinanceShell({
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
           title="คู่มือ — รายรับ–รายจ่าย"
+          subtitle="ครอบคลุมเมนูหลัก · รหัสผ่าน · โน้ต · บันทึก · เอกสาร · ตั้งค่า"
           sections={guideSections}
         />
 
-        <div className={cn(homeFinanceMainPaddingBottomClass, appModuleShellMainScrollClass)}>{children}</div>
+        <div className={appModuleShellMainScrollClass}>{children}</div>
+
+        {isHomeFinanceModulePath(pathname) ? (
+          <AppMobileDockShell ariaLabel="เมนูล่างระบบรายรับรายจ่าย">
+            <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
+              {HOME_FINANCE_NAV_ITEMS.map((item) => {
+                const active = isHomeFinanceNavItemActive(pathname, item.key);
+                return (
+                  <li key={item.key} className="min-w-0">
+                    <Link
+                      href={item.href}
+                      className={appMobileDockLinkClass(active)}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={item.label}
+                    >
+                      {navIcon(item.key, "h-5 w-5 shrink-0")}
+                      <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                        {item.shortLabel}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </AppMobileDockShell>
+        ) : null}
       </div>
     </HomeFinanceMobileBottomProvider>
+  );
+}
+
+export function HomeFinanceShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className={cn("flex min-w-0 flex-col gap-4 sm:gap-6", homeFinanceMainPaddingBottomClass)}>{children}</div>
+      }
+    >
+      <HomeFinanceShellInner>{children}</HomeFinanceShellInner>
+    </Suspense>
   );
 }
