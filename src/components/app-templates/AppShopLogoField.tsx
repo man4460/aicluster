@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { AppImagePickCameraButtons } from "./AppImagePickCameraButtons";
+import { prepareImageFileForUpload } from "./prepareImageFileForUpload";
 import { useAppCameraCapture } from "./useAppCameraCapture";
 import { cn } from "@/lib/cn";
 
@@ -40,8 +41,9 @@ export function AppShopLogoField({
     setUploading(true);
     setErr(null);
     try {
+      const prepared = await prepareImageFileForUpload(file);
       const fd = new FormData();
-      fd.set("file", file);
+      fd.set("file", prepared);
       const res = await fetch(uploadUrl, { method: "POST", body: fd });
       const json = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
       if (!res.ok || !json.imageUrl) {

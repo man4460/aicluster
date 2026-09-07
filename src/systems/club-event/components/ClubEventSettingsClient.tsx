@@ -6,6 +6,7 @@ import {
   AppModuleShopPaymentFields,
   AppShopLogoField,
   AppSlipPaperSizeSettingsField,
+  prepareImageFileForUpload,
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
@@ -267,8 +268,9 @@ export function ClubEventSettingsClient({
                     void (async () => {
                       setSaving(true);
                       try {
+                        const prepared = await prepareImageFileForUpload(file);
                         const fd = new FormData();
-                        fd.set("file", file);
+                        fd.set("file", prepared);
                         const res = await fetch(LOGO_UPLOAD, { method: "POST", body: fd });
                         const json = (await res.json().catch(() => ({}))) as {
                           imageUrl?: string;
