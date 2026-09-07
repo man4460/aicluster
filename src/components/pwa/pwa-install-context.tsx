@@ -96,9 +96,7 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback(() => {}, []);
   const openInstallGuide = useCallback(() => {
-    if (typeof window !== "undefined") {
-      window.location.assign("/download-app");
-    }
+    /* ซ่อนชั่วคราว — จะเปิดคู่มือปุ่มลัดหน้าจอโฮมภายหลัง */
   }, []);
   const install = useCallback(async () => {
     openInstallGuide();

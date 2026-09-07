@@ -85,7 +85,12 @@ export function ClubEventPublicClient({
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
-      <header className="absolute inset-x-0 top-0 z-30 pt-[var(--mawell-safe-top,env(safe-area-inset-top,0px))]">
+      <header className="absolute inset-x-0 top-0 z-30">
+        <div
+          className="h-[env(safe-area-inset-top,0px)] w-full"
+          style={{ minHeight: "env(safe-area-inset-top, 0px)" }}
+          aria-hidden
+        />
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div className={clubEventPortalHeaderBrandPillClass}>
             {profile.logoUrl ? (
