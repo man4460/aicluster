@@ -8,8 +8,8 @@ const chipClass =
 
 /**
  * แสดงในแถบ Header เมื่อล็อกอินบัญชีทดลอง —
- * มือถือ: ป้ายทดลองเบา + ลิงก์ข้อความ «สมัคร» (ไม่ใช้กล่องน้ำเงิน)
- * lg+: ชิปแดง + ชิป «สนใจสมัคร» ตามเดิม
+ * มือถือ: ลิงก์ «สมัคร» อย่างเดียว (ไม่ซ้อนป้ายโหมดทดลอง)
+ * lg+: ชิปแดง + ชิป «สนใจสมัคร»
  */
 export function DemoSessionBanner() {
   const pathname = usePathname() || "/dashboard";
@@ -22,22 +22,13 @@ export function DemoSessionBanner() {
       className="flex h-6 shrink-0 items-center gap-1.5 self-center sm:gap-2"
       title="บัญชีทดลอง — ข้อมูลตัวอย่าง"
     >
-      {/* มือถือ / ไอแพดแนวตั้ง */}
-      <span
-        className={cn(
-          "inline-flex h-6 items-center rounded-md px-1.5 text-[10px] font-bold tracking-tight lg:hidden",
-          "bg-white/20 text-white ring-1 ring-white/35",
-        )}
-      >
-        ทดลอง
-      </span>
       <form action="/api/auth/demo/exit" method="POST" className="m-0 inline-flex h-6 items-center p-0 lg:hidden">
         <input type="hidden" name="next" value={loginNext} />
         <button
           type="submit"
           className="inline-flex h-6 items-center gap-0.5 text-[11px] font-bold text-white underline-offset-2 transition hover:underline active:scale-95"
-          title="ออกจากบัญชีทดลองแล้วไปหน้าเข้าสู่ระบบ / สมัคร"
-          aria-label="สมัครใช้งาน"
+          title="โหมดทดลอง — กดเพื่อไปสมัคร / เข้าสู่ระบบ"
+          aria-label="สมัครใช้งาน (ออกจากโหมดทดลอง)"
           suppressHydrationWarning
         >
           สมัคร
@@ -47,7 +38,6 @@ export function DemoSessionBanner() {
         </button>
       </form>
 
-      {/* เดสก์ท็อป */}
       <span className={cn(chipClass, "hidden bg-red-600 ring-1 ring-red-950/25 lg:inline-flex")}>โหมดทดลอง</span>
       <form action="/api/auth/demo/exit" method="POST" className="m-0 hidden h-6 items-center p-0 lg:inline-flex">
         <input type="hidden" name="next" value={loginNext} />
