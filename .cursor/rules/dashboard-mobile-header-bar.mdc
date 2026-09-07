@@ -13,13 +13,11 @@ alwaysApply: true
 
 ## บังคับ
 
-1. **พื้นหลังชั้นเดียว** ชิดขอบ **ซ้าย · ขวา · บน** (รวม safe-area สถานะ) — **ห้าม** ซ้อนกล่องโค้งมน (pill / การ์ด) ภายในแถบหัว
-2. ปุ่มในหัวเป็น **ไอคอน** — มี `aria-label` / `title` ชัด · บนมือถือไม่บังคับข้อความข้างไอคอน
-3. ปุ่มไอคอน **ไม่มีกล่องซ้อน** (ไม่ใส่ `border` + `bg-white/20` + `rounded-*` เป็นการ์ดย่อย) — ใช้สีไอคอน/ตัวอักษรเมื่อ active (คู่กับแนว dock ล่าง)
-4. Import โทเค็นจาก **`@/components/app-templates`**:
-   - `appDashboardHeaderBarClass`
-   - `appDashboardHeaderBarInnerClass`
-   - `appDashboardHeaderIconButtonClass`
+1. **พื้นหลังชั้นเดียว** ชิดขอบ **ซ้าย · ขวา · บน** (รวม safe-area) — **ห้าม** ซ้อนกล่องโค้งมนในแถบหัว
+2. **มือถือ / ไอแพดแนวตั้ง (`max-lg`):** พื้น **ขาว** โทนเดียวกับ safe-area · ไอคอน/ข้อความสีเข้ม (`text-[#1e1b4b]`)
+3. **`lg+`:** ไล่สีม่วงแบรนด์ · ไอคอนขาว
+4. ปุ่มในหัวเป็น **ไอคอน** · ไม่มีกล่องซ้อน · สีตาม `text-current` ของแถบ
+5. Import จาก **`@/components/app-templates`**: `appDashboardHeaderBarClass` · `appDashboardHeaderBarInnerClass` · `appDashboardHeaderIconButtonClass`
 
 ## ห้าม
 

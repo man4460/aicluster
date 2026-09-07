@@ -84,7 +84,7 @@ export function LogoutIconButton({ className }: { className?: string }) {
       title={pending ? "กำลังออกจากระบบ…" : "ออกจากระบบ"}
       aria-label={pending ? "กำลังออกจากระบบ" : "ออกจากระบบ"}
       className={cn(
-        "inline-flex h-10 w-10 shrink-0 items-center justify-center text-white/90 transition-colors hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-55 touch-manipulation",
+        "inline-flex h-10 w-10 shrink-0 items-center justify-center text-current/80 transition-colors hover:text-current active:scale-95 disabled:pointer-events-none disabled:opacity-55 touch-manipulation",
         className,
       )}
     >
