@@ -4,9 +4,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 
-const chipClass =
-  "inline-flex h-6 shrink-0 items-center justify-center rounded-md px-1.5 text-[10px] font-black leading-none tracking-tight text-white shadow-sm sm:px-2 sm:text-[11px]";
-
 function useDemoLoginNext() {
   const pathname = usePathname() || "/dashboard";
   const nextQ = encodeURIComponent(pathname.startsWith("/") ? pathname : "/dashboard");
@@ -26,6 +23,7 @@ async function postDemoExit(next: string): Promise<void> {
 
 /**
  * ชิปในแถบหัว — เฉพาะ lg+ (มือถือย้ายไปเมนูบัญชี เพื่อไม่แย่งที่ยอดโทเคน)
+ * กล่องเดียวโทนแก้วขาวบนแถบม่วง — ไม่แยกชิปแดง/น้ำเงินตัดกัน
  */
 export function DemoSessionBanner() {
   const loginNext = useDemoLoginNext();
@@ -45,19 +43,30 @@ export function DemoSessionBanner() {
   return (
     <div
       role="status"
-      className="hidden h-6 shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:flex"
+      className={cn(
+        "hidden shrink-0 self-center lg:inline-flex",
+        "h-8 items-center gap-0.5 rounded-full border border-white/30 bg-white/12 p-0.5",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-md",
+      )}
       title="บัญชีทดลอง — ไม่ใช่บัญชีจริง · ข้อมูลเป็นตัวอย่าง"
     >
-      <span className={cn(chipClass, "bg-red-600 ring-1 ring-red-950/25")}>โหมดทดลอง</span>
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold tracking-tight text-white/95">
+        <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+          <span className="absolute inset-0 animate-ping rounded-full bg-amber-300/70" />
+          <span className="relative m-auto h-1.5 w-1.5 rounded-full bg-amber-300 ring-1 ring-white/50" />
+        </span>
+        ทดลองใช้งาน
+      </span>
       <button
         type="button"
         disabled={pending}
         onClick={() => void exitToSignup()}
         className={cn(
-          chipClass,
-          "bg-[#0000BF] ring-1 ring-[#00008a]/40 transition-all duration-200 ease-out disabled:opacity-60",
-          "hover:-translate-y-0.5 hover:scale-105 hover:bg-[#1a1aff] hover:shadow-[0_6px_16px_-4px_rgba(0,0,191,0.75)] hover:ring-2 hover:ring-white/70",
-          "focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/80 active:translate-y-0 active:scale-95",
+          "inline-flex h-7 shrink-0 items-center justify-center rounded-full px-3",
+          "bg-white text-[11px] font-black tracking-tight text-[#5b3ac2]",
+          "shadow-sm transition-colors hover:bg-white/90",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+          "active:scale-[0.98] disabled:opacity-60",
         )}
         title="ออกจากบัญชีทดลอง แล้วไปหน้าเข้าสู่ระบบ / สมัครสมาชิก"
         suppressHydrationWarning
