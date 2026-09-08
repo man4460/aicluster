@@ -270,6 +270,12 @@ export async function seedVillageProdDemoForOwner(db: PrismaClient, ownerUserId:
   const existing = await db.villageProfile.findFirst({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
   });
-  if (existing) return;
+  if (existing) {
+    await db.villageSlipSubmission.updateMany({
+      where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+      data: { slipImageUrl: DEMO_PAYMENT_SLIP_URL },
+    });
+    return;
+  }
   await db.$transaction((tx) => seedVillageTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }
