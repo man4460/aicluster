@@ -255,6 +255,19 @@ function ProResumePortfolioDetailPage({
             </ul>
           </ProResumePortalSection>
         ) : null}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            className={cn(proResumeOutlineButtonClass, "min-h-11 gap-1.5 px-4")}
+            aria-label="กลับไปหน้ารายการผลงาน"
+            title="กลับ"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden strokeWidth={2.25} />
+            <span className="text-sm font-bold">กลับ</span>
+          </button>
+        </div>
       </main>
     </AppPublicCheckInGlassPage>
   );
