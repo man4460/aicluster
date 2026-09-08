@@ -21,6 +21,7 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePagePanel";
+import { ProResumeRichTextField } from "@/systems/pro-resume/components/ProResumeRichTextField";
 import { proResumeTonedRowCardClass } from "@/systems/pro-resume/lib/card-tones";
 import type {
   ResumePortfolioCategoryDto,
@@ -37,7 +38,6 @@ import {
   proResumeFilterChipShellClass,
   proResumeOutlineButtonClass,
   proResumePrimaryButtonClass,
-  proResumeTextareaClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
 const UPLOAD = "/api/pro-resume/session/upload";
@@ -516,14 +516,16 @@ function ItemModal({
         </label>
         <label className={labelClass}>ชื่อผลงาน<input className={proResumeFieldClass} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} /></label>
         <label className={labelClass}>คำอธิบายสั้น<input className={proResumeFieldClass} value={form.shortDesc} onChange={(e) => setForm((f) => ({ ...f, shortDesc: e.target.value }))} /></label>
-        <label className={labelClass}>
-          เนื้อหา
-          <textarea
-            className={cn(proResumeTextareaClass, "min-h-[10rem]")}
-            value={form.contentPlain}
-            onChange={(e) => setForm((f) => ({ ...f, contentPlain: e.target.value }))}
-            placeholder={`## ผลลัพธ์
+        <ProResumeRichTextField
+          label="เนื้อหา"
+          value={form.contentPlain}
+          onChange={(contentPlain) => setForm((f) => ({ ...f, contentPlain }))}
+          disabled={busy}
+          textareaClassName="min-h-[10rem]"
+          placeholder={`# ผลลัพธ์
 ลดงานเอกสารลงทะเบียนวันงาน และเปิดให้สมาชิกชำระค่าบำรุงผ่านลิงก์ไดนามิก
+
+~ หมายเหตุสั้นๆ ตัวเล็ก
 
 ## จุดเด่น
 - เป้าหมายชัดเจนและวัดผลได้
@@ -531,13 +533,7 @@ function ItemModal({
 - ส่งมอบตรงเวลาพร้อมเอกสารครบ
 
 เน้น **ส่งมอบตรงเวลา** และเอกสารครบ`}
-          />
-          <span className="mt-1 block space-y-0.5 text-[10px] font-medium leading-relaxed text-[#66638c]">
-            <span className="block">หัวข้อ: ขึ้นต้นด้วย <code className="rounded bg-slate-100 px-1">##</code> หรือบรรทัดสั้นเดี่ยวคั่นบรรทัดว่าง</span>
-            <span className="block">บูลเล็ต: <code className="rounded bg-slate-100 px-1">- ข้อความ</code> · ตัวหนา: <code className="rounded bg-slate-100 px-1">**ข้อความ**</code></span>
-            <span className="block">ย่อหน้า: คั่นด้วยบรรทัดว่าง</span>
-          </span>
-        </label>
+        />
         <label className={labelClass}>YouTube URL<input className={proResumeFieldClass} value={form.youtubeUrl} onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))} placeholder="https://youtube.com/..." /></label>
         <div className="space-y-2">
           <p className={labelClass}>แกลเลอรี ({form.images.length})</p>

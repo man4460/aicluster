@@ -149,13 +149,14 @@ export const proResumePortalPageTitleClass =
 
 export const proResumePortalPageSubtitleClass = "text-sm font-semibold text-[#66638c]";
 
-/** เนื้อหารายละเอียดสาธารณะ — หัวข้อใหญ่ · ย่อหน้า · บูลเล็ต · ตัวหนา */
+/** เนื้อหารายละเอียดสาธารณะ — หัวข้อใหญ่ · ย่อหน้า · ตัวเล็ก · บูลเล็ต · ตัวหนา */
 export const proResumePortalRichContentClass = cn(
   "max-w-none text-[#1e1b4b]",
   "[&_h1]:mb-2 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-black [&_h1]:tracking-tight [&_h1]:text-[#1e1b4b] [&_h1]:first:mt-0 sm:[&_h1]:text-2xl",
   "[&_h2]:mb-1.5 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-black [&_h2]:tracking-tight [&_h2]:text-[#1e1b4b] [&_h2]:first:mt-0 sm:[&_h2]:text-lg",
   "[&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-[#4d47b6] [&_h3]:first:mt-0 sm:[&_h3]:text-base",
   "[&_p]:mt-2 [&_p]:text-sm [&_p]:font-medium [&_p]:leading-relaxed [&_p]:text-[#5f5a8a] [&_p]:first:mt-0 sm:[&_p]:text-[0.9375rem]",
+  "[&_small]:mt-1.5 [&_small]:block [&_small]:text-[11px] [&_small]:font-medium [&_small]:leading-relaxed [&_small]:text-[#8b87b8] [&_small]:first:mt-0 sm:[&_small]:text-xs",
   "[&_ul]:mt-2 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:marker:text-[#5b61ff]",
   "[&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_ol]:marker:font-bold [&_ol]:marker:text-[#5b61ff]",
   "[&_li]:text-sm [&_li]:font-medium [&_li]:leading-relaxed [&_li]:text-[#5f5a8a] sm:[&_li]:text-[0.9375rem]",
@@ -163,9 +164,35 @@ export const proResumePortalRichContentClass = cn(
   "[&_em]:italic",
 );
 
+/** แถบเครื่องมือจัดรูปแบบช่องรายละเอียด */
+export const proResumeRichTextToolbarClass =
+  "flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-slate-200/90 bg-slate-50/90 p-1.5";
+
+export const proResumeRichTextToolbarBtnClass = cn(
+  "inline-flex min-h-8 min-w-8 items-center justify-center gap-1 rounded-md border border-transparent px-2",
+  "text-[10px] font-bold text-[#4d47b6] touch-manipulation transition",
+  "hover:border-slate-200 hover:bg-white sm:text-[11px]",
+);
+
+export const proResumeRichTextAreaWithToolbarClass = cn(
+  proResumeTextareaClass,
+  "rounded-t-none",
+);
+
 export const proResumePortalPageBodyClass = cn(
   proResumePortalSectionDividerClass,
   "mt-4 space-y-4 pt-5",
+);
+
+/** หน้ารายละเอียดผลงานเต็มจอ — แถบหัว + ปุ่มกลับ */
+export const proResumePortalDetailHeaderClass = cn(
+  "sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur-md",
+  "px-4 py-3 sm:px-6",
+);
+
+export const proResumePortalDetailBackBtnClass = cn(
+  proResumeOutlineButtonClass,
+  "min-h-10 min-w-10 gap-1.5 px-3 sm:min-w-0",
 );
 
 export const proResumePortalEventCardGridClass =

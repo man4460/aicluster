@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Mail, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 import {
   AppImageLightbox,
   AppImageThumb,
@@ -10,7 +10,6 @@ import {
   useAppImageLightbox,
   useAppYoutubeLightbox,
 } from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { ProResumePortalSection } from "@/systems/pro-resume/components/ProResumePortalSection";
 import { ProResumeRichContent } from "@/systems/pro-resume/components/ProResumeRichContent";
@@ -31,6 +30,8 @@ import {
   proResumeGlassShellClass,
   proResumeOutlineButtonClass,
   proResumePortalContainerClass,
+  proResumePortalDetailBackBtnClass,
+  proResumePortalDetailHeaderClass,
   proResumePortalPortfolioGridClass,
   proResumePortalPrimaryBtnClass,
   proResumePortalShopNameHeroClass,
@@ -65,6 +66,116 @@ function useProResumePortalPortfolioPageSize(): number {
   }, []);
 
   return size;
+}
+
+function ProResumePortfolioDetailPage({
+  item,
+  onBack,
+  onOpenImage,
+  onOpenYoutube,
+}: {
+  item: ResumePortfolioItemDto;
+  onBack: () => void;
+  onOpenImage: (url: string) => void;
+  onOpenYoutube: (url: string, title: string) => void;
+}) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [item.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-violet-50/80 via-white to-slate-50 pb-16">
+      <header className={cn(proResumePortalDetailHeaderClass, appSafeAreaLandingHeaderPadClass)}>
+        <div className={cn(proResumePortalContainerClass, "flex items-center gap-3")}>
+          <button
+            type="button"
+            className={proResumePortalDetailBackBtnClass}
+            aria-label="กลับไปหน้ารายการผลงาน"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            <span>กลับ</span>
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-[#8b87b8]">รายละเอียดผลงาน</p>
+            <h1 className="truncate text-base font-black text-[#1e1b4b] sm:text-lg">{item.title}</h1>
+          </div>
+        </div>
+      </header>
+
+      <main className={cn(proResumePortalContainerClass, "space-y-5 px-4 pt-5 sm:space-y-6 sm:px-6 sm:pt-8")}>
+        {item.coverImage ? (
+          <button
+            type="button"
+            className="block w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-100 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+            aria-label={`ดูรูปปก ${item.title}`}
+            onClick={() => onOpenImage(item.coverImage!)}
+          >
+            <img src={item.coverImage} alt="" className="max-h-[min(70vh,28rem)] w-full object-cover" />
+          </button>
+        ) : null}
+
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">{item.title}</h2>
+          {item.shortDesc ? (
+            <p className="text-sm font-semibold leading-relaxed text-[#66638c] sm:text-base">{item.shortDesc}</p>
+          ) : null}
+        </div>
+
+        {item.contentHTML ? <ProResumeRichContent content={item.contentHTML} className="sm:text-base" /> : null}
+
+        {item.youtubeUrl ? (
+          <button
+            type="button"
+            className={proResumePortalPrimaryBtnClass}
+            onClick={() => {
+              if (item.youtubeUrl) onOpenYoutube(item.youtubeUrl, item.title);
+            }}
+          >
+            {proResumePortalYoutubeIcon()}
+            <span>ดูวิดีโอ YouTube</span>
+          </button>
+        ) : null}
+
+        {item.images.length ? (
+          <section className="space-y-2" aria-label="แกลเลอรี">
+            <h3 className="text-sm font-black text-[#1e1b4b]">แกลเลอรี</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {item.images.map((url) => (
+                <AppImageThumb
+                  key={url}
+                  src={url}
+                  alt=""
+                  className="h-20 w-20 sm:h-24 sm:w-24"
+                  onOpen={() => onOpenImage(url)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            className={cn(proResumePortalDetailBackBtnClass, "w-full sm:w-auto")}
+            aria-label="กลับไปหน้ารายการผลงาน"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            <span>กลับ</span>
+          </button>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 export function ProResumePublicClient({
@@ -119,6 +230,13 @@ export function ProResumePublicClient({
     const start = portfolioPage * portfolioPageSize;
     return filteredItems.slice(start, start + portfolioPageSize);
   }, [filteredItems, portfolioPage, portfolioPageSize]);
+
+  const closeDetail = useCallback(() => {
+    setDetailItem(null);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  }, []);
 
   const openItem = useCallback(
     async (item: ResumePortfolioItemDto) => {
@@ -192,6 +310,21 @@ export function ProResumePublicClient({
       </nav>
     ) : null;
 
+  if (detailItem) {
+    return (
+      <>
+        <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูป" />
+        <AppYoutubeLightbox youtubeUrl={yt.youtubeUrl} title={yt.title} onClose={yt.close} />
+        <ProResumePortfolioDetailPage
+          item={detailItem}
+          onBack={closeDetail}
+          onOpenImage={(url) => lb.open(url)}
+          onOpenYoutube={(url, title) => yt.open(url, title)}
+        />
+      </>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -209,7 +342,8 @@ export function ProResumePublicClient({
           "relative overflow-hidden px-4 pb-8 sm:px-6 sm:pb-10",
           appSafeAreaLandingHeaderPadClass,
         )}
-      >        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(91,97,255,0.12),transparent_55%)]" aria-hidden />
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(91,97,255,0.12),transparent_55%)]" aria-hidden />
         <div className={cn(proResumeGlassShellClass, proResumePortalContainerClass, "relative p-6 sm:p-10")}>
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
             <div className="relative flex w-full max-w-[11rem] flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:items-stretch">
@@ -464,39 +598,6 @@ export function ProResumePublicClient({
           {renderTabNav("-m", proResumePortalTabDockMobileInnerClass)}
         </div>
       ) : null}
-
-      <FormModal open={detailItem !== null} onClose={() => setDetailItem(null)} title={detailItem?.title ?? "รายละเอียด"} size="lg">
-        {detailItem ? (
-          <div className="space-y-4">
-            {detailItem.coverImage ? (
-              <img src={detailItem.coverImage} alt="" className="max-h-64 w-full rounded-xl object-cover" />
-            ) : null}
-            {detailItem.shortDesc ? <p className="text-sm font-semibold text-[#66638c]">{detailItem.shortDesc}</p> : null}
-            {detailItem.contentHTML ? (
-              <ProResumeRichContent content={detailItem.contentHTML} />
-            ) : null}
-            {detailItem.youtubeUrl ? (
-              <button
-                type="button"
-                className={proResumePortalPrimaryBtnClass}
-                onClick={() => {
-                  if (detailItem.youtubeUrl) yt.open(detailItem.youtubeUrl, detailItem.title);
-                }}
-              >
-                {proResumePortalYoutubeIcon()}
-                <span>ดูวิดีโอ YouTube</span>
-              </button>
-            ) : null}
-            {detailItem.images.length ? (
-              <div className="flex flex-wrap gap-2">
-                {detailItem.images.map((url) => (
-                  <AppImageThumb key={url} src={url} alt="" className="h-20 w-20" onOpen={() => lb.open(url)} />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </FormModal>
     </div>
   );
 }

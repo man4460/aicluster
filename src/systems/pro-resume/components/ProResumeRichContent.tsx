@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import { toDisplayContentHtml } from "@/systems/pro-resume/lib/content-plain";
 import { proResumePortalRichContentClass } from "@/systems/pro-resume/lib/ui-tokens";
 
-/** แสดงรายละเอียดผลงาน / ผลงานย่อย — หัวข้อ · ตัวหนา · ย่อหน้า · บูลเล็ต */
+/** แสดงรายละเอียดผลงาน / ผลงานย่อย — หัวข้อใหญ่ · ย่อหน้า · ตัวเล็ก · บูลเล็ต · ตัวหนา */
 export function ProResumeRichContent({
   content,
   className,

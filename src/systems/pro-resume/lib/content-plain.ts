@@ -11,6 +11,8 @@ function escapeHtml(s: string): string {
 const LIST_BULLET = /^[-*•]\s+(.+)$/;
 const LIST_NUMBER = /^\d+[.)]\s+(.+)$/;
 const HEADING_MARK = /^(#{1,3})\s+(.+)$/;
+/** เนื้อหาตัวเล็ก — ขึ้นต้นด้วย ~ หรือ %% */
+const SMALL_MARK = /^(?:~|%%)\s+(.+)$/;
 
 /** ตัวหนาแบบ **ข้อความ** หลัง escape แล้ว */
 function formatInline(escaped: string): string {
@@ -21,7 +23,7 @@ function isAutoHeadingLine(line: string, opts?: { maxLen?: number }): boolean {
   const t = line.trim();
   const maxLen = opts?.maxLen ?? 48;
   if (!t || t.length > maxLen) return false;
-  if (LIST_BULLET.test(t) || LIST_NUMBER.test(t) || HEADING_MARK.test(t)) return false;
+  if (LIST_BULLET.test(t) || LIST_NUMBER.test(t) || HEADING_MARK.test(t) || SMALL_MARK.test(t)) return false;
   if (/[.!?。…]$/.test(t)) return false;
   if (t.includes("**")) return false;
   return true;
@@ -32,13 +34,22 @@ function headingTag(level: 1 | 2 | 3, text: string): string {
   return `<${tag}>${formatInline(escapeHtml(text))}</${tag}>`;
 }
 
+function smallTag(text: string): string {
+  return `<small>${formatInline(escapeHtml(text))}</small>`;
+}
+
+function paragraphTag(text: string): string {
+  return `<p>${formatInline(escapeHtml(text))}</p>`;
+}
+
 /**
  * ข้อความธรรมดา → HTML
  *
  * รูปแบบที่รองรับ:
- * - `# ` / `## ` / `### ` → หัวข้อ h1–h3
+ * - `# ` / `## ` / `### ` → หัวข้อ h1–h3 (หัวข้อใหญ่ใช้ `#`)
  * - บรรทัดสั้นเดี่ยว (หรือบรรทัดแรกของบล็อก) → หัวข้อ h2 อัตโนมัติ
- * - ย่อหน้า → p (คั่นด้วยบรรทัดว่าง = แยกบล็อก)
+ * - ย่อหน้า → p (คั่นด้วยบรรทัดว่าง = แยกบล็อก · ขึ้นบรรทัดใหม่ในบล็อก = ย่อหน้าใหม่)
+ * - `~ ` / `%% ` → เนื้อหาตัวเล็ก (`<small>`)
  * - `- ` / `* ` / `• ` → รายการ ul
  * - `1. ` / `1) ` → รายการ ol
  * - `**ตัวหนา**` → strong
@@ -81,12 +92,17 @@ export function plainTextToContentHtml(plain: string): string {
         parts.push(headingTag(level, marked[2]!.trim()));
         continue;
       }
+      const small = only.match(SMALL_MARK)?.[1]?.trim();
+      if (small) {
+        parts.push(smallTag(small));
+        continue;
+      }
       // บรรทัดเดียวสั้นมาก (เช่น «ผลลัพธ์») → หัวข้อ · ยาวกว่านั้นเป็นย่อหน้า
       if (isAutoHeadingLine(only, { maxLen: 20 })) {
         parts.push(headingTag(2, only));
         continue;
       }
-      parts.push(`<p>${formatInline(escapeHtml(only))}</p>`);
+      parts.push(paragraphTag(only));
       continue;
     }
 
@@ -109,6 +125,13 @@ export function plainTextToContentHtml(plain: string): string {
         flushList();
         const level = Math.min(3, marked[1]!.length) as 1 | 2 | 3;
         parts.push(headingTag(level, marked[2]!.trim()));
+        return;
+      }
+
+      const small = line.match(SMALL_MARK)?.[1]?.trim();
+      if (small) {
+        flushList();
+        parts.push(smallTag(small));
         return;
       }
 
@@ -139,7 +162,7 @@ export function plainTextToContentHtml(plain: string): string {
         return;
       }
 
-      parts.push(`<p>${formatInline(escapeHtml(line))}</p>`);
+      parts.push(paragraphTag(line));
     });
 
     flushList();
@@ -164,6 +187,8 @@ export function contentHtmlToPlainText(html: string): string {
     .replace(/<h2[^>]*>/gi, "## ")
     .replace(/<\/h3>/gi, "\n\n")
     .replace(/<h3[^>]*>/gi, "### ")
+    .replace(/<\/small>/gi, "\n")
+    .replace(/<small[^>]*>/gi, "~ ")
     .replace(/<\/(p|div|section|article)>/gi, "\n\n")
     .replace(/<\/li>/gi, "\n")
     .replace(/<li[^>]*>/gi, "- ")
@@ -200,7 +225,7 @@ export function sanitizeResumeContentHtml(html: string): string {
 
   s = s.replace(/<\/?([a-z0-9]+)(\s[^>]*)?>/gi, (full, tag: string) => {
     const t = tag.toLowerCase();
-    if (["h1", "h2", "h3", "p", "ul", "ol", "li", "strong", "em", "br"].includes(t)) {
+    if (["h1", "h2", "h3", "p", "ul", "ol", "li", "strong", "em", "br", "small"].includes(t)) {
       if (t === "br") return "<br />";
       if (full.startsWith("</")) return `</${t}>`;
       return `<${t}>`;
