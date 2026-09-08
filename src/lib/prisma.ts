@@ -438,7 +438,7 @@ function getPrisma(): PrismaClient {
         },
       },
     },
-  }) as PrismaClient;
+  }) as unknown as PrismaClient;
 
   if (parkingDelegatesPresent(extended)) {
     client = extended;
