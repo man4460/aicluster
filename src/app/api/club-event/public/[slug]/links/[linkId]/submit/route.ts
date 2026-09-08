@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
-import { normalizeClubPhoneDigits } from "@/systems/club-event/lib/dues";
+import { normalizeClubPersonName, normalizeClubPhoneDigits } from "@/systems/club-event/lib/dues";
 import { resolveClubLinkBundledAnnualDues } from "@/systems/club-event/lib/link-bundled-dues";
 import {
   computeClubLinkAnswersAmountBaht,
@@ -34,8 +34,31 @@ export async function POST(req: Request, ctx: Ctx) {
     const respondentName = typeof body.respondentName === "string" ? body.respondentName.trim().slice(0, 160) : "";
     const respondentPhone =
       typeof body.respondentPhone === "string" ? body.respondentPhone.trim().slice(0, 32) : "";
-    if (!respondentName) {
+    const nameKey = normalizeClubPersonName(respondentName);
+    const phoneDigits = normalizeClubPhoneDigits(respondentPhone);
+    if (!nameKey) {
       return NextResponse.json({ error: "กรอกชื่อ" }, { status: 400 });
+    }
+    if (phoneDigits.length < 9) {
+      return NextResponse.json({ error: "กรอกเบอร์โทรให้ครบ" }, { status: 400 });
+    }
+
+    const prior = await prisma.clubEventLinkSubmission.findMany({
+      where: { linkId: link.id },
+      select: { respondentName: true, respondentPhone: true },
+      orderBy: { createdAt: "desc" },
+      take: 3000,
+    });
+    const alreadySubmitted = prior.some(
+      (row) =>
+        normalizeClubPhoneDigits(row.respondentPhone) === phoneDigits &&
+        normalizeClubPersonName(row.respondentName) === nameKey,
+    );
+    if (alreadySubmitted) {
+      return NextResponse.json(
+        { error: "ชื่อและเบอร์โทรนี้เคยส่งคำตอบลิงก์นี้แล้ว ไม่สามารถส่งซ้ำได้" },
+        { status: 409 },
+      );
     }
 
     const config = parseDynamicLinkConfig(link.configJson);

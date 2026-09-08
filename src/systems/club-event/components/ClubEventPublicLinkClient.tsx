@@ -362,6 +362,11 @@ export function ClubEventPublicLinkClient({
       notice.error("กรอกชื่อ");
       return;
     }
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 9) {
+      notice.error("กรอกเบอร์โทรให้ครบ");
+      return;
+    }
     for (const f of fields) {
       const val = (answers[f.key] ?? "").trim();
       if (f.type === "qty") {
@@ -437,7 +442,9 @@ export function ClubEventPublicLinkClient({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1">
-                <span className={clubEventPortalLabelClass}>ชื่อ-นามสกุล</span>
+                <span className={clubEventPortalLabelClass}>
+                  ชื่อ-นามสกุล<span className="text-rose-500"> *</span>
+                </span>
                 <input
                   className={clubEventPortalPublicFieldClass}
                   value={name}
@@ -445,10 +452,13 @@ export function ClubEventPublicLinkClient({
                   placeholder="กรอกชื่อของคุณ"
                   disabled={submitting}
                   autoComplete="name"
+                  required
                 />
               </label>
               <label className="block space-y-1">
-                <span className={clubEventPortalLabelClass}>เบอร์โทร</span>
+                <span className={clubEventPortalLabelClass}>
+                  เบอร์โทร<span className="text-rose-500"> *</span>
+                </span>
                 <input
                   className={clubEventPortalPublicFieldClass}
                   value={phone}
@@ -457,9 +467,13 @@ export function ClubEventPublicLinkClient({
                   inputMode="tel"
                   autoComplete="tel"
                   disabled={submitting}
+                  required
                 />
               </label>
             </div>
+            <p className="text-[11px] font-semibold text-[#8b87b8]">
+              ชื่อและเบอร์โทรเดียวกันส่งคำตอบลิงก์นี้ได้เพียงครั้งเดียว
+            </p>
 
             {fields.map((f) =>
               f.type === "qty" ? (
