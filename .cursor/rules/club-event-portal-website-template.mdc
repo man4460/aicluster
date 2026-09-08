@@ -1,9 +1,11 @@
 ---
-description: เว็บสาธารณะชมรม (/club/[slug]) — กริดกิจกรรม 6 คอลัมน์ · รายละเอียด · คณะกรรมการ popup · แบนเนอร์โทนสว่าง
+description: เว็บสาธารณะชมรม (/club/[slug]) — กริดกิจกรรม · รายละเอียด · หัวไม่มีกล่อง · กฎ/ติดต่อ headerAction
 globs:
   - "**/systems/club-event/components/ClubEventPublic*.tsx"
   - "**/systems/club-event/components/ClubEventPortal*.tsx"
   - "**/systems/club-event/lib/portal-media.ts"
+  - "**/systems/club-event/lib/portal-link-icons.tsx"
+  - "**/systems/club-event/lib/ui-tokens.ts"
   - "**/app/club/**"
   - "**/lib/club-event/load-public-portal.ts"
 alwaysApply: false
@@ -11,34 +13,52 @@ alwaysApply: false
 
 # เว็บสาธารณะชมรม — พอร์ทัลลูกค้า
 
-คู่กับ: `laundry-module-portal-website-template.mdc` · `dashboard-module-media-gallery-slideshow.mdc` · `app-templates-media.mdc`
+คู่กับ: `laundry-module-portal-website-template.mdc` · `dashboard-module-media-gallery-slideshow.mdc` · `app-templates-media.mdc` · `dashboard-mobile-header-bar.mdc` (แถบสีหน้ารายละเอียด)
 
-**ต้นแบบโค้ด:** `ClubEventPublicClient` · `ClubEventPortalEventCardGrid` · `ClubEventPublicEventDetailClient` · `portal-media.ts`
+**ต้นแบบโค้ด:** `ClubEventPublicClient` · `ClubEventPortalSection` · `ClubEventPortalEventCardGrid` · `ClubEventPublicEventDetailClient` · `portal-link-icons.ts` · `portal-media.ts`
 
 ---
 
-## 1) โครงหน้า (บังคับ)
+## 1) โครงหน้าพอร์ทัลหลัก `/club/[slug]` (บังคับ)
 
 ```
-AppPublicCheckInGlassPage
-├── header (absolute) — โลโก้+ชื่อในเม็ดขาว · nav โทนมืดบนพื้นสว่าง
-│   └── สมาชิก / คณะกรรมการ = ปุ่มเปิด popup (ไม่เลื่อนไปส่วนในหน้า)
-├── hero แบนเนอร์โทนสว่าง + การ์ดชื่อทับเบา ๆ + CTA
-└── main (max-w-6xl · space-y-12)
-    ├── กำหนดการ — กริดการ์ด  
-    ├── ย้อนหลัง — กริดการ์ดเดียวกัน  
-    ├── แกลเลอรีพอร์ทัล  
-    ├── กฎระเบียบ (+ ลิงก์เดี่ยวที่ไม่มี eventId เช่น LINE / ค่าบำรุงทั่วไป)  
-    └── ติดต่อ  
+AppPublicCheckInGlassPage (!px-0 !pt-0)
+├── header (absolute · appSafeAreaPortalHeaderClass)
+│   ├── ซ้าย: โลโก้ (+ ชื่อบน sm+) — ไม่มีกล่องเม็ด
+│   └── ขวา: nav เดสก์ท็อป — ไม่มีกล่อง (clubEventPortalHeaderNavOnLight*)
+│       └── สมาชิก / คณะกรรมการ = ปุ่มเปิด popup
+├── hero แบนเนอร์โทนสว่าง + ชื่อทับภาพ + CTA
+└── main (max-w-6xl · space-y-12 sm:space-y-14)
+    ├── กำหนดการ — กริดการ์ด
+    ├── ย้อนหลัง — กริดการ์ดเดียวกัน
+    ├── แกลเลอรีพอร์ทัล
+    ├── กฎระเบียบ — ClubEventPortalSection + headerAction ลิงก์เดี่ยว
+    └── ติดต่อ — ClubEventPortalSection + headerAction ปุ่มโทร/LINE/FB/แผนที่
 ```
 
-- **ห้าม** ส่วนลิงก์แยกยาว / คณะกรรมการเป็นรายการยาวใน `main` / ค้นหาสมาชิกเป็นส่วนยาวใน `main`  
-- ลิงก์ที่ไม่มี `eventId` อยู่ใต้ **กฎระเบียบ** ไม่ใช่ใต้กำหนดการ  
-- คณะกรรมการ = **ปุ่ม** → `ClubEventCommitteePopup` (`FormModal`)  
-- ค้นหาสมาชิก = **ปุ่มด้านบน** (nav + CTA ฮีโร่) → `ClubEventMemberSearchPopup` เมื่อเปิด `portalShowMembers`  
-- ตั้งค่า: `portalShowCommittee` ในแท็บเว็ปลิงค์ลูกค้า  
-- ฟิลด์ที่เปิดเผย: `portalMemberFieldsJson` / `portalMemberFields` (ชื่อเต็มเปิดเสมอ · เบอร์/อีเมลค่าเริ่มปิด)  
-- API: `GET /api/club-event/public/[slug]/members/search?q=` — คืนเฉพาะฟิลด์ที่อนุญาต  
+### ห้าม
+
+- ส่วนลิงก์แยกยาว / คณะกรรมการเป็นรายการยาวใน `main` / ค้นหาสมาชิกเป็นส่วนยาวใน `main`
+- ห่อโลโก้+ชื่อด้วย `clubEventPortalHeaderBrandPillClass` หรือกล่องขาวบนหัว
+- ห่อแถบเมนูด้วยพื้น/ขอบ/เงา (`border` · `bg-white/95` · `shadow` บน shell nav)
+
+### บังคับ — ส่วนกฎระเบียบ / ติดต่อ
+
+| ส่วน | หัวข้อ | ด้านขวา (`headerAction`) | เนื้อหาใต้เส้นบาง |
+|------|--------|--------------------------|-------------------|
+| กฎระเบียบ | ไอคอน + «กฎระเบียบ» | ลิงก์ไม่มี `eventId` (กลุ่มไลน์ · ค่าบำรุง ฯลฯ) — `ClubEventPortalStandaloneLinks` `variant="cta"` · **`flex-nowrap`** ไม่ขึ้นแถว 2 | `rulesMarkdown` (ถ้ามี) |
+| ติดต่อ | ไอคอน + «ติดต่อ» | ปุ่ม โทร · LINE · Facebook · แผนที่ · **`flex-nowrap` ชิดขวา** | ที่อยู่ · เบอร์ · LINE **พร้อมไอคอน** (`MapPin` · `Phone` · `MessageCircle`) |
+
+- ใช้ `ClubEventPortalSection` + prop **`headerAction`** — ห้ามวางปุ่มลิงก์ใต้หัวข้อแยกแถวเมื่อต้องการชิดหัวข้อ
+- CTA ลิงก์กฎ: `clubEventPortalLinkCtaClass(type, { compact: true })`
+- ลิงก์ที่ไม่มี `eventId` อยู่ที่กฎระเบียบเท่านั้น — ไม่ใช่ใต้กำหนดการ
+
+### อื่น ๆ
+
+- คณะกรรมการ = **ปุ่ม** → `ClubEventCommitteePopup`
+- ค้นหาสมาชิก = **ปุ่มด้านบน** → `ClubEventMemberSearchPopup` เมื่อเปิด `portalShowMembers`
+- ตั้งค่า: `portalShowCommittee` · `portalMemberFields` ในแท็บเว็ปลิงค์ลูกค้า
+- API ค้นหา: `GET /api/club-event/public/[slug]/members/search?q=`
 
 ---
 
@@ -50,45 +70,96 @@ AppPublicCheckInGlassPage
 | แท็บเล็ต `sm` | **3** |
 | เดสก์ท็อป `lg+` | **6** |
 
-1. แสดง **2 แถว** ต่อหน้า → ขนาดหน้า = คอลัมน์ × 2 (เดสก์ท็อป **12** ใบ)  
-2. เกินแล้วมี **ก่อนหน้า / ถัดไป**  
-3. ค่าคงที่ใน `portal-media.ts`: `CLUB_EVENT_PORTAL_EVENT_*`  
-4. โทเค็นกริด: `clubEventPortalEventCardGridClass`  
-5. **ปกการ์ด** = รูปแรกจากแกลเลอรีกิจกรรม (`coverImageUrl`) · ไม่มีรูป = placeholder ไอคอน  
-6. **คลิกปก/ชื่อ/วันที่** → `/club/[slug]/events/[eventId]` (รายละเอียดกิจกรรม)  
-7. ชิปลิงก์ RSVP/ชำระ/สำรวจ ที่ `config.eventId` ตรง — **อยู่ในกรอบการ์ด** (แถบล่าง) · **ไอคอนตามประเภท** (`portal-link-icons`) + ชื่อ · ไม่ซ้อน `<a>` ใน `<a>`  
-8. ลิงก์ใต้ **กฎระเบียบ** (`standaloneLinks`) — **ไอคอนเรียงแถวเดียว** (`clubEventPortalRulesLinkRowClass`) ไม่ใช่รายการลิงก์ข้อความแนวตั้ง 
+1. แสดง **2 แถว** ต่อหน้า → ขนาดหน้า = คอลัมน์ × 2 (เดสก์ท็อป **12** ใบ)
+2. เกินแล้วมี **ก่อนหน้า / ถัดไป**
+3. ค่าคงที่ใน `portal-media.ts`: `CLUB_EVENT_PORTAL_EVENT_*`
+4. โทเค็นกริด: `clubEventPortalEventCardGridClass`
+5. **ปกการ์ด** = รูปแรกจากแกลเลอรีกิจกรรม (`coverImageUrl`) · ไม่มีรูป = placeholder ไอคอน
+6. **คลิกปก/ชื่อ/วันที่** → `/club/[slug]/events/[eventId]`
+7. ชิปลิงก์ RSVP/ชำระ/สำรวจ ที่ `config.eventId` ตรง — **อยู่ในกรอบการ์ด** · ไอคอนตามประเภท (`portal-link-icons`) · ไม่ซ้อน `<a>` ใน `<a>`
 
 ### แกลเลอรีพอร์ทัล
 
-1. รวมรูปจาก **ตั้งค่าแกลเลอรีชมรม** + **แกลเลอรีกิจกรรมย้อนหลัง** (dedupe URL · สูงสุด `CLUB_EVENT_PORTAL_GALLERY_MAX`)  
-2. กริดตามแม่แบบสื่อ: **มือถือ 3 · คอม 8** (`clubEventGalleryCardGridClass`) · 2 แถวต่อหน้า + แบ่งหน้า  
+1. รวมรูปจาก **ตั้งค่าแกลเลอรีชมรม** + **แกลเลอรีกิจกรรมย้อนหลัง** (dedupe · สูงสุด `CLUB_EVENT_PORTAL_GALLERY_MAX`)
+2. กริด: **มือถือ 3 · คอม 8** (`clubEventGalleryCardGridClass`) · 2 แถวต่อหน้า + แบ่งหน้า
 3. คลิก → `AppImageLightbox` / `openGallery`
 
-### หน้ารายละเอียดสาธารณะ (`ClubEventPublicEventDetailClient`)
+---
 
-- **แบน** — ห้ามหุ้มด้วย `ClubEventPageSubNav` / glass panel / การ์ดโทนแถว  
-- หัวข้อ · วันเวลา · ส่วนรายละเอียด · ลิงก์ (ข้อความ+underline) · วิดีโอ · แกลเลอรี เป็น `section` ใน `space-y-10`  
-- รูป/วิดีโอยังเป็น media thumb ได้ — ไม่ใส่กล่องขอบขาวหุ้มทั้งหน้า  
+## 3) หัวพอร์ทัล + แบนเนอร์
+
+- แบนเนอร์โทน**สว่าง** — ค่าเริ่ม `CLUB_EVENT_PORTAL_SAMPLE_BANNER`
+- Overlay อ่อนขาว · **ชื่อในแบนเนอร์ไม่มีกล่อง** (ข้อความโปร่ง + drop-shadow)
+- **โลโก้หัว:** ไม่มีเม็ดขาว · มือถือ**โลโก้อย่างเดียว** · `sm+` แสดงชื่อ (`clubEventPortalShopNameClass`)
+- **แถบเมนู:** `clubEventPortalHeaderNavOnLightShellClass` = flex ล้วน · `clubEventPortalHeaderNavOnLightLinkClass` = ข้อความโทน `#3f3a6a` · hover สีแบรนด์ — **ไม่มีพื้น/ขอบ/เงา**
 
 ---
 
-## 3) แบนเนอร์
+## 4) หน้ารายละเอียดกิจกรรม `/club/[slug]/events/[eventId]`
 
-- โทน**สว่าง** (กลางแจ้ง / คนยิ้ม) — ค่าเริ่ม `CLUB_EVENT_PORTAL_SAMPLE_BANNER`  
-- Overlay อ่อนขาว ไม่ทับมืดม่วงทั้งจอ · **ชื่อชมรมในแบนเนอร์ไม่มีกล่อง** (ข้อความโปร่งทับภาพ + drop-shadow อ่านง่าย)  
-- หัวเมนู: **พื้นขาวชัด** (`bg-white/95` · เงา · ขอบ slate) · ตัวอักษรโทน `#3f3a6a` (`clubEventPortalHeaderNavOnLight*`) · เม็ดชื่อชมรม `clubEventPortalHeaderBrandPillClass`
+**ไฟล์:** `ClubEventPublicEventDetailClient`
+
+### ห้าม
+
+- `ClubEventPageSubNav` / glass panel / การ์ดโทนแถวหุ้มทั้งหน้า
+- แยกหัวข้อ «รายละเอียด» เป็น section ของตัวเอง
+- เม็ดแบรนด์ขาว / nav «กลับเว็บชมรม» แบบกล่องบนหัว
+
+### บังคับ — Header
+
+```
+appDashboardHeaderBarClass (ไล่ม่วงแบรนด์เต็มขอบ + safe-area)
+└── appDashboardHeaderBarInnerClass · justify-between
+    ├── ซ้าย: โลโก้ + ชื่อ (ลิงก์กลับพอร์ทัล · ไม่มีกล่อง · ข้อความขาว)
+    └── ขวา: ปุ่มกลับ appDashboardHeaderIconButtonClass
+            · มือถือไอคอนอย่างเดียว · sm+ ไอคอน + «กลับ»
+```
+
+### บังคับ — เนื้อหา
+
+```
+main (max-w-6xl · space-y-12 sm:space-y-14)
+├── หัวข้อกิจกรรม (บล็อกเดียว)
+│   ├── ซ้าย: ป้ายกำหนดการ/ย้อนหลัง · h1 · วันเวลา · คำอธิบาย (ถ้ามี)
+│   └── ขวา: ปุ่มลิงก์กิจกรรม clubEventPortalLinkCtaClass — ชิดขวา
+├── วิดีโอ — ClubEventPortalSection (titleIcon youtube) + เส้นบาง
+└── แกลเลอรี — ClubEventPortalSection (titleIcon gallery) + เส้นบาง
+```
+
+- คำอธิบายรวมใต้ชื่อ/วัน — **ไม่** ใช้หัวข้อ «รายละเอียด»
+- ส่วนวิดีโอ/แกลเลอรีใช้เส้นบาง `clubEventPortalPageBodyClass` ผ่าน `ClubEventPortalSection`
+- โทเค็นลิงก์: `clubEventPortalLinkCtaClass` · `clubEventPortalLinkTileClass` · `clubEventPortalLinkChipClass`
 
 ---
 
-## 4) เช็กลิสต์
+## 5) โทเค็น / คอมโพเนนต์สำคัญ
 
-- [ ] กริด 2 / 3 / 6 + แบ่งหน้า 2 แถว  
-- [ ] การ์ดมีรูปปกจากแกลเลอรีกิจกรรม  
-- [ ] คลิกปก/ชื่อ → `/club/[slug]/events/[eventId]` โหลดข้อมูลกิจกรรมจริง (รายละเอียด · ลิงก์ · วิดีโอ · แกลเลอรี)  
+| ชิ้น | ที่มา |
+|------|------|
+| ส่วนหัว–เนื้อหา + `headerAction` | `ClubEventPortalSection` |
+| ลิงก์เดี่ยวใต้กฎ | `ClubEventPortalStandaloneLinks` (`variant="cta"` \| `"tile"`) |
+| สี/ไอคอนลิงก์ตามประเภท | `portal-link-icons.tsx` |
+| แถบหัวรายละเอียด | `appDashboardHeaderBar*` จาก `@/components/app-templates` |
+| เส้นบางใต้หัวข้อ | `clubEventPortalPageBodyClass` / `clubEventPortalSectionDividerClass` |
 
-- [ ] ลิงก์ผูกกิจกรรมอยู่**ในกรอบการ์ด** + ไอคอนตามประเภท  
-- [ ] ลิงก์กฎระเบียบเป็นไอคอนเรียงแถวเดียว  
-- [ ] คณะกรรมการ = ปุ่ม + popup + สวิตช์ตั้งค่า  
-- [ ] ค้นหาสมาชิก = ปุ่มด้านบนเปิด popup + สวิตช์ตั้งค่า + API search (ไม่ลิสต์ทั้งหมด · ไม่มีส่วนใน main)  
-- [ ] แบนเนอร์โทนสว่าง  
+---
+
+## 6) เช็กลิสต์
+
+### พอร์ทัล `/club/[slug]`
+
+- [ ] หัว: โลโก้ไม่มีกล่อง · มือถือโลโก้อย่างเดียว · nav ไม่มีกล่อง
+- [ ] กริดกิจกรรม 2 / 3 / 6 + แบ่งหน้า 2 แถว · ปกจากแกลเลอรี
+- [ ] คลิกการ์ด → หน้ารายละเอียดจริง
+- [ ] ลิงก์ผูกกิจกรรมอยู่ในกรอบการ์ด + ไอคอนประเภท
+- [ ] กฎระเบียบ: ลิงก์เดี่ยว CTA แถวเดียวกับหัวข้อด้านขวา · `nowrap`
+- [ ] ติดต่อ: ปุ่มโทร/LINE/FB/แผนที่แถวเดียวกับหัวข้อ · ที่อยู่/เบอร์/LINE มีไอคอน
+- [ ] คณะกรรมการ / สมาชิก = popup จากปุ่มหัว (ไม่ลิสต์ใน main)
+- [ ] แบนเนอร์โทนสว่าง
+
+### รายละเอียด `/club/.../events/[id]`
+
+- [ ] Header ม่วงแบรนด์ · ซ้ายโลโก้+ชื่อ · ขวากลับ (มือถือไอคอน)
+- [ ] คำอธิบายรวมในหัวข้อ · ไม่มี section «รายละเอียด»
+- [ ] ลิงก์กิจกรรม CTA ด้านขวาหัวข้อ
+- [ ] วิดีโอ / แกลเลอรี = `ClubEventPortalSection` + เส้นบาง

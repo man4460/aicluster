@@ -9,6 +9,7 @@ import type { ClubPublicPortalEvent } from "@/lib/club-event/load-public-portal"
 import {
   ClubEventPortalLinkTypeIcon,
   clubEventPortalLinkChipClass,
+  clubEventPortalLinkCtaClass,
   clubEventPortalLinkTileClass,
   clubEventPortalLinkTypeAriaLabel,
 } from "@/systems/club-event/lib/portal-link-icons";
@@ -184,25 +185,53 @@ export function ClubEventPortalEventCardGrid({
 export function ClubEventPortalStandaloneLinks({
   links,
   linkHref,
+  className,
+  variant = "tile",
 }: {
   links: ClubPortalLinkChip[];
   linkHref: (path: string) => string;
+  className?: string;
+  /** tile = ไทล์แนวตั้ง · cta = ปุ่มแนวนอนเด่น (หัวข้อกฎระเบียบ) */
+  variant?: "tile" | "cta";
 }) {
   if (links.length === 0) return null;
   return (
-    <ul className={clubEventPortalRulesLinkRowClass} aria-label="ลิงก์กฎระเบียบ">
+    <ul
+      className={cn(
+        variant === "cta"
+          ? "flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2"
+          : clubEventPortalRulesLinkRowClass,
+        className,
+      )}
+      aria-label="ลิงก์กฎระเบียบ"
+    >
       {links.map((l) => {
         const label = clubEventPortalLinkTypeAriaLabel(l.type, l.title);
         return (
-          <li key={l.id} className="min-w-0">
+          <li key={l.id} className="shrink-0">
             <Link
               href={linkHref(l.publicPath)}
-              className={clubEventPortalLinkTileClass(l.type)}
+              className={
+                variant === "cta"
+                  ? clubEventPortalLinkCtaClass(l.type, { compact: true })
+                  : clubEventPortalLinkTileClass(l.type)
+              }
               aria-label={label}
               title={label}
             >
-              <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
-              <span className="max-w-[4.75rem] truncate text-[9px] font-bold leading-tight">{l.title}</span>
+              <ClubEventPortalLinkTypeIcon
+                type={l.type}
+                className={variant === "cta" ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5"}
+              />
+              <span
+                className={
+                  variant === "cta"
+                    ? "min-w-0 truncate"
+                    : "max-w-[4.75rem] truncate text-[9px] font-bold leading-tight"
+                }
+              >
+                {l.title}
+              </span>
             </Link>
           </li>
         );

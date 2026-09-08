@@ -7,7 +7,9 @@ import {
   AppImageThumb,
   AppPublicCheckInGlassPage,
   AppYoutubeLightbox,
-  appSafeAreaStickyPublicHeaderClass,
+  appDashboardHeaderBarClass,
+  appDashboardHeaderBarInnerClass,
+  appDashboardHeaderIconButtonClass,
   useAppImageLightbox,
   useAppYoutubeLightbox,
 } from "@/components/app-templates";
@@ -15,21 +17,17 @@ import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import { extractYoutubeVideoId, youtubeThumbUrl } from "@/lib/youtube-url";
 import type { ClubPublicEventDetailPayload } from "@/lib/club-event/load-public-portal";
+import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEventPortalSection";
 import {
   ClubEventPortalLinkTypeIcon,
-  clubEventPortalLinkTileClass,
+  clubEventPortalLinkCtaClass,
   clubEventPortalLinkTypeAriaLabel,
 } from "@/systems/club-event/lib/portal-link-icons";
-import { ClubEventPortalSectionTitleIcon } from "@/systems/club-event/lib/portal-section-icons";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventGalleryCardGridClass,
-  clubEventOutlineButtonClass,
-  clubEventPortalPageBodyClass,
   clubEventPortalPageSubtitleClass,
   clubEventPortalPageTitleClass,
-  clubEventPortalRulesLinkRowClass,
-  clubEventPortalShopNameClass,
   clubEventYoutubeCardGridClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
@@ -111,6 +109,8 @@ export function ClubEventPublicEventDetailClient({
 
   const galleryUrls = gallery.map((g) => g.imageUrl);
   const clubTitle = profile.displayName.trim() || "ชมรม";
+  const description = event.description.trim();
+  const statusLabel = event.status === "PAST" ? "ย้อนหลัง" : "กำหนดการ";
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
@@ -123,95 +123,93 @@ export function ClubEventPublicEventDetailClient({
       />
       <AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
 
-      <header
-        className={cn(
-          appSafeAreaStickyPublicHeaderClass,
-          "border-b border-slate-200/90 bg-white/95 shadow-sm backdrop-blur-md",
-        )}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Link
-              href={clubHref}
-              className={cn(clubEventOutlineButtonClass, "min-h-10 min-w-10 shrink-0 px-0")}
-              aria-label="กลับหน้าชมรม"
-              title="กลับหน้าชมรม"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-            </Link>
-            <div className="flex min-w-0 items-center gap-2">
-              {profile.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.logoUrl}
-                  alt=""
-                  className="h-8 w-8 shrink-0 rounded-full object-cover"
-                />
-              ) : null}
-              <p className={cn("truncate text-sm", clubEventPortalShopNameClass)}>{clubTitle}</p>
-            </div>
-          </div>
+      <header className={appDashboardHeaderBarClass}>
+        <div className={cn(appDashboardHeaderBarInnerClass, "justify-between")}>
+          <Link
+            href={clubHref}
+            className="flex min-w-0 max-w-[min(100%,18rem)] items-center gap-2 sm:max-w-xs sm:gap-2.5"
+            aria-label={clubTitle}
+          >
+            {profile.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.logoUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/35"
+              />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-black text-white ring-2 ring-white/35">
+                {(clubTitle || "C").slice(0, 1)}
+              </span>
+            )}
+            <p className="min-w-0 truncate text-sm font-bold tracking-tight text-white sm:text-base">
+              {clubTitle}
+            </p>
+          </Link>
+
+          <Link
+            href={clubHref}
+            className={cn(
+              appDashboardHeaderIconButtonClass,
+              "min-w-10 gap-1.5 sm:min-w-0 sm:px-2",
+            )}
+            aria-label="กลับหน้าชมรม"
+            title="กลับหน้าชมรม"
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden strokeWidth={2.25} />
+            <span className="hidden text-sm font-bold sm:inline">กลับ</span>
+          </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
-        <section className="space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">
-            {event.status === "PAST" ? "ย้อนหลัง" : "กำหนดการ"}
-          </p>
-          <h1 className={clubEventPortalPageTitleClass}>{event.title}</h1>
-          <p className={cn(clubEventPortalPageSubtitleClass, "flex items-center gap-1.5")}>
-            <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {formatBangkokDateTimeLong(event.eventDate)}
-          </p>
-          {links.length > 0 ? (
-            <ul className={cn(clubEventPortalRulesLinkRowClass, "mt-4")} aria-label="ลิงก์กิจกรรม">
-              {links.map((l) => {
-                const label = clubEventPortalLinkTypeAriaLabel(l.type, l.title);
-                return (
-                  <li key={l.id} className="min-w-0">
-                    <Link
-                      href={linkHref(l.publicPath)}
-                      className={clubEventPortalLinkTileClass(l.type)}
-                      aria-label={label}
-                      title={label}
-                    >
-                      <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
-                      <span className="max-w-[5rem] truncate text-[9px] font-bold leading-tight">{l.title}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+      <main className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:space-y-14 sm:px-6 sm:py-10">
+        <section className="space-y-4" aria-labelledby="event-title">
+          <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">{statusLabel}</p>
+              <h1 id="event-title" className={clubEventPortalPageTitleClass}>
+                {event.title}
+              </h1>
+              <p className={cn(clubEventPortalPageSubtitleClass, "flex items-center gap-1.5")}>
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                {formatBangkokDateTimeLong(event.eventDate)}
+              </p>
+            </div>
+
+            {links.length > 0 ? (
+              <ul
+                className="flex max-w-[min(100%,11.5rem)] shrink-0 flex-wrap content-start justify-end gap-2 sm:max-w-[min(100%,20rem)] sm:pt-0.5"
+                aria-label="ลิงก์กิจกรรม"
+              >
+                {links.map((l) => {
+                  const label = clubEventPortalLinkTypeAriaLabel(l.type, l.title);
+                  return (
+                    <li key={l.id} className="min-w-0">
+                      <Link
+                        href={linkHref(l.publicPath)}
+                        className={clubEventPortalLinkCtaClass(l.type)}
+                        aria-label={label}
+                        title={label}
+                      >
+                        <ClubEventPortalLinkTypeIcon type={l.type} className="h-5 w-5" />
+                        <span className="min-w-0 flex-1 truncate">{l.title}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
+
+          {description ? (
+            <p className="max-w-3xl whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#3f3a6a] sm:text-[15px]">
+              {description}
+            </p>
           ) : null}
         </section>
 
-        <section className={clubEventPortalPageBodyClass} aria-labelledby="event-detail-heading">
-          <h2
-            id="event-detail-heading"
-            className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
-          >
-            <ClubEventPortalSectionTitleIcon name="detail" />
-            <span>รายละเอียด</span>
-          </h2>
-          {event.description.trim() ? (
-            <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#3f3a6a]">
-              {event.description}
-            </p>
-          ) : (
-            <p className="mt-3 text-sm text-[#66638c]">ยังไม่มีคำอธิบายกิจกรรม</p>
-          )}
-        </section>
-
         {videos.length > 0 ? (
-          <section className="space-y-3" aria-labelledby="event-youtube-heading">
-            <h2
-              id="event-youtube-heading"
-              className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
-            >
-              <ClubEventPortalSectionTitleIcon name="youtube" />
-              <span>วิดีโอ</span>
-            </h2>
+          <ClubEventPortalSection id="event-youtube" title="วิดีโอ" titleIcon="youtube">
             <ul className={clubEventYoutubeCardGridClass}>
               {videos.map((v) => (
                 <PublicYoutubeCard
@@ -221,18 +219,11 @@ export function ClubEventPublicEventDetailClient({
                 />
               ))}
             </ul>
-          </section>
+          </ClubEventPortalSection>
         ) : null}
 
         {gallery.length > 0 ? (
-          <section className="space-y-3" aria-labelledby="event-gallery-heading">
-            <h2
-              id="event-gallery-heading"
-              className="flex items-center gap-2.5 text-base font-black text-[#1e1b4b] sm:gap-3 sm:text-lg"
-            >
-              <ClubEventPortalSectionTitleIcon name="gallery" />
-              <span>แกลเลอรี</span>
-            </h2>
+          <ClubEventPortalSection id="event-gallery" title="แกลเลอรี" titleIcon="gallery">
             <ul className={cn(clubEventGalleryCardGridClass, "list-none p-0")}>
               {gallery.map((g, index) => (
                 <li key={g.id} className="min-w-0">
@@ -245,7 +236,7 @@ export function ClubEventPublicEventDetailClient({
                 </li>
               ))}
             </ul>
-          </section>
+          </ClubEventPortalSection>
         ) : null}
       </main>
     </AppPublicCheckInGlassPage>

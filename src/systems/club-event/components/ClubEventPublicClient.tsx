@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Search, Users } from "lucide-react";
+import { MapPin, MessageCircle, Phone, Search, Users } from "lucide-react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
@@ -22,7 +22,6 @@ import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEven
 import { CLUB_EVENT_PORTAL_SAMPLE_BANNER, CLUB_EVENT_PORTAL_GALLERY_MAX } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
-  clubEventPortalHeaderBrandPillClass,
   clubEventPortalHeaderNavOnLightLinkClass,
   clubEventPortalHeaderNavOnLightShellClass,
   clubEventPortalHeroCompactShellClass,
@@ -89,16 +88,22 @@ export function ClubEventPublicClient({
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
       <header className={appSafeAreaPortalHeaderClass}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className={clubEventPortalHeaderBrandPillClass}>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3" aria-label={title}>
             {profile.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+              <img
+                src={profile.logoUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/70 shadow-sm"
+              />
             ) : (
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0000BF]/10 text-xs font-black text-[#0000BF]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-black text-[#0000BF] shadow-sm ring-2 ring-white/70">
                 {(title || "C").slice(0, 1)}
               </span>
             )}
-            <p className={cn("truncate text-sm sm:text-base", clubEventPortalShopNameClass)}>{title}</p>
+            <p className={cn("hidden truncate text-sm sm:block sm:text-base", clubEventPortalShopNameClass)}>
+              {title}
+            </p>
           </div>
           <nav className={clubEventPortalHeaderNavOnLightShellClass} aria-label="เมนู">
             <a href="#schedule" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("schedule")}>
@@ -241,70 +246,107 @@ export function ClubEventPublicClient({
         <ClubEventPortalGallery urls={gallery} onOpenAt={(index) => lb.openGallery(gallery, index)} />
 
         {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
-          <ClubEventPortalSection id="rules" title="กฎระเบียบ" titleIcon="rules">
+          <ClubEventPortalSection
+            id="rules"
+            title="กฎระเบียบ"
+            titleIcon="rules"
+            headerAction={
+              <ClubEventPortalStandaloneLinks
+                links={standaloneLinks}
+                linkHref={linkHref}
+                variant="cta"
+              />
+            }
+          >
             {profile.rulesMarkdown?.trim() ? (
               <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#1e1b4b]">
                 {profile.rulesMarkdown}
               </p>
             ) : null}
-            <ClubEventPortalStandaloneLinks links={standaloneLinks} linkHref={linkHref} />
           </ClubEventPortalSection>
         ) : null}
 
-        <ClubEventPortalSection id="contact" title="ติดต่อ" titleIcon="contact">
-          <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-8 sm:space-y-0">
-            <div className="space-y-2 text-sm font-semibold text-[#66638c]">
-              <p className={cn("text-lg", clubEventPortalShopNameClass)}>{title}</p>
-              {profile.address ? <p>{profile.address}</p> : null}
-              {profile.contactPhone ? (
-                <p>
+        <ClubEventPortalSection
+          id="contact"
+          title="ติดต่อ"
+          titleIcon="contact"
+          headerAction={
+            profile.contactPhone || profile.contactLine || profile.facebookUrl || profile.mapUrl ? (
+              <div className="flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+                {profile.contactPhone ? (
                   <a
-                    className="font-bold text-[#4d47b6] hover:underline"
                     href={`tel:${profile.contactPhone.replace(/\D/g, "")}`}
+                    className={cn(clubEventOutlineButtonClass, "min-h-9 px-2.5 text-[11px] sm:min-h-10 sm:px-3 sm:text-xs")}
                   >
-                    {profile.contactPhone}
+                    โทร
                   </a>
-                </p>
-              ) : null}
-              {profile.contactLine ? <p>LINE: {profile.contactLine}</p> : null}
-            </div>
-            <div className="flex flex-wrap content-start gap-2">
-              {profile.contactPhone ? (
+                ) : null}
+                {profile.contactLine ? (
+                  <a
+                    href={`https://line.me/ti/p/~${encodeURIComponent(profile.contactLine.replace(/^@/, ""))}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cn(clubEventOutlineButtonClass, "min-h-9 px-2.5 text-[11px] sm:min-h-10 sm:px-3 sm:text-xs")}
+                  >
+                    LINE
+                  </a>
+                ) : null}
+                {profile.facebookUrl ? (
+                  <a
+                    href={profile.facebookUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cn(clubEventOutlineButtonClass, "min-h-9 px-2.5 text-[11px] sm:min-h-10 sm:px-3 sm:text-xs")}
+                  >
+                    Facebook
+                  </a>
+                ) : null}
+                {profile.mapUrl ? (
+                  <a
+                    href={profile.mapUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cn(clubEventOutlineButtonClass, "min-h-9 px-2.5 text-[11px] sm:min-h-10 sm:px-3 sm:text-xs")}
+                  >
+                    แผนที่
+                  </a>
+                ) : null}
+              </div>
+            ) : null
+          }
+        >
+          <div className="space-y-2.5 text-sm font-semibold text-[#66638c]">
+            <p className={cn("text-lg", clubEventPortalShopNameClass)}>{title}</p>
+            {profile.address ? (
+              <p className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#4d47b6]" aria-hidden strokeWidth={2.25} />
+                <span className="min-w-0 leading-relaxed">{profile.address}</span>
+              </p>
+            ) : null}
+            {profile.contactPhone ? (
+              <p className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-[#4d47b6]" aria-hidden strokeWidth={2.25} />
                 <a
+                  className="font-bold text-[#4d47b6] hover:underline"
                   href={`tel:${profile.contactPhone.replace(/\D/g, "")}`}
-                  className={clubEventOutlineButtonClass}
                 >
-                  โทร
+                  {profile.contactPhone}
                 </a>
-              ) : null}
-              {profile.contactLine ? (
-                <a
-                  href={`https://line.me/ti/p/~${encodeURIComponent(profile.contactLine.replace(/^@/, ""))}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={clubEventOutlineButtonClass}
-                >
-                  LINE
-                </a>
-              ) : null}
-              {profile.facebookUrl ? (
-                <a href={profile.facebookUrl} target="_blank" rel="noreferrer" className={clubEventOutlineButtonClass}>
-                  Facebook
-                </a>
-              ) : null}
-              {profile.mapUrl ? (
-                <a href={profile.mapUrl} target="_blank" rel="noreferrer" className={clubEventOutlineButtonClass}>
-                  แผนที่
-                </a>
-              ) : null}
-              {!profile.contactPhone &&
-              !profile.contactLine &&
-              !profile.facebookUrl &&
-              !profile.mapUrl &&
-              !profile.address ? (
-                <p className="text-sm font-semibold text-[#66638c]">ยังไม่มีข้อมูลติดต่อ</p>
-              ) : null}
-            </div>
+              </p>
+            ) : null}
+            {profile.contactLine ? (
+              <p className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 shrink-0 text-[#4d47b6]" aria-hidden strokeWidth={2.25} />
+                <span className="min-w-0">LINE: {profile.contactLine}</span>
+              </p>
+            ) : null}
+            {!profile.contactPhone &&
+            !profile.contactLine &&
+            !profile.facebookUrl &&
+            !profile.mapUrl &&
+            !profile.address ? (
+              <p>ยังไม่มีข้อมูลติดต่อ</p>
+            ) : null}
           </div>
         </ClubEventPortalSection>
       </main>

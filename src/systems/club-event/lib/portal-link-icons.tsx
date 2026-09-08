@@ -98,6 +98,21 @@ export function clubEventPortalLinkTileClass(type: ClubPortalLinkIconType): stri
   );
 }
 
+/** ปุ่มลิงก์เด่น — หน้ารายละเอียด / หัวข้อกฎระเบียบ (แนวนอน · ไอคอน+ข้อความ) */
+export function clubEventPortalLinkCtaClass(
+  type: ClubPortalLinkIconType,
+  opts?: { compact?: boolean },
+): string {
+  const compact = Boolean(opts?.compact);
+  return cn(
+    "inline-flex shrink-0 items-center gap-1.5 rounded-2xl border text-left font-black leading-snug shadow-md ring-1 ring-black/[0.03] transition hover:shadow-lg",
+    compact
+      ? "min-h-9 max-w-[8.25rem] px-2 py-1.5 text-[10px] sm:min-h-10 sm:max-w-[9.5rem] sm:gap-2 sm:px-2.5 sm:text-xs"
+      : "min-h-11 max-w-[11rem] gap-2 px-3 py-2.5 text-xs sm:min-h-12 sm:max-w-[14rem] sm:px-3.5 sm:text-sm",
+    clubEventPortalLinkTone(type).tile,
+  );
+}
+
 export function clubEventPortalLinkTypeBadgeClass(type: ClubPortalLinkIconType): string {
   return cn(
     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",

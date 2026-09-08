@@ -19,6 +19,7 @@ export function ClubEventPortalSection({
   titleId,
   titleIcon,
   subtitle,
+  headerAction,
   children,
   className,
   bodyClassName,
@@ -29,7 +30,9 @@ export function ClubEventPortalSection({
   /** ไอคอนหัวข้อ — ชื่อคีย์หรือ ReactNode */
   titleIcon?: ClubPortalSectionIconKey | ReactNode;
   subtitle?: string | null;
-  children: ReactNode;
+  /** เนื้อหาด้านขวาของหัวข้อ (เช่น ปุ่มลิงก์) */
+  headerAction?: ReactNode;
+  children?: ReactNode;
   className?: string;
   bodyClassName?: string;
 }) {
@@ -41,19 +44,31 @@ export function ClubEventPortalSection({
       titleIcon
     );
 
+  const hasBody =
+    Boolean(subtitle) || (children !== undefined && children !== null && children !== false);
+
   return (
     <section id={id} className={cn("scroll-mt-16", className)} aria-labelledby={headingId}>
-      <h2
-        id={headingId}
-        className={cn(clubEventPortalPageTitleClass, "flex items-center gap-2.5 sm:gap-3")}
-      >
-        {iconNode ?? null}
-        <span className="min-w-0">{title}</span>
-      </h2>
-      <div className={cn(clubEventPortalPageBodyClass, bodyClassName)}>
-        {subtitle ? <p className={clubEventPortalPageSubtitleClass}>{subtitle}</p> : null}
-        {children}
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+        <h2
+          id={headingId}
+          className={cn(clubEventPortalPageTitleClass, "flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3")}
+        >
+          {iconNode ?? null}
+          <span className="min-w-0">{title}</span>
+        </h2>
+        {headerAction ? (
+          <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 sm:pt-0.5">
+            {headerAction}
+          </div>
+        ) : null}
       </div>
+      {hasBody ? (
+        <div className={cn(clubEventPortalPageBodyClass, bodyClassName)}>
+          {subtitle ? <p className={clubEventPortalPageSubtitleClass}>{subtitle}</p> : null}
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }

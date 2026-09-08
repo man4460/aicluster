@@ -204,9 +204,9 @@ export const clubEventPortalQtyRowClass =
 export const clubEventPortalHeaderNavShellClass =
   "hidden items-center gap-0.5 rounded-lg border border-white/45 bg-white/20 p-0.5 backdrop-blur-md md:inline-flex";
 
-/** แถบเมนูบนแบนเนอร์โทนสว่าง — พื้นขาวชัด · ตัวอักษรเข้ม */
+/** แถบเมนูบนแบนเนอร์โทนสว่าง — ไม่มีกล่อง · ตัวอักษรเข้ม */
 export const clubEventPortalHeaderNavOnLightShellClass =
-  "hidden items-center gap-0.5 rounded-xl border border-slate-200/90 bg-white/95 p-1 shadow-md backdrop-blur-md md:inline-flex";
+  "hidden items-center gap-0.5 md:inline-flex sm:gap-1";
 
 export function clubEventPortalHeaderNavLinkClass(): string {
   return cn(
@@ -216,7 +216,7 @@ export function clubEventPortalHeaderNavLinkClass(): string {
 
 export function clubEventPortalHeaderNavOnLightLinkClass(): string {
   return cn(
-    "inline-flex min-h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold text-[#3f3a6a] transition hover:bg-slate-100/90 sm:px-3.5 sm:text-sm",
+    "inline-flex min-h-9 items-center justify-center px-2.5 text-xs font-semibold text-[#3f3a6a] transition hover:text-[#0000BF] sm:px-3 sm:text-sm",
   );
 }
 
