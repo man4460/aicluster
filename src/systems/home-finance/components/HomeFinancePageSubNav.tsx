@@ -165,7 +165,7 @@ const OVERVIEW_SUBNAV_ITEMS: HomeFinancePageSubNavItem[] = HOME_FINANCE_OVERVIEW
   icon: homeFinanceOverviewSubIcon(item.key, "h-4 w-4"),
 }));
 
-/** เมนูย่อยใต้เมนูหลักภาพรวม — ภาพรวม · รหัสผ่าน · โน้ต (เนื้อหาในการ์ดเดียว) */
+/** เมนูย่อยใต้เมนูหลักภาพรวม — ภาพรวม · รหัสผ่าน · โน้ต · Prompt AI */
 export function HomeFinanceOverviewSubNav({
   children,
   action,

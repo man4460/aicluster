@@ -9,6 +9,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   title: z.string().trim().min(1).max(160).optional(),
+  categoryId: z.number().int().positive().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
   fileUrl: z
     .string()
@@ -22,6 +23,29 @@ const patchSchema = z.object({
 function parseId(raw: string): number | null {
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+async function resolveCategory(
+  billingUserId: string,
+  categoryId: number | null | undefined,
+  categoryLabel: string | null | undefined,
+  hasCategoryId: boolean,
+  hasCategoryLabel: boolean,
+): Promise<{ categoryId?: number | null; category?: string | null } | { error: string }> {
+  if (hasCategoryId) {
+    if (categoryId == null) {
+      return { categoryId: null, category: hasCategoryLabel ? categoryLabel?.trim() || null : null };
+    }
+    const cat = await prisma.homeFinanceDocumentCategory.findFirst({
+      where: { id: categoryId, ownerUserId: billingUserId },
+    });
+    if (!cat) return { error: "ไม่พบหมวดที่เลือก" };
+    return { categoryId: cat.id, category: cat.name };
+  }
+  if (hasCategoryLabel) {
+    return { category: categoryLabel?.trim() || null };
+  }
+  return {};
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
@@ -46,18 +70,39 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
+  const resolved = await resolveCategory(
+    mod.billingUserId,
+    parsed.data.categoryId,
+    parsed.data.category,
+    parsed.data.categoryId !== undefined,
+    parsed.data.category !== undefined,
+  );
+  if ("error" in resolved) return NextResponse.json({ error: resolved.error }, { status: 400 });
+
   try {
     const row = await prisma.homeFinancePersonalDocument.update({
       where: { id },
       data: {
         ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-        ...(parsed.data.category !== undefined ? { category: parsed.data.category?.trim() || null } : {}),
+        ...resolved,
         ...(parsed.data.fileUrl !== undefined ? { fileUrl: parsed.data.fileUrl } : {}),
         ...(parsed.data.mimeType !== undefined ? { mimeType: parsed.data.mimeType?.trim() || null } : {}),
         ...(parsed.data.note !== undefined ? { note: parsed.data.note?.trim() || null } : {}),
       },
     });
-    return NextResponse.json({ item: row });
+    return NextResponse.json({
+      item: {
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        categoryId: row.categoryId,
+        fileUrl: row.fileUrl,
+        mimeType: row.mimeType,
+        note: row.note,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      },
+    });
   } catch (e) {
     console.error("home-finance/documents PATCH", e);
     return NextResponse.json({ error: "แก้ไขเอกสารไม่สำเร็จ" }, { status: 500 });

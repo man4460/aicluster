@@ -49,6 +49,16 @@ export function IconHomeFinanceNotes({ className }: { className?: string }) {
   );
 }
 
+export function IconHomeFinancePrompts({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M9.5 12h5M12 9.5v5" />
+    </Svg>
+  );
+}
+
 export function homeFinanceOverviewSubIcon(key: HomeFinanceOverviewSubKey, className = "h-4 w-4"): ReactNode {
   switch (key) {
     case "overview":
@@ -57,6 +67,8 @@ export function homeFinanceOverviewSubIcon(key: HomeFinanceOverviewSubKey, class
       return <IconHomeFinancePasswords className={className} />;
     case "notes":
       return <IconHomeFinanceNotes className={className} />;
+    case "prompts":
+      return <IconHomeFinancePrompts className={className} />;
   }
 }
 
@@ -68,6 +80,8 @@ export function homeFinanceOverviewSubTone(key: HomeFinanceOverviewSubKey): Home
       return "indigo";
     case "notes":
       return "amber";
+    case "prompts":
+      return "violet";
   }
 }
 

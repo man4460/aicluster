@@ -125,7 +125,7 @@ export const homeFinancePrimaryTabShellClass =
 
 export function homeFinancePrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-8 shrink-0 grow basis-[calc(33.333%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
+    "min-h-8 shrink-0 grow basis-[calc(25%-4px)] whitespace-nowrap rounded-md px-2 text-[11px] font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3 sm:text-xs",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",

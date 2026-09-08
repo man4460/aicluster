@@ -5,6 +5,7 @@ export const HOME_FINANCE_DOCUMENTS_HREF = `${HOME_FINANCE_BASE}/documents`;
 export const HOME_FINANCE_SETTINGS_HREF = `${HOME_FINANCE_BASE}/categories`;
 export const HOME_FINANCE_PASSWORDS_HREF = `${HOME_FINANCE_BASE}/passwords`;
 export const HOME_FINANCE_NOTES_HREF = `${HOME_FINANCE_BASE}/notes`;
+export const HOME_FINANCE_PROMPTS_HREF = `${HOME_FINANCE_BASE}/prompts`;
 
 export const HOME_FINANCE_MODULE_DISPLAY_NAME = "บันทึกส่วนตัว";
 
@@ -29,7 +30,7 @@ export const HOME_FINANCE_NAV_ITEMS: HomeFinanceNavItem[] = [
 ];
 
 /** เมนูย่อยใต้เมนูหลัก «ภาพรวม» */
-export type HomeFinanceOverviewSubKey = "overview" | "passwords" | "notes";
+export type HomeFinanceOverviewSubKey = "overview" | "passwords" | "notes" | "prompts";
 
 export type HomeFinanceOverviewSubItem = {
   key: HomeFinanceOverviewSubKey;
@@ -61,6 +62,13 @@ export const HOME_FINANCE_OVERVIEW_SUBNAV_ITEMS: HomeFinanceOverviewSubItem[] = 
     shortLabel: "โน้ต",
     description: "จดบันทึกสั้น ๆ คู่กับการเงิน",
   },
+  {
+    key: "prompts",
+    href: HOME_FINANCE_PROMPTS_HREF,
+    label: "Prompt AI",
+    shortLabel: "Prompt",
+    description: "บันทึกหัวข้อ · รายละเอียด prompt · ประเภท",
+  },
 ];
 
 /** @deprecated ใช้ HomeFinanceOverviewSubKey */
@@ -78,9 +86,10 @@ export function homeFinancePathFlags(pathname: string) {
   const isSettings = pathNorm === HOME_FINANCE_SETTINGS_HREF || pathNorm.endsWith("/categories");
   const isPasswords = pathNorm === HOME_FINANCE_PASSWORDS_HREF || pathNorm.endsWith("/passwords");
   const isNotes = pathNorm === HOME_FINANCE_NOTES_HREF || pathNorm.endsWith("/notes");
+  const isPrompts = pathNorm === HOME_FINANCE_PROMPTS_HREF || pathNorm.endsWith("/prompts");
   const isOverviewHome = pathNorm === HOME_FINANCE_BASE;
-  /** เมนูหลักภาพรวม — รวมแท็บย่อยรหัสผ่าน/โน้ต */
-  const isOverviewSection = isOverviewHome || isPasswords || isNotes;
+  /** เมนูหลักภาพรวม — รวมแท็บย่อยรหัสผ่าน/โน้ต/Prompt AI */
+  const isOverviewSection = isOverviewHome || isPasswords || isNotes || isPrompts;
   return {
     onModule,
     isOverview: isOverviewHome,
@@ -90,6 +99,7 @@ export function homeFinancePathFlags(pathname: string) {
     isSettings,
     isPasswords,
     isNotes,
+    isPrompts,
   };
 }
 
@@ -113,6 +123,7 @@ export function homeFinanceOverviewSubKey(pathname: string): HomeFinanceOverview
   const f = homeFinancePathFlags(pathname);
   if (f.isPasswords) return "passwords";
   if (f.isNotes) return "notes";
+  if (f.isPrompts) return "prompts";
   return "overview";
 }
 

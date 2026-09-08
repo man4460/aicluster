@@ -108,7 +108,7 @@ const guideSections = [
           เมนู <strong>เอกสารหลักฐาน</strong> — เก็บรูป/PDF เอกสารสำคัญแยกจากสลิปรายวัน
         </li>
         <li>
-          เมนูย่อยใต้ <strong>ภาพรวม</strong> — ใช้แท็บ <strong>รหัสผ่าน</strong> และ <strong>โน้ต</strong> สำหรับของส่วนตัวคู่กับการเงิน
+          เมนูย่อยใต้ <strong>ภาพรวม</strong> — ใช้แท็บ <strong>รหัสผ่าน</strong> · <strong>โน้ต</strong> · <strong>Prompt AI</strong> สำหรับของส่วนตัวคู่กับการเงิน
         </li>
       </ol>
     ),
@@ -118,7 +118,7 @@ const guideSections = [
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>
-          <strong>ภาพรวม</strong> — สรุปรายรับ–รายจ่าย · กราฟ · และเมนูย่อย รหัสผ่าน / โน้ต
+          <strong>ภาพรวม</strong> — สรุปรายรับ–รายจ่าย · กราฟ · และเมนูย่อย รหัสผ่าน / โน้ต / Prompt AI
         </li>
         <li>
           <strong>บันทึก</strong> — ประวัติรายการทั้งหมด · กรอง · แก้ไข · ลบ
@@ -140,8 +140,8 @@ const guideSections = [
     content: (
       <ul className="list-disc space-y-2 pl-5 marker:text-[#4d47b6]">
         <li>
-          ใต้เมนูหลัก <strong>ภาพรวม</strong> มีแถบย่อย 3 แท็บ: <strong>ภาพรวม</strong> · <strong>รหัสผ่าน</strong> ·{" "}
-          <strong>โน้ต</strong>
+          ใต้เมนูหลัก <strong>ภาพรวม</strong> มีแถบย่อย: <strong>ภาพรวม</strong> · <strong>รหัสผ่าน</strong> ·{" "}
+          <strong>โน้ต</strong> · <strong>Prompt AI</strong>
         </li>
         <li>
           สลับแท็บได้จากแถบย่อยบนหน้า (มือถือและเดสก์ท็อป) — ไม่ต้องออกจากโมดูลบันทึกส่วนตัว
@@ -340,7 +340,7 @@ function HomeFinanceShellInner({ children }: { children: ReactNode }) {
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
           title="คู่มือ — บันทึกส่วนตัว"
-          subtitle="ครอบคลุมเมนูหลัก · รหัสผ่าน · โน้ต · บันทึก · เอกสาร · ตั้งค่า"
+          subtitle="ครอบคลุมเมนูหลัก · รหัสผ่าน · โน้ต · Prompt AI · บันทึก · เอกสาร · ตั้งค่า"
           sections={guideSections}
         />
 

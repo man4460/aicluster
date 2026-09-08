@@ -180,6 +180,8 @@ model User {
   homeVehicleProfiles                HomeVehicleProfile[]
   homeFinanceReminders               HomeFinanceReminder[]
   homeFinancePersonalDocuments       HomeFinancePersonalDocument[]
+  homeFinanceDocumentCategories      HomeFinanceDocumentCategory[]
+  homeFinanceAiPrompts               HomeFinanceAiPrompt[]
   carWashPackages                    CarWashPackage[]
   carWashBundles                     CarWashBundle[]
   carWashVisits                      CarWashVisit[]
@@ -2371,22 +2373,64 @@ model HomeFinanceReminder {
 }
 
 /**
+ * หมวดเอกสารส่วนตัว — แยกจากหมวดรายรับ–รายจ่าย
+ */
+model HomeFinanceDocumentCategory {
+  id          Int                          @id @default(autoincrement())
+  ownerUserId String                       @map("owner_id") @db.VarChar(191)
+  owner       User                         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String                       @db.VarChar(80)
+  sortOrder   Int                          @default(100) @map("sort_order")
+  createdAt   DateTime                     @default(now()) @map("created_at")
+  updatedAt   DateTime                     @updatedAt @map("updated_at")
+  documents   HomeFinancePersonalDocument[]
+
+  @@unique([ownerUserId, name])
+  @@index([ownerUserId, sortOrder])
+  @@map("home_finance_document_categories")
+}
+
+/**
  * เอกสารส่วนตัว — เก็บไฟล์แยกจากสลิปรายการรายรับ–รายจ่าย
  */
 model HomeFinancePersonalDocument {
+  id          Int                          @id @default(autoincrement())
+  ownerUserId String                       @map("owner_id") @db.VarChar(191)
+  owner       User                         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  title       String                       @db.VarChar(160)
+  /**
+   * ป้ายหมวด (denormalized) — คู่กับ categoryId เมื่อผูกหมวด
+   */
+  category    String?                      @db.VarChar(80)
+  categoryId  Int?                         @map("category_id")
+  documentCategory HomeFinanceDocumentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  fileUrl     String                       @map("file_url") @db.VarChar(512)
+  mimeType    String?                      @map("mime_type") @db.VarChar(80)
+  note        String?                      @db.VarChar(600)
+  createdAt   DateTime                     @default(now()) @map("created_at")
+  updatedAt   DateTime                     @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, createdAt])
+  @@index([ownerUserId, categoryId])
+  @@map("home_finance_personal_documents")
+}
+
+/**
+ * Prompt AI ส่วนตัว — เก็บหัวข้อ · รายละเอียด prompt · ประเภท (ใต้เมนูภาพรวม)
+ */
+model HomeFinanceAiPrompt {
   id          Int      @id @default(autoincrement())
   ownerUserId String   @map("owner_id") @db.VarChar(191)
   owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   title       String   @db.VarChar(160)
-  category    String?  @db.VarChar(80)
-  fileUrl     String   @map("file_url") @db.VarChar(512)
-  mimeType    String?  @map("mime_type") @db.VarChar(80)
-  note        String?  @db.VarChar(600)
+  content     String   @db.Text
+  promptType  String   @map("prompt_type") @db.VarChar(80)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([ownerUserId, createdAt])
-  @@map("home_finance_personal_documents")
+  @@index([ownerUserId, promptType])
+  @@map("home_finance_ai_prompts")
 }
 
 enum CarWashBookingStatus {

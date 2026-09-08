@@ -7,6 +7,7 @@ import { isAllowedHomeFinanceUploadPath } from "@/lib/home-finance/attachments";
 
 const postSchema = z.object({
   title: z.string().trim().min(1).max(160),
+  categoryId: z.number().int().positive().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
   fileUrl: z
     .string()
@@ -20,6 +21,7 @@ function mapRow(r: {
   id: number;
   title: string;
   category: string | null;
+  categoryId: number | null;
   fileUrl: string;
   mimeType: string | null;
   note: string | null;
@@ -30,12 +32,29 @@ function mapRow(r: {
     id: r.id,
     title: r.title,
     category: r.category,
+    categoryId: r.categoryId,
     fileUrl: r.fileUrl,
     mimeType: r.mimeType,
     note: r.note,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
+}
+
+async function resolveCategory(
+  billingUserId: string,
+  categoryId: number | null | undefined,
+  categoryLabel: string | null | undefined,
+): Promise<{ categoryId: number | null; category: string | null } | { error: string }> {
+  if (categoryId != null) {
+    const cat = await prisma.homeFinanceDocumentCategory.findFirst({
+      where: { id: categoryId, ownerUserId: billingUserId },
+    });
+    if (!cat) return { error: "ไม่พบหมวดที่เลือก" };
+    return { categoryId: cat.id, category: cat.name };
+  }
+  const label = categoryLabel?.trim() || null;
+  return { categoryId: null, category: label };
 }
 
 export async function GET() {
@@ -83,12 +102,20 @@ export async function POST(req: Request) {
   const parsed = postSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
+  const resolved = await resolveCategory(
+    ctx.billingUserId,
+    parsed.data.categoryId,
+    parsed.data.category,
+  );
+  if ("error" in resolved) return NextResponse.json({ error: resolved.error }, { status: 400 });
+
   try {
     const row = await prisma.homeFinancePersonalDocument.create({
       data: {
         ownerUserId: ctx.billingUserId,
         title: parsed.data.title,
-        category: parsed.data.category?.trim() || null,
+        categoryId: resolved.categoryId,
+        category: resolved.category,
         fileUrl: parsed.data.fileUrl,
         mimeType: parsed.data.mimeType?.trim() || null,
         note: parsed.data.note?.trim() || null,

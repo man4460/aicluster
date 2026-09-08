@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   AppImageLightbox,
   AppImagePickCameraButtons,
@@ -39,14 +39,26 @@ import {
   homeFinanceCardIconTileClass,
   homeFinanceDocumentCardTone,
 } from "@/systems/home-finance/lib/card-tones";
+import {
+  homeFinanceFieldClass,
+  homeFinanceFilterChipClass,
+  homeFinanceFilterChipShellClass,
+  homeFinanceOutlineButtonClass,
+} from "@/systems/home-finance/lib/ui-tokens";
 
-const inputClz =
-  "box-border h-9 min-h-9 w-full rounded-lg border border-slate-200/90 bg-white px-3 text-sm font-semibold text-[#1e1b4b] outline-none transition placeholder:text-slate-400 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15";
+const inputClz = homeFinanceFieldClass;
+
+type DocCategory = {
+  id: number;
+  name: string;
+  sortOrder: number;
+};
 
 type PersonalDocument = {
   id: number;
   title: string;
   category: string | null;
+  categoryId: number | null;
   fileUrl: string;
   mimeType: string | null;
   note: string | null;
@@ -78,13 +90,33 @@ export function HomeFinanceDocumentsClient() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<PersonalDocument[]>([]);
+  const [categories, setCategories] = useState<DocCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: "", category: "", note: "", fileUrl: "" });
+  const [form, setForm] = useState({ title: "", categoryId: "" as string, note: "", fileUrl: "" });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [filterCatId, setFilterCatId] = useState<number | null>(null);
+
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catMode, setCatMode] = useState<"list" | "form">("list");
+  const [catEditId, setCatEditId] = useState<number | null>(null);
+  const [catForm, setCatForm] = useState({ name: "", sortOrder: "100" });
+  const [catError, setCatError] = useState<string | null>(null);
+  const [catBusy, setCatBusy] = useState(false);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/home-finance/document-categories", { credentials: "include" });
+      const j = (await res.json().catch(() => ({}))) as { categories?: DocCategory[]; error?: string };
+      if (!res.ok) return;
+      setCategories(j.categories ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -106,10 +138,16 @@ export function HomeFinanceDocumentsClient() {
 
   useEffect(() => {
     void loadItems();
-  }, [loadItems]);
+    void loadCategories();
+  }, [loadItems, loadCategories]);
+
+  const filteredItems = useMemo(() => {
+    if (filterCatId == null) return items;
+    return items.filter((d) => d.categoryId === filterCatId);
+  }, [items, filterCatId]);
 
   const resetForm = () => {
-    setForm({ title: "", category: "", note: "", fileUrl: "" });
+    setForm({ title: "", categoryId: "", note: "", fileUrl: "" });
     setEditId(null);
   };
 
@@ -123,12 +161,98 @@ export function HomeFinanceDocumentsClient() {
     setEditId(doc.id);
     setForm({
       title: doc.title,
-      category: doc.category ?? "",
+      categoryId: doc.categoryId != null ? String(doc.categoryId) : "",
       note: doc.note ?? "",
       fileUrl: doc.fileUrl,
     });
     setError(null);
     setModalOpen(true);
+  };
+
+  const openCatManage = () => {
+    setCatMode("list");
+    setCatEditId(null);
+    setCatForm({ name: "", sortOrder: "100" });
+    setCatError(null);
+    setCatModalOpen(true);
+  };
+
+  const openCatCreate = () => {
+    setCatEditId(null);
+    setCatForm({ name: "", sortOrder: "100" });
+    setCatError(null);
+    setCatMode("form");
+  };
+
+  const openCatEdit = (c: DocCategory) => {
+    setCatEditId(c.id);
+    setCatForm({ name: c.name, sortOrder: String(c.sortOrder) });
+    setCatError(null);
+    setCatMode("form");
+  };
+
+  const submitCategory = async () => {
+    const name = catForm.name.trim();
+    if (!name) {
+      setCatError("กรอกชื่อหมวด");
+      return;
+    }
+    const order = Number(catForm.sortOrder.trim() || "100");
+    if (!Number.isInteger(order) || order < 1 || order > 999) {
+      setCatError("ลำดับต้องเป็นจำนวนเต็ม 1–999");
+      return;
+    }
+    setCatBusy(true);
+    setCatError(null);
+    try {
+      const isEdit = catEditId != null;
+      const res = await fetch(
+        isEdit ? `/api/home-finance/document-categories/${catEditId}` : "/api/home-finance/document-categories",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, sortOrder: order }),
+        },
+      );
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCatError(j.error ?? "บันทึกหมวดไม่สำเร็จ");
+        return;
+      }
+      await loadCategories();
+      await loadItems();
+      setCatMode("list");
+      setCatEditId(null);
+    } catch {
+      setCatError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
+  };
+
+  const removeCategory = async (c: DocCategory) => {
+    const ok = await notice.confirm(`ลบหมวด «${c.name}»?`);
+    if (!ok) return;
+    setCatBusy(true);
+    setCatError(null);
+    try {
+      const res = await fetch(`/api/home-finance/document-categories/${c.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCatError(j.error ?? "ลบหมวดไม่สำเร็จ");
+        return;
+      }
+      if (filterCatId === c.id) setFilterCatId(null);
+      await loadCategories();
+    } catch {
+      setCatError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
   };
 
   const onPickFile = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -139,11 +263,7 @@ export function HomeFinanceDocumentsClient() {
     setError(null);
     try {
       const url = await uploadHomeFinanceFileUrl(file, { kind: "attach" });
-      setForm((s) => ({
-        ...s,
-        fileUrl: url,
-        // ชื่อเอกสารให้ผู้ใช้ตั้งเอง — ไม่ดึงจากชื่อไฟล์ OS
-      }));
+      setForm((s) => ({ ...s, fileUrl: url }));
     } catch (err) {
       setError(homeFinanceUploadErrorMessage(err, "อัปโหลดไม่สำเร็จ"));
     } finally {
@@ -163,9 +283,10 @@ export function HomeFinanceDocumentsClient() {
     setSaving(true);
     setError(null);
     try {
+      const categoryId = form.categoryId.trim() ? Number(form.categoryId) : null;
       const body = {
         title: form.title.trim(),
-        category: form.category.trim() || null,
+        categoryId: Number.isInteger(categoryId) && categoryId! > 0 ? categoryId : null,
         note: form.note.trim() || null,
         fileUrl: form.fileUrl,
       };
@@ -222,14 +343,58 @@ export function HomeFinanceDocumentsClient() {
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         action={
-          <HomeFinancePrimaryButton type="button" onClick={openCreate} aria-label="เพิ่มเอกสาร">
-            <span className="sm:hidden" aria-hidden>
-              +
-            </span>
-            <span className="hidden sm:inline">+ เพิ่มเอกสาร</span>
-          </HomeFinancePrimaryButton>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={openCatManage}
+              className={cn(homeFinanceOutlineButtonClass, "min-w-[40px] sm:min-w-0")}
+              aria-label="จัดการหมวดหมู่เอกสาร"
+              title="หมวดหมู่"
+            >
+              <span className="sm:hidden" aria-hidden>
+                หมวด
+              </span>
+              <span className="hidden sm:inline">หมวดหมู่</span>
+            </button>
+            <HomeFinancePrimaryButton type="button" onClick={openCreate} aria-label="เพิ่มเอกสาร">
+              <span className="sm:hidden" aria-hidden>
+                +
+              </span>
+              <span className="hidden sm:inline">+ เพิ่มเอกสาร</span>
+            </HomeFinancePrimaryButton>
+          </div>
         }
       />
+
+      {categories.length > 0 ? (
+        <div
+          className={cn(homeFinanceFilterChipShellClass, "overflow-x-auto")}
+          role="group"
+          aria-label="กรองตามหมวดหมู่"
+        >
+          <div className="flex w-max gap-2">
+            <button
+              type="button"
+              aria-pressed={filterCatId == null}
+              className={homeFinanceFilterChipClass(filterCatId == null)}
+              onClick={() => setFilterCatId(null)}
+            >
+              ทั้งหมด
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={filterCatId === c.id}
+                className={homeFinanceFilterChipClass(filterCatId === c.id)}
+                onClick={() => setFilterCatId(c.id)}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error && !modalOpen ? (
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -238,14 +403,21 @@ export function HomeFinanceDocumentsClient() {
       ) : null}
 
       <div>
-        <HomeFinanceListHeading>รายการเอกสาร ({items.length})</HomeFinanceListHeading>
+        <HomeFinanceListHeading>
+          รายการเอกสาร ({filteredItems.length}
+          {filterCatId != null ? `/${items.length}` : ""})
+        </HomeFinanceListHeading>
         {loading ? (
           <p className="p-6 text-center text-sm text-slate-500">กำลังโหลด…</p>
-        ) : items.length === 0 ? (
-          <HomeFinanceEmptyState>ยังไม่มีเอกสาร — กด «+ เพิ่มเอกสาร»</HomeFinanceEmptyState>
+        ) : filteredItems.length === 0 ? (
+          <HomeFinanceEmptyState>
+            {items.length === 0
+              ? "ยังไม่มีเอกสาร — กด «+ เพิ่มเอกสาร»"
+              : "ไม่มีเอกสารในหมวดนี้"}
+          </HomeFinanceEmptyState>
         ) : (
           <HomeFinanceList as="ul" listRole="รายการเอกสารส่วนตัว">
-            {items.map((doc) => {
+            {filteredItems.map((doc) => {
               const abs = encodeHomeFinancePublicAssetHref(doc.fileUrl);
               const pdf = isHomeFinancePdfUrl(doc.fileUrl);
               const tone = homeFinanceDocumentCardTone(pdf);
@@ -337,14 +509,24 @@ export function HomeFinanceDocumentsClient() {
                   required
                 />
               </Field>
-              <Field label="หมวด (ไม่บังคับ)">
-                <input
-                  value={form.category}
-                  onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))}
+              <Field label="หมวดหมู่ (ไม่บังคับ)">
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => setForm((s) => ({ ...s, categoryId: e.target.value }))}
                   className={inputClz}
-                  placeholder="เช่น เอกสารราชการ / สัญญา"
-                  maxLength={80}
-                />
+                >
+                  <option value="">— ไม่ระบุหมวด —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {categories.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-[#66638c]">
+                    ยังไม่มีหมวด — กดปุ่ม «หมวดหมู่» เพื่อเพิ่มก่อน
+                  </p>
+                ) : null}
               </Field>
               <Field label="ไฟล์เอกสาร">
                 <div className="rounded-2xl border border-dashed border-[#0000BF]/30 bg-[#f4f4ff]/60 p-4">
@@ -354,9 +536,7 @@ export function HomeFinanceDocumentsClient() {
                         <AppImageThumb
                           src={encodeHomeFinancePublicAssetHref(form.fileUrl)}
                           objectFit="contain"
-                          onOpen={() =>
-                            lightbox.open(encodeHomeFinancePublicAssetHref(form.fileUrl))
-                          }
+                          onOpen={() => lightbox.open(encodeHomeFinancePublicAssetHref(form.fileUrl))}
                         />
                       ) : (
                         <span className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-800 ring-1 ring-red-200">
@@ -440,6 +620,121 @@ export function HomeFinanceDocumentsClient() {
                 </HomeFinancePrimaryButton>
               </HomeFinanceModalActionBar>
             </form>
+          </HomeFinanceModalPanel>
+        </HomeFinanceModalBackdrop>
+      ) : null}
+
+      {catModalOpen ? (
+        <HomeFinanceModalBackdrop
+          onBackdropClick={() => {
+            if (!catBusy) setCatModalOpen(false);
+          }}
+        >
+          <HomeFinanceModalPanel
+            title={catMode === "list" ? "หมวดหมู่เอกสาร" : catEditId == null ? "เพิ่มหมวด" : "แก้ไขหมวด"}
+            titleId="hf-doc-cat-title"
+            onClose={() => {
+              if (!catBusy) setCatModalOpen(false);
+            }}
+            error={catError}
+            maxWidthClassName="max-w-md"
+          >
+            {catMode === "list" ? (
+              <div className="space-y-3">
+                {categories.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                    ยังไม่มีหมวด — กดเพิ่มด้านล่าง
+                  </p>
+                ) : (
+                  <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
+                    {categories.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-slate-50/50 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-[#1e1b4b]">{c.name}</p>
+                          <p className="text-[10px] text-slate-400">ลำดับ {c.sortOrder}</p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <HomeFinanceRowActionIconButton
+                            variant="primary"
+                            title="แก้ไข"
+                            aria-label={`แก้ไขหมวด ${c.name}`}
+                            disabled={catBusy}
+                            onClick={() => openCatEdit(c)}
+                          >
+                            <HomeFinanceRowIconEdit />
+                          </HomeFinanceRowActionIconButton>
+                          <HomeFinanceRowActionIconButton
+                            variant="danger"
+                            title="ลบ"
+                            aria-label={`ลบหมวด ${c.name}`}
+                            disabled={catBusy}
+                            onClick={() => void removeCategory(c)}
+                          >
+                            <HomeFinanceRowIconTrash />
+                          </HomeFinanceRowActionIconButton>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <HomeFinanceModalActionBar>
+                  <HomeFinanceSecondaryButton type="button" onClick={() => setCatModalOpen(false)} disabled={catBusy}>
+                    ปิด
+                  </HomeFinanceSecondaryButton>
+                  <HomeFinancePrimaryButton type="button" onClick={openCatCreate} disabled={catBusy}>
+                    + เพิ่มหมวด
+                  </HomeFinancePrimaryButton>
+                </HomeFinanceModalActionBar>
+              </div>
+            ) : (
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitCategory();
+                }}
+              >
+                <Field label="ชื่อหมวด">
+                  <input
+                    value={catForm.name}
+                    onChange={(e) => setCatForm((s) => ({ ...s, name: e.target.value }))}
+                    className={inputClz}
+                    placeholder="เช่น เอกสารราชการ / สัญญา"
+                    maxLength={80}
+                    required
+                    disabled={catBusy}
+                  />
+                </Field>
+                <Field label="ลำดับ">
+                  <input
+                    value={catForm.sortOrder}
+                    onChange={(e) => setCatForm((s) => ({ ...s, sortOrder: e.target.value }))}
+                    className={inputClz}
+                    inputMode="numeric"
+                    maxLength={3}
+                    disabled={catBusy}
+                  />
+                </Field>
+                <HomeFinanceModalActionBar>
+                  <HomeFinanceSecondaryButton
+                    type="button"
+                    disabled={catBusy}
+                    onClick={() => {
+                      setCatMode("list");
+                      setCatError(null);
+                    }}
+                  >
+                    กลับ
+                  </HomeFinanceSecondaryButton>
+                  <HomeFinancePrimaryButton type="submit" disabled={catBusy}>
+                    {catBusy ? "กำลังบันทึก…" : "บันทึก"}
+                  </HomeFinancePrimaryButton>
+                </HomeFinanceModalActionBar>
+              </form>
+            )}
           </HomeFinanceModalPanel>
         </HomeFinanceModalBackdrop>
       ) : null}
