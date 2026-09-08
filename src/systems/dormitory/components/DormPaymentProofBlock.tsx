@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AppImageLightbox, AppLabeledImageThumb, useAppImageLightbox } from "@/components/app-templates";
 import { useDormitoryApiFetch } from "@/systems/dormitory/lib/staff-api-fetch";
 
 export function DormPaymentProofBlock({
@@ -18,6 +19,7 @@ export function DormPaymentProofBlock({
   const [url, setUrl] = useState(initialUrl);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const lb = useAppImageLightbox();
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -66,21 +68,25 @@ export function DormPaymentProofBlock({
       <p className="font-semibold text-slate-800">สลิปโอนเงิน</p>
       {err ? <p className="mt-1 text-red-600">{err}</p> : null}
       {url ? (
-        <div className="mt-2 space-y-2">
-          <a href={url} target="_blank" rel="noreferrer" className="text-[#0000BF] underline">
-            เปิดดูสลิป
-          </a>
-          <div className="max-h-40 max-w-[200px] overflow-hidden rounded border border-slate-200 bg-white">
-            <img src={url} alt="" className="h-full w-full object-contain" />
+        <div className="mt-2 flex flex-wrap items-end gap-3">
+          <AppLabeledImageThumb
+            src={url}
+            kind="slip"
+            alt="สลิปโอนเงิน"
+            onOpen={() => lb.open(url)}
+            className="h-20 w-20"
+          />
+          <div className="min-w-0 space-y-1">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onClear()}
+              className="text-red-600 hover:underline disabled:opacity-50"
+            >
+              ลบสลิป
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onClear()}
-            className="text-red-600 hover:underline disabled:opacity-50"
-          >
-            ลบสลิป
-          </button>
+          <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอนเงิน" />
         </div>
       ) : (
         <label className="mt-2 inline-flex cursor-pointer text-[#0000BF] hover:underline">

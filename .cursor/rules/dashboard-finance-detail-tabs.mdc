@@ -48,18 +48,17 @@ alwaysApply: false
 
 | เงื่อนไข | พฤติกรรม |
 |----------|----------|
-| **มี URL สลิป** (แถวการเงินสลิปเดี่ยว) | **`AppSlipImageThumb`** (`h-14 w-14` · `object-contain`) · กดเปิด **`AppImageLightbox`** |
-| **มี URL สลิป** (การ์ดรายการที่ต้องมีป้ายชัด · หรือคู่กับรูปสินค้า) | **`AppLabeledImageThumb`** `kind="slip"` — ป้าย «สลิป» มุมล่างรูป · เลย์เอาต์ `flex items-start gap-3` กับชื่อ |
+| **มี URL สลิป** (แถวการเงิน · การ์ด · พรีวิว) | **`AppLabeledImageThumb` `kind="slip"`** · กดเปิด **`AppImageLightbox`** — ป้าย «สลิป» มุมล่างรูป · ดู **`app-templates-slip-labeled-thumb.mdc`** |
 | **ไม่มีสลิป** | **ไม่แสดง** ช่องว่าง / empty / ข้อความ «ไม่มีสลิป» |
 
-ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย** — รายละเอียดป้าย: **`app-templates-media.mdc`** § AppLabeledImageThumb
+ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย**
 
 ### เลย์เอาต์แถว (มือถือ + เดสก์ท็อป)
 
 แถวหลักใช้ **`flex items-start gap-2`** (หรือ `gap-3`) — **หลีกเลี่ยง `flex-wrap`** ที่ดันราคาลงบรรทัดใหม่บนมือถือ:
 
 ```
-[สลิปย่อ ถ้ามี]  [เนื้อหา min-w-0 flex-1]  [ราคา shrink-0 text-right]  [ไอคอนแก้ไข · ลบ]
+[สลิปย่อ+ป้าย ถ้ามี]  [เนื้อหา min-w-0 flex-1]  [ราคา shrink-0 text-right]  [ไอคอนแก้ไข · ลบ]
 ```
 
 ### สีราคาในแถว (บังคับ)
@@ -73,12 +72,6 @@ alwaysApply: false
 - Import จาก `@/components/app-templates` เท่านั้น
 
 ```tsx
-{/* แถวการเงิน — สลิปเดี่ยว ไม่บังคับป้าย */}
-{slipUrl ? (
-  <AppSlipImageThumb src={slipUrl} alt="สลิป …" onOpen={() => lb.open(slipUrl)} className="h-14 w-14 shrink-0" />
-) : null}
-
-{/* การ์ดออเดอร์ / คำตอบ / ค่าบำรุง — มีป้าย */}
 {slipUrl ? (
   <AppLabeledImageThumb src={slipUrl} kind="slip" alt={label} onOpen={() => lb.open(slipUrl)} />
 ) : null}
@@ -92,6 +85,7 @@ alwaysApply: false
 - แสดงเฉพาะลิงก์ข้อความโดยไม่มีรูปย่อ (อนุญาตเป็นทางสำรองเพิ่มจาก thumb ได้)
 - ยอดรายรับเป็นม่วง/`slate-900` เป็นสีหลัก
 - วางป้าย «สลิป» เป็นข้อความใต้รูปจนทับชื่อ — ใช้ `AppLabeledImageThumb`
+- ใช้ `AppSlipImageThumb` / `AppImageThumb` เปล่าในแถวการเงินมาตรฐาน
 ---
 
 ## 2b) แท็บ **ประวัติ / รายรับ** — แก้ไข + ลบ (บังคับ)
@@ -100,7 +94,7 @@ alwaysApply: false
 
 | | บังคับ |
 |--|--------|
-| **แก้ไข** | ไอคอนดินสอทุกแถว · `FormModal` · PATCH ตามโดเมน · **รวมสลิป** (ดูย่อ · ลบ · อัปโหลด/ถ่ายใหม่ ด้วย `AppSlipImageThumb` + gallery/camera จาก app-templates) |
+| **แก้ไข** | ไอคอนดินสอทุกแถว · `FormModal` · PATCH ตามโดเมน · **รวมสลิป** (ดูย่อ · ลบ · อัปโหลด/ถ่ายใหม่ ด้วย **`AppLabeledImageThumb` `kind="slip"`** + gallery/camera จาก app-templates) |
 | **ลบ** | ไอคอนถังทุกแถว · **`await notice.confirm(...)`** ก่อน DELETE |
 | **วางปุ่ม** | ขวาสุดคู่ราคา · `dashboard-row-action-icon-buttons.mdc` · `aria-label` |
 | **สีราคา** | `text-emerald-700` |
@@ -179,4 +173,4 @@ if (!ok) return;
 - [ ] ลบใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
 - [ ] ฟอร์มรายจ่ายครบ 5 ช่องตามต้นแบบร้านอาหาร
 - [ ] CTA รายจ่ายอยู่แท็บรายจ่ายเท่านั้น
-- [ ] `AppSlipImageThumb` (แถวการเงิน) / `AppLabeledImageThumb kind="slip"` (การ์ดที่มีป้าย) / `AppImageLightbox` จาก `app-templates`
+- [ ] **`AppLabeledImageThumb` `kind="slip"`** + `AppImageLightbox` จาก `app-templates` (ดู **`app-templates-slip-labeled-thumb.mdc`**)

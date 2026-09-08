@@ -26,7 +26,7 @@ globs:
 
 ## QR ลูกค้า & QR พนักงาน (โปสเตอร์กลาง MAWELL)
 
-- ใช้ **`@/components/qr/shop-qr-template`**: `QRCode.toDataURL` (240px) → **`createShopQrPosterDataUrl`** (พรีวิว) / **`createShopQrPosterCanvas`** + **`downloadPosterPng`** / **`downloadPosterPdf`**
+- ใช้ **`@/components/qr/shop-qr-template`**: `QRCode.toDataURL` → **`createShopQrPosterDataUrl`** (พรีวิวโปสเตอร์) / **`createShopQrPosterCanvas`** + **`downloadPosterPng`** / **`downloadPosterPdf`** — **ห้าม** โชว์ QR ดิบในแผง (ดู `shop-qr-poster-template.mdc`)
 - คนละ **tagline** เป็นค่าคงที่ (เช่น `CAR_WASH_CUSTOMER_QR_TAGLINE`, `CAR_WASH_STAFF_QR_TAGLINE`); โลโก้ + `shopLabel` เหมือนกัน
 - พรีวิว: กล่อง `overflow-x-auto` + รูป `w-[340px]` + สถานะโหลดเหมือนกัน
 - **Modal QR ลูกค้า**: มีปุ่ม **ปิด** ใน `footer`; **แสดงลิงก์ / ซ่อนลิงก์** (ค่าเริ่มต้นซ่อน); รีเซ็ตซ่อนเมื่อเปิด modal

@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
-import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 import {
   ecommerceStoreCompactOutlineButtonClass,
-  ecommerceStoreDashboardSegmentBtnClass,
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
@@ -58,56 +56,37 @@ function ModalCloseFooter({ onClose }: { onClose: () => void }) {
 function ShopWebLinkModalBody({
   shopUrl,
   storeId,
+  storeName,
+  logoUrl,
   salePageEnabled,
   featuredProductId,
 }: {
   shopUrl: string;
   storeId: string;
+  storeName: string;
+  logoUrl: string | null;
   salePageEnabled: boolean;
   featuredProductId: string | null;
 }) {
-  const [copyMsg, setCopyMsg] = useState<string | null>(null);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(shopUrl);
-      setCopyMsg("คัดลอกลิงก์ร้านแล้ว");
-    } catch {
-      setCopyMsg("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  };
-
   return (
     <div className="space-y-3 text-left">
-      <p className="text-sm text-[#5f5a8a]">เปิดหรือคัดลอกลิงก์ร้านออนไลน์ให้ลูกค้าสั่งซื้อ</p>
-      {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
-      <div className="rounded-xl border border-slate-200/90 bg-slate-50/80 p-3">
-        <p className="text-xs font-bold text-[#4d47b6]">ลิงก์เว็บไซต์ร้าน</p>
-        <p className="mt-1.5 break-all text-sm font-semibold text-[#1e1b4b]">{shopUrl}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href={ecommercePublicShopUrl(storeId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={ecommerceStoreCompactOutlineButtonClass}
-          >
-            เปิดลิงก์
-          </a>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
-          >
-            <IconCopy className="h-3.5 w-3.5" aria-hidden />
-            คัดลอกลิงก์
-          </button>
-          {salePageEnabled && featuredProductId ? (
-            <Link href={`/shop/${storeId}/sale`} target="_blank" className={ecommerceStoreCompactOutlineButtonClass}>
-              Sale Page
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <ModulePublicLinkQrPanel
+        moduleSlug={ECOMMERCE_STORE_MODULE_SLUG}
+        planGateAllowed
+        pageUrl={shopUrl}
+        shopLabel={storeName || "ร้านออนไลน์"}
+        logoUrl={logoUrl}
+        tagline="สแกนเพื่อเข้าหน้าร้านออนไลน์"
+        openLabel="เปิดเว็บ"
+        posterTintClass="shadow-lg shadow-indigo-950/10"
+        posterAlt="โปสเตอร์ QR ร้านออนไลน์"
+        downloadFilePrefix={`ecommerce-shop-qr-${storeId.slice(0, 8)}`}
+      />
+      {salePageEnabled && featuredProductId ? (
+        <Link href={`/shop/${storeId}/sale`} target="_blank" className={ecommerceStoreCompactOutlineButtonClass}>
+          Sale Page
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -233,6 +212,8 @@ export function EcommerceQrHubClient({
           <ShopWebLinkModalBody
             shopUrl={shopUrl}
             storeId={storeId}
+            storeName={storeName}
+            logoUrl={logoUrl}
             salePageEnabled={salePageEnabled}
             featuredProductId={featuredProductId}
           />

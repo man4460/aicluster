@@ -6,6 +6,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   prepareImageFileForUpload,
@@ -304,7 +305,11 @@ export function AppointmentQueuePortalClient({ ownerId }: { ownerId: string }) {
                   />
                   {slipUrl ? (
                     <>
-                      <AppImageThumb src={slipUrl} alt="สลิปมัดจำ" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
+                      <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิปมัดจำ"
+                      onOpen={() => lb.open(slipUrl)} />
                       <button
                         type="button"
                         className={cn(

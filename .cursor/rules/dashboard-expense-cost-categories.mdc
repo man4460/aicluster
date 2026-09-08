@@ -66,9 +66,9 @@ finance-summary (ถ้ามี) ควรคืน `paymentSlipUrl` ในร�
    - คอมโพเนนต์ต้นแบบ: **`BuildingPosCostsPanel`**  
    - เครื่องดื่ม: `DrinkPosCostsPanel` · โรงแรม: ฟอร์มใน `HotelResortFinanceClient` — โครงฟิลด์เดียวกัน  
    - อัปโหลด: `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
-   - ดูตัวอย่างในฟอร์ม: `AppImageThumb` + lightbox · `FormModal` + **`mobileCentered`**
+   - ดูตัวอย่างในฟอร์ม: **`AppLabeledImageThumb` `kind="slip"`** + lightbox · `FormModal` + **`mobileCentered`**
 5. **ในแถวรายการ:**
-   - มีสลิป → **`AppImageThumb`** กดเปิด lightbox · ไม่มี → **ไม่แสดงช่องสลิป**  
+   - มีสลิป → **`AppLabeledImageThumb` `kind="slip"`** กดเปิด lightbox · ไม่มี → **ไม่แสดงช่องสลิป**  
    - เลย์เอาต์: `[สลิป?] [เนื้อหา flex-1] [ราคาขวา text-rose-600 + ไอคอนแก้ไข/ลบ]`  
    - มือถือห้ามให้ราคาหล่นซ้ายเพราะ `flex-wrap`  
    - กฎเต็ม: **`dashboard-finance-detail-tabs.mdc`** §2 · **`app-templates-media.mdc`**

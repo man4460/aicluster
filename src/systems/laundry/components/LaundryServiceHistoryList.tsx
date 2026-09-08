@@ -5,6 +5,7 @@ import {
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -291,13 +292,22 @@ export function LaundryServiceHistoryList({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-1 items-start gap-2.5">
                     {showSlipThumb ?
-                      <AppImageThumb
-                        src={slipResolved}
-                        alt="สลิป"
-                        emptyLabel="ไม่มีสลิป"
-                        onOpen={() => slipResolved && lightbox.open(slipResolved)}
-                        className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
-                        objectFit="contain" />
+                      slipResolved ? (
+                        <AppLabeledImageThumb
+                          src={slipResolved}
+                          kind="slip"
+                          alt="สลิป"
+                          onOpen={() => lightbox.open(slipResolved)}
+                          className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
+                        />
+                      ) : (
+                        <AppImageThumb
+                          src={null}
+                          emptyLabel="ไม่มีสลิป"
+                          className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
+                          objectFit="contain"
+                        />
+                      )
                     : null}
                     <button
                       type="button"

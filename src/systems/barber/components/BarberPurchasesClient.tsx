@@ -8,6 +8,7 @@ import {
   AppIconTrash,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import {
@@ -155,14 +156,18 @@ function BarberPurchaseSlipCell(props: {
     );
   }
 
+  if (!displaySrc) {
+    return <AppImageThumb src={null} emptyLabel="ไม่มีสลิป" className={className} objectFit="contain" />;
+  }
+
   return (
-    <AppImageThumb
+    <AppLabeledImageThumb
       src={displaySrc}
-      alt={displaySrc ? "สลิปขายแพ็กเกจ" : ""}
-      emptyLabel="ไม่มีสลิป"
-      onOpen={displaySrc ? () => onOpenLightbox(displaySrc) : undefined}
+      kind="slip"
+      alt="สลิปขายแพ็กเกจ"
+      onOpen={() => onOpenLightbox(displaySrc)}
       className={className}
-      objectFit="contain" />
+    />
   );
 }
 

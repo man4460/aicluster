@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
@@ -332,7 +333,11 @@ export function EcommercePaymentPanel({
           />
           {slipErr ? <p className="text-xs font-semibold text-rose-600">{slipErr}</p> : null}
           {slipUrl ? (
-            <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} className="h-20 w-20" objectFit="contain" />
+            <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(slipUrl)} className="h-20 w-20" />
           ) : null}
           <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปชำระเงิน" />
           {cameraModal}

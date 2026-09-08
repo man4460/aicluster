@@ -1,0 +1,62 @@
+---
+description: เทมเพลตสร้างโปสเตอร์ QR มาตรฐาน MAWELL — createShopQrPosterCanvas · ห้ามโชว์ QR ดิบในแผง
+alwaysApply: false
+globs:
+  - "**/components/qr/shop-qr-template.tsx"
+  - "**/components/qr/shop-staff-qr-panel.tsx"
+  - "**/components/qr/module-public-link-qr-panel.tsx"
+  - "**/components/qr/module-staff-token-qr-panel.tsx"
+  - "**/lib/shop-qr-template-theme.ts"
+  - "**/systems/**/*Qr*"
+  - "**/systems/**/*qr*"
+---
+
+# เทมเพลตสร้างโปสเตอร์ QR (`shop-qr-template`)
+
+**แหล่งความจริง:** `src/components/qr/shop-qr-template.tsx`  
+**พื้นหน้าเว็บที่เกี่ยว:** `src/lib/shop-qr-template-theme.ts` (`shopQrTemplatePageBgClass`)  
+**แผง UI แสดงผล:** `ShopStaffQrPanel` — กฎคู่ **`shop-staff-qr-panel.mdc`**
+
+## ลำดับสร้าง (บังคับ)
+
+1. สร้าง data URL ของ QR ด้วย `QRCode.toDataURL(url, { width, margin: 2, errorCorrectionLevel: "M", color: { dark, light } })` — ใช้เป็น **อินพุตภายใน** เท่านั้น
+2. พรีวิว / ดาวน์โหลด ต้องผ่าน **`createShopQrPosterDataUrl`** หรือ **`createShopQrPosterCanvas`** แล้วค่อย `downloadPosterPdf` / `downloadPosterPng`
+3. **ห้าม** แสดง `<img src={qrPng}>` (QR ดิบ) ในแผงแดชบอร์ด / โมดัล — ให้แสดง **ภาพโปสเตอร์** (`posterPreview`) เท่านั้น
+4. **ห้าม** คัดลอกเลย์เอาต์แคนวาสโปสเตอร์ไปโมดูลอื่น — แก้ที่ `createShopQrPosterCanvas` กลาง
+
+## โครงโปสเตอร์แคนวาส (760×1080)
+
+โทนม่วง–ชมพูแบรนด์ (`#1e1b4b` · `#4d47b6` · `#5b61ff` · `#8b5cf6` · `#ec4899`) — ไม่ใช้โทน teal ของตัวอย่างภายนอก
+
+| ชั้น | รายละเอียด |
+|-----|---|
+| พื้นหลัง | ไล่สีท้องฟ้าอ่อน + เมฆนุ่ม + เนินล่างโทนม่วง/ชมพู |
+| โลโก้ | วงกลมซ้ายบน (โลโก้ร้าน หรือตัวอักษรสำรอง) |
+| หัวเรื่อง | `tagline` กลาง · บรรทัดอังกฤษจาก `subtitle` / `footerText` / `SCAN TO OPEN` |
+| การ์ด QR | มุมมนขาว · ขอบม่วงอ่อน · **มุม L สี่มุม** (`#4d47b6`) รอบ QR |
+| แคปซูล | pill ขาวขอบม่วง: (1) ชื่อร้าน `shopLabel` (2) คำอธิบายรอง |
+
+Input: `{ qrDataUrl, shopLabel, logoUrl?, tagline, subtitle?, footerText? }`
+
+## พรีวิว HTML (`ShopQrPosterPreview`)
+
+ต้องสะท้อนโครงเดียวกับแคนวาส (โลโก้วง · หัวเรื่อง · การ์ด+มุม L · pill) — ใช้ตอนต้องการพรีวิว React โดยไม่เรนเดอร์แคนวาส
+
+## แผง UI (`ShopStaffQrPanel`)
+
+- แสดง **โปสเตอร์** + ปุ่มแถวเดียว **คัดลอก · ดาวน์โหลด · เปิดเว็บ · แสดง/ซ่อน**
+- `qrPng` ใช้เช็คพร้อมดาวน์โหลดเท่านั้น — **ไม่** เป็นรูปหลักบนจอ
+- รายละเอียดปุ่ม/โมดัล → **`shop-staff-qr-panel.mdc`**
+
+## ห้าม
+
+- ออกแบบโปสเตอร์โมดูลละแบบ (กรอบ gradient เก่า · แถวโลโก้+ชื่อแนวนอน · QR ล้วนไม่มีโปสเตอร์)
+- โชว์ QR ดิบคู่กับโปสเตอร์ในแผงเดียวกัน
+- เปลี่ยนสีหลักเป็น teal/เขียวของตัวอย่างภายนอกโดยไม่ผ่านโทนแบรนด์
+
+## เช็กลิสต์เมื่อแก้โปสเตอร์
+
+- [ ] แก้ที่ `createShopQrPosterCanvas` (+ `ShopQrPosterPreview` ให้สอดคล้อง)
+- [ ] `ShopStaffQrPanel` ยังไม่โชว์ `qrPng` เป็นรูปหลัก
+- [ ] ดาวน์โหลด PDF/PNG ยังใช้แคนวาสชุดเดียวกัน
+- [ ] อัปเดตกฎนี้ถ้าเปลี่ยนโครงเลย์เอาต์

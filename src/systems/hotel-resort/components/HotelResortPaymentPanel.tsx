@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
@@ -352,7 +353,11 @@ export function HotelResortPaymentPanel({
           {slipErr ? <p className="text-xs font-semibold text-rose-600">{slipErr}</p> : null}
           {slipUrl ? (
             <div className="flex items-center gap-3">
-              <AppImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => lb.open(slipUrl)} className="h-20 w-20" objectFit="contain" />
+              <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิปชำระเงิน"
+                      onOpen={() => lb.open(slipUrl)} className="h-20 w-20" />
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-bold text-emerald-700">แนบสลิปแล้ว</p>
                 <HotelResortButton

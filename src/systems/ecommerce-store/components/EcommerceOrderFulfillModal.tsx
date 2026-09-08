@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AppImageLightbox, useAppImageLightbox } from "@/components/app-templates";
+import { AppImageLightbox, AppLabeledImageThumb, useAppImageLightbox } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
-import { EcommerceLabeledImageThumb } from "@/systems/ecommerce-store/components/EcommerceLabeledImageThumb";
 import { ecommerceOrderStatusBadgeClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
   printEcommerceOrderReceipt,
@@ -165,7 +164,7 @@ export function EcommerceOrderFulfillModal({
             <div className={cn(sectionDividerClass, "space-y-2")}>
               <p className={sectionLabelClass}>สลิปชำระเงิน</p>
               {order.paymentSlipUrl?.trim() ? (
-                <EcommerceLabeledImageThumb
+                <AppLabeledImageThumb
                   src={order.paymentSlipUrl.trim()}
                   kind="slip"
                   alt={order.referenceCode}
@@ -193,7 +192,7 @@ export function EcommerceOrderFulfillModal({
                   items.map((it) => (
                     <li key={it.id} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
                       {it.imageUrl ? (
-                        <EcommerceLabeledImageThumb
+                        <AppLabeledImageThumb
                           src={it.imageUrl}
                           kind="product"
                           alt={it.productName}

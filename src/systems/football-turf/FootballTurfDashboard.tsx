@@ -33,6 +33,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppShopLogoField,
@@ -5369,14 +5370,11 @@ export function FootballTurfDashboard({
 
                         {item.paymentSlipDataUrl ? (
                           <div className="mt-3 flex items-center gap-3">
-                            <AppImageThumb
-                              src={item.paymentSlipDataUrl}
+                            <AppLabeledImageThumb kind="slip" src={item.paymentSlipDataUrl}
                               alt={`สลิปการจอง ${guest}`}
-                              onOpen={() => item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)}
-                              className="h-14 w-14"
-                              objectFit="contain" />
+                              onOpen={() => item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)} className="h-14 w-14" />
                             <div className="min-w-0">
-                              <p className="text-xs font-black text-emerald-800">แนบสลิปแล้ว</p>
+                              <p className="text-xs font-black text-emerald-800">แนบแล้ว</p>
                               <p className="truncate text-[11px] font-medium text-emerald-700">
                                 {item.paymentReference || "ไม่มีเลขอ้างอิง"}
                               </p>
@@ -5840,12 +5838,9 @@ export function FootballTurfDashboard({
                           <li key={item.id} className={footballTurfFinanceListItemClass}>
                             <div className="flex items-start gap-2">
                               {item.slipUrl ? (
-                                <AppImageThumb
-                                  src={item.slipUrl}
-                                  alt={`สลิป ${item.title}`}
-                                  onOpen={() => saleSlipLightbox.open(item.slipUrl)}
-                                  className="h-14 w-14 shrink-0"
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb kind="slip" src={item.slipUrl}
+                                  alt={item.title}
+                                  onOpen={() => saleSlipLightbox.open(item.slipUrl)} className="h-14 w-14" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-black text-[#1e1b4b]">{item.title}</p>
@@ -6062,12 +6057,9 @@ export function FootballTurfDashboard({
                           return (
                             <li key={item.id} className={cn(footballTurfFinanceListItemClass, "flex items-start gap-2")}>
                               {item.slipUrl ? (
-                                <AppImageThumb
-                                  src={item.slipUrl}
-                                  alt={`สลิป ${item.title}`}
-                                  onOpen={() => saleSlipLightbox.open(item.slipUrl)}
-                                  className="h-14 w-14 shrink-0"
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb kind="slip" src={item.slipUrl}
+                                  alt={item.title}
+                                  onOpen={() => saleSlipLightbox.open(item.slipUrl)} className="h-14 w-14" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">{item.dateLabel}</p>
@@ -6460,13 +6452,11 @@ export function FootballTurfDashboard({
                         </div>
                         {item.paymentSlipDataUrl ? (
                           <div className="mt-3">
-                            <AppImageThumb
-                              src={item.paymentSlipDataUrl}
-                              alt={`สลิป ${item.promotionName}`}
+                            <AppLabeledImageThumb kind="slip" src={item.paymentSlipDataUrl}
+                              alt={item.promotionName}
                               onOpen={() =>
                                 item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)
-                              }
-                              objectFit="contain" />
+                              } />
                           </div>
                         ) : null}
                       </div>
@@ -7831,12 +7821,10 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                 />
                 {bookingForm.paymentSlipDataUrl ? (
                   <div className="flex flex-wrap items-end gap-3">
-                    <AppImageThumb
-                      src={bookingForm.paymentSlipDataUrl}
+                    <AppLabeledImageThumb kind="slip" src={bookingForm.paymentSlipDataUrl}
                       alt="สลิปรายรับ"
                       onOpen={() => saleSlipLightbox.open(bookingForm.paymentSlipDataUrl)}
-                      className="h-20 w-20"
-                      objectFit="contain" />
+                      className="h-20 w-20" />
                     <button
                       type="button"
                       className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-3 py-2 text-xs font-bold text-rose-600")}
@@ -8038,13 +8026,11 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                     </div>
                     {bookingForm.paymentSlipDataUrl ? (
                       <div className="mt-3">
-                        <AppImageThumb
-                          src={bookingForm.paymentSlipDataUrl}
+                        <AppLabeledImageThumb kind="slip" src={bookingForm.paymentSlipDataUrl}
                           alt="สลิปการจอง"
                           onOpen={() => saleSlipLightbox.open(bookingForm.paymentSlipDataUrl)}
-                          className="h-24 w-24"
-                          objectFit="contain" />
-                        <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — บันทึกแล้วรอตรวจชำระ</p>
+                          className="h-24 w-24" />
+                        <p className="mt-2 text-xs font-bold text-emerald-700">แนบแล้ว — บันทึกแล้วรอตรวจชำระ</p>
                       </div>
                     ) : (
                       <p className="mt-3 text-xs font-bold text-amber-700">ต้องแนบหรือถ่ายสลิปก่อนบันทึกเมื่อเลือกโอนเงิน</p>
@@ -8443,13 +8429,11 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                   </div>
                   {saleForm.paymentSlipDataUrl ? (
                     <div className="mt-3">
-                      <AppImageThumb
-                        src={saleForm.paymentSlipDataUrl}
+                      <AppLabeledImageThumb kind="slip" src={saleForm.paymentSlipDataUrl}
                         alt="สลิปขายโปร"
                         onOpen={() => saleSlipLightbox.open(saleForm.paymentSlipDataUrl)}
-                        className="h-24 w-24"
-                        objectFit="contain" />
-                      <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — บันทึกแล้วรอตรวจชำระ</p>
+                        className="h-24 w-24" />
+                      <p className="mt-2 text-xs font-bold text-emerald-700">แนบแล้ว — บันทึกแล้วรอตรวจชำระ</p>
                     </div>
                   ) : (
                     <p className="mt-3 text-xs font-bold text-amber-700">ต้องแนบหรือถ่ายสลิปก่อนบันทึกเมื่อเลือกโอนเงิน</p>
@@ -8643,14 +8627,12 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
             />
             {saleEditForm.paymentSlipDataUrl ? (
               <div className="flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={saleEditForm.paymentSlipDataUrl}
+                <AppLabeledImageThumb kind="slip" src={saleEditForm.paymentSlipDataUrl}
                   alt="สลิปขายโปร"
                   onOpen={() =>
                     saleEditForm.paymentSlipDataUrl && saleSlipLightbox.open(saleEditForm.paymentSlipDataUrl)
                   }
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-3 py-2 text-xs font-bold text-rose-600")}
@@ -9004,12 +8986,9 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
             />
             {costForm.paymentSlipUrl ? (
               <div className="flex items-center gap-3">
-                <AppImageThumb
-                  src={costForm.paymentSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={costForm.paymentSlipUrl}
                   alt="สลิปรายจ่าย"
-                  onOpen={() => saleSlipLightbox.open(costForm.paymentSlipUrl)}
-                  className="h-14 w-14"
-                  objectFit="contain" />
+                  onOpen={() => saleSlipLightbox.open(costForm.paymentSlipUrl)} className="h-14 w-14" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "min-h-[40px] px-3 text-xs font-black text-rose-600")}
@@ -9211,12 +9190,9 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
             />
             {incomeForm.paymentSlipUrl ? (
               <div className="flex items-center gap-3">
-                <AppImageThumb
-                  src={incomeForm.paymentSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={incomeForm.paymentSlipUrl}
                   alt="สลิปรายรับ"
-                  onOpen={() => saleSlipLightbox.open(incomeForm.paymentSlipUrl)}
-                  className="h-14 w-14"
-                  objectFit="contain" />
+                  onOpen={() => saleSlipLightbox.open(incomeForm.paymentSlipUrl)} className="h-14 w-14" />
                 <button
                   type="button"
                   className={cn(appTemplateOutlineButtonClass, "min-h-[40px] px-3 text-xs font-black text-rose-600")}
@@ -9650,12 +9626,10 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                     <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
                       สลิป
                     </p>
-                    <AppImageThumb
-                      src={booking.paymentSlipDataUrl}
+                    <AppLabeledImageThumb kind="slip" src={booking.paymentSlipDataUrl}
                       alt="สลิปการจอง"
                       onOpen={() => saleSlipLightbox.open(booking.paymentSlipDataUrl!)}
-                      className="h-20 w-20"
-                      objectFit="contain" />
+                      className="h-20 w-20" />
                   </div>
                 ) : null}
 
@@ -9852,13 +9826,11 @@ openPrimaryLabel="เปิดหน้าพนักงาน"
                     />
                     {balancePaySlipDataUrl ? (
                       <div>
-                        <AppImageThumb
-                          src={balancePaySlipDataUrl}
+                        <AppLabeledImageThumb kind="slip" src={balancePaySlipDataUrl}
                           alt="สลิปค้างชำระ"
                           onOpen={() => saleSlipLightbox.open(balancePaySlipDataUrl)}
-                          className="h-24 w-24"
-                          objectFit="contain" />
-                        <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว</p>
+                          className="h-24 w-24" />
+                        <p className="mt-2 text-xs font-bold text-emerald-700">แนบแล้ว</p>
                       </div>
                     ) : (
                       <p className="text-xs font-bold text-amber-700">ยังไม่ได้แนบหรือถ่ายสลิป</p>

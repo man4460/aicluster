@@ -14,7 +14,8 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
@@ -428,12 +429,10 @@ export const EcommerceCostsPanel = forwardRef<
                 className={cn(ecommerceStoreFinanceListRowClass, "flex items-start gap-2")}
               >
                 {slip ? (
-                  <AppImageThumb
-                    src={slip}
-                    alt={`สลิป ${entry.label}`}
+                  <AppLabeledImageThumb kind="slip" src={slip}
+                    alt={entry.label}
                     onOpen={() => slipLb.open(slip)}
-                    className="h-14 w-14 shrink-0 rounded-lg"
-                    objectFit="contain" />
+                    className="h-14 w-14 shrink-0 rounded-lg" />
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
@@ -644,12 +643,10 @@ export const EcommerceCostsPanel = forwardRef<
             {cameraModal}
             {costSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={costSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={costSlipUrl}
                   alt="สลิปรายจ่าย"
                   onOpen={() => slipLb.open(costSlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}

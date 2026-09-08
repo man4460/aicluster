@@ -11,8 +11,8 @@ alwaysApply: true
 
 - Import จาก **`@/components/app-templates`** เท่านั้น:
   - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64 · `object-cover`) + `onOpen`
-  - **`AppSlipImageThumb`** — รูปย่อ**สลิป / ใบเสร็จ / หลักฐานโอน** (กรอบเดิม · `object-contain` เห็นรูปครบ ไม่ตัด) — ใช้เมื่อ**ไม่ต้องการป้ายข้อความ** (พรีวิวอัปโหลด · แถวการเงินสลิปเดี่ยว)
-  - **`AppLabeledImageThumb`** — รูปย่อ + **ป้ายมุมล่างบนรูป** (`slip` = «สลิป» · `product` = «สินค้า» · `photo` = «รูป») — **บังคับในรายการ/การ์ด** ที่ต้องรู้ชนิดรูปทันที (ออเดอร์ · คำตอบกิจกรรม · จ่ายค่าบำรุง)
+  - **`AppSlipImageThumb`** — สลิป**ไม่มีป้าย** (กรณีพิเศษเท่านั้น) — **รายการ/การ์ด/พรีวิวสลิปมาตรฐานใช้ `AppLabeledImageThumb`** ดู **`app-templates-slip-labeled-thumb.mdc`**
+  - **`AppLabeledImageThumb`** — รูปย่อ + **ป้ายมุมล่างบนรูป** (`slip` = «สลิป» · `product` = «สินค้า» · `photo` = «รูป») — **บังคับ** ทุกรายการ/การ์ด/ประวัติ/การเงิน/จอง และ**พรีวิวหลังอัปโหลดสลิป** (ต้นแบบ ecommerce)
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
   - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ (ไอคอนล้วน · ไม่มีลิงก์ watch)
@@ -40,8 +40,14 @@ const lb = useAppImageLightbox();
 {/* รูปทั่วไป / แกลเลอรี / โลโก้ */}
 <AppImageThumb src={url} alt="คำอธิบาย" onOpen={() => url && lb.open(url)} />
 
-{/* พรีวิวอัปโหลด / แถวการเงินที่มีแค่สลิป — ไม่มีป้าย */}
-<AppSlipImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => slipUrl && lb.open(slipUrl)} />
+{/* พรีวิวอัปโหลด / รายการ — มีป้าย «สลิป» */}
+<AppLabeledImageThumb
+  src={slipUrl}
+  kind="slip"
+  alt="สลิปชำระเงิน"
+  onOpen={() => slipUrl && lb.open(slipUrl)}
+  className="h-20 w-20"
+/>
 
 {/* รายการ/การ์ด — ป้าย «สลิป» ทับมุมล่างรูป · ชื่ออยู่ข้างรูป (gap-3) */}
 <div className="flex min-w-0 items-start gap-3">
@@ -70,15 +76,12 @@ const lb = useAppImageLightbox();
 4. **ขนาดอื่น** — ส่ง **`className`** ให้ `AppImageThumb` / `AppSlipImageThumb` / `AppLabeledImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"`
 5. **Lightbox ทับโมดัล** — `AppImageLightbox` ใช้ **`z-[240]`** เหนือ `FormModal` (`z-[200]`) และ `AppCameraCaptureModal` (`z-[220]`) — ถ้าแก้ z-index โมดัล ต้องเช็คลำดับซ้อนกับ lightbox
 
-## AppSlipImageThumb — สลิปไม่มีป้าย
+## AppSlipImageThumb — สลิปไม่มีป้าย (legacy / กรณีพิเศษ)
 
-เมื่อมี **พรีวิวหลังอัปโหลด · แถวการเงินที่มีสลิปอย่างเดียว · แผงชำระ**:
+**รายการ · การ์ด · พรีวิวหลังอัปโหลดสลิปมาตรฐาน → ใช้ `AppLabeledImageThumb` `kind="slip"`**  
+ดูกฎเต็ม: **`app-templates-slip-labeled-thumb.mdc`**
 
-1. ใช้ **`AppSlipImageThumb`** จาก `@/components/app-templates` (ห่อ `AppImageThumb` + `objectFit="contain"`)
-2. **ห้าม** ใช้ `AppImageThumb` แบบ `object-cover` สำหรับสลิป — จะตัดขอบใบเสร็จ
-3. กรอบขนาดเดิม (`h-14 w-14` / `h-16 w-16` / `h-20 w-20` ตามแถวการเงิน) — พื้นว่างเป็น `bg-slate-50`
-4. กดเปิด **`AppImageLightbox`** เหมือนรูปอื่น
-5. แผงชำระกลาง: `AppPaymentMethodPanel` ใช้ `AppSlipImageThumb` แล้ว
+`AppSlipImageThumb` คงไว้เฉพาะเมื่อ**ตั้งใจไม่มีป้าย** — ห้ามใช้ในแถวการเงิน/ออเดอร์/จองใหม่
 
 ## AppLabeledImageThumb — สลิป/สินค้าพร้อมป้าย (บังคับในรายการ)
 

@@ -6,7 +6,8 @@ import {
   AppCameraCaptureModal,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   AppPickGalleryImageButton,
   AppRevenueCostColumnChart,
   AppTakePhotoButton,
@@ -693,12 +694,9 @@ export function LmsFinanceClient() {
                   className="flex items-start gap-2 rounded-lg border border-slate-200/90 bg-white p-3 sm:p-4"
                 >
                   {row.slipUrl ? (
-                    <AppImageThumb
-                      src={row.slipUrl}
+                    <AppLabeledImageThumb kind="slip" src={row.slipUrl}
                       alt="สลิป"
-                      onOpen={() => lb.open(row.slipUrl!)}
-                      className="h-14 w-14 shrink-0"
-                      objectFit="contain" />
+                      onOpen={() => lb.open(row.slipUrl!)} className="h-14 w-14" />
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{row.category}</p>
@@ -810,7 +808,7 @@ export function LmsFinanceClient() {
             <p className="text-xs font-bold text-[#4d47b6]">สลิป (ไม่บังคับ)</p>
             {form.slipUrl ? (
               <div className="flex items-center gap-2">
-                <AppImageThumb src={form.slipUrl} alt="สลิป" onOpen={() => lb.open(form.slipUrl!)} objectFit="contain" />
+                <AppLabeledImageThumb kind="slip" src={form.slipUrl} alt="สลิป" onOpen={() => lb.open(form.slipUrl!)} />
                 <button
                   type="button"
                   className={lmsOutlineButtonClass}

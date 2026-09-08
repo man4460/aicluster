@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSlipPrintIconButton,
@@ -1406,12 +1407,9 @@ export function HotelResortFinanceClient() {
                           return (
                             <li key={row.key} className={cn(listItemClass, "flex items-start gap-2")}>
                               {slip ? (
-                                <AppImageThumb
-                                  src={slip}
-                                  alt={`สลิป ${item.label}`}
-                                  onOpen={() => slipLb.open(slip)}
-                                  className="h-14 w-14 shrink-0"
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb kind="slip" src={slip}
+                                  alt={item.label}
+                                  onOpen={() => slipLb.open(slip)} className="h-14 w-14" />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">
@@ -1463,20 +1461,14 @@ export function HotelResortFinanceClient() {
                               {depositSlip || slip ? (
                                 <div className="flex shrink-0 flex-col gap-1">
                                   {depositSlip ? (
-                                    <AppImageThumb
-                                      src={depositSlip}
-                                      alt={`สลิปมัดจำ ${s.guestName}`}
-                                      onOpen={() => slipLb.open(depositSlip)}
-                                      className="h-14 w-14 shrink-0"
-                                      objectFit="contain" />
+                                    <AppLabeledImageThumb kind="slip" src={depositSlip}
+                                      alt={s.guestName}
+                                      onOpen={() => slipLb.open(depositSlip)} className="h-14 w-14" />
                                   ) : null}
                                   {slip ? (
-                                    <AppImageThumb
-                                      src={slip}
-                                      alt={`สลิปชำระเพิ่ม ${s.guestName}`}
-                                      onOpen={() => slipLb.open(slip)}
-                                      className="h-14 w-14 shrink-0"
-                                      objectFit="contain" />
+                                    <AppLabeledImageThumb kind="slip" src={slip}
+                                      alt={s.guestName}
+                                      onOpen={() => slipLb.open(slip)} className="h-14 w-14" />
                                   ) : null}
                                 </div>
                               ) : null}
@@ -1634,12 +1626,9 @@ export function HotelResortFinanceClient() {
                         return (
                           <li key={c.id} className={cn(listItemClass, "flex items-start gap-2")}>
                             {slip ? (
-                              <AppImageThumb
-                                src={slip}
-                                alt={`สลิป ${c.label}`}
-                                onOpen={() => slipLb.open(slip)}
-                                className="h-14 w-14 shrink-0"
-                                objectFit="contain" />
+                              <AppLabeledImageThumb kind="slip" src={slip}
+                                alt={c.label}
+                                onOpen={() => slipLb.open(slip)} className="h-14 w-14" />
                             ) : null}
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-bold text-[#66638c]">{formatThaiDateTime(c.spentAt)}</p>
@@ -1776,12 +1765,10 @@ export function HotelResortFinanceClient() {
             {costCamera.cameraModal}
             {costSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={costSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={costSlipUrl}
                   alt="สลิปรายจ่าย"
                   onOpen={() => slipLb.open(costSlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}
@@ -1972,12 +1959,10 @@ export function HotelResortFinanceClient() {
             {incomeCamera.cameraModal}
             {incomeSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={incomeSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={incomeSlipUrl}
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(incomeSlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setIncomeSlipUrl("")}
@@ -2362,12 +2347,10 @@ export function HotelResortFinanceClient() {
             {stayCamera.cameraModal}
             {staySlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={staySlipUrl}
+                <AppLabeledImageThumb kind="slip" src={staySlipUrl}
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(staySlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setStaySlipUrl("")}

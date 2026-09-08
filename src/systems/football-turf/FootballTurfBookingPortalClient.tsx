@@ -9,6 +9,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   prepareImageFileAsDataUrl,
@@ -1450,11 +1451,11 @@ export function FootballTurfBookingPortalClient({
                         labels={{ gallery: "แนบสลิป", camera: "ถ่ายสลิป" }}
                       />
                       {paymentSlipDataUrl ? (
-                        <AppImageThumb
-                          src={paymentSlipDataUrl}
-                          alt="สลิป"
-                          onOpen={() => lb.open(paymentSlipDataUrl)}
-                          objectFit="contain" />
+                        <AppLabeledImageThumb
+                      src={paymentSlipDataUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(paymentSlipDataUrl)} />
                       ) : (
                         <p className="text-[11px] font-bold text-rose-600">
                           ยังไม่มีสลิป — แนบหรือถ่ายก่อนยืนยันจอง

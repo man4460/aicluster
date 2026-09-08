@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, ShoppingBag } from "lucide-react";
 import {
   AppImageLightbox,
+  AppLabeledImageThumb,
   appSafeAreaPageContentTopPadClass,
   useAppImageLightbox,
   useAppNoticePopup,
@@ -321,17 +322,19 @@ export function LmsLearnerDashboardClient({ slug }: Props) {
                 {purchases
                   .filter((p) => p.status === "REJECTED")
                   .map((p) => (
-                    <li key={p.id}>
-                      {p.course?.title || "คอร์ส"} — {p.reviewerNote || "สลิปไม่ถูกต้อง"}
+                    <li key={p.id} className="flex min-w-0 items-start gap-2">
                       {p.slipUrl ? (
-                        <button
-                          type="button"
-                          className="ml-2 font-bold text-indigo-700 underline"
-                          onClick={() => lb.open(p.slipUrl!)}
-                        >
-                          ดูสลิป
-                        </button>
+                        <AppLabeledImageThumb
+                          src={p.slipUrl}
+                          kind="slip"
+                          alt={p.course?.title || "สลิป"}
+                          onOpen={() => lb.open(p.slipUrl!)}
+                          className="h-12 w-12"
+                        />
                       ) : null}
+                      <span className="min-w-0 flex-1">
+                        {p.course?.title || "คอร์ส"} — {p.reviewerNote || "สลิปไม่ถูกต้อง"}
+                      </span>
                     </li>
                   ))}
               </ul>

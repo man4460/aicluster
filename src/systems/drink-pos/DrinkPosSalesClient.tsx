@@ -7,7 +7,8 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
@@ -852,12 +853,9 @@ export function DrinkPosSalesClient() {
                           >
                             <div className="flex items-start gap-3">
                               {slipUrl ? (
-                                <AppImageThumb
-                                  src={slipUrl}
-                                  alt="สลิปชำระเงิน"
-                                  className="h-14 w-14 shrink-0"
-                                  onOpen={() => slipLb.open(slipUrl)}
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb kind="slip" src={slipUrl}
+                                  alt="สลิปชำระเงิน" className="h-14 w-14"
+                                  onOpen={() => slipLb.open(slipUrl)} />
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#66638c]">
@@ -1184,12 +1182,10 @@ export function DrinkPosSalesClient() {
             {editSlipCameraModal}
             {editSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={editSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={editSlipUrl}
                   alt="สลิปบิล"
                   onOpen={() => slipLb.open(editSlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setEditSlipUrl("")}

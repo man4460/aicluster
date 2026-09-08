@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -77,11 +78,11 @@ function OrderAside({
         {order.paymentSlipUrl ? (
           <div className="border-t border-slate-200/80 pt-3">
             <p className="mb-1.5 text-xs font-bold text-[#4d47b6]">สลิปที่แนบ</p>
-            <AppImageThumb
-              src={order.paymentSlipUrl}
-              alt="สลิปชำระเงิน"
-              onOpen={() => onOpenSlip(order.paymentSlipUrl!)}
-              objectFit="contain" />
+            <AppLabeledImageThumb
+                      src={order.paymentSlipUrl}
+                      kind="slip"
+                      alt="สลิปชำระเงิน"
+                      onOpen={() => onOpenSlip(order.paymentSlipUrl!)} />
           </div>
         ) : null}
       </div>

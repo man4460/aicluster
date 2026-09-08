@@ -1,0 +1,70 @@
+---
+description: เทมเพลตกลาง QR ร้าน MAWELL — โปสเตอร์ · ปุ่มแถวเดียว · บังคับใช้ Module* / ShopStaffQrPanel
+alwaysApply: false
+globs:
+  - "**/components/qr/**"
+  - "**/systems/**/*Qr*"
+  - "**/systems/**/*qr*"
+  - "**/systems/**/LaundryQr*"
+  - "**/systems/**/CarWashQr*"
+  - "**/systems/**/EcommerceQr*"
+  - "**/systems/**/BuildingPosStaff*"
+  - "**/systems/**/ParkingSpot*Qr*"
+---
+
+# เทมเพลตกลาง — QR ลูกค้า / พนักงาน (ร้าน)
+
+เมื่อทำหรือแก้ **ลิงก์/QR พอร์ทัลลูกค้า หรือพนักงาน** ที่คัดลอก · ดาวน์โหลดโปสเตอร์ · เปิดเว็บ — **ต้องใช้ชุดกลางเท่านั้น**
+
+## สแต็กบังคับ (3 ชั้น)
+
+| ชั้น | ไฟล์ | ใช้เมื่อ |
+|-----|---|----|
+| **UI แผง** | `ShopStaffQrPanel` | มี `pageUrl` พร้อมแล้ว · ต้องการปุ่ม+โปสเตอร์ |
+| **ห่อลูกค้า** | `ModulePublicLinkQrPanel` | ลิงก์สาธารณะคงที่ (พอร์ทัลจอง / ชมรม / LMS ฯลฯ) |
+| **ห่อพนักงานโทเค็น** | `ModuleStaffTokenQrPanel` | สร้าง/หมุนโทเค็นผ่าน `staffLinkApiPath` |
+| **แคนวาสโปสเตอร์** | `createShopQrPosterCanvas` / `DataUrl` | สร้างภาพในห่อด้านบนเท่านั้น |
+
+กฎย่อย:
+
+- แผงปุ่ม / โมดัล → **`shop-staff-qr-panel.mdc`**
+- โครงภาพโปสเตอร์ → **`shop-qr-poster-template.mdc`**
+- Hub การ์ดคู่ → **`shop-qr-hub-popup-pattern.mdc`**
+
+## UX แผง (บังคับ)
+
+1. **ห้าม** แสดง QR ดิบ (`qrPng`) เป็นรูปหลัก — แสดง **โปสเตอร์** เท่านั้น
+2. **ปุ่มแถวเดียว** `flex-nowrap`: **คัดลอก · ดาวน์โหลด · เปิดเว็บ · แสดง/ซ่อน**
+3. ดาวน์โหลด = PDF A4 จากแคนวาสโปสเตอร์ชุดกลาง (ไม่แยกปุ่ม PNG/A5 บนแผง)
+4. เมื่อ hub ห่อ `ModuleQrMonthlyGate` แล้ว — ส่ง **`planGateAllowed`** เข้า `ModulePublicLinkQrPanel` / `ModuleStaffTokenQrPanel` เพื่อไม่เกตซ้ำ
+
+## โมดัล
+
+- QR **พนักงาน**: `FormModal` **`size="full"`**
+- QR **ลูกค้า**: `size="lg"` ได้
+
+## ห้าม
+
+- คัดลอก toolbar คัดลอก/PDF/PNG/แสดงลิงก์ ใหม่ใน `*QrPosterClient`
+- ออกแบบโปสเตอร์โมดูลละแบบนอก `shop-qr-template.tsx`
+- ใช้ `ShopQrPosterPreview` HTML เก่าแทนแผงกลางในแดชบอร์ด (ยกเว้นพรีวิวพิเศษที่ไม่มีปุ่มดาวน์โหลด)
+
+## Migration checklist
+
+เมื่อเจอ `*QrPosterClient` / แผง PDF+PNG แบบเก่า:
+
+1. คำนวณ `pageUrl` + `shopLabel` + `logoUrl` + `tagline` เหมือนเดิม
+2. แทนที่ JSX ด้วย `ModulePublicLinkQrPanel` หรือ `ModuleStaffTokenQrPanel` หรือ `ShopStaffQrPanel`
+3. คง export ชื่อเดิมเป็น thin wrapper ได้ (เพื่อไม่พัง import hub)
+4. ส่ง `planGateAllowed` ถ้าพ่อมีเกตแล้ว
+5. ลบ state: `linkVisible`, `downloadPosterPng` แยกบน UI, ปุ่มแสดงลิงก์
+
+## ยกเว้น (ไม่ใช้แผงนี้)
+
+PromptPay / สลิปชำระ · QR โต๊ะ/ออเดอร์ POS · attendance · admin try-links · `StaffQrLandingShell` (หน้าหลังสแกน)
+
+## โมดูลที่ควรเป็นกลางแล้ว
+
+ลูกค้า: car-wash · laundry · barber · massage · hotel · drink-pos · appointment-queue · dorm · village · loyalty-stamp · ecommerce · club-event · football · parking (booking) · lms · pro-resume  
+พนักงานโทเค็น: hotel · building-pos · drink-pos · ecommerce · car-wash · dorm · football · parking  
+พนักงาน URL คงที่: laundry / barber / massage → `ShopStaffQrPanel`

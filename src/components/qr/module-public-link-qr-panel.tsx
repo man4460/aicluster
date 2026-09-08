@@ -6,7 +6,6 @@ import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
   downloadPosterPdf,
-  downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
@@ -22,8 +21,15 @@ type Props = {
   logoUrl?: string | null;
   trialExportBlocked?: boolean;
   tagline?: string;
+  /** บรรทัดรองบนโปสเตอร์ (เช่น ช่องจอด · โซน) */
+  subtitle?: string | null;
+  footerText?: string | null;
   mobileBannerText?: string;
+  /** ป้ายปุ่มเปิด — ค่าเริ่ม «เปิดเว็บ» */
+  openLabel?: string;
+  /** @deprecated ใช้ openLabel */
   openPrimaryLabel?: string;
+  /** @deprecated ไม่ใช้แล้ว */
   openSecondaryLabel?: string;
   posterTintClass?: string;
   qrAlt?: string;
@@ -55,20 +61,24 @@ function ModulePublicLinkQrPanelInner({
   logoUrl = null,
   trialExportBlocked = false,
   tagline = "สแกนเพื่อเปิดหน้าจองออนไลน์",
+  subtitle = null,
+  footerText = null,
   mobileBannerText = "",
-  openPrimaryLabel = "เปิดหน้าจอง",
-  openSecondaryLabel = "เปิดหน้า",
+  openLabel,
+  openPrimaryLabel,
+  openSecondaryLabel: _openSecondaryLabel,
   posterTintClass = "shadow-indigo-950/10",
   qrAlt = "QR ลิงก์ลูกค้า",
   posterAlt = "โปสเตอร์ QR ลิงก์ลูกค้า",
   downloadFilePrefix = "customer-qr",
 }: InnerProps) {
+  void _openSecondaryLabel;
+  const resolvedOpenLabel = openLabel?.trim() || openPrimaryLabel?.trim() || "เปิดเว็บ";
   const url = pageUrl.trim();
   const [qrPng, setQrPng] = useState<string | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const [linkVisible, setLinkVisible] = useState(false);
   const [qrSize, setQrSize] = useState(240);
 
   const headline = shopLabel.trim() || "ร้าน";
@@ -120,6 +130,8 @@ function ModulePublicLinkQrPanelInner({
       shopLabel: headline,
       logoUrl: resolvedLogo,
       tagline,
+      subtitle,
+      footerText,
     })
       .then((data) => {
         if (!cancelled) setPosterPreview(data);
@@ -130,7 +142,7 @@ function ModulePublicLinkQrPanelInner({
     return () => {
       cancelled = true;
     };
-  }, [qrPng, headline, resolvedLogo, tagline]);
+  }, [qrPng, headline, resolvedLogo, tagline, subtitle, footerText]);
 
   async function copyLink() {
     if (!url) return;
@@ -153,24 +165,10 @@ function ModulePublicLinkQrPanelInner({
         shopLabel: headline,
         logoUrl: resolvedLogo,
         tagline,
+        subtitle,
+        footerText,
       });
       await downloadPosterPdf(canvas, `${downloadFilePrefix}-a4.pdf`, "a4");
-    } finally {
-      setDlBusy(false);
-    }
-  }
-
-  async function downloadPng() {
-    if (!qrPng || trialExportBlocked) return;
-    setDlBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: qrPng,
-        shopLabel: headline,
-        logoUrl: resolvedLogo,
-        tagline,
-      });
-      await downloadPosterPng(canvas, `${downloadFilePrefix}.png`);
     } finally {
       setDlBusy(false);
     }
@@ -197,18 +195,14 @@ function ModulePublicLinkQrPanelInner({
         qrPng={qrPng}
         posterPreview={posterPreview}
         copyMsg={copyMsg}
-        linkVisible={linkVisible}
-        setLinkVisible={setLinkVisible}
         onCopyLink={() => void copyLink()}
         downloadBusy={dlBusy}
         trialExportBlocked={trialExportBlocked}
-        onDownloadPdfA4={() => void downloadPdf()}
-        onDownloadPng={() => void downloadPng()}
+        onDownload={() => void downloadPdf()}
         posterTintClass={posterTintClass}
         mobileBannerText={mobileBannerText}
         qrAlt={qrAlt}
-        openPrimaryLabel={openPrimaryLabel}
-        openSecondaryLabel={openSecondaryLabel}
+        openLabel={resolvedOpenLabel}
         posterAlt={posterAlt}
       />
     </div>

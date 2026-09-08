@@ -322,10 +322,6 @@ export function ClubEventSettingsClient({
 
         {tab === "portal" ? (
           <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
-            <div className="space-y-1.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-              <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บชมรมสาธารณะ</p>
-              <p className="break-all text-xs font-semibold text-[#1e1b4b] sm:text-sm">{portalPath}</p>
-            </div>
             <ModulePublicLinkQrPanel
               moduleSlug={CLUB_EVENT_MODULE_SLUG}
               pageUrl={portalAbsoluteUrl}
@@ -333,8 +329,7 @@ export function ClubEventSettingsClient({
               logoUrl={form.logoUrl}
               trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
               tagline="สแกนเพื่อเข้าเว็บชมรม / ดูกิจกรรม"
-              openPrimaryLabel="เปิดเว็บชมรม"
-              openSecondaryLabel="เปิดเว็บ"
+              openLabel="เปิดเว็บ"
               qrAlt="QR เว็บชมรมสาธารณะ"
               posterAlt="โปสเตอร์ QR เว็บชมรม"
               downloadFilePrefix={`club-portal-${form.slug || "portal"}`}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
@@ -194,12 +195,11 @@ export function FootballTurfPortalBookingClient({
                 <p className="mb-1 text-xs font-bold text-[#8b87b8]">
                   {slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
                 </p>
-                <AppImageThumb
-                  src={slipUrl}
-                  alt={slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
-                  onOpen={() => lb.open(slipUrl)}
-                  className="h-24 w-24"
-                  objectFit="contain" />
+                <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt={slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
+                      onOpen={() => lb.open(slipUrl)} className="h-24 w-24" />
               </section>
             ) : null}
 

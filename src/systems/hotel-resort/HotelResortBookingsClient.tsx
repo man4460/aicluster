@@ -6,6 +6,7 @@ import {
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppSectionHeader,
   appTemplateOutlineButtonClass,
   useAppImageLightbox,
@@ -578,20 +579,18 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                           {b.depositSlipUrl?.trim() || b.paymentSlipUrl?.trim() ? (
                             <div className="flex flex-wrap gap-2 pt-1">
                               {b.depositSlipUrl?.trim() ? (
-                                <AppImageThumb
-                                  src={b.depositSlipUrl}
-                                  alt={`สลิปมัดจำ ${b.guestName}`}
-                                  onOpen={() => slipLb.open(b.depositSlipUrl!.trim())}
-                                  className="h-14 w-14"
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb
+                      src={b.depositSlipUrl}
+                      kind="slip"
+                      alt={`สลิปมัดจำ ${b.guestName}`}
+                      onOpen={() => slipLb.open(b.depositSlipUrl!.trim())} className="h-14 w-14" />
                               ) : null}
                               {b.paymentSlipUrl?.trim() ? (
-                                <AppImageThumb
-                                  src={b.paymentSlipUrl}
-                                  alt={`สลิปชำระเพิ่ม ${b.guestName}`}
-                                  onOpen={() => slipLb.open(b.paymentSlipUrl!.trim())}
-                                  className="h-14 w-14"
-                                  objectFit="contain" />
+                                <AppLabeledImageThumb
+                      src={b.paymentSlipUrl}
+                      kind="slip"
+                      alt={`สลิปชำระเพิ่ม ${b.guestName}`}
+                      onOpen={() => slipLb.open(b.paymentSlipUrl!.trim())} className="h-14 w-14" />
                               ) : null}
                             </div>
                           ) : null}
@@ -705,12 +704,11 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                               สลิปมัดจำ
                             </p>
-                            <AppImageThumb
-                              src={manage.booking.depositSlipUrl}
-                              alt={`สลิปมัดจำ ${manage.booking.guestName}`}
-                              onOpen={() => slipLb.open(manage.booking!.depositSlipUrl!.trim())}
-                              className="h-20 w-20"
-                              objectFit="contain" />
+                            <AppLabeledImageThumb
+                      src={manage.booking.depositSlipUrl}
+                      kind="slip"
+                      alt={`สลิปมัดจำ ${manage.booking.guestName}`}
+                      onOpen={() => slipLb.open(manage.booking!.depositSlipUrl!.trim())} className="h-20 w-20" />
                           </div>
                         ) : null}
                         {manage.booking.paymentSlipUrl?.trim() ? (
@@ -718,12 +716,11 @@ export function HotelResortBookingsClient({ refreshNonce = 0 }: { refreshNonce?:
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                               สลิปชำระเพิ่ม
                             </p>
-                            <AppImageThumb
-                              src={manage.booking.paymentSlipUrl}
-                              alt={`สลิปชำระเพิ่ม ${manage.booking.guestName}`}
-                              onOpen={() => slipLb.open(manage.booking!.paymentSlipUrl!.trim())}
-                              className="h-20 w-20"
-                              objectFit="contain" />
+                            <AppLabeledImageThumb
+                      src={manage.booking.paymentSlipUrl}
+                      kind="slip"
+                      alt={`สลิปชำระเพิ่ม ${manage.booking.guestName}`}
+                      onOpen={() => slipLb.open(manage.booking!.paymentSlipUrl!.trim())} className="h-20 w-20" />
                           </div>
                         ) : null}
                       </div>

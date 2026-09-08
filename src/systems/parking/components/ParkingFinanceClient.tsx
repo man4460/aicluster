@@ -7,7 +7,7 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
-  AppImageThumb,
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
@@ -642,7 +642,7 @@ export function ParkingFinanceClient() {
                   {filteredIncomes.map((row) => (
                     <li key={`income-${row.id}`} className={parkingListRowCardClass}>
                       <div className="flex items-start gap-2">
-                        {row.paymentSlipUrl ? <AppImageThumb src={row.paymentSlipUrl} alt={`สลิป ${row.label}`} onOpen={() => lightbox.open(row.paymentSlipUrl!)} className="h-14 w-14 shrink-0" objectFit="contain" /> : null}
+                        {row.paymentSlipUrl ? <AppLabeledImageThumb src={row.paymentSlipUrl} kind="slip" alt={row.label} onOpen={() => lightbox.open(row.paymentSlipUrl!)} className="h-14 w-14" /> : null}
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-black text-[#1e1b4b]">{row.label}</p>
                           <p className="mt-1 text-xs font-semibold text-[#66638c]">{row.categoryName} · {formatBangkokDateTimeLong(row.earnedAt)}</p>
@@ -713,7 +713,7 @@ export function ParkingFinanceClient() {
                   {filteredCosts.map((row) => (
                     <li key={row.id} className={parkingListRowCardClass}>
                       <div className="flex items-start gap-2">
-                        {row.paymentSlipUrl ? <AppImageThumb src={row.paymentSlipUrl} alt={`สลิป ${row.label}`} onOpen={() => lightbox.open(row.paymentSlipUrl)} className="h-14 w-14 shrink-0" objectFit="contain" /> : null}
+                        {row.paymentSlipUrl ? <AppLabeledImageThumb src={row.paymentSlipUrl} kind="slip" alt={row.label} onOpen={() => lightbox.open(row.paymentSlipUrl)} className="h-14 w-14" /> : null}
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-black text-[#1e1b4b]">{row.label}</p>
                           <p className="mt-1 text-xs font-semibold text-[#66638c]">{row.categoryName} · {formatBangkokDateTimeLong(row.spentAt)}</p>
@@ -786,7 +786,7 @@ export function ParkingFinanceClient() {
             />
             {entrySlipUrl ? (
               <div className="mt-3 flex items-end gap-3">
-                <AppImageThumb src={entrySlipUrl} alt="ตัวอย่างสลิป" onOpen={() => lightbox.open(entrySlipUrl)} className="h-20 w-20" objectFit="contain" />
+                <AppLabeledImageThumb src={entrySlipUrl} kind="slip" alt="ตัวอย่างสลิป" onOpen={() => lightbox.open(entrySlipUrl)} className="h-20 w-20" />
                 <button type="button" onClick={() => setEntrySlipUrl("")} className={cn(appTemplateOutlineButtonClass, "min-h-[40px] px-3 text-xs font-bold text-rose-600")}>ลบสลิป</button>
               </div>
             ) : null}

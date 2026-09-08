@@ -12,6 +12,7 @@ import {
   appDashboardInnerScrollClass,
   useAppImageLightbox,
   useAppNoticePopup,
+  AppLabeledImageThumb,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
@@ -30,7 +31,6 @@ import {
   EcommerceOrderFulfillModal,
   type EcommerceFulfillOrder,
 } from "@/systems/ecommerce-store/components/EcommerceOrderFulfillModal";
-import { EcommerceLabeledImageThumb } from "@/systems/ecommerce-store/components/EcommerceLabeledImageThumb";
 import type { EcommerceOrderPrintShop } from "@/systems/ecommerce-store/lib/ecommerce-order-print";
 import {
   ecommerceSalesChannelLabel,
@@ -879,7 +879,7 @@ export function EcommerceFinanceClient() {
                           )}
                         >
                           {slip ? (
-                            <EcommerceLabeledImageThumb
+                            <AppLabeledImageThumb
                               src={slip}
                               kind="slip"
                               alt={o.referenceCode}

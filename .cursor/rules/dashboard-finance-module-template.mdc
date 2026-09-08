@@ -176,17 +176,17 @@ alwaysApply: false
 
 | มี URL สลิป | ไม่มี |
 |-------------|-------|
-| `AppSlipImageThumb` (`h-14 w-14` · contain) + `AppImageLightbox` | **ไม่แสดง**ช่องว่าง / empty / «ไม่มีสลิป» |
+| **`AppLabeledImageThumb` `kind="slip"`** + `AppImageLightbox` | **ไม่แสดง**ช่องว่าง / empty / «ไม่มีสลิป» |
 
 เลย์เอาต์แถวหลัก (มือถือ+เดสก์ท็อป):
 
 ```
-[สลิปย่อ?]  [เนื้อหา min-w-0 flex-1]  [ราคา shrink-0 text-right]  [ไอคอนแก้ไข/ลบ]
+[สลิปย่อ+ป้าย?]  [เนื้อหา min-w-0 flex-1]  [ราคา shrink-0 text-right]  [ไอคอนแก้ไข/ลบ]
 ```
 
 - ใช้ `flex items-start gap-2` — **หลีกเลี่ยง `flex-wrap`** ที่ดันราคาลงบรรทัดใหม่
 - ราคาขวาสุดของบล็อคเนื้อหา · สีตาม §2
-- Import media จาก `@/components/app-templates` เท่านั้น
+- Import จาก `@/components/app-templates` เท่านั้น — กฎเต็ม: **`app-templates-slip-labeled-thumb.mdc`**
 
 ---
 
@@ -205,7 +205,7 @@ alwaysApply: false
 
 ฟอร์มแก้ไขรายรับต้องมีบล็อกสลิปเหมือนรายจ่าย:
 
-1. ถ้ามี URL เดิม → แสดง `AppSlipImageThumb` + ปุ่ม **ลบสลิป** (เคลียร์ URL ในฟอร์ม)  
+1. ถ้ามี URL เดิม → แสดง **`AppLabeledImageThumb` `kind="slip"`** + ปุ่ม **ลบสลิป** (เคลียร์ URL ในฟอร์ม)  
 2. ปุ่ม gallery/camera จาก `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
 3. บันทึกส่ง `paymentSlipUrl` / `payment_slip_url` (ว่าง = ลบออกจากรายการ)  
 4. Import media จาก `@/components/app-templates` เท่านั้น

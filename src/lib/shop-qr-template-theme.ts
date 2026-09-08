@@ -3,4 +3,4 @@
  */
 /** โทนเดียวกับพื้นหลังโปสเตอร์แคนวาส (ไล่สีอ่อน + กลิ่น indigo/teal) */
 export const shopQrTemplatePageBgClass =
-  "bg-gradient-to-br from-[#e8ecf8] via-[#f6eef4] to-[#e9f5f2]";
+  "bg-gradient-to-b from-[#eef0ff] via-[#f7f4ff] to-[#ebe4f7]";

@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { AppGalleryCameraFileInputs } from "./AppGalleryCameraFileInputs";
 import { AppImageLightbox } from "./AppImageLightbox";
 import { AppImagePickCameraButtons } from "./AppImagePickCameraButtons";
-import { AppSlipImageThumb } from "./AppSlipImageThumb";
+import { AppLabeledImageThumb } from "./AppLabeledImageThumb";
 import {
   APP_PAYMENT_METHODS,
   appPaymentMethodLabel,
@@ -175,7 +175,13 @@ export function AppPaymentMethodPanel({
           {slipError ? <p className="text-xs font-semibold text-rose-600">{slipError}</p> : null}
           {slipUrl ? (
             <div className="flex items-center gap-3">
-              <AppSlipImageThumb src={slipUrl} alt="สลิปชำระเงิน" className="h-20 w-20" onOpen={() => lightbox.open(slipUrl)} />
+              <AppLabeledImageThumb
+                src={slipUrl}
+                kind="slip"
+                alt="สลิปชำระเงิน"
+                className="h-20 w-20"
+                onOpen={() => lightbox.open(slipUrl)}
+              />
               <button type="button" className="min-h-10 rounded-xl px-3 text-xs font-black text-rose-600" onClick={() => onSlipUrlChange(null)}>ลบสลิป</button>
             </div>
           ) : null}

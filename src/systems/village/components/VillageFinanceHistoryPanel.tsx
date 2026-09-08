@@ -7,7 +7,7 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
-  AppImageThumb,
+  AppLabeledImageThumb,
   AppSectionHeader,
   appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
@@ -483,12 +483,13 @@ export function VillageFinanceHistoryPanel({
                 return (
                   <li key={row.key} className={cn(villageListRowCardClass, "flex items-start gap-2")}>
                     {slip ? (
-                      <AppImageThumb
+                      <AppLabeledImageThumb
                         src={slip}
-                        alt={`สลิป ${item.label}`}
+                        kind="slip"
+                        alt={item.label}
                         onOpen={() => slipLb.open(slip)}
-                        className="h-14 w-14 shrink-0"
-                        objectFit="contain" />
+                        className="h-14 w-14"
+                      />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#66638c]">
@@ -646,12 +647,13 @@ export function VillageFinanceHistoryPanel({
             {incomeCamera.cameraModal}
             {incomeSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
+                <AppLabeledImageThumb
                   src={incomeSlipUrl}
+                  kind="slip"
                   alt="สลิปรายรับ"
                   onOpen={() => slipLb.open(incomeSlipUrl)}
                   className="h-20 w-20"
-                  objectFit="contain" />
+                />
                 <button
                   type="button"
                   onClick={() => setIncomeSlipUrl("")}

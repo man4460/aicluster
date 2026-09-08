@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -330,12 +331,10 @@ export function LmsPurchasesPanel({
             >
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 {p.slipUrl ? (
-                  <AppImageThumb
-                    src={p.slipUrl}
+                  <AppLabeledImageThumb kind="slip" src={p.slipUrl}
                     alt="สลิป"
                     className="h-20 w-20 shrink-0 sm:h-24 sm:w-24"
-                    onOpen={() => lb.open(p.slipUrl!)}
-                    objectFit="contain" />
+                    onOpen={() => lb.open(p.slipUrl!)} />
                 ) : (
                   <span
                     className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[11px] font-bold text-[#9b97b8] sm:h-24 sm:w-24"

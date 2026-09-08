@@ -6,6 +6,7 @@ import {
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppSectionHeader,
   appDashboardSectionVioletClass,
   appTemplateOutlineButtonClass,
@@ -176,12 +177,11 @@ export function DrinkPosReservationsPanel({ embedded = false }: { embedded?: boo
                 ) : null}
                 {r.paymentSlipUrl ? (
                   <div className="mt-2">
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={r.paymentSlipUrl}
+                      kind="slip"
                       alt="สลิป"
-                      className="h-12 w-12"
-                      onOpen={() => lb.open(r.paymentSlipUrl!)}
-                      objectFit="contain" />
+                      onOpen={() => lb.open(r.paymentSlipUrl!)} className="h-12 w-12" />
                   </div>
                 ) : null}
               </div>

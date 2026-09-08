@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode";
 import {
   AppDashboardSection,
   AppSectionHeader,
 } from "@/components/app-templates";
-import {
-  createShopQrPosterCanvas,
-  createShopQrPosterDataUrl,
-  downloadPosterPdf,
-  downloadPosterPng,
-  resolveAssetUrl,
-} from "@/components/qr/shop-qr-template";
+import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
+import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { FormModal } from "@/components/ui/FormModal";
@@ -43,27 +37,8 @@ export function CarWashQrHubClient({
   const [showCustomerQrModal, setShowCustomerQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
   const [portalUrl, setPortalUrl] = useState("");
-  const [portalQr, setPortalQr] = useState<string | null>(null);
-  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
-  const [qrBusy, setQrBusy] = useState(false);
-  const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const [qrLinkVisible, setQrLinkVisible] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const resolvedLogoUrl = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
-
-  const customerPortalPath = useMemo(() => {
-    if (!ownerId) return "";
-    const params = new URLSearchParams();
-    if (isTrialSandbox) params.set("t", trialSessionId);
-    const q = params.toString();
-    const path = `/car-wash/${ownerId}`;
-    return q ? `${path}?${q}` : path;
-  }, [ownerId, trialSessionId, isTrialSandbox]);
-
-  useEffect(() => {
-    if (showCustomerQrModal) setQrLinkVisible(false);
-  }, [showCustomerQrModal]);
 
   useEffect(() => {
     const root = baseUrl.startsWith("http://") || baseUrl.startsWith("https://") ? baseUrl : "";
@@ -78,87 +53,8 @@ export function CarWashQrHubClient({
     setPortalUrl(q ? `${base}?${q}` : base);
   }, [baseUrl, ownerId, trialSessionId, isTrialSandbox]);
 
-  useEffect(() => {
-    if (!portalUrl) return;
-    QRCode.toDataURL(portalUrl, {
-      width: 240,
-      margin: 2,
-      errorCorrectionLevel: "M",
-      color: { dark: "#0f172a", light: "#ffffff" },
-    })
-      .then(setPortalQr)
-      .catch(() => setPortalQr(null));
-  }, [portalUrl]);
-
-  useEffect(() => {
-    if (!portalQr) {
-      setPosterPreviewUrl(null);
-      return;
-    }
-    let cancelled = false;
-    void createShopQrPosterDataUrl({
-      qrDataUrl: portalQr,
-      shopLabel: shopLabel.trim() || "คาร์แคร์",
-      logoUrl: resolvedLogoUrl,
-      tagline: CAR_WASH_CUSTOMER_QR_TAGLINE,
-    })
-      .then((url) => {
-        if (!cancelled) setPosterPreviewUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setPosterPreviewUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [portalQr, resolvedLogoUrl, shopLabel]);
-
-  async function copyPortalLink() {
-    if (!portalUrl) return;
-    try {
-      await navigator.clipboard.writeText(portalUrl);
-      setCopyMsg("คัดลอกลิงก์แล้ว");
-      setTimeout(() => setCopyMsg(null), 1800);
-    } catch {
-      setError("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  }
-
-  async function downloadQrPng() {
-    if (!portalUrl || !portalQr) return;
-    setQrBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: portalQr,
-        shopLabel: shopLabel.trim() || "คาร์แคร์",
-        logoUrl: resolvedLogoUrl,
-        tagline: CAR_WASH_CUSTOMER_QR_TAGLINE,
-      });
-      await downloadPosterPng(canvas, "car-wash-qr-poster.png");
-    } finally {
-      setQrBusy(false);
-    }
-  }
-
-  async function downloadQrPdf() {
-    if (!portalUrl || !portalQr) return;
-    setQrBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: portalQr,
-        shopLabel: shopLabel.trim() || "คาร์แคร์",
-        logoUrl: resolvedLogoUrl,
-        tagline: CAR_WASH_CUSTOMER_QR_TAGLINE,
-      });
-      await downloadPosterPdf(canvas, "car-wash-qr-poster-a4.pdf", "a4");
-    } finally {
-      setQrBusy(false);
-    }
-  }
-
   const hubBody = (
     <>
-      {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
       <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6", !embedded && "mt-4")}>
         <button
           type="button"
@@ -268,85 +164,18 @@ export function CarWashQrHubClient({
           </div>
         }
       >
-        <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <a
-              href={customerPortalPath || undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-disabled={!customerPortalPath}
-              className={cn(
-              "cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold",
-                !customerPortalPath && "pointer-events-none opacity-60",
-              )}
-              aria-label="เปิดลิงก์พอร์ทัลลูกค้าบนโฮสต์นี้"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <path d="M15 3h6v6" />
-                <path d="M10 14 21 3" />
-              </svg>
-              <span className="cw-btn-label">เปิดลิงก์ลูกค้า</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => void copyPortalLink()}
-              disabled={!portalUrl}
-              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-60"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="9" y="9" width="13" height="13" rx="2" /><rect x="2" y="2" width="13" height="13" rx="2" /></svg>
-              <span className="cw-btn-label">คัดลอกลิงก์</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setQrLinkVisible((v) => !v)}
-              className="cw-btn cw-btn-stack rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                {qrLinkVisible ? <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.84-2 2.2-3.75 3.94-5.06M9.9 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a10.96 10.96 0 0 1-4.07 5.09M1 1l22 22" /> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></>}
-              </svg>
-              <span className="cw-btn-label">{qrLinkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
-            </button>
-            <button
-              type="button"
-              disabled={qrBusy || !portalUrl}
-              onClick={() => void downloadQrPdf()}
-              className="cw-btn cw-btn-stack app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
-              <span className="cw-btn-label">ดาวน์โหลด PDF (A4)</span>
-            </button>
-            <button
-              type="button"
-              disabled={qrBusy || !portalUrl}
-              onClick={() => void downloadQrPng()}
-              className="cw-btn cw-btn-stack app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
-              <span className="cw-btn-label">ดาวน์โหลด PNG</span>
-            </button>
-          </div>
-          {copyMsg ? (
-            <p className="rounded-xl border border-emerald-200/60 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-900 backdrop-blur-sm">
-              {copyMsg}
-            </p>
-          ) : null}
-          {qrLinkVisible ? (
-            <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
-              {portalUrl || "-"}
-            </p>
-          ) : null}
-          <div className="overflow-x-auto rounded-2xl border border-white/50 bg-white/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] backdrop-blur-md">
-            {posterPreviewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR คาร์แคร์" className="mx-auto w-[340px] rounded-3xl shadow-lg shadow-indigo-950/10" />
-            ) : (
-              <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-white/45 bg-white/40 text-xs font-medium text-slate-600 backdrop-blur-sm">
-                กำลังเรนเดอร์ตัวอย่าง...
-              </div>
-            )}
-          </div>
-        </div>
+        <ModulePublicLinkQrPanel
+          moduleSlug={CAR_WASH_MODULE_SLUG}
+          planGateAllowed
+          pageUrl={portalUrl}
+          shopLabel={shopLabel}
+          logoUrl={logoUrl}
+          tagline={CAR_WASH_CUSTOMER_QR_TAGLINE}
+          openLabel="เปิดเว็บ"
+          posterTintClass="shadow-lg shadow-indigo-950/10"
+          posterAlt="ตัวอย่างโปสเตอร์ QR คาร์แคร์"
+          downloadFilePrefix="car-wash-qr-poster"
+        />
       </FormModal>
 
       <FormModal

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
@@ -154,11 +155,11 @@ export function BuildingPosPortalReservationClient({
               {reservation.paymentSlipUrl ? (
                 <div className="mt-4">
                   <p className="mb-2 text-xs font-bold text-[#4d47b6]">สลิปชำระ</p>
-                  <AppImageThumb
-                    src={reservation.paymentSlipUrl}
-                    alt="สลิป"
-                    onOpen={() => lb.open(reservation.paymentSlipUrl!)}
-                    objectFit="contain" />
+                  <AppLabeledImageThumb
+                      src={reservation.paymentSlipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(reservation.paymentSlipUrl!)} />
                 </div>
               ) : null}
             </div>

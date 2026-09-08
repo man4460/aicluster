@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppSectionHeader,
   appTemplateOutlineButtonClass,
   useAppCameraCapture,
@@ -569,12 +570,11 @@ export function HotelResortCheckInClient({
                 <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                   สลิปมัดจำ (จากลิงก์จอง)
                 </p>
-                <AppImageThumb
-                  src={existingBooking.depositSlipUrl.trim()}
-                  alt="สลิปมัดจำ"
-                  onOpen={() => slipLb.open(existingBooking.depositSlipUrl!.trim())}
-                  className="h-16 w-16"
-                  objectFit="contain" />
+                <AppLabeledImageThumb
+                      src={existingBooking.depositSlipUrl.trim()}
+                      kind="slip"
+                      alt="สลิปมัดจำ"
+                      onOpen={() => slipLb.open(existingBooking.depositSlipUrl!.trim())} className="h-16 w-16" />
               </div>
             ) : null}
           </div>

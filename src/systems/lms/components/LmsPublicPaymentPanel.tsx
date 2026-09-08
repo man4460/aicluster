@@ -7,6 +7,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
@@ -231,7 +232,11 @@ export function LmsPublicPaymentPanel({
           {slipErr ? <p className="text-xs font-semibold text-rose-600">{slipErr}</p> : null}
           {slipUrl ? (
             <div className="flex items-center gap-3">
-              <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
+              <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(slipUrl)} />
               <button
                 type="button"
                 className="text-xs font-bold text-rose-600"

@@ -15,6 +15,7 @@ import {
   AppImageLightbox,
 
   AppImageThumb,
+  AppLabeledImageThumb,
 
   AppSectionHeader,
 
@@ -474,14 +475,11 @@ export function AppointmentQueueBoardClient({
 
                       {b.depositSlipUrl ? (
 
-                        <AppImageThumb
-
-                          src={b.depositSlipUrl}
-
-                          alt="สลิปมัดจำ"
-
-                          onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)}
-                          objectFit="contain" />
+                        <AppLabeledImageThumb
+                      src={b.depositSlipUrl}
+                      kind="slip"
+                      alt="สลิปมัดจำ"
+                      onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)} />
 
                       ) : null}
 
@@ -547,14 +545,11 @@ export function AppointmentQueueBoardClient({
 
                       {b.depositSlipUrl ? (
 
-                        <AppImageThumb
-
-                          src={b.depositSlipUrl}
-
-                          alt="สลิปมัดจำ"
-
-                          onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)}
-                          objectFit="contain" />
+                        <AppLabeledImageThumb
+                      src={b.depositSlipUrl}
+                      kind="slip"
+                      alt="สลิปมัดจำ"
+                      onOpen={() => b.depositSlipUrl && lb.open(b.depositSlipUrl)} />
 
                       ) : null}
 

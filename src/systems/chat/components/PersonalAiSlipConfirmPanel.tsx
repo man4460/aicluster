@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { GlmOcrSlipResult } from "@/lib/vision/glm-ocr-service";
 import { cn } from "@/lib/cn";
-import { AppImageThumb } from "@/components/app-templates";
+import { AppLabeledImageThumb } from "@/components/app-templates";
 
 export type SlipConfirmFormState = {
   entryDateYmd: string;
@@ -79,7 +79,11 @@ export function PersonalAiSlipConfirmPanel({ imageDataUrl, glmResult, form, onCh
             ลอง Kimi ก่อน แล้วใช้ GLM-OCR รองเมื่อตัวแรกไม่พอ — ตรวจก่อนกดยืนยัน; ส่งรูปไป Telegram ได้เพิ่มถ้าต้องการ
           </p>
         </div>
-        <AppImageThumb src={imageDataUrl} alt="สลิป" className="h-16 w-16 rounded-lg" onOpen={onOpenImage} objectFit="contain" />
+        <AppLabeledImageThumb
+                      src={imageDataUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={onOpenImage} className="h-16 w-16 rounded-lg" />
       </div>
 
       <p className="mb-2 rounded-lg border border-indigo-200/80 bg-indigo-50/90 px-2.5 py-2 text-xs font-medium leading-snug text-[#1e1b4b]">

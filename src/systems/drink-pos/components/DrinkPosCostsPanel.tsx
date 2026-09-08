@@ -6,7 +6,8 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   appTemplateOutlineButtonClass,
   prepareImageFileForUpload,
   useAppCameraCapture,
@@ -400,12 +401,9 @@ export function DrinkPosCostsPanel({
                 className="flex items-start gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40"
               >
                 {slip ? (
-                  <AppImageThumb
-                    src={slip}
-                    alt={`สลิป ${entry.label}`}
-                    onOpen={() => slipLb.open(slip)}
-                    className="h-14 w-14 shrink-0"
-                    objectFit="contain" />
+                  <AppLabeledImageThumb kind="slip" src={slip}
+                    alt={entry.label}
+                    onOpen={() => slipLb.open(slip)} className="h-14 w-14" />
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
@@ -616,12 +614,10 @@ export function DrinkPosCostsPanel({
             {cameraModal}
             {costSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={costSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={costSlipUrl}
                   alt="สลิปรายจ่าย"
                   onOpen={() => slipLb.open(costSlipUrl)}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}

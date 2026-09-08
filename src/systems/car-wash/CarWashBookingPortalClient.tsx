@@ -7,6 +7,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   prepareImageFileForUpload,
@@ -956,7 +957,12 @@ export function CarWashBookingPortalClient({
                     onPickCamera={() => bookSlipGalleryRef.current?.click()}
                   />
                   {bookSlipUrl ? (
-                    <AppImageThumb src={bookSlipUrl} alt="สลิปจอง" onOpen={() => lb.open(bookSlipUrl)} objectFit="contain" />
+                    <AppLabeledImageThumb
+                      src={bookSlipUrl}
+                      kind="slip"
+                      alt="สลิปจอง"
+                      onOpen={() => lb.open(bookSlipUrl)}
+                    />
                   ) : (
                     <p className="text-xs font-semibold text-amber-800">แนบสลิปก่อนยืนยันจอง</p>
                   )}
@@ -1327,7 +1333,12 @@ export function CarWashBookingPortalClient({
               />
               {cameraModal}
               {slipUrl ? (
-                <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
+                <AppLabeledImageThumb
+                  src={slipUrl}
+                  kind="slip"
+                  alt="สลิป"
+                  onOpen={() => lb.open(slipUrl)}
+                />
               ) : null}
 
               {buyErr ? <p className="text-sm font-semibold text-rose-600">{buyErr}</p> : null}

@@ -9,6 +9,7 @@ import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
@@ -224,6 +225,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange,
   photoBusy,
   previewUrl,
+  onOpenPreview,
   galleryInputRef,
   onFileInputChange,
   onOpenModalCamera,
@@ -237,6 +239,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange: (url: string) => void;
   photoBusy: boolean;
   previewUrl: string | null;
+  onOpenPreview: (url: string) => void;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   onFileInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onOpenModalCamera: () => void;
@@ -314,11 +317,12 @@ function CostSlipAttachmentZone({
 
       {slipUrl.trim() && previewUrl ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <AppLabeledImageThumb
             src={previewUrl}
+            kind="slip"
             alt="สลิปแนบ"
-            className="h-20 w-auto max-w-[min(100%,12rem)] rounded-lg object-cover object-center ring-1 ring-slate-200"
+            onOpen={() => onOpenPreview(previewUrl)}
+            className="h-20 w-20"
           />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
@@ -1679,12 +1683,10 @@ export function CarWashSalesPanel({
                       <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                         {slipResolved ?
                           <div className="relative shrink-0 transition-transform duration-300 group-hover/item:scale-105">
-                            <AppImageThumb
-                              className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-amber-100"
+                            <AppLabeledImageThumb kind="slip" className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-amber-100"
                               src={slipResolved}
                               alt="สลิปแพ็กเหมา"
-                              onOpen={() => lightbox.open(slipResolved)}
-                              objectFit="contain" />
+                              onOpen={() => lightbox.open(slipResolved)} />
                           </div>
                         : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-white/50 text-[9px] font-medium leading-tight text-amber-600">
                             NO SLIP
@@ -1788,12 +1790,10 @@ export function CarWashSalesPanel({
                     <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                       {slipResolved ?
                         <div className="relative shrink-0 transition-transform duration-300 group-hover/item:scale-105">
-                          <AppImageThumb
-                            className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-rose-100"
+                          <AppLabeledImageThumb kind="slip" className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-rose-100"
                             src={slipResolved}
                             alt="สลิปรายจ่าย"
-                            onOpen={() => lightbox.open(slipResolved)}
-                            objectFit="contain" />
+                            onOpen={() => lightbox.open(slipResolved)} />
                         </div>
                       : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-rose-50/50 text-[9px] font-medium leading-tight text-rose-400">
                           NO SLIP
@@ -2418,6 +2418,7 @@ export function CarWashSalesPanel({
             onSlipUrlChange={setEntrySlipUrl}
             photoBusy={entryPhotoBusy}
             previewUrl={addSlipPreview}
+            onOpenPreview={(url) => lightbox.open(url)}
             galleryInputRef={costGalleryInputRef}
             onFileInputChange={(e) => void onCostSlipFileChange(e, "add")}
             onOpenModalCamera={() => setEntryCameraOpen(true)}
@@ -2535,6 +2536,7 @@ export function CarWashSalesPanel({
               }
               photoBusy={entryPhotoBusy}
               previewUrl={editSlipPreview}
+              onOpenPreview={(url) => lightbox.open(url)}
               galleryInputRef={costGalleryInputRef}
               onFileInputChange={(e) => void onCostSlipFileChange(e, "edit")}
               onOpenModalCamera={() => setEntryCameraOpen(true)}
@@ -3043,20 +3045,24 @@ export function CarWashSalesPanel({
                 }}
               />
               <div className="flex flex-wrap items-center gap-3">
-                {editBundleForm.slip_photo_url.trim() ? (
-                  <AppImageThumb
-                    src={resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl)}
-                    alt="สลิปแพ็กเหมา"
-                    onOpen={() => {
-                      const u = resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl);
-                      if (u) lightbox.open(u);
-                    }}
-                    objectFit="contain" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-amber-50/50 text-[10px] font-bold text-amber-500">
-                    ไม่มีสลิป
-                  </div>
-                )}
+                {(() => {
+                  const slipSrc = editBundleForm.slip_photo_url.trim()
+                    ? resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl)
+                    : null;
+                  return slipSrc ? (
+                    <AppLabeledImageThumb
+                      kind="slip"
+                      src={slipSrc}
+                      alt="สลิปแพ็กเหมา"
+                      onOpen={() => lightbox.open(slipSrc)}
+                      className="h-20 w-20"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-amber-50/50 text-[10px] font-bold text-amber-500">
+                      ไม่มีสลิป
+                    </div>
+                  );
+                })()}
                 <div className="flex flex-wrap gap-2">
                   <AppPickGalleryImageButton
                     type="button"

@@ -4,7 +4,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { prepareImageFileForUpload } from "@/components/app-templates";
+import { prepareImageFileForUpload, AppImageLightbox, AppLabeledImageThumb, useAppImageLightbox } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { createVillageSessionApiRepository, type VillageHouse, type VillageSlip } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
@@ -299,6 +299,7 @@ function VillageEditSlipModal({
 
 export function VillageSlipsClient({ baseUrl, embedded = false }: { baseUrl: string; embedded?: boolean }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
+  const lb = useAppImageLightbox();
   const [houses, setHouses] = useState<VillageHouse[]>([]);
   const [slips, setSlips] = useState<VillageSlip[]>([]);
   const [filter, setFilter] = useState<"PENDING" | "ALL">("PENDING");
@@ -428,22 +429,13 @@ export function VillageSlipsClient({ baseUrl, embedded = false }: { baseUrl: str
                   />
                   <div className="flex gap-2.5 sm:gap-3">
                     {src ? (
-                      <a
-                        href={src}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="relative h-[4.75rem] w-[3.85rem] shrink-0 overflow-hidden rounded-xl bg-white/75 shadow-inner ring-1 ring-white/80 sm:h-[5.25rem] sm:w-[4.15rem]"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element -- URL จาก API / blob ไดนามิก */}
-                        <img
-                          src={src}
-                          alt={`สลิปบ้าน ${s.house_no}`}
-                          className="h-full w-full object-cover transition hover:opacity-95"
-                        />
-                        <span className="absolute bottom-0.5 right-0.5 rounded bg-black/45 px-1 py-px text-[7px] font-bold text-white backdrop-blur-[2px]">
-                          ดู
-                        </span>
-                      </a>
+                      <AppLabeledImageThumb
+                        src={src}
+                        kind="slip"
+                        alt={`บ้าน ${s.house_no}`}
+                        onOpen={() => lb.open(src)}
+                        className="h-[4.75rem] w-[3.85rem] rounded-xl sm:h-[5.25rem] sm:w-[4.15rem]"
+                      />
                     ) : (
                       <div className="flex h-[4.75rem] w-[3.85rem] shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[9px] font-medium text-slate-400 sm:h-[5.25rem] sm:w-[4.15rem]">
                         ไม่มีรูป
@@ -618,6 +610,7 @@ export function VillageSlipsClient({ baseUrl, embedded = false }: { baseUrl: str
       <>
         {slipsBody}
         {slipsModals}
+        <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอนเงิน" />
       </>
     );
   }
@@ -637,6 +630,7 @@ export function VillageSlipsClient({ baseUrl, embedded = false }: { baseUrl: str
         {slipsBody}
       </VillagePanelCard>
       {slipsModals}
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอนเงิน" />
     </VillagePageStack>
   );
 }

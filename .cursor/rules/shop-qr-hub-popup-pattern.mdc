@@ -36,6 +36,9 @@ globs:
    - **`mobileCentered`**
 5. **`footer`** — ปุ่มหลัก **ปิด** ชิดขวา
 6. **เนื้อหาในโมดัลพนักงาน** — **`ModuleStaffTokenQrPanel`** / **`ShopStaffQrPanel`** + `planGateAllowed` (เพราะเกตอยู่ข้างนอก Hub แล้ว)
+7. **เนื้อหาในโมดัลลูกค้า** — **`ModulePublicLinkQrPanel`** + `planGateAllowed` — ห้ามคัดลอก toolbar PDF/PNG เอง
+
+**เทมเพลตกลางเต็ม:** `.cursor/rules/shop-qr-central-template.mdc`
 
 ## แสดง/ซ่อนลิงก์ในโมดัล
 

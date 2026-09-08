@@ -11,6 +11,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppMobileDockShell,
   AppUsageGuideModal,
   appMobileDockGridClass,
@@ -2293,12 +2294,13 @@ export function CarWashDashboard({
 
                                   <div className="relative flex min-w-0 items-center gap-2.5">
                                     {slipResolved ?
-                                      <AppImageThumb
+                                      <AppLabeledImageThumb
                                         className="!h-12 !w-12 rounded-lg sm:!h-14 sm:!w-14"
                                         src={slipResolved}
+                                        kind="slip"
                                         alt="สลิป"
                                         onOpen={() => bundleTabLightbox.open(slipResolved)}
-                                        objectFit="contain" />
+                                      />
                                     : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-amber-200 bg-amber-50/80 text-[8px] text-amber-800/80 sm:h-14 sm:w-14">
                                         ไม่มีสลิป
                                       </div>
@@ -3309,17 +3311,19 @@ export function CarWashDashboard({
             <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">สลิปชำระเงิน (ถ้ามี)</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                {bundleForm.slip_photo_url.trim() ? (
+                {(() => {
+                  const slipSrc = bundleForm.slip_photo_url.trim()
+                    ? resolveAssetUrl(bundleForm.slip_photo_url.trim(), baseUrl)
+                    : null;
+                  return slipSrc ? (
                   <div className="group relative">
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       className="h-16 w-16 rounded-xl border-2 border-white shadow-md transition-transform group-hover:scale-105"
-                      src={resolveAssetUrl(bundleForm.slip_photo_url.trim(), baseUrl)}
+                      src={slipSrc}
+                      kind="slip"
                       alt="สลิป"
-                      onOpen={() => {
-                        const u = resolveAssetUrl(bundleForm.slip_photo_url.trim(), baseUrl);
-                        if (u) bundleTabLightbox.open(u);
-                      }}
-                      objectFit="contain" />
+                      onOpen={() => bundleTabLightbox.open(slipSrc)}
+                    />
                     <button
                       type="button"
                       className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-md active:scale-90"
@@ -3330,13 +3334,14 @@ export function CarWashDashboard({
                       </svg>
                     </button>
                   </div>
-                ) : (
+                  ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-amber-100 bg-white/50 text-amber-200">
                     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                     </svg>
                   </div>
-                )}
+                  );
+                })()}
                 <AppImagePickCameraButtons
                   busy={bundleTabPhotoBusy}
                   onPickGallery={() => bundleModalSlipGalleryRef.current?.click()}

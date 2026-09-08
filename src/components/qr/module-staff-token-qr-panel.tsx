@@ -6,7 +6,6 @@ import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
   downloadPosterPdf,
-  downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
@@ -25,7 +24,10 @@ type Props = {
   trialExportBlocked?: boolean;
   tagline?: string;
   mobileBannerText?: string;
+  openLabel?: string;
+  /** @deprecated ใช้ openLabel */
   openPrimaryLabel?: string;
+  /** @deprecated ไม่ใช้แล้ว */
   openSecondaryLabel?: string;
   posterTintClass?: string;
 };
@@ -55,10 +57,13 @@ function ModuleStaffTokenQrPanelInner({
   trialExportBlocked = false,
   tagline = "สแกนเข้าหน้าพนักงาน — ไม่มีวันหมดอายุ · หมุนโทเค็นใหม่เมื่อต้องการยกเลิก",
   mobileBannerText = "",
-  openPrimaryLabel = "เปิดหน้าพนักงาน",
-  openSecondaryLabel = "เปิดหน้า",
+  openLabel,
+  openPrimaryLabel,
+  openSecondaryLabel: _openSecondaryLabel,
   posterTintClass = "shadow-amber-950/10",
 }: InnerProps) {
+  void _openSecondaryLabel;
+  const resolvedOpenLabel = openLabel?.trim() || openPrimaryLabel?.trim() || "เปิดหน้าพนักงาน";
   const [configured, setConfigured] = useState(false);
   const [pageUrl, setPageUrl] = useState("");
   const [qrPng, setQrPng] = useState<string | null>(null);
@@ -66,7 +71,6 @@ function ModuleStaffTokenQrPanelInner({
   const [busy, setBusy] = useState(false);
   const [dlBusy, setDlBusy] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const [linkVisible, setLinkVisible] = useState(false);
   const [loadDone, setLoadDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [qrSize, setQrSize] = useState(240);
@@ -190,22 +194,6 @@ function ModuleStaffTokenQrPanelInner({
     }
   }
 
-  async function downloadPng() {
-    if (!qrPng || trialExportBlocked) return;
-    setDlBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: qrPng,
-        shopLabel: headline,
-        logoUrl: resolvedLogo,
-        tagline,
-      });
-      await downloadPosterPng(canvas, "staff-qr.png");
-    } finally {
-      setDlBusy(false);
-    }
-  }
-
   if (!loadDone) {
     return <p className="text-sm font-medium text-[#66638c]">กำลังโหลดลิงก์พนักงาน…</p>;
   }
@@ -255,18 +243,14 @@ function ModuleStaffTokenQrPanelInner({
             qrPng={qrPng}
             posterPreview={posterPreview}
             copyMsg={copyMsg}
-            linkVisible={linkVisible}
-            setLinkVisible={setLinkVisible}
             onCopyLink={() => void copyLink()}
             downloadBusy={dlBusy}
             trialExportBlocked={trialExportBlocked}
-            onDownloadPdfA4={() => void downloadPdf()}
-            onDownloadPng={() => void downloadPng()}
+            onDownload={() => void downloadPdf()}
             posterTintClass={posterTintClass}
             mobileBannerText={mobileBannerText}
             qrAlt="QR พนักงาน"
-            openPrimaryLabel={openPrimaryLabel}
-            openSecondaryLabel={openSecondaryLabel}
+            openLabel={resolvedOpenLabel}
             posterAlt="โปสเตอร์ QR พนักงาน"
           />
         </>

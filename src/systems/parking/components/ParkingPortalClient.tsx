@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   prepareImageFileForUpload,
@@ -1137,12 +1138,11 @@ export function ParkingPortalClient({
                     disabled={uploadingSlip || bookBusy}
                   />
                   {slipUrl ? (
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={slipUrl}
+                      kind="slip"
                       alt="สลิป"
-                      className="h-24 w-24"
-                      onOpen={() => lb.open(slipUrl)}
-                      objectFit="contain" />
+                      onOpen={() => lb.open(slipUrl)} className="h-24 w-24" />
                   ) : null}
                   {uploadingSlip ? <p className={mutedTextClass}>กำลังอัปโหลดสลิป…</p> : null}
                 </>

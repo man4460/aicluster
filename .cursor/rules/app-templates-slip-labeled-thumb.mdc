@@ -1,0 +1,72 @@
+---
+description: สลิป+ป้าย label แบบ ecommerce — บังคับ AppLabeledImageThumb ในรายการ/การ์ด/พรีวิวหลังอัปโหลด
+alwaysApply: false
+globs:
+  - "**/components/app-templates/AppLabeledImageThumb.tsx"
+  - "**/components/app-templates/AppSlipImageThumb.tsx"
+  - "**/components/app-templates/AppPaymentMethodPanel.tsx"
+  - "**/systems/**/*Finance*"
+  - "**/systems/**/*Cost*"
+  - "**/systems/**/*Sales*"
+  - "**/systems/**/*History*"
+  - "**/systems/**/*Orders*"
+  - "**/systems/**/*Booking*"
+  - "**/systems/**/*Payment*"
+  - "**/systems/**/*Slip*"
+  - "**/systems/**/*Purchases*"
+  - "**/systems/ecommerce-store/**"
+  - "**/systems/club-event/**"
+---
+
+# สลิป + ป้าย (เทมเพลตกลาง — แบบร้านออนไลน์)
+
+**ต้นแบบ:** `EcommerceOrdersClient` / `EcommerceFinanceClient`  
+**คอมโพเนนต์:** `AppLabeledImageThumb` จาก `@/components/app-templates` · `kind="slip"`  
+**ห้าม** ใช้ `EcommerceLabeledImageThumb` ในโมดูลใหม่ (legacy re-export เท่านั้น)
+
+## เมื่อไหร่บังคับ
+
+| บริบท | ใช้ |
+|--------|-----|
+| รายการ / การ์ด / ประวัติ / การเงิน / จอง / คิว / คำขอ | **`AppLabeledImageThumb` `kind="slip"`** |
+| พรีวิวหลังอัปโหลดในแผงชำระ / ฟอร์มแนบสลิป | **`AppLabeledImageThumb` `kind="slip"`** (หรือ `className="h-20 w-20"`) |
+| Lightbox เต็มจอ | `AppImageLightbox` + `useAppImageLightbox` |
+
+**`AppSlipImageThumb`:** สงวนกรณีพิเศษที่**ตั้งใจไม่มีป้าย**เท่านั้น — รายการ/การ์ด/พรีวิวสลิปมาตรฐาน**ห้าม**ใช้
+
+## เลย์เอาต์ (บังคับ)
+
+```tsx
+<div className="flex min-w-0 items-start gap-3">
+  <AppLabeledImageThumb
+    src={slipUrl}
+    kind="slip"
+    alt={personOrRefName}
+    onOpen={() => lb.open(slipUrl)}
+  />
+  <div className="min-w-0 flex-1 space-y-0.5">
+    {/* ชื่อ · เบอร์ · ยอด · เมตา */}
+  </div>
+</div>
+```
+
+- ป้าย «สลิป» อยู่**มุมล่างบนรูป** (`absolute`) — **ห้าม** ข้อความ «สลิป» ใต้รูปหรือข้างชื่อ
+- สลิปใช้ `objectFit` ค่าเริ่ม `contain`
+- ขนาดค่าเริ่ม `h-14 w-14` · `sm:h-16 sm:w-16` · พรีวิวอัปโหลดใหญ่กว่าได้ `className="h-20 w-20"`
+- มีทั้งสลิป+รูปสินค้าในแถวเดียว: `flex gap-1.5` ของ `AppLabeledImageThumb` คู่กัน (`slip` + `product`)
+
+## ห้าม
+
+- `<img>` / `AppImageThumb` เปล่าสำหรับสลิปในรายการ/การ์ด
+- Hardcode badge `bg-emerald-600` นอก `AppLabeledImageThumb`
+- ป้าย «สลิป» เป็นข้อความใต้ thumb ในคอลัมน์แคบ
+
+## เช็กลิสต์ migrate
+
+- [ ] Import `AppLabeledImageThumb` จาก `@/components/app-templates`
+- [ ] แทนที่ `AppImageThumb` / `AppSlipImageThumb` / raw `<img>` ที่แสดงสลิปในรายการ
+- [ ] เลย์เอาต์ `flex … gap-3` · ชื่ออยู่ข้างรูป
+- [ ] มี `AppImageLightbox` คู่กัน
+- [ ] ลบข้อความ «สลิป» ซ้ำใต้รูป
+
+คู่กับ: `app-templates-media.mdc` · `app-templates-image-upload.mdc` · `dashboard-finance-detail-tabs.mdc`

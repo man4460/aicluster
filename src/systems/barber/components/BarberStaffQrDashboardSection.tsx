@@ -6,7 +6,6 @@ import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
   downloadPosterPdf,
-  downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
@@ -80,7 +79,6 @@ export function BarberStaffQrDashboardSection({
   const [staffPosterPreviewUrl, setStaffPosterPreviewUrl] = useState<string | null>(null);
   const [staffQrBusy, setStaffQrBusy] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const [linkVisible, setLinkVisible] = useState(false);
   /** บนมือถือใช้โมดูลใหญ่ขึ้นให้สแกนง่าย — สอดคล้องคาร์แคร์ */
   const [qrModuleSize, setQrModuleSize] = useState(240);
 
@@ -166,23 +164,7 @@ export function BarberStaffQrDashboardSection({
     window.setTimeout(() => setCopyMsg(null), 2000);
   }, [staffPageUrl]);
 
-  async function downloadStaffQrPng() {
-    if (!staffPageUrl || !staffPortalQr || trialExportBlocked) return;
-    setStaffQrBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: staffPortalQr,
-        shopLabel: headline,
-        logoUrl: resolvedLogoUrl,
-        tagline: BARBER_STAFF_QR_TAGLINE,
-      });
-      await downloadPosterPng(canvas, `barber-staff-qr-${ownerId.slice(0, 8)}.png`);
-    } finally {
-      setStaffQrBusy(false);
-    }
-  }
-
-  async function downloadStaffQrPdf(format: "a4" | "a5") {
+  async function downloadStaffQrPdf(format: "a4" | "a5" = "a4") {
     if (!staffPageUrl || !staffPortalQr || trialExportBlocked) return;
     setStaffQrBusy(true);
     try {
@@ -250,19 +232,14 @@ export function BarberStaffQrDashboardSection({
             qrPng={staffPortalQr}
             posterPreview={staffPosterPreviewUrl}
             copyMsg={copyMsg}
-            linkVisible={linkVisible}
-            setLinkVisible={setLinkVisible}
             onCopyLink={() => void copyStaffPageUrl()}
             downloadBusy={staffQrBusy}
             trialExportBlocked={trialExportBlocked}
-            onDownloadPdfA4={() => void downloadStaffQrPdf("a4")}
-            onDownloadPng={() => void downloadStaffQrPng()}
-            onDownloadPdfA5={() => void downloadStaffQrPdf("a5")}
+            onDownload={() => void downloadStaffQrPdf("a4")}
             posterTintClass="shadow-lg shadow-indigo-950/10"
             mobileBannerText=""
             qrAlt="QR เข้าหน้าพนักงานร้านตัดผม"
-            openPrimaryLabel="เปิดหน้าพนักงานบนเครื่องนี้"
-            openSecondaryLabel="เปิดหน้าพนักงาน"
+            openLabel="เปิดหน้าพนักงาน"
             posterAlt="ตัวอย่างโปสเตอร์ QR พนักงานร้านตัดผม"
           />
         </div>

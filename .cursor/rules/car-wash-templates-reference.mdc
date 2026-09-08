@@ -17,7 +17,7 @@ alwaysApply: false
 | ต้นทุน | `CarWashCostPanel.tsx` |
 | พอร์ทัลลูกค้า | `CarWashCustomerPortalClient.tsx`, `app/car-wash/check-in/[ownerId]` |
 | หน้าพนักงาน | `app/(dashboard)/dashboard/car-wash/staff/page.tsx` |
-| โปสเตอร์ QR | `@/components/qr/shop-qr-template` (`createShopQrPosterDataUrl`, `createShopQrPosterCanvas`, `downloadPosterPng`, `downloadPosterPdf`) |
+| โปสเตอร์ QR | `@/components/qr/shop-qr-template` (`createShopQrPosterDataUrl`, `createShopQrPosterCanvas`, …) · กฎ `shop-qr-poster-template.mdc` · แผง UI แสดงโปสเตอร์อย่างเดียว (`ShopStaffQrPanel`) |
 | การ์ดแดชบอร์ด | `@/components/app-templates` — `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, `FormModal` |
 | สถานะลาน | `@/lib/car-wash/service-status` (`carWashStatusLabelTh`, `normalizeCarWashServiceStatus`) |
 

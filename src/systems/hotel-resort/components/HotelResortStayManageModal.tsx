@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
@@ -335,12 +336,11 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
               <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                 สลิปมัดจำ (จากลิงก์จอง)
               </p>
-              <AppImageThumb
-                src={booking.depositSlipUrl.trim()}
-                alt="สลิปมัดจำ"
-                onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
-                className="h-16 w-16"
-                objectFit="contain" />
+              <AppLabeledImageThumb
+                      src={booking.depositSlipUrl.trim()}
+                      kind="slip"
+                      alt="สลิปมัดจำ"
+                      onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())} className="h-16 w-16" />
             </div>
           ) : null}
 

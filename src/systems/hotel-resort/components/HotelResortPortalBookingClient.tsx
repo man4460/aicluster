@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
@@ -177,24 +178,22 @@ export function HotelResortPortalBookingClient({
                   <div>
                     <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปมัดจำ / ชำระตอนจอง</p>
                     <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={booking.depositSlipUrl}
+                      kind="slip"
                       alt="สลิปมัดจำ / ชำระตอนจอง"
-                      onOpen={() => lb.open(booking.depositSlipUrl!)}
-                      className="h-24 w-24"
-                      objectFit="contain" />
+                      onOpen={() => lb.open(booking.depositSlipUrl!)} className="h-24 w-24" />
                   </div>
                 ) : null}
                 {booking.paymentSlipUrl ? (
                   <div>
                     <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปชำระเพิ่ม</p>
                     <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={booking.paymentSlipUrl}
+                      kind="slip"
                       alt="สลิปชำระเพิ่ม"
-                      onOpen={() => lb.open(booking.paymentSlipUrl!)}
-                      className="h-24 w-24"
-                      objectFit="contain" />
+                      onOpen={() => lb.open(booking.paymentSlipUrl!)} className="h-24 w-24" />
                   </div>
                 ) : null}
               </section>

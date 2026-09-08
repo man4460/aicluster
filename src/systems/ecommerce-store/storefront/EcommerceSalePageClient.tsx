@@ -6,6 +6,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppImageLightbox,
 } from "@/components/app-templates";
@@ -241,12 +242,11 @@ export function EcommerceSalePageClient({
         <section className="app-surface rounded-2xl p-4">
           <p className="font-bold text-sm">แนบสลิป</p>
           {slipUrl ? (
-            <AppImageThumb
-              src={slipUrl}
-              alt="สลิป"
-              onOpen={() => lb.open(slipUrl)}
-              className="mt-2"
-              objectFit="contain" />
+            <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(slipUrl)} className="mt-2" />
           ) : null}
           <input
             ref={galleryRef}

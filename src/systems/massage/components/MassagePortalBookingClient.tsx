@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
@@ -156,11 +157,11 @@ export function MassagePortalBookingClient({
                     <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                       สลิปมัดจำ
                     </p>
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={booking.depositSlipUrl}
+                      kind="slip"
                       alt="สลิปมัดจำ"
-                      onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
-                      objectFit="contain" />
+                      onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())} />
                   </div>
                 ) : null}
                 {booking.paymentSlipUrl?.trim() ? (
@@ -168,11 +169,11 @@ export function MassagePortalBookingClient({
                     <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
                       สลิปชำระเพิ่ม
                     </p>
-                    <AppImageThumb
+                    <AppLabeledImageThumb
                       src={booking.paymentSlipUrl}
+                      kind="slip"
                       alt="สลิปชำระเพิ่ม"
-                      onOpen={() => slipLb.open(booking.paymentSlipUrl!.trim())}
-                      objectFit="contain" />
+                      onOpen={() => slipLb.open(booking.paymentSlipUrl!.trim())} />
                   </div>
                 ) : null}
               </section>

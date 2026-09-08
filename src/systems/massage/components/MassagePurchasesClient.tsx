@@ -7,6 +7,7 @@ import {
   AppIconTrash,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -113,14 +114,18 @@ function MassagePurchaseSlipCell(props: {
     );
   }
 
+  if (!displaySrc) {
+    return <AppImageThumb src={null} emptyLabel="ไม่มีสลิป" className={className} objectFit="contain" />;
+  }
+
   return (
-    <AppImageThumb
+    <AppLabeledImageThumb
       src={displaySrc}
-      alt={displaySrc ? "สลิปขายแพ็กเกจ" : ""}
-      emptyLabel="ไม่มีสลิป"
-      onOpen={displaySrc ? () => onOpenLightbox(displaySrc) : undefined}
+      kind="slip"
+      alt="สลิปขายแพ็กเกจ"
+      onOpen={() => onOpenLightbox(displaySrc)}
       className={className}
-      objectFit="contain" />
+    />
   );
 }
 
@@ -128,8 +133,9 @@ function MassageEditSlipPreview(props: {
   subscriptionId: number;
   saleReceiptImageUrl: string | null;
   imgClassName: string;
+  onOpen: (src: string) => void;
 }) {
-  const { subscriptionId, saleReceiptImageUrl, imgClassName } = props;
+  const { subscriptionId, saleReceiptImageUrl, imgClassName, onOpen } = props;
   const { displaySrc, loading } = useMassageSubscriptionSaleReceiptBlobUrl(
     subscriptionId,
     saleReceiptImageUrl,
@@ -155,10 +161,13 @@ function MassageEditSlipPreview(props: {
     );
   }
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={displaySrc} alt="สลิปปัจจุบัน" className={imgClassName} />
-    </>
+    <AppLabeledImageThumb
+      src={displaySrc}
+      kind="slip"
+      alt="สลิปปัจจุบัน"
+      onOpen={() => onOpen(displaySrc)}
+      className={imgClassName}
+    />
   );
 }
 
@@ -784,7 +793,8 @@ export function MassagePurchasesClient({
                     <MassageEditSlipPreview
                       subscriptionId={editTarget.id}
                       saleReceiptImageUrl={editTarget.saleReceiptImageUrl}
-                      imgClassName="h-16 w-16 shrink-0 rounded-[1.25rem] border border-[#ecebff] object-cover"
+                      imgClassName="h-16 w-16 shrink-0 rounded-[1.25rem]"
+                      onOpen={(src) => slipLightbox.open(src)}
                     />
                     <span className="text-[11px] text-[#5f5a8a]">มีสลิปในระบบ</span>
                   </div>

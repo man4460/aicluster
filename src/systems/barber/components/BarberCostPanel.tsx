@@ -6,7 +6,7 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
+  AppLabeledImageThumb,
   AppPickGalleryImageButton,
   AppSectionHeader,
   AppTakePhotoButton,
@@ -59,6 +59,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange,
   photoBusy,
   previewUrl,
+  onOpenPreview,
   galleryInputRef,
   onFileInputChange,
   onOpenModalCamera,
@@ -72,6 +73,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange: (url: string) => void;
   photoBusy: boolean;
   previewUrl: string | null;
+  onOpenPreview: (url: string) => void;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   onFileInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onOpenModalCamera: () => void;
@@ -131,8 +133,13 @@ function CostSlipAttachmentZone({
 
       {slipUrl.trim() && previewUrl ?
         <div className={`mt-4 flex flex-wrap items-center gap-3 ${barberCardSurfaceRadiusClass} border border-slate-200/80 bg-white/80 p-3`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="สลิปแนบ" className="h-20 w-auto max-w-[min(100%,12rem)] rounded-[1.25rem] object-cover object-center ring-1 ring-slate-200" />
+          <AppLabeledImageThumb
+            src={previewUrl}
+            kind="slip"
+            alt="สลิปแนบ"
+            onOpen={() => onOpenPreview(previewUrl)}
+            className="h-20 w-20"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
             <p className="truncate text-[11px] text-slate-500">{slipUrl.slice(0, 80)}{slipUrl.length > 80 ? "…" : ""}</p>
@@ -589,12 +596,10 @@ export function BarberCostPanel({
                     >
                       <div className="flex min-w-0 flex-1 gap-3">
                         {slipResolved ?
-                          <AppImageThumb
-                            src={slipResolved}
+                          <AppLabeledImageThumb kind="slip" src={slipResolved}
                             alt="สลิป"
                             onOpen={() => lightbox.open(slipResolved)}
-                            className="h-14 w-14 rounded-[1.25rem]"
-                            objectFit="contain" />
+                            className="h-14 w-14 rounded-[1.25rem]" />
                         : null}
                         <div className="min-w-0">
                           <p className="text-xs tabular-nums text-slate-500">
@@ -660,12 +665,10 @@ export function BarberCostPanel({
                   >
                     <div className="flex min-w-0 flex-1 gap-3">
                       {slipResolved ?
-                        <AppImageThumb
-                          src={slipResolved}
+                        <AppLabeledImageThumb kind="slip" src={slipResolved}
                           alt="สลิป"
                           onOpen={() => lightbox.open(slipResolved)}
-                          className="h-14 w-14 rounded-[1.25rem]"
-                          objectFit="contain" />
+                          className="h-14 w-14 rounded-[1.25rem]" />
                       : null}
                       <div className="min-w-0">
                         <p className="text-xs tabular-nums text-slate-500">
@@ -778,6 +781,7 @@ export function BarberCostPanel({
               onSlipUrlChange={setEntrySlipUrl}
               photoBusy={entryPhotoBusy}
               previewUrl={addSlipPreview}
+              onOpenPreview={(url) => lightbox.open(url)}
               galleryInputRef={galleryInputRef}
               onFileInputChange={(ev) => void onSlipFileChange(ev, "record")}
               onOpenModalCamera={() => setEntryCameraOpen(true)}
@@ -883,6 +887,7 @@ export function BarberCostPanel({
               onSlipUrlChange={(url) => setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s))}
               photoBusy={entryPhotoBusy}
               previewUrl={editSlipPreview}
+              onOpenPreview={(url) => lightbox.open(url)}
               galleryInputRef={galleryInputRef}
               onFileInputChange={(ev) => void onSlipFileChange(ev, "edit")}
               onOpenModalCamera={() => setEntryCameraOpen(true)}

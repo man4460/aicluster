@@ -11,6 +11,7 @@ import {
   AppIconTrash,
   AppImageLightbox,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppRevenueCostColumnChart,
   useAppImageLightbox,
 } from "@/components/app-templates";
@@ -1119,12 +1120,11 @@ export function MassageHistoryClient({
                     )}
                   >
                     {receiptSrc ? (
-                      <AppImageThumb
-                        src={receiptSrc}
-                        alt="สลิป"
-                        onOpen={() => receiptLightbox.open(receiptSrc)}
-                        className="self-start rounded-[1.25rem] border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
-                        objectFit="contain" />
+                      <AppLabeledImageThumb
+                      src={receiptSrc}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => receiptLightbox.open(receiptSrc)} className="self-start rounded-[1.25rem] border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]" />
                     ) : null}
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -1284,33 +1284,25 @@ export function MassageHistoryClient({
                     }}
                   />
                   {receiptPickUrl ? (
-                    <button
-                      type="button"
-                      className="mt-2 block w-full cursor-zoom-in rounded-[1.25rem] border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
-                      onClick={() => receiptLightbox.open(receiptPickUrl)}
-                      aria-label="ดูรูปสลิปใหม่เต็มจอ"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                    <div className="mt-2">
+                      <AppLabeledImageThumb
                         src={receiptPickUrl}
+                        kind="slip"
                         alt="ตัวอย่างสลิปใหม่"
-                        className="max-h-36 w-full rounded-[1.25rem] border border-[#ecebff] object-contain"
+                        onOpen={() => receiptLightbox.open(receiptPickUrl)}
+                        className="h-36 w-28 max-h-36"
                       />
-                    </button>
+                    </div>
                   ) : resolvedEditReceipt ? (
-                    <button
-                      type="button"
-                      className="mt-2 block w-full cursor-zoom-in rounded-[1.25rem] border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
-                      onClick={() => receiptLightbox.open(resolvedEditReceipt)}
-                      aria-label="ดูรูปสลิปปัจจุบันเต็มจอ"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                    <div className="mt-2">
+                      <AppLabeledImageThumb
                         src={resolvedEditReceipt}
+                        kind="slip"
                         alt="สลิปปัจจุบัน"
-                        className="max-h-36 w-full rounded-[1.25rem] border border-[#ecebff] object-contain"
+                        onOpen={() => receiptLightbox.open(resolvedEditReceipt)}
+                        className="h-36 w-28 max-h-36"
                       />
-                    </button>
+                    </div>
                   ) : (
                     <p className="mt-2 text-xs text-[#8b87ad]">ยังไม่มีสลิป</p>
                   )}

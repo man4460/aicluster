@@ -7,6 +7,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   prepareImageFileForUpload,
   useAppImageLightbox,
 } from "@/components/app-templates";
@@ -317,7 +318,11 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
               <p className={formLabelClass}>สลิปชำระเงิน</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-3">
                 {slipUrl ? (
-                  <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
+                  <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(slipUrl)} />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-[#8b87b8]">
                     ไม่มีสลิป

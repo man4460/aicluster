@@ -7,6 +7,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppLabeledImageThumb,
   AppPublicCheckInGlassPage,
   AppTime24Input,
   appPublicCheckInGlassCardClass,
@@ -867,7 +868,11 @@ export function BuildingPosPortalClient({
                         }
                       />
                       {slipUrl ? (
-                        <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} objectFit="contain" />
+                        <AppLabeledImageThumb
+                      src={slipUrl}
+                      kind="slip"
+                      alt="สลิป"
+                      onOpen={() => lb.open(slipUrl)} />
                       ) : null}
                     </div>
                   ) : null}

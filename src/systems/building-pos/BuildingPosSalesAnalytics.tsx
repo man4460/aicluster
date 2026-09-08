@@ -30,7 +30,8 @@ import {
   AppEmptyState,
   AppGalleryCameraFileInputs,
   AppImagePickCameraButtons,
-  AppImageThumb,
+
+  AppLabeledImageThumb,
   type AppRevenueCostBucket,
   AppRevenueCostColumnChart,
   AppSectionHeader,
@@ -1354,15 +1355,12 @@ function PosSalesHistoryCard({
     <article className="rounded-[1.25rem] border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm transition hover:border-slate-300">
       <div className="flex items-start gap-2">
         {slipUrl ? (
-          <AppImageThumb
-            src={slipUrl}
-            alt={`สลิปออเดอร์ #${o.id}`}
-            className="h-14 w-14 shrink-0"
+          <AppLabeledImageThumb kind="slip" src={slipUrl}
+            alt={`ออเดอร์ #${o.id}`} className="h-14 w-14"
             onOpen={() => {
               if (onSlipImageOpen) onSlipImageOpen(slipUrl);
               else window.open(slipUrl, "_blank", "noopener,noreferrer");
-            }}
-            objectFit="contain" />
+            }} />
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -2403,14 +2401,12 @@ export function BuildingPosSalesHistoryPanel({
             {editSlipCameraModal}
             {editSlipUrl ? (
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <AppImageThumb
-                  src={editSlipUrl}
+                <AppLabeledImageThumb kind="slip" src={editSlipUrl}
                   alt="สลิปออเดอร์"
                   onOpen={() => {
                     if (onSlipImageOpen) onSlipImageOpen(editSlipUrl);
                   }}
-                  className="h-20 w-20"
-                  objectFit="contain" />
+                  className="h-20 w-20" />
                 <button
                   type="button"
                   onClick={() => setEditSlipUrl("")}

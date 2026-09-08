@@ -12,6 +12,7 @@ import {
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   AppImageLightbox,
+  AppLabeledImageThumb,
   AppSlipPaperSizeToolbar,
   useAppImageLightbox,
   useAppSlipPaperSize,
@@ -277,19 +278,13 @@ function VillageFeeRowCard({
           <div className="flex items-center gap-1.5 px-2.5 py-2 sm:gap-2 sm:px-3">
             {slipSrc ? (
               <>
-                <button
-                  type="button"
-                  className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg border border-amber-200/90 bg-white shadow-sm ring-1 ring-amber-100 sm:h-14 sm:w-11"
-                  onClick={() => lb.open(slipSrc)}
-                  aria-label={`ดูสลิปรอตรวจ บ้าน ${r.house_no}`}
-                  title="ดูสลิปรอตรวจ"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={slipSrc} alt="" className="h-full w-full object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-amber-500/90 py-px text-center text-[8px] font-bold text-white">
-                    รอตรวจ
-                  </span>
-                </button>
+                <AppLabeledImageThumb
+                  src={slipSrc}
+                  kind="slip"
+                  alt={`บ้าน ${r.house_no}`}
+                  onOpen={() => lb.open(slipSrc)}
+                  className="h-12 w-10 rounded-lg sm:h-14 sm:w-11"
+                />
                 <div className="flex min-w-0 flex-col gap-1">
                   <button
                     type="button"

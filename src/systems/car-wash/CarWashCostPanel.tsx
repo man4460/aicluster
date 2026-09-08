@@ -5,7 +5,7 @@ import {
   AppCameraCaptureModal,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
+  AppLabeledImageThumb,
   AppPickGalleryImageButton,
   AppTakePhotoButton,
   useAppImageLightbox,
@@ -40,6 +40,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange,
   photoBusy,
   previewUrl,
+  onOpenPreview,
   galleryInputRef,
   onFileInputChange,
   onOpenModalCamera,
@@ -53,6 +54,7 @@ function CostSlipAttachmentZone({
   onSlipUrlChange: (url: string) => void;
   photoBusy: boolean;
   previewUrl: string | null;
+  onOpenPreview: (url: string) => void;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   onFileInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onOpenModalCamera: () => void;
@@ -112,8 +114,13 @@ function CostSlipAttachmentZone({
 
       {slipUrl.trim() && previewUrl ?
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="สลิปแนบ" className="h-20 w-auto max-w-[min(100%,12rem)] rounded-lg object-cover object-center ring-1 ring-slate-200" />
+          <AppLabeledImageThumb
+            src={previewUrl}
+            kind="slip"
+            alt="สลิปแนบ"
+            onOpen={() => onOpenPreview(previewUrl)}
+            className="h-20 w-20"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
             <p className="truncate text-[11px] text-slate-500">{slipUrl.slice(0, 80)}{slipUrl.length > 80 ? "…" : ""}</p>
@@ -452,12 +459,15 @@ export function CarWashCostPanel({
                       className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8]"
                     />
                     <div className="flex min-w-0 items-start gap-3">
-                      <AppImageThumb
-                        src={slipResolved}
-                        alt="สลิป"
-                        onOpen={() => slipResolved && lightbox.open(slipResolved)}
-                        className="h-14 w-14 rounded-lg lg:h-16 lg:w-16"
-                        objectFit="contain" />
+                      {slipResolved ? (
+                        <AppLabeledImageThumb
+                          kind="slip"
+                          src={slipResolved}
+                          alt="สลิป"
+                          onOpen={() => lightbox.open(slipResolved)}
+                          className="h-14 w-14 rounded-lg lg:h-16 lg:w-16"
+                        />
+                      ) : null}
                       <div className="min-w-0 flex-1">
                         <p className="text-xs tabular-nums text-slate-500">
                           {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
@@ -638,6 +648,7 @@ export function CarWashCostPanel({
             onSlipUrlChange={setEntrySlipUrl}
             photoBusy={entryPhotoBusy}
             previewUrl={addSlipPreview}
+            onOpenPreview={(url) => lightbox.open(url)}
             galleryInputRef={galleryInputRef}
             onFileInputChange={(ev) => void onSlipFileChange(ev, "add")}
             onOpenModalCamera={() => setEntryCameraOpen(true)}
@@ -754,6 +765,7 @@ export function CarWashCostPanel({
               onSlipUrlChange={(url) => setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s))}
               photoBusy={entryPhotoBusy}
               previewUrl={editSlipPreview}
+              onOpenPreview={(url) => lightbox.open(url)}
               galleryInputRef={galleryInputRef}
               onFileInputChange={(ev) => void onSlipFileChange(ev, "edit")}
               onOpenModalCamera={() => setEntryCameraOpen(true)}
