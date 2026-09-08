@@ -412,7 +412,7 @@ export function ProResumePublicClient({
                 <p className="mt-1 text-lg font-bold text-[#4d47b6] sm:text-xl">{profile.positionTitle}</p>
               ) : null}
               {profile.bio ? (
-                <p className="mt-3 text-sm leading-relaxed text-[#66638c] sm:text-base">{profile.bio}</p>
+                <ProResumeRichContent content={profile.bio} className="mt-3 text-left sm:text-left" />
               ) : null}
             </div>
           </div>

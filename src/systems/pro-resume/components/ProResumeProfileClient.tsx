@@ -37,7 +37,6 @@ import {
   proResumeOutlineButtonClass,
   proResumePrimaryButtonClass,
   proResumeRowIconButtonClass,
-  proResumeTextareaClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
 const UPLOAD = "/api/pro-resume/session/upload";
@@ -293,15 +292,20 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
                 onChange={(e) => setProfile((p) => ({ ...p, positionTitle: e.target.value }))}
               />
             </label>
-            <label className={labelClass}>
-              เกี่ยวกับตัวเอง
-              <textarea
-                className={proResumeTextareaClass}
-                value={profile.bio}
-                disabled={saving}
-                onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
-              />
-            </label>
+            <ProResumeRichTextField
+              label="เกี่ยวกับตัวเอง"
+              value={profile.bio}
+              disabled={saving}
+              onChange={(bio) => setProfile((p) => ({ ...p, bio }))}
+              textareaClassName="min-h-[7rem]"
+              placeholder={`# หัวข้อใหญ่
+ย่อหน้าแนะนำตัว
+
+~ เนื้อหาตัวเล็กเพิ่มเติม
+
+- จุดเด่นข้อที่ 1
+- จุดเด่นข้อที่ 2`}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className={labelClass}>
                 อีเมล
