@@ -38,10 +38,50 @@ import {
   proResumeFilterChipShellClass,
   proResumeOutlineButtonClass,
   proResumePrimaryButtonClass,
+  proResumeRowIconButtonClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
 const UPLOAD = "/api/pro-resume/session/upload";
 const labelClass = "block space-y-1 text-xs font-bold text-[#4d47b6]";
+
+function ReorderButtons({
+  index,
+  total,
+  onUp,
+  onDown,
+  label,
+}: {
+  index: number;
+  total: number;
+  onUp: () => void;
+  onDown: () => void;
+  label: string;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col gap-0.5">
+      <button
+        type="button"
+        className={proResumeRowIconButtonClass}
+        disabled={index === 0}
+        aria-label={`เลื่อนขึ้น ${label}`}
+        title="เลื่อนขึ้น (ไว้ด้านหน้า)"
+        onClick={onUp}
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        className={proResumeRowIconButtonClass}
+        disabled={index >= total - 1}
+        aria-label={`เลื่อนลง ${label}`}
+        title="เลื่อนลง"
+        onClick={onDown}
+      >
+        ↓
+      </button>
+    </div>
+  );
+}
 
 export function ProResumePortfolioClient() {
   const notice = useAppNoticePopup();
@@ -87,6 +127,41 @@ export function ProResumePortfolioClient() {
       return;
     }
     await load();
+  };
+
+  const persistOrder = async (orderedIds: string[]) => {
+    const res = await fetch("/api/pro-resume/session/portfolio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds }),
+    });
+    const data = (await res.json()) as { items?: ResumePortfolioItemDto[]; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "จัดลำดับไม่สำเร็จ");
+    if (data.items) setItems(data.items);
+    else await load();
+  };
+
+  /** เลื่อนในรายการที่แสดง — อันบนสุด = ด้านหน้าสุดบนพอร์ทัล */
+  const moveItem = async (index: number, dir: -1 | 1) => {
+    const list = [...filteredItems];
+    const j = index + dir;
+    if (j < 0 || j >= list.length) return;
+    [list[index], list[j]] = [list[j]!, list[index]!];
+
+    const queue = [...list];
+    const orderedIds =
+      filterCat === "all"
+        ? list.map((r) => r.id)
+        : items.map((item) => {
+            if (item.categoryId !== filterCat) return item.id;
+            return queue.shift()!.id;
+          });
+
+    try {
+      await persistOrder(orderedIds);
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "จัดลำดับไม่สำเร็จ");
+    }
   };
 
   return (
@@ -135,9 +210,16 @@ export function ProResumePortfolioClient() {
 
         {filteredItems.length ? (
           <ul className="space-y-2">
-            {filteredItems.map((row) => (
+            {filteredItems.map((row, index) => (
               <li key={row.id} className={proResumeTonedRowCardClass("sky")}>
                 <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <ReorderButtons
+                    index={index}
+                    total={filteredItems.length}
+                    label={row.title}
+                    onUp={() => void moveItem(index, -1)}
+                    onDown={() => void moveItem(index, 1)}
+                  />
                   <AppImageThumb src={row.coverImage} alt={row.title} className="h-14 w-14 shrink-0" onOpen={() => row.coverImage && lb.open(row.coverImage)} />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{row.title}</p>

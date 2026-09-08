@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { proResumeOwnerFromAuth } from "@/lib/pro-resume/api-owner";
 import { proResumeOwnerWhere, proResumeSessionContext } from "@/lib/pro-resume/session-context";
 import { prisma } from "@/lib/prisma";
+import { applyOrderedIds } from "@/systems/pro-resume/lib/helpers";
 import { mapResumePortfolioItem, serializeImagesJson } from "@/systems/pro-resume/lib/mappers";
 
 export async function GET(req: Request) {
@@ -41,6 +42,25 @@ export async function POST(req: Request) {
     const { profile, scope } = await proResumeSessionContext(own.ownerId);
     const body = (await req.json()) as Record<string, unknown>;
 
+    if (Array.isArray(body.orderedIds)) {
+      const result = await applyOrderedIds(
+        prisma.resumePortfolioItem,
+        profile.id,
+        own.ownerId,
+        scope.trialSessionId,
+        body.orderedIds.filter((id): id is string => typeof id === "string"),
+      );
+      if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+      const rows = await prisma.resumePortfolioItem.findMany({
+        where: {
+          profileId: profile.id,
+          ...proResumeOwnerWhere(own.ownerId, scope.trialSessionId),
+        },
+        orderBy: { orderIndex: "asc" },
+      });
+      return NextResponse.json({ items: rows.map(mapResumePortfolioItem) });
+    }
+
     const categoryId = typeof body.categoryId === "string" ? body.categoryId : "";
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 200) : "";
     if (!categoryId || !title) {
@@ -57,7 +77,7 @@ export async function POST(req: Request) {
       : [];
 
     const maxOrder = await prisma.resumePortfolioItem.aggregate({
-      where: { categoryId },
+      where: { profileId: profile.id },
       _max: { orderIndex: true },
     });
 
