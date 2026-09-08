@@ -429,50 +429,51 @@ export function HomeFinanceAiPromptsClient() {
             {items.length === 0 ? "ยังไม่มี Prompt — กด «+ เพิ่ม»" : "ไม่พบรายการตามเงื่อนไขกรอง"}
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="w-full space-y-2" aria-label="รายการ Prompt AI">
             {filtered.map((row) => (
-              <li key={row.id} className={cn(homeFinanceTonedRowCardClass("violet"), "p-3 sm:p-4")}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-bold text-[#1e1b4b]">{row.title}</p>
-                      {row.promptType ? (
-                        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
-                          {row.promptType}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="line-clamp-3 whitespace-pre-wrap text-xs text-[#66638c]">{row.content}</p>
-                    <p className="text-[10px] font-medium text-slate-400">
-                      อัปเดต {formatBangkokDigestDateTimeLabel(row.updatedAt)}
-                    </p>
+              <li
+                key={row.id}
+                className={cn(homeFinanceTonedRowCardClass("violet"), "w-full items-start p-3 sm:p-4")}
+              >
+                <div className="min-w-0 flex-1 space-y-1 pr-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-bold text-[#1e1b4b]">{row.title}</p>
+                    {row.promptType ? (
+                      <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
+                        {row.promptType}
+                      </span>
+                    ) : null}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <HomeFinanceRowActionIconButton
-                      variant="muted"
-                      title="คัดลอก"
-                      aria-label={`คัดลอก ${row.title}`}
-                      onClick={() => void copyContent(row.content)}
-                    >
-                      <HomeFinanceRowIconCopy />
-                    </HomeFinanceRowActionIconButton>
-                    <HomeFinanceRowActionIconButton
-                      variant="primary"
-                      title="แก้ไข"
-                      aria-label={`แก้ไข ${row.title}`}
-                      onClick={() => openEdit(row)}
-                    >
-                      <HomeFinanceRowIconEdit />
-                    </HomeFinanceRowActionIconButton>
-                    <HomeFinanceRowActionIconButton
-                      variant="danger"
-                      title="ลบ"
-                      aria-label={`ลบ ${row.title}`}
-                      onClick={() => void removePrompt(row)}
-                    >
-                      <HomeFinanceRowIconTrash />
-                    </HomeFinanceRowActionIconButton>
-                  </div>
+                  <p className="line-clamp-3 whitespace-pre-wrap text-xs text-[#66638c]">{row.content}</p>
+                  <p className="text-[10px] font-medium text-slate-400">
+                    อัปเดต {formatBangkokDigestDateTimeLabel(row.updatedAt)}
+                  </p>
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-1 self-start">
+                  <HomeFinanceRowActionIconButton
+                    variant="muted"
+                    title="คัดลอก"
+                    aria-label={`คัดลอก ${row.title}`}
+                    onClick={() => void copyContent(row.content)}
+                  >
+                    <HomeFinanceRowIconCopy />
+                  </HomeFinanceRowActionIconButton>
+                  <HomeFinanceRowActionIconButton
+                    variant="primary"
+                    title="แก้ไข"
+                    aria-label={`แก้ไข ${row.title}`}
+                    onClick={() => openEdit(row)}
+                  >
+                    <HomeFinanceRowIconEdit />
+                  </HomeFinanceRowActionIconButton>
+                  <HomeFinanceRowActionIconButton
+                    variant="danger"
+                    title="ลบ"
+                    aria-label={`ลบ ${row.title}`}
+                    onClick={() => void removePrompt(row)}
+                  >
+                    <HomeFinanceRowIconTrash />
+                  </HomeFinanceRowActionIconButton>
                 </div>
               </li>
             ))}
