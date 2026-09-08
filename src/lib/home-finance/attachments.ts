@@ -1,3 +1,5 @@
+import { isTrustedDemoMockUploadPath } from "@/lib/trial/demo-module-settings";
+
 /** จำนวนไฟล์แนบสูงสุดต่อรายการรายรับ–รายจ่าย */
 export const MAX_HOME_FINANCE_ATTACHMENTS = 20;
 
@@ -32,6 +34,7 @@ export function encodeHomeFinancePublicAssetHref(path: string): string {
 /**
  * แปลงค่าที่เก็บ/ส่งมา (path `/uploads/...` หรือ URL เต็ม) เป็น path มาตรฐานเดียวกัน
  * กันที่รายการไม่แสดงเพราะ client หรือ proxy เก็บเป็น https://host/uploads/...
+ * รวมสลิปตัวอย่าง `/uploads/mock/...` จาก seed
  */
 export function normalizeHomeFinanceStoredPath(raw: string): string | null {
   let s = raw.trim();
@@ -39,6 +42,7 @@ export function normalizeHomeFinanceStoredPath(raw: string): string | null {
   s = rewriteLegacyHomeFinancePath(s);
   if (s.length > 512) return null;
   if (s.startsWith("/uploads/home-finance/")) return s;
+  if (isTrustedDemoMockUploadPath(s)) return s;
   try {
     if (/^https?:\/\//i.test(s)) {
       const u = new URL(s);
@@ -46,6 +50,7 @@ export function normalizeHomeFinanceStoredPath(raw: string): string | null {
       if (p.startsWith("/uploads/home-finance/") && !p.includes("..") && p.length <= 512) {
         return p;
       }
+      if (isTrustedDemoMockUploadPath(p)) return p;
     }
   } catch {
     return null;
@@ -57,7 +62,7 @@ export function isAllowedHomeFinanceUploadPath(url: string): boolean {
   return normalizeHomeFinanceStoredPath(url) != null;
 }
 
-/** ก่อนบันทึกลง DB — เก็บเป็น path เริ่ม `/uploads/home-finance/` เสมอ */
+/** ก่อนบันทึกลง DB — เก็บเป็น path `/uploads/home-finance/…` หรือสลิปตัวอย่าง `/uploads/mock/…` */
 export function canonicalizeHomeFinanceAttachmentList(urls: string[]): string[] {
   const out: string[] = [];
   for (const u of urls) {

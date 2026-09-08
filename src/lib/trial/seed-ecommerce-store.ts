@@ -6,14 +6,15 @@ import {
 } from "@/lib/ecommerce/order-codes";
 import { serializeEcommerceGalleryImages } from "@/lib/ecommerce/product-images";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_ECOMMERCE_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 
 /** รูป Unsplash ที่ตรวจ HEAD 200 แล้ว — ห้ามใช้ picsum */
 const U = (id: string, w = 800) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 const STORE_LOGO_URL = U("photo-1441986300917-64674bd600d8", 400);
-const SLIP_SAMPLE_URLS = [DEMO_PAYMENT_SLIP_URL] as const;
+const SLIP_SAMPLE_URLS = [DEMO_ECOMMERCE_SLIP_URL] as const;
 
 const CATEGORY_DEFS = [
   "สกินแคร์",
@@ -486,6 +487,7 @@ export async function seedEcommerceStoreProdDemoForOwner(
   prisma: PrismaClient,
   ownerUserId: string,
 ) {
+  await ensureDemoPaymentSlipFiles();
   const trialSessionId = "prod";
 
   const store = await prisma.ecommerceStore.findUnique({

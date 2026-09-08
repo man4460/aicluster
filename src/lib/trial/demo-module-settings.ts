@@ -10,11 +10,47 @@ export const DEMO_MODULE_PAYMENT: ModuleShopPaymentDto = {
   taxId: "0123456789012",
 };
 
+export const DEMO_PAYMENT_SLIP_FILENAME = "demo-payment-slip.jpg" as const;
+
+/** พาธกลาง — โมดูลที่รับ `/uploads/…` ทั่วไป */
+export const DEMO_PAYMENT_SLIP_URL =
+  `/uploads/mock/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+/** รายรับ–รายจ่าย — ต้องอยู่ใต้ `/uploads/home-finance/` */
+export const DEMO_HOME_FINANCE_SLIP_URL =
+  `/uploads/home-finance/_demo/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+export const DEMO_VILLAGE_SLIP_URL =
+  `/uploads/village-slips/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+export const DEMO_BARBER_SLIP_URL =
+  `/uploads/barber-cash-receipts/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+export const DEMO_MASSAGE_SLIP_URL =
+  `/uploads/massage-cash-receipts/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+export const DEMO_ECOMMERCE_SLIP_URL =
+  `/uploads/ecommerce-slips/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+export const DEMO_LAUNDRY_SLIP_URL =
+  `/uploads/laundry/_demo/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+/** ชมรม — ค่าบำรุง / คำตอบลิงก์กิจกรรม / การเงิน */
+export const DEMO_CLUB_EVENT_SLIP_URL =
+  `/uploads/club-event/_demo/${DEMO_PAYMENT_SLIP_FILENAME}` as const;
+
+const DEMO_MOCK_UPLOAD_PREFIX = "/uploads/mock/";
+
 /**
- * สลิปโอนเงินตัวอย่างกลาง (กรุงไทย) — ใช้ทุกโมดูลที่ seed แนบสลิป
- * ไฟล์: `public/uploads/mock/demo-payment-slip.jpg`
+ * พาธสลิปตัวอย่างใต้ `public/uploads/mock/` — สำรองตอนอ่าน
+ * (seed ควรใช้พาธบัคเก็ตของโมดูล — ดู DEMO_HOME_FINANCE_SLIP_URL ฯลฯ)
  */
-export const DEMO_PAYMENT_SLIP_URL = "/uploads/mock/demo-payment-slip.jpg" as const;
+export function isTrustedDemoMockUploadPath(url: string): boolean {
+  const s = url.trim();
+  if (!s.startsWith(DEMO_MOCK_UPLOAD_PREFIX) || s.includes("..") || s.length > 512) return false;
+  const rest = s.slice(DEMO_MOCK_UPLOAD_PREFIX.length);
+  return /^[a-zA-Z0-9_.-]+$/.test(rest) && rest.length > 0 && rest.length <= 200;
+}
 
 export const DEMO_MODULE_CONTACT = {
   contactPhone: "021234567",

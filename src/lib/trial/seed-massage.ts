@@ -6,7 +6,8 @@ import {
   bangkokDayStartEndForDateKey,
 } from "@/lib/massage/bangkok-day";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_MASSAGE_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 import {
   MASSAGE_PACKAGE_SAMPLE_IMAGES,
   MASSAGE_PORTAL_SAMPLE_BANNER,
@@ -29,7 +30,7 @@ export const MASSAGE_LIVE_DEMO_NOTE = "ตัวอย่างอัตโน�
 
 /** รูปสลิป/ใบเสร็จตัวอย่าง — สลิปโอนกลางของโปรเจกต์ */
 function trialSlipUrl(): string {
-  return DEMO_PAYMENT_SLIP_URL;
+  return DEMO_MASSAGE_SLIP_URL;
 }
 
 function isMissingOrPlaceholderImage(url: string | null | undefined): boolean {
@@ -876,6 +877,7 @@ export async function seedMassageProdDemoForOwner(
   ownerUserId: string,
   opts?: { refreshDaily?: boolean },
 ): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   const refresh = opts?.refreshDaily !== false;
   const pkgCount = await db.massagePackage.count({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },

@@ -10,7 +10,8 @@ import {
   barberNormalizePortalGallery,
   barberSerializePortalGallery,
 } from "@/systems/barber/lib/portal-media";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_BARBER_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 
 type Tx = Omit<
   PrismaClient,
@@ -179,7 +180,7 @@ export async function seedBarberTrialData(tx: Tx, ownerUserId: string, trialSess
           soldByStylistId: stylist.id,
           remainingSessions: remaining,
           status: st,
-          saleReceiptImageUrl: withSlip ? DEMO_PAYMENT_SLIP_URL : null,
+          saleReceiptImageUrl: withSlip ? DEMO_BARBER_SLIP_URL : null,
         },
       });
     }),
@@ -216,7 +217,7 @@ export async function seedBarberTrialData(tx: Tx, ownerUserId: string, trialSess
           visitType: "CASH_WALK_IN",
           stylistId: stylist.id,
           amountBaht: 180 + i * 20,
-          receiptImageUrl: DEMO_PAYMENT_SLIP_URL,
+          receiptImageUrl: DEMO_BARBER_SLIP_URL,
           note: i === 3 ? "Walk-in ไม่ระบุแพ็ก" : null,
           createdAt: new Date(now - (i + 2) * day),
         },
@@ -277,7 +278,7 @@ export async function seedBarberTrialData(tx: Tx, ownerUserId: string, trialSess
           amount: 450 + i * 120,
           itemLabel,
           note: "รายการตัวอย่างโหมดทดลอง",
-          slipPhotoUrl: DEMO_PAYMENT_SLIP_URL,
+          slipPhotoUrl: DEMO_BARBER_SLIP_URL,
         },
       });
     }),
@@ -307,6 +308,7 @@ export async function seedBarberProdDemoForOwner(
   ownerUserId: string,
   opts?: { refreshDaily?: boolean },
 ): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   const refresh = opts?.refreshDaily !== false;
   const pkgCount = await db.barberPackage.count({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },

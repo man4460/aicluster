@@ -3,7 +3,8 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_LAUNDRY_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 import { LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR } from "@/systems/laundry/laundry-customer-pickup-request";
 import type { LaundryOrderStatus } from "@/systems/laundry/laundry-order-status";
 import {
@@ -338,7 +339,7 @@ async function ensureLaundryDemoOrdersDb(
         paymentMethod: def.paymentMethod ?? null,
         receiptImageUrl:
           def.paymentMethod === "PROMPTPAY" || def.paymentMethod === "TRANSFER"
-            ? DEMO_PAYMENT_SLIP_URL
+            ? DEMO_LAUNDRY_SLIP_URL
             : null,
         pickupPublicToken: def.online ? randomUUID() : null,
       },
@@ -401,7 +402,7 @@ async function ensureLaundryDemoCustomersDb(
         remainingSessions: def.remaining,
         status,
         paymentMethod: "CASH",
-        saleReceiptImageUrl: DEMO_PAYMENT_SLIP_URL,
+        saleReceiptImageUrl: DEMO_LAUNDRY_SLIP_URL,
       },
     });
   }
@@ -473,7 +474,7 @@ async function ensureLaundryDemoFinanceDb(
         amount: 420,
         itemLabel: "น้ำยาซัก + น้ำยาปรับผ้านุ่ม",
         note: `${DEMO_NOTE} — ซื้อสต็อกประจำสัปดาห์`,
-        slipPhotoUrl: DEMO_PAYMENT_SLIP_URL,
+        slipPhotoUrl: DEMO_LAUNDRY_SLIP_URL,
       },
     });
   }
@@ -577,6 +578,7 @@ async function ensureLaundryDemoForScope(
 
 /** ข้อมูลตัวอย่างรับฝากซักผ้า — prod + trial ที่ยัง active */
 export async function seedLaundryProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   await ensureLaundryDemoForScope(db, ownerUserId, TRIAL_PROD_SCOPE);
 
   const mod = await db.appModule.findFirst({

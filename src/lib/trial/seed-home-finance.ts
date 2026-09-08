@@ -1,12 +1,13 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_HOME_FINANCE_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 
 /** แถวที่ seed — รันซ้ำได้ ลบเฉพาะข้อมูลที่มีแท็กนี้ก่อนแทรกใหม่ */
 const SEED_EXTERNAL_SOURCE = "seed-prod-demo";
 const SEED_TITLE_PREFIX = "(ตัวอย่าง)";
 
-const DEMO_SLIP = DEMO_PAYMENT_SLIP_URL;
+const DEMO_SLIP = DEMO_HOME_FINANCE_SLIP_URL;
 const DEMO_DOC_ID = "https://picsum.photos/seed/hf-doc-id/800/500.jpg";
 
 const CATEGORY_SEEDS = [
@@ -64,6 +65,7 @@ async function clearSeedTaggedRows(db: PrismaClient, ownerUserId: string) {
 
 /** รายรับ–รายจ่าย + หมวด + แจ้งเตือน + เอกสารส่วนตัว สำหรับบัญชี demo */
 export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   await clearSeedTaggedRows(db, ownerUserId);
   const categories = await ensureCategories(db, ownerUserId);
 

@@ -1,7 +1,8 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
-import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { DEMO_VILLAGE_SLIP_URL } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 
 type Tx = Omit<
   PrismaClient,
@@ -181,7 +182,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feeNowH1.id,
         yearMonth: ym,
         amount: 900,
-        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
+        slipImageUrl: DEMO_VILLAGE_SLIP_URL,
         status: "APPROVED",
         reviewerNote: "ยอดตรงบิล",
         submittedAt: new Date(`${ym}-03T20:05:00+07:00`),
@@ -194,7 +195,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feeNowH2.id,
         yearMonth: ym,
         amount: 500,
-        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
+        slipImageUrl: DEMO_VILLAGE_SLIP_URL,
         status: "PENDING",
         submittedAt: new Date(`${ym}-05T18:20:00+07:00`),
       },
@@ -205,7 +206,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feePrevH2.id,
         yearMonth: prevYm,
         amount: 500,
-        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
+        slipImageUrl: DEMO_VILLAGE_SLIP_URL,
         status: "APPROVED",
         reviewerNote: "ปิดยอดเดือนก่อน",
         submittedAt: new Date(`${prevYm}-09T10:00:00+07:00`),
@@ -267,13 +268,14 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
 }
 
 export async function seedVillageProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   const existing = await db.villageProfile.findFirst({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
   });
   if (existing) {
     await db.villageSlipSubmission.updateMany({
       where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
-      data: { slipImageUrl: DEMO_PAYMENT_SLIP_URL },
+      data: { slipImageUrl: DEMO_VILLAGE_SLIP_URL },
     });
     return;
   }

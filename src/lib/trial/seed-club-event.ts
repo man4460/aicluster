@@ -4,8 +4,9 @@ import {
   DEMO_MODULE_CONTACT,
   DEMO_MODULE_LOGO_URL,
   DEMO_MODULE_PAYMENT,
-  DEMO_PAYMENT_SLIP_URL,
+  DEMO_CLUB_EVENT_SLIP_URL,
 } from "@/lib/trial/demo-module-settings";
+import { ensureDemoPaymentSlipFiles } from "@/lib/trial/demo-payment-slip";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { youtubeEmbedUrl } from "@/lib/youtube-url";
 import { ensureClubEventProfile } from "@/systems/club-event/lib/ensure-club-event-profile";
@@ -20,7 +21,8 @@ import { clubEventDuesPeriodForDate } from "@/systems/club-event/lib/dues";
 import { DEFAULT_CLUB_EVENT_FINANCE_CATEGORIES } from "@/systems/club-event/lib/mappers";
 import { syncClubEventDuesPublicLink } from "@/systems/club-event/lib/sync-dues-link";
 
-const DEMO_MARKER = "seed:club-event-demo-v5";
+const DEMO_MARKER = "seed:club-event-demo-v6";
+const DEMO_SLIP = DEMO_CLUB_EVENT_SLIP_URL;
 
 const GALLERY_POOL = [
   "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=900&q=80",
@@ -122,6 +124,7 @@ export async function seedClubEventProdDemoForOwner(
   prisma: PrismaClient,
   ownerUserId: string,
 ): Promise<void> {
+  await ensureDemoPaymentSlipFiles();
   const trialSessionId = TRIAL_PROD_SCOPE;
   await wipeClubEventDemoScope(prisma, ownerUserId, trialSessionId);
 
@@ -494,7 +497,7 @@ export async function seedClubEventProdDemoForOwner(
       amountBaht: row.amountBaht,
       transactedAt: bangkokOffsetDays(-row.daysAgo, row.hour, (i * 7) % 60),
       note: DEMO_MARKER,
-      slipUrl: row.slip ? DEMO_PAYMENT_SLIP_URL : null,
+      slipUrl: row.slip ? DEMO_SLIP : null,
     })),
   });
 
@@ -1254,7 +1257,7 @@ export async function seedClubEventProdDemoForOwner(
       payloadJson: mkPayload(row),
       amountBaht: row.amountBaht ?? null,
       paymentMethod: row.paymentMethod ?? null,
-      slipUrl: row.slipIndex != null ? DEMO_PAYMENT_SLIP_URL : null,
+      slipUrl: row.slipIndex != null ? DEMO_SLIP : null,
       createdAt: bangkokOffsetDays(-(row.daysAgo ?? 1), 10 + (i % 8), (i * 11) % 60),
     })),
   });
@@ -1280,7 +1283,7 @@ export async function seedClubEventProdDemoForOwner(
         }),
         amountBaht: PARTY_FEE_DUES,
         paymentMethod: row.paymentMethod ?? null,
-        slipUrl: row.slipIndex != null ? DEMO_PAYMENT_SLIP_URL : null,
+        slipUrl: row.slipIndex != null ? DEMO_SLIP : null,
         createdAt: bangkokOffsetDays(-(row.daysAgo ?? 1), 11 + (i % 6), (i * 13) % 60),
       })),
     });
@@ -1325,7 +1328,7 @@ export async function seedClubEventProdDemoForOwner(
         periodKey: duesPeriodInfo.periodKey,
         periodLabel: duesPeriodInfo.periodLabel,
         paymentMethod: r.paymentMethod,
-        slipUrl: r.slipIndex != null ? DEMO_PAYMENT_SLIP_URL : null,
+        slipUrl: r.slipIndex != null ? DEMO_SLIP : null,
         source: r.source,
         sourceLinkId: r.source === "EVENT_BUNDLE" ? partyPay.id : pay.id,
         sourceEventId: r.source === "EVENT_BUNDLE" ? party?.id ?? null : null,

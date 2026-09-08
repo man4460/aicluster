@@ -12,9 +12,10 @@ const KIND_LABEL: Record<AppLabeledImageThumbKind, string> = {
 };
 
 const KIND_BADGE_CLASS: Record<AppLabeledImageThumbKind, string> = {
-  slip: "bg-emerald-600/95 text-white",
-  product: "bg-[#4d47b6]/95 text-white",
-  photo: "bg-slate-700/90 text-white",
+  /** ทึบเต็ม — ห้ามใช้ /opacity อย่างเดียว บาง build ป้ายโปร่งจนพื้นหาย */
+  slip: "bg-emerald-600 text-white",
+  product: "bg-[#4d47b6] text-white",
+  photo: "bg-slate-700 text-white",
 };
 
 export type AppLabeledImageThumbProps = {
@@ -51,7 +52,7 @@ export function AppLabeledImageThumb({
       />
       <span
         className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-0 rounded-b-lg px-0.5 py-0.5 text-center text-[9px] font-black leading-none tracking-wide",
+          "pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg px-0.5 py-0.5 text-center text-[9px] font-black leading-none tracking-wide",
           KIND_BADGE_CLASS[kind],
         )}
         aria-hidden

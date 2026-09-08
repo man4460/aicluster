@@ -56,14 +56,21 @@ mawell_buffet_from_host.sql
 !/public/uploads/attendance-faces/.gitkeep
 /public/uploads/village-slips/*
 !/public/uploads/village-slips/.gitkeep
+!/public/uploads/village-slips/demo-payment-slip.jpg
 /public/uploads/building-pos/*
 !/public/uploads/building-pos/.gitkeep
+!/public/uploads/building-pos/_demo/
+!/public/uploads/building-pos/_demo/demo-payment-slip.jpg
 /public/uploads/home-finance/*
 !/public/uploads/home-finance/.gitkeep
+!/public/uploads/home-finance/_demo/
+!/public/uploads/home-finance/_demo/demo-payment-slip.jpg
 /public/uploads/attendance-roster/*
 !/public/uploads/attendance-roster/.gitkeep
 /public/uploads/car-wash/*
 !/public/uploads/car-wash/.gitkeep
+!/public/uploads/car-wash/_demo/
+!/public/uploads/car-wash/_demo/demo-payment-slip.jpg
 /public/uploads/car-wash-portal-slips/*
 !/public/uploads/car-wash-portal-slips/.gitkeep
 /public/uploads/car-wash-portal-signatures/*
@@ -72,6 +79,7 @@ mawell_buffet_from_host.sql
 !/public/uploads/barber-stylists/.gitkeep
 /public/uploads/barber-cash-receipts/*
 !/public/uploads/barber-cash-receipts/.gitkeep
+!/public/uploads/barber-cash-receipts/demo-payment-slip.jpg
 /public/uploads/barber-portal-slips/*
 !/public/uploads/barber-portal-slips/.gitkeep
 /public/uploads/module-cards/*
@@ -80,12 +88,17 @@ mawell_buffet_from_host.sql
 !/public/uploads/dorm-cost-slips/.gitkeep
 /public/uploads/laundry/*
 !/public/uploads/laundry/.gitkeep
+!/public/uploads/laundry/_demo/
+!/public/uploads/laundry/_demo/demo-payment-slip.jpg
 /public/uploads/ecommerce-slips/*
 !/public/uploads/ecommerce-slips/.gitkeep
+!/public/uploads/ecommerce-slips/demo-payment-slip.jpg
 /public/uploads/ecommerce-store/*
 !/public/uploads/ecommerce-store/.gitkeep
 /public/uploads/hotel-resort/*
 !/public/uploads/hotel-resort/.gitkeep
+!/public/uploads/hotel-resort/_demo/
+!/public/uploads/hotel-resort/_demo/demo-payment-slip.jpg
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/
