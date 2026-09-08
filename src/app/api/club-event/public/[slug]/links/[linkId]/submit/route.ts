@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
+import { normalizeClubPhoneDigits } from "@/systems/club-event/lib/dues";
+import { resolveClubLinkBundledAnnualDues } from "@/systems/club-event/lib/link-bundled-dues";
 import {
   computeClubLinkAnswersAmountBaht,
   parseClubLinkQtyAnswer,
@@ -78,10 +80,24 @@ export async function POST(req: Request, ctx: Ctx) {
       typeof body.paymentMethod === "string" ? body.paymentMethod.trim().slice(0, 32) : null;
     const slipUrl = typeof body.slipUrl === "string" ? body.slipUrl.trim().slice(0, 512) : null;
 
+    const includeBundledDues = body.includeBundledDues !== false;
+    const bundledDues = includeBundledDues
+      ? resolveClubLinkBundledAnnualDues({
+          linkAnnualDues: config.linkAnnualDues,
+          profile: {
+            duesEnabled: profile.duesEnabled,
+            duesAmountBaht: profile.duesAmountBaht,
+            duesPeriod: profile.duesPeriod,
+          },
+        })
+      : null;
+    const includeDuesBaht = bundledDues?.amountBaht ?? 0;
+
     let amountBaht: number | null = null;
     if (link.type === "PAYMENT") {
       amountBaht = computeClubLinkAnswersAmountBaht(fields, answers, {
         baseAmountBaht: Number(config.amountBaht) || 0,
+        includeDuesBaht,
       });
       if (amountBaht > 0 && (paymentMethod === "PROMPTPAY" || paymentMethod === "TRANSFER") && !slipUrl) {
         return NextResponse.json({ error: "แนบสลิปหลังชำระ" }, { status: 400 });
@@ -93,6 +109,9 @@ export async function POST(req: Request, ctx: Ctx) {
       answer: answers[fields[0]?.key ?? "answer"] ?? legacyAnswer,
       eventId: config.eventId ?? null,
       fields,
+      includeBundledDues: Boolean(bundledDues),
+      bundledDuesAmountBaht: includeDuesBaht || undefined,
+      bundledDuesPeriodKey: bundledDues?.periodKey,
     };
 
     const row = await prisma.clubEventLinkSubmission.create({
@@ -116,11 +135,55 @@ export async function POST(req: Request, ctx: Ctx) {
           trialSessionId: profile.trialSessionId,
           profileId: profile.id,
           type: "INCOME",
-          category: "ค่ากิจกรรม (ลิงก์)",
+          category: includeDuesBaht > 0 ? "ค่ากิจกรรม+ค่าบำรุง (ลิงก์)" : "ค่ากิจกรรม (ลิงก์)",
           amountBaht: Math.round(amountBaht),
           transactedAt: new Date(),
           note: `${link.title} · ${respondentName}`,
           slipUrl,
+        },
+      });
+    }
+
+    if (link.type === "PAYMENT" && bundledDues && includeDuesBaht > 0) {
+      const phoneDigits = normalizeClubPhoneDigits(respondentPhone);
+      const members =
+        phoneDigits.length >= 9
+          ? await prisma.clubEventMember.findMany({
+              where: {
+                profileId: profile.id,
+                isActive: true,
+                ownerUserId: profile.ownerUserId,
+                trialSessionId: profile.trialSessionId,
+              },
+              select: { id: true, memberCode: true, phone: true },
+              take: 2000,
+            })
+          : [];
+      const matched =
+        phoneDigits.length >= 9
+          ? members.find((m) => normalizeClubPhoneDigits(m.phone) === phoneDigits)
+          : undefined;
+
+      await prisma.clubEventDuesPayment.create({
+        data: {
+          ownerUserId: profile.ownerUserId,
+          trialSessionId: profile.trialSessionId,
+          profileId: profile.id,
+          memberId: matched?.id ?? null,
+          payerName: respondentName,
+          payerPhone: respondentPhone,
+          memberCode: matched?.memberCode ?? "",
+          amountBaht: includeDuesBaht,
+          periodKey: bundledDues.periodKey,
+          periodLabel: bundledDues.periodLabel,
+          paymentMethod,
+          slipUrl,
+          source: "EVENT_BUNDLE",
+          sourceLinkId: link.id,
+          sourceSubmissionId: row.id,
+          sourceEventId: config.eventId ?? null,
+          note: `พ่วงจากลิงก์ · ${link.title}`,
+          paidAt: new Date(),
         },
       });
     }

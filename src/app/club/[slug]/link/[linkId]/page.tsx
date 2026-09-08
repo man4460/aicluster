@@ -1,6 +1,7 @@
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
 import { ClubEventPublicLinkClient } from "@/systems/club-event/components/ClubEventPublicLinkClient";
 import { prisma } from "@/lib/prisma";
+import { resolveClubLinkBundledAnnualDues } from "@/systems/club-event/lib/link-bundled-dues";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 import { notFound } from "next/navigation";
 
@@ -30,6 +31,15 @@ export default async function ClubPublicLinkPage({ params, searchParams }: Props
     eventTitle = ev?.title ?? null;
   }
 
+  const bundledAnnualDues = resolveClubLinkBundledAnnualDues({
+    linkAnnualDues: config.linkAnnualDues,
+    profile: {
+      duesEnabled: profile.duesEnabled,
+      duesAmountBaht: profile.duesAmountBaht,
+      duesPeriod: profile.duesPeriod,
+    },
+  });
+
   return (
     <ClubEventPublicLinkClient
       slug={slug}
@@ -43,6 +53,7 @@ export default async function ClubPublicLinkPage({ params, searchParams }: Props
         slug: profile.slug,
         tagline: profile.tagline ?? null,
         paymentRulesNote: profile.paymentRulesNote ?? "",
+        bundledAnnualDues,
         link: {
           id: link.id,
           type: link.type,

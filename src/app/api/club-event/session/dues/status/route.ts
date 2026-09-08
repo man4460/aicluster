@@ -44,10 +44,15 @@ export async function GET() {
 
     const ownerWhere = clubEventOwnerWhere(own.ownerId, scope.trialSessionId);
 
-    const [submissions, members] = await Promise.all([
+    const [submissions, duesPayments, members] = await Promise.all([
       prisma.clubEventLinkSubmission.findMany({
         where: { linkId: profile.duesLinkId, ...ownerWhere },
         orderBy: { createdAt: "desc" },
+        take: 500,
+      }),
+      prisma.clubEventDuesPayment.findMany({
+        where: { profileId: profile.id, periodKey, ...ownerWhere },
+        orderBy: { paidAt: "desc" },
         take: 500,
       }),
       prisma.clubEventMember.findMany({
@@ -79,6 +84,12 @@ export async function GET() {
       const name = normalizeClubPersonName(s.respondentName);
       if (name) paidNames.add(name);
     }
+    for (const p of duesPayments) {
+      const phone = normalizeClubPhoneDigits(p.payerPhone);
+      if (phone.length >= 9) paidPhones.add(phone);
+      const name = normalizeClubPersonName(p.payerName);
+      if (name) paidNames.add(name);
+    }
 
     type PaidRow = {
       id: string;
@@ -92,9 +103,10 @@ export async function GET() {
       createdAt: string;
       matchedMemberId: string | null;
       matchedMemberName: string | null;
+      source?: string;
     };
 
-    const paid: PaidRow[] = paidInPeriod.map((s) => {
+    const paidFromSubmissions: PaidRow[] = paidInPeriod.map((s) => {
       const phone = normalizeClubPhoneDigits(s.respondentPhone);
       const name = normalizeClubPersonName(s.respondentName);
       const byPhone =
@@ -120,8 +132,45 @@ export async function GET() {
         createdAt: s.createdAt.toISOString(),
         matchedMemberId: matched?.id ?? null,
         matchedMemberName: matched?.name ?? null,
+        source: "DIRECT",
       };
     });
+
+    const paidFromBundle: PaidRow[] = duesPayments.map((p) => {
+      const phone = normalizeClubPhoneDigits(p.payerPhone);
+      const name = normalizeClubPersonName(p.payerName);
+      const byPhone =
+        phone.length >= 9 ? members.find((m) => normalizeClubPhoneDigits(m.phone) === phone) : undefined;
+      const byName =
+        !byPhone && name
+          ? members.find((m) => {
+              const mPhone = normalizeClubPhoneDigits(m.phone);
+              if (mPhone.length >= 9) return false;
+              return normalizeClubPersonName(m.name) === name;
+            })
+          : undefined;
+      const matched = byPhone ?? byName ?? (p.memberId ? members.find((m) => m.id === p.memberId) : undefined);
+      return {
+        id: p.id,
+        respondentName: p.payerName,
+        respondentPhone: p.payerPhone,
+        amountBaht: p.amountBaht,
+        paymentMethod: p.paymentMethod,
+        slipUrl: p.slipUrl,
+        slipVerifiedAt: null,
+        slipVerified: false,
+        createdAt: p.paidAt.toISOString(),
+        matchedMemberId: matched?.id ?? p.memberId ?? null,
+        matchedMemberName: matched?.name ?? null,
+        source: p.source,
+      };
+    });
+
+    const seenIds = new Set(paidFromSubmissions.map((r) => r.id));
+    const paid: PaidRow[] = [
+      ...paidFromSubmissions,
+      ...paidFromBundle.filter((r) => !seenIds.has(r.id)),
+    ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     const unpaidMembers = members
       .filter((m) => {

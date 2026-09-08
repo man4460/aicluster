@@ -56,6 +56,12 @@ export type ClubPublicLinkPayload = {
   slug: string;
   tagline: string | null;
   paymentRulesNote: string;
+  /** ค่าบำรุงที่พ่วงกับลิงก์นี้ (จากตั้งค่าชมรม) */
+  bundledAnnualDues?: {
+    amountBaht: number;
+    periodKey: string;
+    periodLabel: string;
+  } | null;
   link: {
     id: string;
     type: ClubEventDynamicLinkDto["type"];
@@ -172,8 +178,10 @@ export function ClubEventPublicLinkClient({
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [includeBundledDues, setIncludeBundledDues] = useState(true);
 
   const { link, clubName, ownerId, paymentRulesNote, logoUrl, tagline } = data;
+  const bundledAnnualDues = data.bundledAnnualDues ?? null;
   const title = clubName.trim() || "ชมรม";
   const banner = data.bannerUrl?.trim() || CLUB_EVENT_PORTAL_SAMPLE_BANNER;
   const homeHref = trialParam
@@ -184,12 +192,19 @@ export function ClubEventPublicLinkClient({
     () => normalizeClubDynamicLinkFields(link.config.fields ?? []),
     [link.config.fields],
   );
+  const duesBaht =
+    includeBundledDues && bundledAnnualDues ? Math.max(0, bundledAnnualDues.amountBaht) : 0;
   const computedAmount = useMemo(() => {
     if (link.type !== "PAYMENT") return 0;
     return computeClubLinkAnswersAmountBaht(fields, answers, {
       baseAmountBaht: Number(link.config.amountBaht) || 0,
+      includeDuesBaht: duesBaht,
     });
-  }, [answers, fields, link.config.amountBaht, link.type]);
+  }, [answers, duesBaht, fields, link.config.amountBaht, link.type]);
+
+  useEffect(() => {
+    setIncludeBundledDues(Boolean(bundledAnnualDues));
+  }, [bundledAnnualDues]);
 
   useEffect(() => {
     const init: Record<string, string> = {};
@@ -393,6 +408,7 @@ export function ClubEventPublicLinkClient({
             paymentMethod: link.type === "PAYMENT" ? method : undefined,
             slipUrl: link.type === "PAYMENT" ? slipUrl : undefined,
             amountBaht: link.type === "PAYMENT" ? computedAmount : undefined,
+            includeBundledDues: link.type === "PAYMENT" ? includeBundledDues : undefined,
           }),
         },
       );
@@ -499,6 +515,26 @@ export function ClubEventPublicLinkClient({
                 </label>
               ),
             )}
+
+            {link.type === "PAYMENT" && bundledAnnualDues ? (
+              <label className="flex min-h-[48px] cursor-pointer items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#5b61ff] focus:ring-[#5b61ff]"
+                  checked={includeBundledDues}
+                  disabled={submitting}
+                  onChange={(e) => setIncludeBundledDues(e.target.checked)}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-black text-[#1e1b4b]">
+                    รวมค่าบำรุง · {bundledAnnualDues.periodLabel}
+                  </span>
+                  <span className="block text-[11px] font-semibold text-[#66638c]">
+                    ฿{bundledAnnualDues.amountBaht.toLocaleString("th-TH")} — รวมในยอดชำระสุทธิด้านล่าง
+                  </span>
+                </span>
+              </label>
+            ) : null}
 
             {link.type === "PAYMENT" ? (
               <div className={clubEventPortalInsetPanelClass}>

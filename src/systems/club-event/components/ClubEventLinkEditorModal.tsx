@@ -239,8 +239,9 @@ export function ClubEventLinkEditorModal({
 
     if (form.type === "PAYMENT") {
       const base = Number(form.amountBaht) || 0;
-      if (base <= 0 && !clubLinkFieldsHavePrices(fields)) {
-        notice.error("กรอกยอดตั้งต้น หรือกำหนดราคาในคำถาม (ตัวเลือก / ขนาดเสื้อ)");
+      const duesOk = Boolean(profileDues?.enabled && form.linkAnnualDues && (profileDues.amountBaht ?? 0) > 0);
+      if (base <= 0 && !clubLinkFieldsHavePrices(fields) && !duesOk) {
+        notice.error("กรอกยอดตั้งต้น หรือกำหนดราคาในคำถาม (ตัวเลือก / ขนาดเสื้อ) หรือพ่วงค่าบำรุง");
         return;
       }
     }
@@ -408,7 +409,7 @@ export function ClubEventLinkEditorModal({
                   พ่วงค่าบำรุง · {profileDues.periodLabel}
                 </span>
                 <span className="block text-[11px] font-semibold text-[#66638c]">
-                  ฿{profileDues.amountBaht.toLocaleString("th-TH")} — ผู้กรอกเลือกจ่ายพร้อมลิงก์นี้ได้
+                  ฿{profileDues.amountBaht.toLocaleString("th-TH")} — รวมในยอดชำระสุทธิบนหน้าลิงก์ (ผู้กรอกยกเลิกได้)
                 </span>
               </span>
             </label>

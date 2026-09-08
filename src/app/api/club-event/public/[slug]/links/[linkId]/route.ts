@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
+import { resolveClubLinkBundledAnnualDues } from "@/systems/club-event/lib/link-bundled-dues";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 
 type Ctx = { params: Promise<{ slug: string; linkId: string }> };
@@ -31,10 +32,20 @@ export async function GET(req: Request, ctx: Ctx) {
       eventTitle = ev?.title ?? null;
     }
 
+    const bundledAnnualDues = resolveClubLinkBundledAnnualDues({
+      linkAnnualDues: config.linkAnnualDues,
+      profile: {
+        duesEnabled: profile.duesEnabled,
+        duesAmountBaht: profile.duesAmountBaht,
+        duesPeriod: profile.duesPeriod,
+      },
+    });
+
     return NextResponse.json({
       ownerId: profile.ownerUserId,
       clubName: profile.displayName,
       paymentRulesNote: profile.paymentRulesNote ?? "",
+      bundledAnnualDues,
       link: {
         id: link.id,
         type: link.type,
