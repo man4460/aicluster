@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokDateKey, bangkokNowMinutes } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import { ensureFootballTurfProfile } from "@/systems/football-turf/lib/ensure-profile";
 import { parseBookingDate } from "@/systems/football-turf/lib/mappers";
 import { minutesToTime, timeToMinutes } from "@/systems/football-turf/lib/time-queue";
@@ -265,6 +266,7 @@ export async function seedFootballTurfSampleActivity(
         paymentMethod: spec.paymentMethod,
         paymentStatus: "PAID",
         paymentReference: spec.paymentMethod === "TRANSFER" ? `REF-FT-${spec.daysAgo}` : "",
+        paymentSlipDataUrl: spec.paymentMethod === "TRANSFER" ? DEMO_PAYMENT_SLIP_URL : null,
         createdAt: daysAgoDateTime(spec.daysAgo, 10),
       },
     });
@@ -287,6 +289,7 @@ export async function seedFootballTurfSampleActivity(
         paymentMethod: "TRANSFER",
         paymentStatus: "PAID",
         paymentReference: "PROMO-001",
+        paymentSlipDataUrl: DEMO_PAYMENT_SLIP_URL,
         createdAt: daysAgoDateTime(4, 15),
       },
     });
@@ -466,6 +469,7 @@ export async function seedFootballTurfLiveOverviewBookings(
         paymentMethod: input.paymentMethod,
         paymentStatus: "PAID",
         paymentReference: input.paymentMethod === "TRANSFER" ? "REF-LIVE" : "",
+        paymentSlipDataUrl: input.paymentMethod === "TRANSFER" ? DEMO_PAYMENT_SLIP_URL : null,
         createdAt: new Date(),
       },
     });

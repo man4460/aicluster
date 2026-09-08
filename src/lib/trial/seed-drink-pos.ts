@@ -3,6 +3,7 @@ import {
   DRINK_POS_CATEGORY_IMAGES,
   DRINK_POS_PRODUCT_IMAGES,
 } from "@/lib/drink-pos/drink-stock-images";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 const CATEGORY_DEFS = [
   { name: "กาแฟ", sortOrder: 0 },
@@ -236,6 +237,8 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
         note: bill.note,
         totalBaht,
         pointsEarned,
+        paymentMethod: bill.daysAgo % 2 === 0 ? "PROMPTPAY" : "CASH",
+        paymentSlipUrl: bill.daysAgo % 2 === 0 ? DEMO_PAYMENT_SLIP_URL : null,
         createdAt,
         lines: { create: lines },
       },
@@ -251,6 +254,7 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
         label: c.label,
         amountBaht: c.amountBaht,
         spentAt,
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
   }
@@ -280,6 +284,7 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
         payDueBaht: 50,
         amountPaidBaht: 50,
         paymentMethod: "PROMPTPAY",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
         status: "SCHEDULED",
         note: "ใกล้หน้าต่าง",
       },

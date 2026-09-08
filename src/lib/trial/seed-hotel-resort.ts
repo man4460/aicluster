@@ -4,6 +4,7 @@ import {
   DEMO_MODULE_CONTACT,
   DEMO_MODULE_LOGO_URL,
   DEMO_MODULE_PAYMENT,
+  DEMO_PAYMENT_SLIP_URL,
   trialDemoDisplayName,
 } from "@/lib/trial/demo-module-settings";
 import { bangkokDateKey } from "@/lib/time/bangkok";
@@ -349,6 +350,8 @@ async function seedHotelActivity(
         amountPaidBaht: 1200,
         paymentStatus: "PARTIAL",
         paymentMethod: "PROMPTPAY",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
+        depositSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
       {
         ownerUserId,
@@ -383,6 +386,8 @@ async function seedHotelActivity(
         amountPaidBaht: 500,
         paymentStatus: "PARTIAL",
         paymentMethod: "TRANSFER",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
+        depositSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
       {
         ownerUserId,
@@ -400,6 +405,8 @@ async function seedHotelActivity(
         amountPaidBaht: 2000,
         paymentStatus: "PARTIAL",
         paymentMethod: "PROMPTPAY",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
+        depositSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
       {
         ownerUserId,
@@ -416,6 +423,7 @@ async function seedHotelActivity(
         amountPaidBaht: 2400,
         paymentStatus: "PAID",
         paymentMethod: "TRANSFER",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     ],
   });

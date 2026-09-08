@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 const TARGET_EMAILS = ["admin@mawell.local", "user@mawell.local", "user@mawell.local.com"] as const;
 const DEMO_ELECTRIC_IMAGE = "https://picsum.photos/seed/hf-electric/960/1280.jpg";
 const DEMO_FUEL_IMAGE = "https://picsum.photos/seed/hf-fuel/960/1280.jpg";
-const DEMO_INCOME_IMAGE = "https://picsum.photos/seed/hf-income/960/1280.jpg";
+const DEMO_SLIP_IMAGE = DEMO_PAYMENT_SLIP_URL;
 
 function ymdToDate(ymd: string) {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -146,8 +147,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "รายรับเงินเดือน",
     amount: 32000,
     paymentMethod: "โอนธนาคาร",
-    slipImageUrl: DEMO_INCOME_IMAGE,
-    attachmentUrls: [DEMO_INCOME_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 
@@ -159,8 +160,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "รายรับงานฟรีแลนซ์",
     amount: 5800,
     paymentMethod: "โอนพร้อมเพย์",
-    slipImageUrl: DEMO_INCOME_IMAGE,
-    attachmentUrls: [DEMO_INCOME_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 
@@ -172,8 +173,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "รายรับค่าคอมมิชชั่น",
     amount: 2750,
     paymentMethod: "โอนธนาคาร",
-    slipImageUrl: DEMO_INCOME_IMAGE,
-    attachmentUrls: [DEMO_INCOME_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 
@@ -185,8 +186,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "รายรับออเดอร์ออนไลน์",
     amount: 4190,
     paymentMethod: "โอนธนาคาร",
-    slipImageUrl: DEMO_INCOME_IMAGE,
-    attachmentUrls: [DEMO_INCOME_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 
@@ -198,8 +199,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "รายรับเงินคืนบัตรเครดิต",
     amount: 1260,
     paymentMethod: "เครดิตเข้าบัญชี",
-    slipImageUrl: DEMO_INCOME_IMAGE,
-    attachmentUrls: [DEMO_INCOME_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 
@@ -211,8 +212,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "ชำระค่าไฟบ้านหลัก",
     amount: 2042,
     paymentMethod: "พร้อมเพย์",
-    slipImageUrl: DEMO_ELECTRIC_IMAGE,
-    attachmentUrls: [DEMO_ELECTRIC_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     linkedUtilityId: utilityId,
     note: "ข้อมูลตัวอย่าง",
   });
@@ -225,8 +226,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "เติมน้ำมันรถครอบครัว A",
     amount: 1354,
     paymentMethod: "บัตรเครดิต",
-    slipImageUrl: DEMO_FUEL_IMAGE,
-    attachmentUrls: [DEMO_FUEL_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     linkedVehicleId: vehicleId,
     note: "ข้อมูลตัวอย่าง",
   });
@@ -239,8 +240,8 @@ async function seedForUser(ownerUserId: string, email: string | null) {
     title: "ซื้อของเข้าบ้าน",
     amount: 890,
     paymentMethod: "เงินสด",
-    slipImageUrl: DEMO_FUEL_IMAGE,
-    attachmentUrls: [DEMO_FUEL_IMAGE],
+    slipImageUrl: DEMO_SLIP_IMAGE,
+    attachmentUrls: [DEMO_SLIP_IMAGE],
     note: "ข้อมูลตัวอย่าง",
   });
 

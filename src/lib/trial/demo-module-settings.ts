@@ -10,6 +10,12 @@ export const DEMO_MODULE_PAYMENT: ModuleShopPaymentDto = {
   taxId: "0123456789012",
 };
 
+/**
+ * สลิปโอนเงินตัวอย่างกลาง (กรุงไทย) — ใช้ทุกโมดูลที่ seed แนบสลิป
+ * ไฟล์: `public/uploads/mock/demo-payment-slip.jpg`
+ */
+export const DEMO_PAYMENT_SLIP_URL = "/uploads/mock/demo-payment-slip.jpg" as const;
+
 export const DEMO_MODULE_CONTACT = {
   contactPhone: "021234567",
   address: "88/1 ถ.ตัวอย่าง แขวงสาธิต เขตสาธิต กรุงเทพฯ 10110",

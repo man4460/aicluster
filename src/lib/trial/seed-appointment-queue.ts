@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { parseYmdToDbDate } from "@/lib/home-finance/entry-date";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import { ensureAppointmentQueueProfile } from "@/systems/appointment-queue/lib/ensure-profile";
 
 type Tx = Omit<
@@ -160,7 +161,7 @@ export async function seedAppointmentQueueProdDemoForOwner(
         durationMinutes: svc.durationMinutes,
         status: s.status,
         depositAmountBaht: s.status === "PENDING_DEPOSIT" ? 50 : null,
-        depositSlipUrl: null,
+        depositSlipUrl: s.status === "PENDING_DEPOSIT" ? DEMO_PAYMENT_SLIP_URL : null,
         note: DEMO_NOTE,
         boardSort: 0,
       },

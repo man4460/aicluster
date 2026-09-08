@@ -6,18 +6,14 @@ import {
 } from "@/lib/ecommerce/order-codes";
 import { serializeEcommerceGalleryImages } from "@/lib/ecommerce/product-images";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 /** รูป Unsplash ที่ตรวจ HEAD 200 แล้ว — ห้ามใช้ picsum */
 const U = (id: string, w = 800) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 const STORE_LOGO_URL = U("photo-1441986300917-64674bd600d8", 400);
-const SLIP_SAMPLE_URLS = [
-  U("photo-1556742049-0cfed4f6a45d", 600),
-  U("photo-1563013544-824ae1b704d3", 600),
-  U("photo-1554224155-6726b3ff858f", 600),
-  U("photo-1450101499163-c8848c66ca85", 600),
-] as const;
+const SLIP_SAMPLE_URLS = [DEMO_PAYMENT_SLIP_URL] as const;
 
 const CATEGORY_DEFS = [
   "สกินแคร์",

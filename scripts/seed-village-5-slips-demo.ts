@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 const TARGET_EMAILS = [
   "admin@mawell.local",
@@ -8,13 +9,7 @@ const TARGET_EMAILS = [
 
 const TRIAL_SESSION_ID = "prod";
 
-const SLIP_PHOTOS = [
-  "https://upload.wikimedia.org/wikipedia/commons/0/0b/ReceiptSwiss.jpg",
-  "https://upload.wikimedia.org/wikipedia/commons/3/3a/Credit_card_receipt.jpg",
-  "https://upload.wikimedia.org/wikipedia/commons/2/2f/Shopping_receipt%2C_Taiwan.jpg",
-  "https://upload.wikimedia.org/wikipedia/commons/9/94/Receipt_01.jpg",
-  "https://upload.wikimedia.org/wikipedia/commons/f/f9/Kassenzettel.jpg",
-] as const;
+const SLIP_PHOTOS = [DEMO_PAYMENT_SLIP_URL] as const;
 
 type SlipPlan = {
   yearMonth: string;

@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 type Tx = Omit<
   PrismaClient,
@@ -180,7 +181,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feeNowH1.id,
         yearMonth: ym,
         amount: 900,
-        slipImageUrl: "/uploads/mock/village-slip-paid-h1.jpg",
+        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
         status: "APPROVED",
         reviewerNote: "ยอดตรงบิล",
         submittedAt: new Date(`${ym}-03T20:05:00+07:00`),
@@ -193,7 +194,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feeNowH2.id,
         yearMonth: ym,
         amount: 500,
-        slipImageUrl: "/uploads/mock/village-slip-pending-h2.jpg",
+        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
         status: "PENDING",
         submittedAt: new Date(`${ym}-05T18:20:00+07:00`),
       },
@@ -204,7 +205,7 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
         feeRowId: feePrevH2.id,
         yearMonth: prevYm,
         amount: 500,
-        slipImageUrl: "/uploads/mock/village-slip-prev-h2.jpg",
+        slipImageUrl: DEMO_PAYMENT_SLIP_URL,
         status: "APPROVED",
         reviewerNote: "ปิดยอดเดือนก่อน",
         submittedAt: new Date(`${prevYm}-09T10:00:00+07:00`),

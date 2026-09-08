@@ -6,6 +6,7 @@ import {
   bangkokDayStartEndForDateKey,
 } from "@/lib/massage/bangkok-day";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import {
   MASSAGE_PACKAGE_SAMPLE_IMAGES,
   MASSAGE_PORTAL_SAMPLE_BANNER,
@@ -26,9 +27,9 @@ type DbLike = PrismaClient | Tx;
 /** หมายเหตุแถวที่ระบบใส่ให้อัตโนมัติ — ลบ/รีเฟรชได้โดยไม่แตะข้อมูลที่ผู้ใช้สร้าง */
 export const MASSAGE_LIVE_DEMO_NOTE = "ตัวอย่างอัตโนมัติ";
 
-/** รูปสลิป/ใบเสร็จตัวอย่าง — โหลดจาก CDN สาธารณะ */
-function trialPhoto(seed: string, w: number, h: number): string {
-  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+/** รูปสลิป/ใบเสร็จตัวอย่าง — สลิปโอนกลางของโปรเจกต์ */
+function trialSlipUrl(): string {
+  return DEMO_PAYMENT_SLIP_URL;
 }
 
 function isMissingOrPlaceholderImage(url: string | null | undefined): boolean {
@@ -503,7 +504,7 @@ export async function seedMassageLiveTodayActivity(
           soldByTherapistId: therapist.id,
           remainingSessions: remaining,
           status: st,
-          saleReceiptImageUrl: i % 2 === 0 ? trialPhoto(`massage-trial-sale-v2-${i}`, 480, 640) : null,
+          saleReceiptImageUrl: i % 2 === 0 ? trialSlipUrl() : null,
         },
       });
       if (st === "ACTIVE") activeSubs.push(sub);
@@ -568,7 +569,7 @@ export async function seedMassageLiveTodayActivity(
           amountBaht: spec.amountBaht ?? null,
           receiptImageUrl:
             spec.visitType === "CASH_WALK_IN"
-              ? trialPhoto(`massage-live-cash-${spec.hour}`, 480, 640)
+              ? trialSlipUrl()
               : null,
           note: MASSAGE_LIVE_DEMO_NOTE,
           createdAt: bangkokDateTime(todayKey, spec.hour, spec.minute),
@@ -599,7 +600,7 @@ export async function seedMassageLiveTodayActivity(
           soldByTherapistId: seller.id,
           remainingSessions: pkgNew.totalSessions,
           status: "ACTIVE",
-          saleReceiptImageUrl: trialPhoto("massage-live-new-sale", 480, 640),
+          saleReceiptImageUrl: trialSlipUrl(),
           createdAt: bangkokDateTime(todayKey, pastA.hour, 15),
         },
       });
@@ -700,7 +701,7 @@ export async function seedMassageTrialData(tx: Tx, ownerUserId: string, trialSes
             amount: item.amount,
             itemLabel: item.label,
             note: MASSAGE_LIVE_DEMO_NOTE,
-            slipPhotoUrl: trialPhoto(`massage-trial-cost-v2-${i}`, 480, 640),
+            slipPhotoUrl: trialSlipUrl(),
           },
         });
       }),
@@ -738,7 +739,7 @@ export async function seedMassageTrialData(tx: Tx, ownerUserId: string, trialSes
             soldByTherapistId: therapist.id,
             remainingSessions: remaining,
             status: st,
-            saleReceiptImageUrl: i % 2 === 0 ? trialPhoto(`massage-trial-sale-seed-${i}`, 480, 640) : null,
+            saleReceiptImageUrl: i % 2 === 0 ? trialSlipUrl() : null,
           },
         });
         if (st === "ACTIVE") subs.push(sub);
@@ -773,7 +774,7 @@ export async function seedMassageTrialData(tx: Tx, ownerUserId: string, trialSes
             visitType: "CASH_WALK_IN",
             therapistId: therapist.id,
             amountBaht: 350 + i * 50,
-            receiptImageUrl: trialPhoto(`massage-trial-cash-seed-${i}`, 480, 640),
+            receiptImageUrl: trialSlipUrl(),
             note: MASSAGE_LIVE_DEMO_NOTE,
             createdAt: bangkokDateTime(dayKey, 14, 0),
           },

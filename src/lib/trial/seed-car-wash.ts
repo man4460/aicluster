@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import {
   CAR_WASH_PACKAGE_SAMPLE_IMAGES,
   carWashPackageSampleImage,
@@ -399,6 +400,7 @@ export async function seedCarWashSampleActivity(
         amount: c.amount,
         itemLabel: c.item,
         note: c.note,
+        slipPhotoUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
   }

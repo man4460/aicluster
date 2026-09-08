@@ -3,6 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import { LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR } from "@/systems/laundry/laundry-customer-pickup-request";
 import type { LaundryOrderStatus } from "@/systems/laundry/laundry-order-status";
 import {
@@ -335,6 +336,10 @@ async function ensureLaundryDemoOrdersDb(
         status: def.status,
         distanceKm: def.online ? new Prisma.Decimal("3.5") : null,
         paymentMethod: def.paymentMethod ?? null,
+        receiptImageUrl:
+          def.paymentMethod === "PROMPTPAY" || def.paymentMethod === "TRANSFER"
+            ? DEMO_PAYMENT_SLIP_URL
+            : null,
         pickupPublicToken: def.online ? randomUUID() : null,
       },
     });
@@ -396,6 +401,7 @@ async function ensureLaundryDemoCustomersDb(
         remainingSessions: def.remaining,
         status,
         paymentMethod: "CASH",
+        saleReceiptImageUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
   }
@@ -467,6 +473,7 @@ async function ensureLaundryDemoFinanceDb(
         amount: 420,
         itemLabel: "น้ำยาซัก + น้ำยาปรับผ้านุ่ม",
         note: `${DEMO_NOTE} — ซื้อสต็อกประจำสัปดาห์`,
+        slipPhotoUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
   }

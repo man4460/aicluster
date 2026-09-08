@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { ensureDefaultParkingSite, ensureSampleSpotsIfEmpty } from "@/systems/parking/lib/ensure-site";
 import { ensureParkingIncomeCategories } from "@/systems/parking/lib/ensure-income-categories";
@@ -315,6 +316,7 @@ export async function seedParkingProdDemoForOwner(
         amountDueBaht: i % 13 === 0 ? null : new Prisma.Decimal(amount),
         amountPaidBaht: i % 13 === 0 ? null : new Prisma.Decimal(amount),
         paymentMethod: i % 13 === 0 ? null : i % 2 === 0 ? "CASH" : "PROMPTPAY",
+        paymentSlipUrl: i % 13 === 0 || i % 2 === 0 ? null : DEMO_PAYMENT_SLIP_URL,
         pointsEarned: i % 13 === 0 ? 0 : Math.floor(amount / 100),
         memberPhone: phoneFor(20 + i),
         internalNote: PARKING_DEMO_NOTE,
@@ -378,6 +380,8 @@ export async function seedParkingProdDemoForOwner(
         depositAmountBaht: deposit,
         paymentStatus: deposit >= amount ? "PAID" : deposit > 0 ? "PARTIAL" : "UNPAID",
         paymentMethod: deposit > 0 ? "PROMPTPAY" : null,
+        paymentSlipUrl: deposit > 0 ? DEMO_PAYMENT_SLIP_URL : null,
+        depositSlipUrl: deposit > 0 ? DEMO_PAYMENT_SLIP_URL : null,
         status: "SCHEDULED",
         note: PARKING_DEMO_NOTE,
       },
@@ -419,7 +423,7 @@ export async function seedParkingProdDemoForOwner(
         amountBaht: 200 + i * 85,
         label: i % 2 === 0 ? "ค่าไฟลานจอด" : "น้ำยาทำความสะอาด",
         note: PARKING_DEMO_NOTE,
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
   }

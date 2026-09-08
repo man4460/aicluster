@@ -4,6 +4,7 @@ import { bangkokDateKeyMinusDays, bangkokDayStartEndForDateKey } from "@/lib/bar
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 type Tx = Omit<
   PrismaClient,
@@ -284,7 +285,7 @@ export async function seedBuildingPosDemoFinanceData(
         trialSessionId,
         purchasedOn: new Date(`${keys[0]}T12:00:00+07:00`),
         note: "ตลาดเช้า — ของสดสัปดาห์",
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
     await db.buildingPosPurchaseLine.createMany({
@@ -301,7 +302,7 @@ export async function seedBuildingPosDemoFinanceData(
         trialSessionId,
         purchasedOn: new Date(`${keys[1]}T12:00:00+07:00`),
         note: "ซื้อข้าวสาร · น้ำมัน",
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
     await db.buildingPosPurchaseLine.createMany({
@@ -318,7 +319,7 @@ export async function seedBuildingPosDemoFinanceData(
         trialSessionId,
         purchasedOn: new Date(`${keys[2]}T12:00:00+07:00`),
         note: "ของแห้ง · ชา",
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
       },
     });
     await db.buildingPosPurchaseLine.createMany({
@@ -376,7 +377,7 @@ export async function seedBuildingPosDemoFinanceData(
     itemsJson: items,
     totalAmount: totalAmount(items),
     note,
-    paymentSlipUrl: "",
+    paymentSlipUrl: status === "PAID" ? DEMO_PAYMENT_SLIP_URL : "",
     customerSessionId: "",
     createdAt: atBangkokHour(dateKey, hour, minute),
   });
@@ -647,7 +648,7 @@ export async function seedBuildingPosPortalDemoData(
         payDueBaht: 200,
         amountPaidBaht: 200,
         paymentMethod: "PROMPTPAY",
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
         status: "SCHEDULED",
         note: "มีเด็กเล็ก 1 คน",
       },
@@ -685,7 +686,7 @@ export async function seedBuildingPosPortalDemoData(
         payDueBaht: Math.max(200, Math.ceil((r3Total * 30) / 100)),
         amountPaidBaht: Math.max(200, Math.ceil((r3Total * 30) / 100)),
         paymentMethod: "TRANSFER",
-        paymentSlipUrl: "",
+        paymentSlipUrl: DEMO_PAYMENT_SLIP_URL,
         status: "SCHEDULED",
         note: "ประชุมทีม — ขอใบเสร็จบริษัท",
       },

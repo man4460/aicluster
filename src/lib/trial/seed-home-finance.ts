@@ -1,13 +1,12 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { DEMO_PAYMENT_SLIP_URL } from "@/lib/trial/demo-module-settings";
 
 /** แถวที่ seed — รันซ้ำได้ ลบเฉพาะข้อมูลที่มีแท็กนี้ก่อนแทรกใหม่ */
 const SEED_EXTERNAL_SOURCE = "seed-prod-demo";
 const SEED_TITLE_PREFIX = "(ตัวอย่าง)";
 
-const DEMO_SLIP_FOOD = "https://picsum.photos/seed/hf-food/960/1280.jpg";
-const DEMO_SLIP_INCOME = "https://picsum.photos/seed/hf-income/960/1280.jpg";
-const DEMO_SLIP_UTIL = "https://picsum.photos/seed/hf-util/960/1280.jpg";
+const DEMO_SLIP = DEMO_PAYMENT_SLIP_URL;
 const DEMO_DOC_ID = "https://picsum.photos/seed/hf-doc-id/800/500.jpg";
 
 const CATEGORY_SEEDS = [
@@ -91,8 +90,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: salary.label,
         title: `${SEED_TITLE_PREFIX} เงินเดือนประจำเดือน`,
         amount: new Prisma.Decimal("35000.00"),
-        slipImageUrl: DEMO_SLIP_INCOME,
-        attachmentUrls: [DEMO_SLIP_INCOME],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         note: "โอนเข้าบัญชีกสิกร",
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "income-salary",
@@ -105,8 +104,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: extra.label,
         title: `${SEED_TITLE_PREFIX} งานฟรีแลนซ์ออกแบบ`,
         amount: new Prisma.Decimal("6500.00"),
-        slipImageUrl: DEMO_SLIP_INCOME,
-        attachmentUrls: [DEMO_SLIP_INCOME],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         note: "รับโอนพร้อมเพย์",
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "income-freelance",
@@ -119,8 +118,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: util.label,
         title: `${SEED_TITLE_PREFIX} ค่าไฟฟ้าเดือนนี้`,
         amount: new Prisma.Decimal("2180.50"),
-        slipImageUrl: DEMO_SLIP_UTIL,
-        attachmentUrls: [DEMO_SLIP_UTIL],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         note: "ชำระผ่านแอปธนาคาร",
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "expense-electric",
@@ -133,8 +132,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: travel.label,
         title: `${SEED_TITLE_PREFIX} เติมน้ำมันรถ`,
         amount: new Prisma.Decimal("1200.00"),
-        slipImageUrl: DEMO_SLIP_UTIL,
-        attachmentUrls: [DEMO_SLIP_UTIL],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "expense-fuel",
       },
@@ -146,8 +145,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: food.label,
         title: `${SEED_TITLE_PREFIX} ซื้อของเข้าบ้าน`,
         amount: new Prisma.Decimal("945.00"),
-        slipImageUrl: DEMO_SLIP_FOOD,
-        attachmentUrls: [DEMO_SLIP_FOOD],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "expense-grocery",
       },
@@ -159,8 +158,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: food.label,
         title: `${SEED_TITLE_PREFIX} อาหารกลางวัน`,
         amount: new Prisma.Decimal("185.00"),
-        slipImageUrl: DEMO_SLIP_FOOD,
-        attachmentUrls: [DEMO_SLIP_FOOD],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "expense-lunch",
       },
@@ -172,8 +171,8 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         categoryLabel: home.label,
         title: `${SEED_TITLE_PREFIX} ซื้อของใช้ในบ้าน`,
         amount: new Prisma.Decimal("560.00"),
-        slipImageUrl: DEMO_SLIP_FOOD,
-        attachmentUrls: [DEMO_SLIP_FOOD],
+        slipImageUrl: DEMO_SLIP,
+        attachmentUrls: [DEMO_SLIP],
         externalSource: SEED_EXTERNAL_SOURCE,
         externalId: "expense-home",
       },
@@ -208,7 +207,7 @@ export async function seedHomeFinanceProdDemoForOwner(db: PrismaClient, ownerUse
         ownerUserId,
         title: `${SEED_TITLE_PREFIX} สัญญาเช่าห้อง`,
         category: "สัญญา",
-        fileUrl: DEMO_SLIP_UTIL,
+        fileUrl: DEMO_SLIP,
         mimeType: "image/jpeg",
         note: "เก็บไว้อ้างอิง — ตัวอย่าง",
       },
