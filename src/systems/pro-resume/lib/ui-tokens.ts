@@ -184,7 +184,15 @@ export const proResumePortalPageBodyClass = cn(
   "mt-4 space-y-4 pt-5",
 );
 
-/** หน้ารายละเอียดผลงานเต็มจอ — แถบหัว + ปุ่มกลับ */
+/** วิดีโอ YouTube บนหน้ารายละเอียด — มือถือ 2 · คอม 6 (แบบชมรม) */
+export const proResumePortalYoutubeCardGridClass =
+  "grid list-none grid-cols-2 gap-2 p-0 sm:gap-2.5 lg:grid-cols-6";
+
+/** แกลเลอรีรูปบนหน้ารายละเอียด — มือถือ 3 · คอม 8 (แบบชมรม) */
+export const proResumePortalGalleryCardGridClass =
+  "grid list-none grid-cols-3 gap-2 p-0 sm:gap-2.5 lg:grid-cols-8";
+
+/** หน้ารายละเอียดผลงานเต็มจอ — แถบหัว + ปุ่มกลับ (legacy) */
 export const proResumePortalDetailHeaderClass = cn(
   "sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur-md",
   "px-4 py-3 sm:px-6",

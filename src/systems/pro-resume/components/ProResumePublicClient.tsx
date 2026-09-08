@@ -1,23 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Play } from "lucide-react";
 import {
   AppImageLightbox,
   AppImageThumb,
+  AppPublicCheckInGlassPage,
   AppYoutubeLightbox,
+  appDashboardHeaderBarClass,
+  appDashboardHeaderBarInnerClass,
+  appDashboardHeaderIconButtonClass,
   appSafeAreaLandingHeaderPadClass,
   useAppImageLightbox,
   useAppYoutubeLightbox,
 } from "@/components/app-templates";
+import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { extractYoutubeVideoId, youtubeThumbUrl } from "@/lib/youtube-url";
 import { ProResumePortalSection } from "@/systems/pro-resume/components/ProResumePortalSection";
 import { ProResumeRichContent } from "@/systems/pro-resume/components/ProResumeRichContent";
-import type { ResumePortfolioItemDto, ResumePublicDto } from "@/systems/pro-resume/lib/mappers";
+import type {
+  ResumeCertificateDto,
+  ResumePortfolioItemDto,
+  ResumeProfileDto,
+  ResumePublicDto,
+} from "@/systems/pro-resume/lib/mappers";
 import {
   proResumePortalContactIcon,
   proResumePortalTabIcon,
-  proResumePortalYoutubeIcon,
   proResumeSectionIcon,
   proResumeTimelineKindIcon,
 } from "@/systems/pro-resume/lib/page-menu-icons";
@@ -30,8 +40,9 @@ import {
   proResumeGlassShellClass,
   proResumeOutlineButtonClass,
   proResumePortalContainerClass,
-  proResumePortalDetailBackBtnClass,
-  proResumePortalDetailHeaderClass,
+  proResumePortalGalleryCardGridClass,
+  proResumePortalPageSubtitleClass,
+  proResumePortalPageTitleClass,
   proResumePortalPortfolioGridClass,
   proResumePortalPrimaryBtnClass,
   proResumePortalShopNameHeroClass,
@@ -39,6 +50,7 @@ import {
   proResumePortalTabDockDesktopWrapClass,
   proResumePortalTabDockMobileInnerClass,
   proResumePortalTabDockMobileShellClass,
+  proResumePortalYoutubeCardGridClass,
   proResumePrimaryTabPillClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
@@ -68,15 +80,22 @@ function useProResumePortalPortfolioPageSize(): number {
   return size;
 }
 
+/** หน้ารายละเอียดผลงาน — โครงเดียวกับหน้ารายละเอียดชมรมสาธารณะ */
 function ProResumePortfolioDetailPage({
   item,
+  profile,
+  categoryName,
   onBack,
   onOpenImage,
+  onOpenGallery,
   onOpenYoutube,
 }: {
   item: ResumePortfolioItemDto;
+  profile: ResumeProfileDto;
+  categoryName?: string | null;
   onBack: () => void;
   onOpenImage: (url: string) => void;
+  onOpenGallery: (urls: string[], index: number) => void;
   onOpenYoutube: (url: string, title: string) => void;
 }) {
   useEffect(() => {
@@ -91,90 +110,153 @@ function ProResumePortfolioDetailPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [onBack]);
 
+  const displayName = profile.fullName.trim() || "Resume";
+  const ytId = item.youtubeUrl ? extractYoutubeVideoId(item.youtubeUrl) : "";
+  const galleryUrls = item.images.filter(Boolean);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50/80 via-white to-slate-50 pb-16">
-      <header className={cn(proResumePortalDetailHeaderClass, appSafeAreaLandingHeaderPadClass)}>
-        <div className={cn(proResumePortalContainerClass, "flex items-center gap-3")}>
+    <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
+      <header className={appDashboardHeaderBarClass}>
+        <div className={cn(appDashboardHeaderBarInnerClass, "justify-between")}>
           <button
             type="button"
-            className={proResumePortalDetailBackBtnClass}
-            aria-label="กลับไปหน้ารายการผลงาน"
+            className="flex min-w-0 max-w-[min(100%,18rem)] items-center gap-2 text-left sm:max-w-xs sm:gap-2.5"
+            aria-label={`กลับไปโปรไฟล์ ${displayName}`}
             onClick={onBack}
           >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            <span>กลับ</span>
+            {profile.profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.profileImageUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/35"
+              />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-black text-white ring-2 ring-white/35">
+                {displayName.slice(0, 1) || "?"}
+              </span>
+            )}
+            <p className="min-w-0 truncate text-sm font-bold tracking-tight text-white sm:text-base">{displayName}</p>
           </button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-[#8b87b8]">รายละเอียดผลงาน</p>
-            <h1 className="truncate text-base font-black text-[#1e1b4b] sm:text-lg">{item.title}</h1>
-          </div>
+
+          <button
+            type="button"
+            className={cn(appDashboardHeaderIconButtonClass, "min-w-10 gap-1.5 sm:min-w-0 sm:px-2")}
+            aria-label="กลับไปหน้ารายการผลงาน"
+            title="กลับ"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden strokeWidth={2.25} />
+            <span className="hidden text-sm font-bold sm:inline">กลับ</span>
+          </button>
         </div>
       </header>
 
-      <main className={cn(proResumePortalContainerClass, "space-y-5 px-4 pt-5 sm:space-y-6 sm:px-6 sm:pt-8")}>
-        {item.coverImage ? (
-          <button
-            type="button"
-            className="block w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-100 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
-            aria-label={`ดูรูปปก ${item.title}`}
-            onClick={() => onOpenImage(item.coverImage!)}
-          >
-            <img src={item.coverImage} alt="" className="max-h-[min(70vh,28rem)] w-full object-cover" />
-          </button>
-        ) : null}
+      <main className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:space-y-14 sm:px-6 sm:py-10">
+        <section className="space-y-4" aria-labelledby="portfolio-item-title">
+          <div className="min-w-0 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">
+              {categoryName?.trim() || "ผลงาน"}
+            </p>
+            <h1 id="portfolio-item-title" className={proResumePortalPageTitleClass}>
+              {item.title}
+            </h1>
+            {item.shortDesc ? (
+              <p className={proResumePortalPageSubtitleClass}>{item.shortDesc}</p>
+            ) : null}
+          </div>
 
-        <div className="space-y-2">
-          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">{item.title}</h2>
-          {item.shortDesc ? (
-            <p className="text-sm font-semibold leading-relaxed text-[#66638c] sm:text-base">{item.shortDesc}</p>
+          {item.coverImage ? (
+            <button
+              type="button"
+              className="block w-full overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+              aria-label={`ดูรูปปก ${item.title}`}
+              onClick={() => onOpenImage(item.coverImage!)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.coverImage}
+                alt=""
+                className="max-h-[min(56vh,26rem)] w-full object-cover"
+              />
+            </button>
           ) : null}
-        </div>
 
-        {item.contentHTML ? <ProResumeRichContent content={item.contentHTML} className="sm:text-base" /> : null}
+          {item.contentHTML ? (
+            <ProResumeRichContent content={item.contentHTML} className="max-w-3xl" />
+          ) : null}
+        </section>
 
         {item.youtubeUrl ? (
-          <button
-            type="button"
-            className={proResumePortalPrimaryBtnClass}
-            onClick={() => {
-              if (item.youtubeUrl) onOpenYoutube(item.youtubeUrl, item.title);
-            }}
+          <ProResumePortalSection
+            id="portfolio-youtube"
+            title="วิดีโอ"
+            titleIcon={proResumeSectionIcon("portfolio")}
+            titleTone="rose"
           >
-            {proResumePortalYoutubeIcon()}
-            <span>ดูวิดีโอ YouTube</span>
-          </button>
+            <ul className={proResumePortalYoutubeCardGridClass}>
+              <li className="min-w-0">
+                <button
+                  type="button"
+                  className="group relative block w-full overflow-hidden rounded-xl bg-slate-100 ring-2 ring-slate-100 transition hover:ring-[#0000BF]/35"
+                  aria-label={`เล่นวิดีโอ ${item.title}`}
+                  title={item.title}
+                  onClick={() => onOpenYoutube(item.youtubeUrl!, item.title)}
+                >
+                  <span className="relative block aspect-video w-full">
+                    {ytId ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={youtubeThumbUrl(ytId)}
+                        alt=""
+                        className="h-full w-full object-cover object-center"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400">
+                        ไม่มีตัวอย่าง
+                      </span>
+                    )}
+                    <span
+                      className="absolute inset-0 flex items-center justify-center bg-[#1e1b4b]/35 transition group-hover:bg-[#1e1b4b]/45"
+                      aria-hidden
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-md">
+                        <Play className="ml-0.5 h-4 w-4 fill-current" />
+                      </span>
+                    </span>
+                    <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1.5 py-1 text-[10px] font-bold text-white">
+                      {item.title}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </ProResumePortalSection>
         ) : null}
 
-        {item.images.length ? (
-          <section className="space-y-2" aria-label="แกลเลอรี">
-            <h3 className="text-sm font-black text-[#1e1b4b]">แกลเลอรี</h3>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {item.images.map((url) => (
-                <AppImageThumb
-                  key={url}
-                  src={url}
-                  alt=""
-                  className="h-20 w-20 sm:h-24 sm:w-24"
-                  onOpen={() => onOpenImage(url)}
-                />
+        {galleryUrls.length ? (
+          <ProResumePortalSection
+            id="portfolio-gallery"
+            title="แกลเลอรี"
+            titleIcon={proResumeSectionIcon("portfolio")}
+            titleTone="sky"
+          >
+            <ul className={proResumePortalGalleryCardGridClass}>
+              {galleryUrls.map((url, index) => (
+                <li key={url} className="min-w-0">
+                  <AppImageThumb
+                    src={url}
+                    alt=""
+                    className="aspect-square h-auto w-full rounded-xl"
+                    onOpen={() => onOpenGallery(galleryUrls, index)}
+                  />
+                </li>
               ))}
-            </div>
-          </section>
+            </ul>
+          </ProResumePortalSection>
         ) : null}
-
-        <div className="pt-2">
-          <button
-            type="button"
-            className={cn(proResumePortalDetailBackBtnClass, "w-full sm:w-auto")}
-            aria-label="กลับไปหน้ารายการผลงาน"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            <span>กลับ</span>
-          </button>
-        </div>
       </main>
-    </div>
+    </AppPublicCheckInGlassPage>
   );
 }
 
@@ -192,6 +274,7 @@ export function ProResumePublicClient({
   const [data] = useState(initialData);
   const [filterCat, setFilterCat] = useState<string>("all");
   const [detailItem, setDetailItem] = useState<ResumePortfolioItemDto | null>(null);
+  const [certDetail, setCertDetail] = useState<ResumeCertificateDto | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [portfolioPage, setPortfolioPage] = useState(0);
   const portfolioPageSize = useProResumePortalPortfolioPageSize();
@@ -269,6 +352,11 @@ export function ProResumePublicClient({
     return [...exp, ...edu].sort((a, b) => b.sort.localeCompare(a.sort));
   }, [data.experiences, data.educations]);
 
+  const detailCategoryName = useMemo(() => {
+    if (!detailItem) return null;
+    return data.categories.find((c) => c.id === detailItem.categoryId)?.name ?? null;
+  }, [data.categories, detailItem]);
+
   const { profile } = data;
   const hasContact = Boolean(profile.contactEmail || profile.contactPhone);
   const showTabNav = hasCareer && hasPortfolio;
@@ -313,12 +401,21 @@ export function ProResumePublicClient({
   if (detailItem) {
     return (
       <>
-        <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูป" />
+        <AppImageLightbox
+          src={lb.src}
+          sources={lb.sources}
+          initialIndex={lb.initialIndex}
+          onClose={lb.close}
+          alt="รูปผลงาน"
+        />
         <AppYoutubeLightbox youtubeUrl={yt.youtubeUrl} title={yt.title} onClose={yt.close} />
         <ProResumePortfolioDetailPage
           item={detailItem}
+          profile={profile}
+          categoryName={detailCategoryName}
           onBack={closeDetail}
           onOpenImage={(url) => lb.open(url)}
+          onOpenGallery={(urls, index) => lb.openGallery(urls, index)}
           onOpenYoutube={(url, title) => yt.open(url, title)}
         />
       </>
@@ -334,8 +431,62 @@ export function ProResumePublicClient({
           : "pb-24",
       )}
     >
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูป" />
+      <AppImageLightbox
+        src={lb.src}
+        sources={lb.sources}
+        initialIndex={lb.initialIndex}
+        onClose={lb.close}
+        alt="รูป"
+      />
       <AppYoutubeLightbox youtubeUrl={yt.youtubeUrl} title={yt.title} onClose={yt.close} />
+
+      <FormModal
+        open={certDetail !== null}
+        onClose={() => setCertDetail(null)}
+        title={certDetail?.name ?? "ใบรับรอง"}
+        size="md"
+        mobileCentered
+      >
+        {certDetail ? (
+          <div className="space-y-4">
+            {certDetail.fileUrl ? (
+              <button
+                type="button"
+                className="block w-full overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+                aria-label={`ดูรูปใบรับรอง ${certDetail.name}`}
+                onClick={() => lb.open(certDetail.fileUrl!)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={certDetail.fileUrl}
+                  alt={certDetail.name}
+                  className="max-h-[min(55vh,22rem)] w-full object-contain"
+                />
+              </button>
+            ) : (
+              <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm font-semibold text-slate-400">
+                ไม่มีรูปใบรับรอง
+              </div>
+            )}
+            <dl className="space-y-2.5 text-sm">
+              <div>
+                <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ชื่อใบรับรอง</dt>
+                <dd className="mt-0.5 font-black text-[#1e1b4b]">{certDetail.name}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ออกโดย</dt>
+                <dd className="mt-0.5 font-semibold text-[#4d47b6]">{certDetail.issuedBy || "—"}</dd>
+              </div>
+              {certDetail.year ? (
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ปี</dt>
+                  <dd className="mt-0.5 font-semibold text-[#66638c]">{certDetail.year}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+        ) : null}
+      </FormModal>
 
       <header
         className={cn(
@@ -354,6 +505,7 @@ export function ProResumePublicClient({
                   aria-label={`ดูรูปโปรไฟล์ ${profile.fullName}`}
                   onClick={() => lb.open(profile.profileImageUrl!)}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={profile.profileImageUrl}
                     alt={profile.fullName}
@@ -470,19 +622,29 @@ export function ProResumePublicClient({
               <ProResumePortalSection title="ใบรับรอง" titleIcon={proResumeSectionIcon("certificate")} titleTone="emerald">
                 <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3">
                   {data.certificates.map((c) => (
-                    <li key={c.id} className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white p-2.5 shadow-sm sm:gap-3 sm:rounded-xl sm:p-3">
-                      <AppImageThumb
-                        src={c.fileUrl}
-                        alt={c.name}
-                        emptyLabel="ไม่มีรูป"
-                        className="h-12 w-12 shrink-0 sm:h-14 sm:w-14"
-                        onOpen={() => c.fileUrl && lb.open(c.fileUrl)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold leading-snug text-[#1e1b4b]">{c.name}</p>
-                        <p className="mt-0.5 truncate text-xs leading-snug text-[#66638c] sm:text-sm">{c.issuedBy || "—"}</p>
-                        {c.year ? <p className="truncate text-[11px] leading-tight text-[#8b87b8] sm:text-xs">{c.year}</p> : null}
-                      </div>
+                    <li key={c.id} className="min-w-0">
+                      <button
+                        type="button"
+                        className="flex h-full w-full items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 sm:gap-3 sm:rounded-xl sm:p-3"
+                        aria-label={`ดูรายละเอียดใบรับรอง ${c.name}`}
+                        onClick={() => setCertDetail(c)}
+                      >
+                        <span className="relative flex h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-50 ring-2 ring-slate-100 sm:h-14 sm:w-14">
+                          {c.fileUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.fileUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[9px] font-bold text-slate-400">
+                              ไม่มีรูป
+                            </span>
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold leading-snug text-[#1e1b4b]">{c.name}</p>
+                          <p className="mt-0.5 truncate text-xs leading-snug text-[#66638c] sm:text-sm">{c.issuedBy || "—"}</p>
+                          {c.year ? <p className="truncate text-[11px] leading-tight text-[#8b87b8] sm:text-xs">{c.year}</p> : null}
+                        </div>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -528,6 +690,7 @@ export function ProResumePublicClient({
                       >
                         <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                           {item.coverImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={item.coverImage}
                               alt=""
