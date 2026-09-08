@@ -154,18 +154,6 @@ function ProResumePortfolioDetailPage({
 
       <main className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:space-y-14 sm:px-6 sm:py-10">
         <section className="space-y-4" aria-labelledby="portfolio-item-title">
-          <div className="min-w-0 space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">
-              {categoryName?.trim() || "ผลงาน"}
-            </p>
-            <h1 id="portfolio-item-title" className={proResumePortalPageTitleClass}>
-              {item.title}
-            </h1>
-            {item.shortDesc ? (
-              <p className={proResumePortalPageSubtitleClass}>{item.shortDesc}</p>
-            ) : null}
-          </div>
-
           {item.coverImage ? (
             <button
               type="button"
@@ -181,6 +169,18 @@ function ProResumePortfolioDetailPage({
               />
             </button>
           ) : null}
+
+          <div className="min-w-0 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">
+              {categoryName?.trim() || "ผลงาน"}
+            </p>
+            <h1 id="portfolio-item-title" className={proResumePortalPageTitleClass}>
+              {item.title}
+            </h1>
+            {item.shortDesc ? (
+              <p className={proResumePortalPageSubtitleClass}>{item.shortDesc}</p>
+            ) : null}
+          </div>
 
           {item.contentHTML ? (
             <ProResumeRichContent content={item.contentHTML} className="max-w-3xl" />
