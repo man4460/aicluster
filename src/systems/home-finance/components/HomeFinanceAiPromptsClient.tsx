@@ -16,6 +16,7 @@ import {
   HomeFinanceModalPanel,
   HomeFinancePrimaryButton,
   HomeFinanceRowActionIconButton,
+  HomeFinanceRowIconCopy,
   HomeFinanceRowIconEdit,
   HomeFinanceRowIconTrash,
   HomeFinanceSecondaryButton,
@@ -31,13 +32,18 @@ import {
   homeFinanceTextareaClass,
 } from "@/systems/home-finance/lib/ui-tokens";
 
-const PROMPT_TYPE_OPTIONS = ["ทั่วไป", "วิเคราะห์", "สรุป", "เขียน", "แปล", "โค้ด", "อื่นๆ"] as const;
+type PromptCategory = {
+  id: number;
+  name: string;
+  sortOrder: number;
+};
 
 type PromptRow = {
   id: number;
   title: string;
   content: string;
   promptType: string;
+  categoryId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -45,17 +51,36 @@ type PromptRow = {
 export function HomeFinanceAiPromptsClient() {
   const notice = useAppNoticePopup();
   const [items, setItems] = useState<PromptRow[]>([]);
+  const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [filterCatId, setFilterCatId] = useState<number | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: "", content: "", promptType: "ทั่วไป" });
+  const [form, setForm] = useState({ title: "", content: "", categoryId: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catMode, setCatMode] = useState<"list" | "form">("list");
+  const [catEditId, setCatEditId] = useState<number | null>(null);
+  const [catForm, setCatForm] = useState({ name: "", sortOrder: "100" });
+  const [catError, setCatError] = useState<string | null>(null);
+  const [catBusy, setCatBusy] = useState(false);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/home-finance/ai-prompt-categories", { credentials: "include" });
+      const j = (await res.json().catch(() => ({}))) as { categories?: PromptCategory[]; error?: string };
+      if (!res.ok) return;
+      setCategories(j.categories ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,22 +107,15 @@ export function HomeFinanceAiPromptsClient() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadCategories();
+  }, [load, loadCategories]);
 
-  const typeOptions = useMemo(() => {
-    const fromData = new Set<string>(PROMPT_TYPE_OPTIONS);
-    for (const it of items) {
-      if (it.promptType.trim()) fromData.add(it.promptType.trim());
-    }
-    return Array.from(fromData);
-  }, [items]);
-
-  const filtersActive = search.trim().length > 0 || typeFilter.length > 0;
+  const filtersActive = search.trim().length > 0 || filterCatId != null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((p) => {
-      if (typeFilter && p.promptType !== typeFilter) return false;
+      if (filterCatId != null && p.categoryId !== filterCatId) return false;
       if (!q) return true;
       return (
         p.title.toLowerCase().includes(q) ||
@@ -105,32 +123,136 @@ export function HomeFinanceAiPromptsClient() {
         p.promptType.toLowerCase().includes(q)
       );
     });
-  }, [items, search, typeFilter]);
+  }, [items, search, filterCatId]);
 
   const openCreate = () => {
     setEditId(null);
-    setForm({ title: "", content: "", promptType: "ทั่วไป" });
+    setForm({
+      title: "",
+      content: "",
+      categoryId: categories[0] ? String(categories[0].id) : "",
+    });
     setFormError(null);
     setModalOpen(true);
   };
 
   const openEdit = (row: PromptRow) => {
     setEditId(row.id);
-    setForm({ title: row.title, content: row.content, promptType: row.promptType || "ทั่วไป" });
+    setForm({
+      title: row.title,
+      content: row.content,
+      categoryId: row.categoryId != null ? String(row.categoryId) : "",
+    });
     setFormError(null);
     setModalOpen(true);
+  };
+
+  const openCatManage = () => {
+    setCatMode("list");
+    setCatEditId(null);
+    setCatForm({ name: "", sortOrder: "100" });
+    setCatError(null);
+    setCatModalOpen(true);
+  };
+
+  const openCatCreate = () => {
+    setCatEditId(null);
+    setCatForm({ name: "", sortOrder: "100" });
+    setCatError(null);
+    setCatMode("form");
+  };
+
+  const openCatEdit = (c: PromptCategory) => {
+    setCatEditId(c.id);
+    setCatForm({ name: c.name, sortOrder: String(c.sortOrder) });
+    setCatError(null);
+    setCatMode("form");
+  };
+
+  const submitCategory = async () => {
+    const name = catForm.name.trim();
+    if (!name) {
+      setCatError("กรอกชื่อหมวด");
+      return;
+    }
+    const order = Number(catForm.sortOrder.trim() || "100");
+    if (!Number.isInteger(order) || order < 1 || order > 999) {
+      setCatError("ลำดับต้องเป็นจำนวนเต็ม 1–999");
+      return;
+    }
+    setCatBusy(true);
+    setCatError(null);
+    try {
+      const isEdit = catEditId != null;
+      const res = await fetch(
+        isEdit
+          ? `/api/home-finance/ai-prompt-categories/${catEditId}`
+          : "/api/home-finance/ai-prompt-categories",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, sortOrder: order }),
+        },
+      );
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCatError(j.error ?? "บันทึกหมวดไม่สำเร็จ");
+        return;
+      }
+      await loadCategories();
+      await load();
+      setCatMode("list");
+      setCatEditId(null);
+    } catch {
+      setCatError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
+  };
+
+  const removeCategory = async (c: PromptCategory) => {
+    const ok = await notice.confirm(`ลบหมวด «${c.name}»?`);
+    if (!ok) return;
+    setCatBusy(true);
+    setCatError(null);
+    try {
+      const res = await fetch(`/api/home-finance/ai-prompt-categories/${c.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCatError(j.error ?? "ลบหมวดไม่สำเร็จ");
+        return;
+      }
+      if (filterCatId === c.id) setFilterCatId(null);
+      await loadCategories();
+    } catch {
+      setCatError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
   };
 
   const submitForm = async () => {
     const title = form.title.trim();
     const content = form.content.trim();
-    const promptType = form.promptType.trim() || "ทั่วไป";
     if (!title) {
       setFormError("กรอกหัวข้อ");
       return;
     }
     if (!content) {
       setFormError("กรอกรายละเอียด prompt");
+      return;
+    }
+    if (!form.categoryId.trim()) {
+      setFormError("เลือกหมวดหมู่ — หรือกด «หมวดหมู่» เพื่อเพิ่มก่อน");
+      return;
+    }
+    const categoryId = Number(form.categoryId);
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      setFormError("หมวดหมู่ไม่ถูกต้อง");
       return;
     }
     setSaving(true);
@@ -142,7 +264,7 @@ export function HomeFinanceAiPromptsClient() {
           method: editId != null ? "PATCH" : "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, content, promptType }),
+          body: JSON.stringify({ title, content, categoryId }),
         },
       );
       const j = (await res.json().catch(() => ({}))) as { error?: string };
@@ -182,9 +304,9 @@ export function HomeFinanceAiPromptsClient() {
   const copyContent = async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
-      await notice.success("คัดลอก Prompt แล้ว");
+      notice.success("คัดลอก Prompt แล้ว");
     } catch {
-      await notice.error("คัดลอกไม่สำเร็จ");
+      notice.error("คัดลอกไม่สำเร็จ");
     }
   };
 
@@ -204,6 +326,18 @@ export function HomeFinanceAiPromptsClient() {
             disabled={loading || saving}
             busy={loading}
           />
+          <button
+            type="button"
+            onClick={openCatManage}
+            className={cn(homeFinanceOutlineButtonClass, "min-w-[40px] sm:min-w-0")}
+            aria-label="จัดการหมวดหมู่ Prompt"
+            title="หมวดหมู่"
+          >
+            <span className="sm:hidden" aria-hidden>
+              หมวด
+            </span>
+            <span className="hidden sm:inline">หมวดหมู่</span>
+          </button>
           <button
             type="button"
             onClick={openCreate}
@@ -227,30 +361,34 @@ export function HomeFinanceAiPromptsClient() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(homeFinanceFieldClass, "mt-1")}
-              placeholder="หัวข้อ · รายละเอียด · ประเภท…"
+              placeholder="หัวข้อ · รายละเอียด · หมวด…"
               aria-label="ค้นหา Prompt"
             />
           </label>
-          {typeOptions.length > 0 ? (
-            <div className={cn(homeFinanceFilterChipShellClass, "overflow-x-auto")} role="group" aria-label="กรองประเภท">
+          {categories.length > 0 ? (
+            <div
+              className={cn(homeFinanceFilterChipShellClass, "overflow-x-auto")}
+              role="group"
+              aria-label="กรองตามหมวดหมู่"
+            >
               <div className="flex w-max gap-2">
                 <button
                   type="button"
-                  aria-pressed={!typeFilter}
-                  className={homeFinanceFilterChipClass(!typeFilter)}
-                  onClick={() => setTypeFilter("")}
+                  aria-pressed={filterCatId == null}
+                  className={homeFinanceFilterChipClass(filterCatId == null)}
+                  onClick={() => setFilterCatId(null)}
                 >
                   ทั้งหมด
                 </button>
-                {typeOptions.map((t) => (
+                {categories.map((c) => (
                   <button
-                    key={t}
+                    key={c.id}
                     type="button"
-                    aria-pressed={typeFilter === t}
-                    className={homeFinanceFilterChipClass(typeFilter === t)}
-                    onClick={() => setTypeFilter(t)}
+                    aria-pressed={filterCatId === c.id}
+                    className={homeFinanceFilterChipClass(filterCatId === c.id)}
+                    onClick={() => setFilterCatId(c.id)}
                   >
-                    {t}
+                    {c.name}
                   </button>
                 ))}
               </div>
@@ -262,7 +400,7 @@ export function HomeFinanceAiPromptsClient() {
               className={homeFinanceOutlineButtonClass}
               onClick={() => {
                 setSearch("");
-                setTypeFilter("");
+                setFilterCatId(null);
               }}
             >
               ล้างกรอง
@@ -294,29 +432,30 @@ export function HomeFinanceAiPromptsClient() {
           <ul className="space-y-2">
             {filtered.map((row) => (
               <li key={row.id} className={cn(homeFinanceTonedRowCardClass("violet"), "p-3 sm:p-4")}>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-bold text-[#1e1b4b]">{row.title}</p>
-                      <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
-                        {row.promptType}
-                      </span>
+                      {row.promptType ? (
+                        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
+                          {row.promptType}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="line-clamp-3 whitespace-pre-wrap text-xs text-[#66638c]">{row.content}</p>
                     <p className="text-[10px] font-medium text-slate-400">
                       อัปเดต {formatBangkokDigestDateTimeLabel(row.updatedAt)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
-                    <button
-                      type="button"
-                      className={cn(homeFinanceOutlineButtonClass, "min-h-7 px-2 text-[10px]")}
-                      onClick={() => void copyContent(row.content)}
-                      aria-label={`คัดลอก ${row.title}`}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <HomeFinanceRowActionIconButton
+                      variant="muted"
                       title="คัดลอก"
+                      aria-label={`คัดลอก ${row.title}`}
+                      onClick={() => void copyContent(row.content)}
                     >
-                      คัดลอก
-                    </button>
+                      <HomeFinanceRowIconCopy />
+                    </HomeFinanceRowActionIconButton>
                     <HomeFinanceRowActionIconButton
                       variant="primary"
                       title="แก้ไข"
@@ -370,19 +509,24 @@ export function HomeFinanceAiPromptsClient() {
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-[#66638c]">ประเภท</span>
+                <span className="text-xs font-semibold text-[#66638c]">หมวดหมู่</span>
                 <select
-                  value={form.promptType}
-                  onChange={(e) => setForm((s) => ({ ...s, promptType: e.target.value }))}
+                  value={form.categoryId}
+                  onChange={(e) => setForm((s) => ({ ...s, categoryId: e.target.value }))}
                   className={homeFinanceFieldClass}
                   disabled={saving}
+                  required
                 >
-                  {PROMPT_TYPE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  <option value="">— เลือกหมวด —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
+                {categories.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-[#66638c]">ยังไม่มีหมวด — กดปุ่ม «หมวดหมู่» เพื่อเพิ่มก่อน</p>
+                ) : null}
               </label>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-[#66638c]">รายละเอียด Prompt</span>
@@ -406,6 +550,123 @@ export function HomeFinanceAiPromptsClient() {
                 </HomeFinancePrimaryButton>
               </HomeFinanceModalActionBar>
             </form>
+          </HomeFinanceModalPanel>
+        </HomeFinanceModalBackdrop>
+      ) : null}
+
+      {catModalOpen ? (
+        <HomeFinanceModalBackdrop
+          onBackdropClick={() => {
+            if (!catBusy) setCatModalOpen(false);
+          }}
+        >
+          <HomeFinanceModalPanel
+            title={catMode === "list" ? "หมวดหมู่ Prompt" : catEditId == null ? "เพิ่มหมวด" : "แก้ไขหมวด"}
+            titleId="hf-ai-prompt-cat-title"
+            onClose={() => {
+              if (!catBusy) setCatModalOpen(false);
+            }}
+            error={catError}
+            maxWidthClassName="max-w-md"
+          >
+            {catMode === "list" ? (
+              <div className="space-y-3">
+                {categories.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                    ยังไม่มีหมวด — กดเพิ่มด้านล่าง
+                  </p>
+                ) : (
+                  <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
+                    {categories.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-slate-50/50 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-[#1e1b4b]">{c.name}</p>
+                          <p className="text-[10px] text-slate-400">ลำดับ {c.sortOrder}</p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <HomeFinanceRowActionIconButton
+                            variant="primary"
+                            title="แก้ไข"
+                            aria-label={`แก้ไขหมวด ${c.name}`}
+                            disabled={catBusy}
+                            onClick={() => openCatEdit(c)}
+                          >
+                            <HomeFinanceRowIconEdit />
+                          </HomeFinanceRowActionIconButton>
+                          <HomeFinanceRowActionIconButton
+                            variant="danger"
+                            title="ลบ"
+                            aria-label={`ลบหมวด ${c.name}`}
+                            disabled={catBusy}
+                            onClick={() => void removeCategory(c)}
+                          >
+                            <HomeFinanceRowIconTrash />
+                          </HomeFinanceRowActionIconButton>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <HomeFinanceModalActionBar>
+                  <HomeFinanceSecondaryButton type="button" onClick={() => setCatModalOpen(false)} disabled={catBusy}>
+                    ปิด
+                  </HomeFinanceSecondaryButton>
+                  <HomeFinancePrimaryButton type="button" onClick={openCatCreate} disabled={catBusy}>
+                    + เพิ่มหมวด
+                  </HomeFinancePrimaryButton>
+                </HomeFinanceModalActionBar>
+              </div>
+            ) : (
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitCategory();
+                }}
+              >
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-[#66638c]">ชื่อหมวด</span>
+                  <input
+                    value={catForm.name}
+                    onChange={(e) => setCatForm((s) => ({ ...s, name: e.target.value }))}
+                    className={homeFinanceFieldClass}
+                    placeholder="เช่น ทั่วไป / วิเคราะห์ / สรุป"
+                    maxLength={80}
+                    required
+                    disabled={catBusy}
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-[#66638c]">ลำดับ</span>
+                  <input
+                    value={catForm.sortOrder}
+                    onChange={(e) => setCatForm((s) => ({ ...s, sortOrder: e.target.value }))}
+                    className={homeFinanceFieldClass}
+                    inputMode="numeric"
+                    maxLength={3}
+                    disabled={catBusy}
+                  />
+                </label>
+                <HomeFinanceModalActionBar>
+                  <HomeFinanceSecondaryButton
+                    type="button"
+                    disabled={catBusy}
+                    onClick={() => {
+                      setCatMode("list");
+                      setCatError(null);
+                    }}
+                  >
+                    กลับ
+                  </HomeFinanceSecondaryButton>
+                  <HomeFinancePrimaryButton type="submit" disabled={catBusy}>
+                    {catBusy ? "กำลังบันทึก…" : "บันทึก"}
+                  </HomeFinancePrimaryButton>
+                </HomeFinanceModalActionBar>
+              </form>
+            )}
           </HomeFinanceModalPanel>
         </HomeFinanceModalBackdrop>
       ) : null}

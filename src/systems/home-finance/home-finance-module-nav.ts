@@ -67,7 +67,7 @@ export const HOME_FINANCE_OVERVIEW_SUBNAV_ITEMS: HomeFinanceOverviewSubItem[] = 
     href: HOME_FINANCE_PROMPTS_HREF,
     label: "Prompt AI",
     shortLabel: "Prompt",
-    description: "บันทึกหัวข้อ · รายละเอียด prompt · ประเภท",
+    description: "บันทึกหัวข้อ · รายละเอียด prompt · หมวดหมู่",
   },
 ];
 

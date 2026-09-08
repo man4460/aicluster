@@ -45,7 +45,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 84: LmsCoursePurchase — learner buy + slip review */
 /** 87: SiteSetting.adminTokenTopUpPinHash — รหัสเติมโทเคนแอดมิน */
 /** 89: HomeFinanceDocumentCategory + HomeFinanceAiPrompt */
-const PRISMA_SINGLETON_VERSION = 89;
+/** 90: HomeFinanceAiPromptCategory */
+const PRISMA_SINGLETON_VERSION = 90;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -80,6 +81,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     homeFinancePersonalDocument?: { findMany?: unknown };
     homeFinanceDocumentCategory?: { findMany?: unknown };
     homeFinanceAiPrompt?: { findMany?: unknown };
+    homeFinanceAiPromptCategory?: { findMany?: unknown };
     barberPortalStaffPing?: { findMany?: unknown };
     systemActivityLog?: { findMany?: unknown };
     parkingSite?: { findFirst?: unknown };
@@ -219,6 +221,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.homeFinancePersonalDocument?.findMany === "function" &&
     typeof c.homeFinanceDocumentCategory?.findMany === "function" &&
     typeof c.homeFinanceAiPrompt?.findMany === "function" &&
+    typeof c.homeFinanceAiPromptCategory?.findMany === "function" &&
     typeof c.barberPortalStaffPing?.findMany === "function" &&
     typeof c.systemActivityLog?.findMany === "function" &&
     typeof c.parkingSite?.findFirst === "function" &&

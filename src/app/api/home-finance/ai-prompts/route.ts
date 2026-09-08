@@ -7,7 +7,8 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 const postSchema = z.object({
   title: z.string().trim().min(1).max(160),
   content: z.string().trim().min(1).max(20000),
-  promptType: z.string().trim().min(1).max(80),
+  categoryId: z.number().int().positive().optional().nullable(),
+  promptType: z.string().trim().min(1).max(80).optional(),
 });
 
 async function requireOwner() {
@@ -38,6 +39,7 @@ function mapRow(r: {
   title: string;
   content: string;
   promptType: string;
+  categoryId: number | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -46,9 +48,26 @@ function mapRow(r: {
     title: r.title,
     content: r.content,
     promptType: r.promptType,
+    categoryId: r.categoryId,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
+}
+
+async function resolveCategory(
+  billingUserId: string,
+  categoryId: number | null | undefined,
+  promptType: string | undefined,
+): Promise<{ categoryId: number | null; promptType: string } | { error: string }> {
+  if (categoryId != null) {
+    const cat = await prisma.homeFinanceAiPromptCategory.findFirst({
+      where: { id: categoryId, ownerUserId: billingUserId },
+    });
+    if (!cat) return { error: "ไม่พบหมวดที่เลือก" };
+    return { categoryId: cat.id, promptType: cat.name };
+  }
+  const label = (promptType ?? "").trim() || "ทั่วไป";
+  return { categoryId: null, promptType: label };
 }
 
 export async function GET() {
@@ -82,8 +101,11 @@ export async function POST(req: Request) {
   }
   const parsed = postSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "กรอกหัวข้อ · รายละเอียด prompt · และประเภท" }, { status: 400 });
+    return NextResponse.json({ error: "กรอกหัวข้อ · รายละเอียด prompt · และหมวด" }, { status: 400 });
   }
+
+  const resolved = await resolveCategory(guard.billingUserId, parsed.data.categoryId, parsed.data.promptType);
+  if ("error" in resolved) return NextResponse.json({ error: resolved.error }, { status: 400 });
 
   try {
     const row = await prisma.homeFinanceAiPrompt.create({
@@ -91,7 +113,8 @@ export async function POST(req: Request) {
         ownerUserId: guard.billingUserId,
         title: parsed.data.title,
         content: parsed.data.content,
-        promptType: parsed.data.promptType,
+        categoryId: resolved.categoryId,
+        promptType: resolved.promptType,
       },
     });
     return NextResponse.json(

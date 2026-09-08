@@ -182,6 +182,7 @@ model User {
   homeFinancePersonalDocuments       HomeFinancePersonalDocument[]
   homeFinanceDocumentCategories      HomeFinanceDocumentCategory[]
   homeFinanceAiPrompts               HomeFinanceAiPrompt[]
+  homeFinanceAiPromptCategories      HomeFinanceAiPromptCategory[]
   carWashPackages                    CarWashPackage[]
   carWashBundles                     CarWashBundle[]
   carWashVisits                      CarWashVisit[]
@@ -2416,20 +2417,44 @@ model HomeFinancePersonalDocument {
 }
 
 /**
- * Prompt AI ส่วนตัว — เก็บหัวข้อ · รายละเอียด prompt · ประเภท (ใต้เมนูภาพรวม)
+ * หมวด Prompt AI ส่วนตัว
+ */
+model HomeFinanceAiPromptCategory {
+  id          Int                 @id @default(autoincrement())
+  ownerUserId String              @map("owner_id") @db.VarChar(191)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String              @db.VarChar(80)
+  sortOrder   Int                 @default(100) @map("sort_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  prompts     HomeFinanceAiPrompt[]
+
+  @@unique([ownerUserId, name])
+  @@index([ownerUserId, sortOrder])
+  @@map("home_finance_ai_prompt_categories")
+}
+
+/**
+ * Prompt AI ส่วนตัว — เก็บหัวข้อ · รายละเอียด prompt · หมวด (ใต้เมนูภาพรวม)
  */
 model HomeFinanceAiPrompt {
-  id          Int      @id @default(autoincrement())
-  ownerUserId String   @map("owner_id") @db.VarChar(191)
-  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  title       String   @db.VarChar(160)
-  content     String   @db.Text
-  promptType  String   @map("prompt_type") @db.VarChar(80)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          Int                          @id @default(autoincrement())
+  ownerUserId String                       @map("owner_id") @db.VarChar(191)
+  owner       User                         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  title       String                       @db.VarChar(160)
+  content     String                       @db.Text
+  /**
+   * ป้ายหมวด (denormalized) — คู่กับ categoryId เมื่อผูกหมวด
+   */
+  promptType  String                       @map("prompt_type") @db.VarChar(80)
+  categoryId  Int?                         @map("category_id")
+  category    HomeFinanceAiPromptCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt   DateTime                     @default(now()) @map("created_at")
+  updatedAt   DateTime                     @updatedAt @map("updated_at")
 
   @@index([ownerUserId, createdAt])
   @@index([ownerUserId, promptType])
+  @@index([ownerUserId, categoryId])
   @@map("home_finance_ai_prompts")
 }
 

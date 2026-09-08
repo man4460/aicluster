@@ -7,10 +7,8 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
-  title: z.string().trim().min(1).max(160).optional(),
-  content: z.string().trim().min(1).max(20000).optional(),
-  categoryId: z.number().int().positive().optional().nullable(),
-  promptType: z.string().trim().min(1).max(80).optional(),
+  name: z.string().trim().min(1).max(80).optional(),
+  sortOrder: z.number().int().min(1).max(999).optional(),
 });
 
 function parseId(raw: string): number | null {
@@ -33,7 +31,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
-  const existing = await prisma.homeFinanceAiPrompt.findFirst({
+  const existing = await prisma.homeFinanceAiPromptCategory.findFirst({
     where: { id, ownerUserId: guard.billingUserId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
@@ -47,47 +45,32 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const data: {
-    title?: string;
-    content?: string;
-    categoryId?: number | null;
-    promptType?: string;
-  } = {};
-  if (parsed.data.title !== undefined) data.title = parsed.data.title;
-  if (parsed.data.content !== undefined) data.content = parsed.data.content;
-
-  if (parsed.data.categoryId !== undefined) {
-    if (parsed.data.categoryId == null) {
-      data.categoryId = null;
-      if (parsed.data.promptType !== undefined) data.promptType = parsed.data.promptType;
-    } else {
-      const cat = await prisma.homeFinanceAiPromptCategory.findFirst({
-        where: { id: parsed.data.categoryId, ownerUserId: guard.billingUserId },
+  try {
+    const row = await prisma.homeFinanceAiPromptCategory.update({
+      where: { id },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
+      },
+    });
+    if (parsed.data.name !== undefined && parsed.data.name !== existing.name) {
+      await prisma.homeFinanceAiPrompt.updateMany({
+        where: { ownerUserId: guard.billingUserId, categoryId: id },
+        data: { promptType: parsed.data.name },
       });
-      if (!cat) return NextResponse.json({ error: "ไม่พบหมวดที่เลือก" }, { status: 400 });
-      data.categoryId = cat.id;
-      data.promptType = cat.name;
     }
-  } else if (parsed.data.promptType !== undefined) {
-    data.promptType = parsed.data.promptType;
+    return NextResponse.json({
+      category: {
+        id: row.id,
+        name: row.name,
+        sortOrder: row.sortOrder,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "ชื่อหมวดซ้ำ" }, { status: 400 });
   }
-
-  const row = await prisma.homeFinanceAiPrompt.update({
-    where: { id },
-    data,
-  });
-
-  return NextResponse.json({
-    item: {
-      id: row.id,
-      title: row.title,
-      content: row.content,
-      promptType: row.promptType,
-      categoryId: row.categoryId,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    },
-  });
 }
 
 export async function DELETE(_req: Request, ctx: Ctx) {
@@ -97,11 +80,21 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
-  const existing = await prisma.homeFinanceAiPrompt.findFirst({
+  const existing = await prisma.homeFinanceAiPromptCategory.findFirst({
     where: { id, ownerUserId: guard.billingUserId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
-  await prisma.homeFinanceAiPrompt.delete({ where: { id } });
+  const linked = await prisma.homeFinanceAiPrompt.count({
+    where: { ownerUserId: guard.billingUserId, categoryId: id },
+  });
+  if (linked > 0) {
+    return NextResponse.json(
+      { error: `ยังมี Prompt ${linked} รายการในหมวดนี้ — ย้ายหรือลบก่อน` },
+      { status: 409 },
+    );
+  }
+
+  await prisma.homeFinanceAiPromptCategory.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
