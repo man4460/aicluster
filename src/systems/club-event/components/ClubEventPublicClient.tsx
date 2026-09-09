@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { MapPin, MessageCircle, Phone, Search, Users } from "lucide-react";
+import { MapPin, MessageCircle, Phone, Search, UserPlus, Users } from "lucide-react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
@@ -66,6 +66,12 @@ export function ClubEventPublicClient({
   const banner = profile.portalBannerUrl?.trim() || CLUB_EVENT_PORTAL_SAMPLE_BANNER;
   const showCommittee = profile.portalShowCommittee && committee.length > 0;
   const showMembers = Boolean(profile.portalShowMembers);
+  const showSignup = Boolean(profile.portalSignupEnabled);
+  const signupHref = useMemo(() => {
+    if (!showSignup) return null;
+    const base = `/club/${encodeURIComponent(slug)}/signup`;
+    return trialParam ? `${base}?t=${encodeURIComponent(trialParam)}` : base;
+  }, [showSignup, slug, trialParam]);
 
   const linkHref = useCallback(
     (path: string) => (trialParam ? `${path}?t=${encodeURIComponent(trialParam)}` : path),
@@ -142,6 +148,11 @@ export function ClubEventPublicClient({
                 สมาชิก
               </button>
             ) : null}
+            {signupHref ? (
+              <a href={signupHref} className={clubEventPortalHeaderNavOnLightLinkClass()}>
+                สมัครสมาชิก
+              </a>
+            ) : null}
             <a href="#contact" className={clubEventPortalHeaderNavOnLightLinkClass()} onClick={() => scrollTo("contact")}>
               ติดต่อ
             </a>
@@ -186,9 +197,15 @@ export function ClubEventPublicClient({
                 : "ดูกำหนดการและติดต่อชมรม"}
             </p>
             <div className="flex flex-wrap gap-2">
+              {signupHref ? (
+                <a href={signupHref} className={cn(clubEventPortalPrimaryBtnClass, "inline-flex items-center gap-1.5")}>
+                  <UserPlus className="h-4 w-4" aria-hidden />
+                  สมัครสมาชิก
+                </a>
+              ) : null}
               <button
                 type="button"
-                className={clubEventPortalPrimaryBtnClass}
+                className={signupHref ? cn(clubEventOutlineButtonClass, "inline-flex") : clubEventPortalPrimaryBtnClass}
                 onClick={() => scrollTo("schedule")}
               >
                 ดูกำหนดการ

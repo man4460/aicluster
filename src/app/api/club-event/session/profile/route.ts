@@ -9,6 +9,7 @@ import {
   parsePortalMemberFieldsJson,
   serializePortalMemberFields,
 } from "@/systems/club-event/lib/portal-member-fields";
+import { parsePortalSignupCollectDues } from "@/systems/club-event/lib/portal-signup";
 import { syncClubEventDuesPublicLink } from "@/systems/club-event/lib/sync-dues-link";
 
 function parseDuesPeriod(raw: unknown): ClubEventDuesPeriodKey | null {
@@ -90,6 +91,19 @@ export async function PUT(req: Request) {
       existingDuesLinkId: profile.duesLinkId,
     });
 
+    const portalSignupEnabled =
+      typeof body.portalSignupEnabled === "boolean"
+        ? body.portalSignupEnabled
+        : profile.portalSignupEnabled;
+    let portalSignupCollectDues = parsePortalSignupCollectDues(
+      body.portalSignupCollectDues !== undefined
+        ? body.portalSignupCollectDues
+        : profile.portalSignupCollectDues,
+    );
+    if (!duesEnabled || duesAmountBaht <= 0) {
+      portalSignupCollectDues = "OFF";
+    }
+
     const updated = await prisma.clubEventProfile.update({
       where: { id: profile.id },
       data: {
@@ -141,6 +155,8 @@ export async function PUT(req: Request) {
                 parsePortalMemberFieldsJson(JSON.stringify(body.portalMemberFields)),
               )
             : profile.portalMemberFieldsJson,
+        portalSignupEnabled,
+        portalSignupCollectDues,
         paymentRulesNote:
           typeof body.paymentRulesNote === "string" ? body.paymentRulesNote : profile.paymentRulesNote,
         promptPayPhone: typeof body.promptPayPhone === "string" ? body.promptPayPhone.slice(0, 20) : body.promptPayPhone === null ? null : profile.promptPayPhone,

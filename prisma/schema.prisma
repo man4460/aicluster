@@ -7434,6 +7434,14 @@ model ClubEventProfile {
    */
   portalMemberFieldsJson String @default("{}") @map("portal_member_fields_json") @db.VarChar(1000)
   /**
+   * เปิดปุ่ม/หน้าสมัครสมาชิกสาธารณะ `/club/{slug}/signup`
+   */
+  portalSignupEnabled Boolean @default(false) @map("portal_signup_enabled")
+  /**
+   * เรียกเก็บค่าบำรุงตอนสมัคร: OFF | OPTIONAL | REQUIRED
+   */
+  portalSignupCollectDues String @default("OFF") @map("portal_signup_collect_dues") @db.VarChar(16)
+  /**
    * กฎ/หมายเหตุการชำระเงินสำหรับลูกค้า (แสดงบนลิงก์เก็บค่า)
    */
   paymentRulesNote    String   @default("") @map("payment_rules_note") @db.Text

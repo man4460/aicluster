@@ -30,6 +30,10 @@ import {
   DEFAULT_CLUB_PORTAL_MEMBER_FIELDS,
 } from "@/systems/club-event/lib/portal-member-fields";
 import {
+  CLUB_PORTAL_SIGNUP_COLLECT_DUES_LABELS,
+  type ClubPortalSignupCollectDues,
+} from "@/systems/club-event/lib/portal-signup";
+import {
   clubEventPageTitleIcon,
   clubEventPageTitleTone,
   clubEventSettingsTabIcon,
@@ -97,6 +101,8 @@ export function ClubEventSettingsClient({
           portalShowCommittee: form.portalShowCommittee !== false,
           portalShowMembers: Boolean(form.portalShowMembers),
           portalMemberFields: form.portalMemberFields,
+          portalSignupEnabled: Boolean(form.portalSignupEnabled),
+          portalSignupCollectDues: form.portalSignupCollectDues,
           paymentRulesNote: form.paymentRulesNote,
           promptPayPhone: form.promptPayPhone,
           promptPayQrImageUrl: form.promptPayQrImageUrl,
@@ -431,6 +437,89 @@ export function ClubEventSettingsClient({
                     })}
                   </div>
                 </fieldset>
+              ) : null}
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                  checked={Boolean(form.portalSignupEnabled)}
+                  disabled={saving}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      portalSignupEnabled: e.target.checked,
+                    }))
+                  }
+                />
+                <span>
+                  <span className="block text-sm font-bold text-[#1e1b4b]">เปิดหน้าเว็บสมัครสมาชิก</span>
+                  <span className="mt-0.5 block text-xs font-semibold text-[#66638c]">
+                    แสดงปุ่ม «สมัครสมาชิก» บนเว็บสาธารณะ และเปิดฟอร์มที่ /club/[slug]/signup
+                  </span>
+                </span>
+              </label>
+
+              {form.portalSignupEnabled ? (
+                <div className="space-y-3 border-t border-slate-100 pt-3">
+                  {form.duesEnabled && form.duesAmountBaht > 0 ? (
+                    <fieldset className="space-y-2" disabled={saving}>
+                      <legend className="text-xs font-bold uppercase tracking-wide text-[#66638c]">
+                        ค่าบำรุงตอนสมัคร
+                      </legend>
+                      <p className="text-xs font-semibold text-[#66638c]">
+                        ใช้ยอดและรอบจากแท็บ «ค่าบำรุงประจำปี» — เลือกว่าจะเรียกเก็บตอนสมัครหรือทีหลัง
+                      </p>
+                      {(Object.keys(CLUB_PORTAL_SIGNUP_COLLECT_DUES_LABELS) as ClubPortalSignupCollectDues[]).map(
+                        (key) => (
+                          <label
+                            key={key}
+                            className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2"
+                          >
+                            <input
+                              type="radio"
+                              name="portalSignupCollectDues"
+                              className="mt-0.5 h-4 w-4 border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                              checked={(form.portalSignupCollectDues ?? "OFF") === key}
+                              onChange={() => setForm((f) => ({ ...f, portalSignupCollectDues: key }))}
+                            />
+                            <span className="text-sm font-bold text-[#1e1b4b]">
+                              {CLUB_PORTAL_SIGNUP_COLLECT_DUES_LABELS[key]}
+                            </span>
+                          </label>
+                        ),
+                      )}
+                    </fieldset>
+                  ) : (
+                    <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-[#66638c]">
+                      ยังไม่เปิดค่าบำรุง — หน้าสมัครจะรับข้อมูลสมาชิกอย่างเดียว (เปิดได้ที่แท็บค่าบำรุงประจำปี)
+                    </p>
+                  )}
+
+                  <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+                    <p className="text-xs font-black text-[#4d47b6]">ลิงก์หน้าสมัครสมาชิก</p>
+                    <p className="break-all text-sm font-semibold text-[#1e1b4b]">
+                      {form.portalSignupPath ?? `/club/${form.slug}/signup`}
+                    </p>
+                    <button
+                      type="button"
+                      className={clubEventOutlineButtonClass}
+                      disabled={saving || !form.slug}
+                      onClick={() => {
+                        const path = form.portalSignupPath ?? `/club/${form.slug}/signup`;
+                        const url = absoluteUrl(path);
+                        void navigator.clipboard.writeText(url).then(
+                          () => notice.success("คัดลอกลิงก์แล้ว"),
+                          () => notice.error("คัดลอกไม่สำเร็จ"),
+                        );
+                      }}
+                    >
+                      คัดลอกลิงก์
+                    </button>
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>

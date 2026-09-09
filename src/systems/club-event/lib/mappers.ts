@@ -11,6 +11,10 @@ import {
 } from "@/systems/club-event/lib/youtube";
 import type { ClubPortalMemberPublicFields } from "@/systems/club-event/lib/portal-member-fields";
 import { parsePortalMemberFieldsJson } from "@/systems/club-event/lib/portal-member-fields";
+import {
+  clubEventSignupPublicPath,
+  parsePortalSignupCollectDues,
+} from "@/systems/club-event/lib/portal-signup";
 
 export type { ClubEventYoutubeVideo, ClubPortalMemberPublicFields };
 
@@ -297,6 +301,12 @@ export type ClubEventProfileDto = {
   portalShowMembers: boolean;
   /** ฟิลด์สมาชิกที่เปิดเผยบนเว็บ (ชื่อเต็มเปิดเสมอ) */
   portalMemberFields: ClubPortalMemberPublicFields;
+  /** เปิดหน้า/ปุ่มสมัครสมาชิกสาธารณะ */
+  portalSignupEnabled: boolean;
+  /** เรียกเก็บค่าบำรุงตอนสมัคร: OFF | OPTIONAL | REQUIRED */
+  portalSignupCollectDues: "OFF" | "OPTIONAL" | "REQUIRED";
+  /** พาธหน้าสมัครสมาชิก */
+  portalSignupPath: string | null;
   paymentRulesNote: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
@@ -457,6 +467,8 @@ export function mapClubEventProfile(row: {
   portalShowCommittee?: boolean;
   portalShowMembers?: boolean;
   portalMemberFieldsJson?: string;
+  portalSignupEnabled?: boolean;
+  portalSignupCollectDues?: string | null;
   paymentRulesNote?: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
@@ -493,6 +505,9 @@ export function mapClubEventProfile(row: {
     portalShowCommittee: row.portalShowCommittee !== false,
     portalShowMembers: Boolean(row.portalShowMembers),
     portalMemberFields: parsePortalMemberFieldsJson(row.portalMemberFieldsJson),
+    portalSignupEnabled: Boolean(row.portalSignupEnabled),
+    portalSignupCollectDues: parsePortalSignupCollectDues(row.portalSignupCollectDues),
+    portalSignupPath: row.portalSignupEnabled ? clubEventSignupPublicPath(row.slug) : null,
     paymentRulesNote: row.paymentRulesNote ?? "",
     promptPayPhone: row.promptPayPhone,
     promptPayQrImageUrl: row.promptPayQrImageUrl,
