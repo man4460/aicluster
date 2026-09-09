@@ -10,7 +10,6 @@ import {
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
-import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
