@@ -90,6 +90,26 @@ export function ModuleTryPromoVideosAdmin({
     setForm({ ...v });
   }
 
+  function moveVideo(from: number, delta: -1 | 1) {
+    setVideos((prev) => {
+      const to = from + delta;
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const tmp = next[from]!;
+      next[from] = next[to]!;
+      next[to] = tmp;
+      return next;
+    });
+    setEditIdx((cur) => {
+      if (cur == null) return cur;
+      const to = from + delta;
+      if (to < 0 || to >= videos.length) return cur;
+      if (cur === from) return to;
+      if (cur === to) return from;
+      return cur;
+    });
+  }
+
   function saveFormLocal() {
     const title = form.title.trim();
     const youtubeUrl = form.youtubeUrl.trim();
@@ -173,7 +193,7 @@ export function ModuleTryPromoVideosAdmin({
           setErr(null);
         }}
         title={`วิดีโอ · ${moduleTitle}`}
-        description="วางลิงก์ YouTube — ลูกค้ากดดูในหน้า /try ได้เลย"
+        description="วางลิงก์ YouTube — กด ↑↓ จัดลำดับการแสดงบนหน้า /try แล้วกดบันทึกทั้งหมด"
         size="lg"
         mobileCentered
         footer={
@@ -286,25 +306,64 @@ export function ModuleTryPromoVideosAdmin({
                       ) : null}
                       <p className="mt-1 break-all text-[10px] text-[#8b87a8]">{v.youtubeUrl}</p>
                     </div>
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        type="button"
-                        className={assetRowEditIconButtonClass}
-                        aria-label={`แก้ไข ${v.title}`}
-                        title="แก้ไข"
-                        onClick={() => openEdit(i)}
-                      >
-                        <IconRowEdit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${v.title}`}
-                        title="ลบ"
-                        onClick={() => setVideos((prev) => prev.filter((_, j) => j !== i))}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
+                    <div className="flex shrink-0 flex-col gap-0.5">
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className={cn(assetRowEditIconButtonClass, "disabled:cursor-not-allowed disabled:opacity-35")}
+                          disabled={i === 0}
+                          aria-label={`เลื่อนขึ้น ${v.title}`}
+                          title="เลื่อนขึ้น"
+                          onClick={() => moveVideo(i, -1)}
+                        >
+                          <span className="text-sm font-black leading-none" aria-hidden>
+                            ↑
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={cn(assetRowEditIconButtonClass, "disabled:cursor-not-allowed disabled:opacity-35")}
+                          disabled={i >= videos.length - 1}
+                          aria-label={`เลื่อนลง ${v.title}`}
+                          title="เลื่อนลง"
+                          onClick={() => moveVideo(i, 1)}
+                        >
+                          <span className="text-sm font-black leading-none" aria-hidden>
+                            ↓
+                          </span>
+                        </button>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className={assetRowEditIconButtonClass}
+                          aria-label={`แก้ไข ${v.title}`}
+                          title="แก้ไข"
+                          onClick={() => openEdit(i)}
+                        >
+                          <IconRowEdit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className={assetRowRemoveIconButtonClass}
+                          aria-label={`ลบ ${v.title}`}
+                          title="ลบ"
+                          onClick={() => {
+                            setVideos((prev) => prev.filter((_, j) => j !== i));
+                            setEditIdx((cur) => {
+                              if (cur == null) return cur;
+                              if (cur === i) {
+                                setForm(newDraft());
+                                return null;
+                              }
+                              if (cur > i) return cur - 1;
+                              return cur;
+                            });
+                          }}
+                        >
+                          <IconRowRemove className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );
