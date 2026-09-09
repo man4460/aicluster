@@ -194,7 +194,7 @@ export function ClubEventPublicClient({
             <p className="text-sm font-semibold text-[#5f5a8a] sm:pb-1">
               {upcoming.length > 0
                 ? `กิจกรรมถัดไป ${upcoming.length} รายการ`
-                : "ดูกำหนดการและติดต่อชมรม"}
+                : "ติดต่อชมรมและดูกิจกรรมด้านล่าง"}
             </p>
             <div className="flex flex-wrap gap-2">
               {signupHref ? (
@@ -203,17 +203,13 @@ export function ClubEventPublicClient({
                   สมัครสมาชิก
                 </a>
               ) : null}
-              <button
-                type="button"
-                className={signupHref ? cn(clubEventOutlineButtonClass, "inline-flex") : clubEventPortalPrimaryBtnClass}
-                onClick={() => scrollTo("schedule")}
-              >
-                ดูกำหนดการ
-              </button>
               {showCommittee ? (
                 <button
                   type="button"
-                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                  className={cn(
+                    signupHref ? clubEventOutlineButtonClass : clubEventPortalPrimaryBtnClass,
+                    "inline-flex items-center gap-1.5",
+                  )}
                   onClick={() => setCommitteeOpen(true)}
                 >
                   <Users className="h-4 w-4" aria-hidden />
