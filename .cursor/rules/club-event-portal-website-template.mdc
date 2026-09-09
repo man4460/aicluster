@@ -57,7 +57,7 @@ AppPublicCheckInGlassPage (!px-0 !pt-0)
 
 - คณะกรรมการ = **ปุ่ม** → `ClubEventCommitteePopup`
 - ค้นหาสมาชิก = **ปุ่มด้านบน** → `ClubEventMemberSearchPopup` เมื่อเปิด `portalShowMembers`
-- ตั้งค่า: `portalShowCommittee` · `portalMemberFields` ในแท็บเว็ปลิงค์ลูกค้า
+- ตั้งค่า: `portalShowCommittee` · `portalMemberFields` ในแท็บตั้งค่าเว็บไซต์ · QR/คัดลอกลิงก์ในแท็บ **ลิงก์** (`?tab=link`)
 - API ค้นหา: `GET /api/club-event/public/[slug]/members/search?q=`
 
 ---

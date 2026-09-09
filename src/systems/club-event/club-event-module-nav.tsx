@@ -43,8 +43,8 @@ export type ClubEventDashboardTabKey = "upcoming" | "past" | "dues";
 /** แท็บย่อยการจัดการ: สมาชิก · โครงสร้าง · ทรัพย์สิน */
 export type ClubEventManageTabKey = "members" | "committee" | "assets";
 
-/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · ค่าบำรุง · เว็ปลิงค์ลูกค้า */
-export type ClubEventSettingsTab = "basic" | "finance" | "dues" | "portal";
+/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · ค่าบำรุง · เว็บไซต์ · ลิงก์ */
+export type ClubEventSettingsTab = "basic" | "finance" | "dues" | "portal" | "link";
 
 export type ClubEventNavItem = {
   key: ClubEventModuleNavKey;
@@ -93,7 +93,8 @@ export const CLUB_EVENT_SETTINGS_TAB_ITEMS: {
   { key: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { key: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
   { key: "dues", label: "ค่าบำรุงประจำปี", shortLabel: "บำรุง" },
-  { key: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า", shortLabel: "เว็บ" },
+  { key: "portal", label: "ตั้งค่าเว็บไซต์", shortLabel: "เว็บ" },
+  { key: "link", label: "ลิงก์", shortLabel: "ลิงก์" },
 ];
 
 export function isClubEventModulePath(pathname: string): boolean {
@@ -154,8 +155,8 @@ export function clubEventManageHref(tab?: ClubEventManageTabKey): string {
 }
 
 export function parseClubEventSettingsTab(raw: string | null | undefined): ClubEventSettingsTab {
-  if (raw === "finance" || raw === "portal" || raw === "dues") return raw;
-  if (raw === "links") return "portal";
+  if (raw === "finance" || raw === "portal" || raw === "dues" || raw === "link") return raw;
+  if (raw === "links") return "link";
   return "basic";
 }
 

@@ -3,16 +3,13 @@
 import type { Dispatch, SetStateAction } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { clubEventDashboardTabHref } from "@/systems/club-event/club-event-module-nav";
+import { clubEventDashboardTabHref, clubEventSettingsHref } from "@/systems/club-event/club-event-module-nav";
 import {
   CLUB_EVENT_DUES_PERIOD_LABELS,
   type ClubEventDuesPeriodKey,
 } from "@/systems/club-event/lib/dues";
 import type { ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
-import {
-  clubEventFieldClass,
-  clubEventOutlineButtonClass,
-} from "@/systems/club-event/lib/ui-tokens";
+import { clubEventFieldClass } from "@/systems/club-event/lib/ui-tokens";
 
 const labelClass = "block space-y-1";
 const labelTextClass = "text-xs font-bold text-[#4d47b6]";
@@ -21,31 +18,16 @@ export function ClubEventDuesSettingsPanel({
   form,
   setForm,
   saving,
-  onCopied,
-  onCopyFailed,
 }: {
   form: ClubEventProfileDto;
   setForm: Dispatch<SetStateAction<ClubEventProfileDto>>;
   saving?: boolean;
+  /** @deprecated คัดลอกลิงก์ย้ายไปแท็บลิงก์แล้ว */
   onCopied?: () => void;
   onCopyFailed?: () => void;
 }) {
   const period = form.duesPeriod as ClubEventDuesPeriodKey;
   const publicPath = form.duesPublicPath;
-
-  async function copyLink() {
-    if (!publicPath) return;
-    const url =
-      typeof window !== "undefined"
-        ? `${window.location.origin}${publicPath.startsWith("/") ? publicPath : `/${publicPath}`}`
-        : publicPath;
-    try {
-      await navigator.clipboard.writeText(url);
-      onCopied?.();
-    } catch {
-      onCopyFailed?.();
-    }
-  }
 
   return (
     <div id="club-event-settings-panel-dues" role="tabpanel" className="space-y-4">
@@ -60,7 +42,7 @@ export function ClubEventDuesSettingsPanel({
         <span className="min-w-0">
           <span className="block text-sm font-black text-[#1e1b4b]">เปิดเก็บค่าบำรุงสมาชิก</span>
           <span className="block text-[11px] font-semibold text-[#66638c]">
-            สร้างลิงก์ชำระสาธารณะอัตโนมัติเมื่อบันทึก
+            สร้างลิงก์ชำระสาธารณะอัตโนมัติเมื่อบันทึก — QR/คัดลอกอยู่แท็บ «ลิงก์»
           </span>
         </span>
       </label>
@@ -99,18 +81,15 @@ export function ClubEventDuesSettingsPanel({
       </label>
 
       {publicPath ? (
-        <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-          <p className="text-xs font-black text-[#4d47b6]">ลิงก์ชำระค่าบำรุง</p>
-          <p className="break-all text-sm font-semibold text-[#1e1b4b]">{publicPath}</p>
-          <button
-            type="button"
-            className={clubEventOutlineButtonClass}
-            disabled={saving}
-            onClick={() => void copyLink()}
+        <p className="rounded-xl border border-slate-200/90 bg-slate-50/80 px-3 py-2.5 text-xs font-semibold text-[#66638c]">
+          ลิงก์ชำระค่าบำรุงพร้อมแล้ว — ดู QR และคัดลอกได้ที่{" "}
+          <Link
+            href={clubEventSettingsHref("link")}
+            className="font-bold text-[#0000BF] underline underline-offset-2"
           >
-            คัดลอกลิงก์
-          </button>
-        </div>
+            ตั้งค่า → ลิงก์
+          </Link>
+        </p>
       ) : (
         <p className="text-xs font-semibold text-[#66638c]">
           เปิดเก็บค่าบำรุงแล้วกดบันทึก เพื่อสร้างลิงก์สาธารณะ

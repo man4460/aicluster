@@ -112,6 +112,8 @@ export function clubEventSettingsTabIcon(key: ClubEventSettingsTab): ReactNode {
       return <Wallet className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "portal":
       return <Globe className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "link":
+      return <Link2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:
       return null;
   }

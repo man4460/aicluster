@@ -12,7 +12,6 @@ import {
 } from "@/components/app-templates";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
-import { CLUB_EVENT_MODULE_SLUG } from "@/lib/modules/config";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import {
@@ -24,6 +23,7 @@ import {
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventDuesSettingsPanel } from "@/systems/club-event/components/ClubEventDuesSettingsPanel";
 import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
+import { ClubEventQrHubClient } from "@/systems/club-event/components/ClubEventQrHubClient";
 import type { ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
 import {
   CLUB_PORTAL_MEMBER_FIELD_OPTIONS,
@@ -138,6 +138,16 @@ export function ClubEventSettingsClient({
 
   const portalPath = form.publicUrl || `/club/${form.slug}`;
   const portalAbsoluteUrl = useMemo(() => absoluteUrl(portalPath), [portalPath]);
+  const signupAbsoluteUrl = useMemo(() => {
+    if (!form.portalSignupEnabled) return null;
+    const path = form.portalSignupPath ?? `/club/${form.slug}/signup`;
+    return absoluteUrl(path);
+  }, [form.portalSignupEnabled, form.portalSignupPath, form.slug]);
+  const duesAbsoluteUrl = useMemo(() => {
+    if (!form.duesPublicPath) return null;
+    return absoluteUrl(form.duesPublicPath);
+  }, [form.duesPublicPath]);
+  const trialExportBlocked = trialSessionId !== TRIAL_PROD_SCOPE;
 
   return (
     <>
@@ -151,14 +161,16 @@ export function ClubEventSettingsClient({
         onSelect={setTab}
         ariaLabel="แท็บตั้งค่า"
         action={
-          <button
-            type="button"
-            className={clubEventPrimaryButtonClass}
-            disabled={saving}
-            onClick={() => void saveProfile()}
-          >
-            บันทึก
-          </button>
+          tab === "link" ? null : (
+            <button
+              type="button"
+              className={clubEventPrimaryButtonClass}
+              disabled={saving}
+              onClick={() => void saveProfile()}
+            >
+              บันทึก
+            </button>
+          )
         }
       >
         {tab === "basic" ? (
@@ -317,29 +329,11 @@ export function ClubEventSettingsClient({
         ) : null}
 
         {tab === "dues" ? (
-          <ClubEventDuesSettingsPanel
-            form={form}
-            setForm={setForm}
-            saving={saving}
-            onCopied={() => notice.success("คัดลอกลิงก์แล้ว")}
-            onCopyFailed={() => notice.error("คัดลอกไม่สำเร็จ")}
-          />
+          <ClubEventDuesSettingsPanel form={form} setForm={setForm} saving={saving} />
         ) : null}
 
         {tab === "portal" ? (
           <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
-            <ModulePublicLinkQrPanel
-              moduleSlug={CLUB_EVENT_MODULE_SLUG}
-              pageUrl={portalAbsoluteUrl}
-              shopLabel={form.displayName || "ชมรม"}
-              logoUrl={form.logoUrl}
-              trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
-              tagline="สแกนเพื่อเข้าเว็บชมรม / ดูกิจกรรม"
-              openLabel="เปิดเว็บ"
-              qrAlt="QR เว็บชมรมสาธารณะ"
-              posterAlt="โปสเตอร์ QR เว็บชมรม"
-              downloadFilePrefix={`club-portal-${form.slug || "portal"}`}
-            />
             <ClubEventPortalMediaSettings
               bannerUrl={form.portalBannerUrl ?? ""}
               gallery={form.portalGallery ?? []}
@@ -380,7 +374,6 @@ export function ClubEventSettingsClient({
                     setForm((f) => ({
                       ...f,
                       portalShowMembers: e.target.checked,
-                      // เมื่อเปิดครั้งแรกให้คงค่าเดิม — ถ้ายังไม่มี ให้ใช้ค่าเริ่มที่ปิดเบอร์/อีเมล/โซเชียล
                       portalMemberFields: f.portalMemberFields ?? DEFAULT_CLUB_PORTAL_MEMBER_FIELDS,
                     }))
                   }
@@ -457,7 +450,7 @@ export function ClubEventSettingsClient({
                 <span>
                   <span className="block text-sm font-bold text-[#1e1b4b]">เปิดหน้าเว็บสมัครสมาชิก</span>
                   <span className="mt-0.5 block text-xs font-semibold text-[#66638c]">
-                    แสดงปุ่ม «สมัครสมาชิก» บนเว็บสาธารณะ และเปิดฟอร์มที่ /club/[slug]/signup
+                    แสดงปุ่ม «สมัครสมาชิก» บนเว็บสาธารณะ — QR/คัดลอกลิงก์อยู่แท็บ «ลิงก์»
                   </span>
                 </span>
               </label>
@@ -497,31 +490,24 @@ export function ClubEventSettingsClient({
                       ยังไม่เปิดค่าบำรุง — หน้าสมัครจะรับข้อมูลสมาชิกอย่างเดียว (เปิดได้ที่แท็บค่าบำรุงประจำปี)
                     </p>
                   )}
-
-                  <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-                    <p className="text-xs font-black text-[#4d47b6]">ลิงก์หน้าสมัครสมาชิก</p>
-                    <p className="break-all text-sm font-semibold text-[#1e1b4b]">
-                      {form.portalSignupPath ?? `/club/${form.slug}/signup`}
-                    </p>
-                    <button
-                      type="button"
-                      className={clubEventOutlineButtonClass}
-                      disabled={saving || !form.slug}
-                      onClick={() => {
-                        const path = form.portalSignupPath ?? `/club/${form.slug}/signup`;
-                        const url = absoluteUrl(path);
-                        void navigator.clipboard.writeText(url).then(
-                          () => notice.success("คัดลอกลิงก์แล้ว"),
-                          () => notice.error("คัดลอกไม่สำเร็จ"),
-                        );
-                      }}
-                    >
-                      คัดลอกลิงก์
-                    </button>
-                  </div>
                 </div>
               ) : null}
             </div>
+          </div>
+        ) : null}
+
+        {tab === "link" ? (
+          <div id="club-event-settings-panel-link" role="tabpanel" className="space-y-4">
+            <ClubEventQrHubClient
+              portalAbsoluteUrl={portalAbsoluteUrl}
+              signupAbsoluteUrl={signupAbsoluteUrl}
+              duesAbsoluteUrl={duesAbsoluteUrl}
+              shopLabel={form.displayName || "ชมรม"}
+              logoUrl={form.logoUrl}
+              trialExportBlocked={trialExportBlocked}
+              signupEnabled={Boolean(form.portalSignupEnabled)}
+              duesEnabled={Boolean(form.duesEnabled && form.duesPublicPath)}
+            />
           </div>
         ) : null}
       </ClubEventPageSubNav>
