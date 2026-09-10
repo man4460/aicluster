@@ -217,6 +217,12 @@ function LoginFormInner({
           {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
         </button>
       </form>
+      <Link
+        href="/"
+        className="mt-3 flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+      >
+        กลับหน้าแรก
+      </Link>
       <p className="mt-6 flex flex-row flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
         <AuthFooterLink href="/register">สมัครสมาชิก</AuthFooterLink>
         <span className="text-slate-300" aria-hidden>
