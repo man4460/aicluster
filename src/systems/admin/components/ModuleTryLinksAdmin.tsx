@@ -120,22 +120,17 @@ function ModuleCapabilityList({ slug }: { slug: string }) {
     );
   }
   return (
-    <div className="mt-1.5 space-y-1">
+    <div className="mt-1 space-y-0.5">
       {pack?.hook ? (
-        <p className="break-words text-[11px] font-semibold leading-snug text-[#5f5a8a]">{pack.hook}</p>
+        <p className="line-clamp-2 break-words text-[11px] font-semibold leading-snug text-[#5f5a8a]">{pack.hook}</p>
       ) : null}
-      <ul className="space-y-0.5">
-        {features.slice(0, 4).map((f, i) => (
-          <li key={f.title} className="break-words text-[11px] leading-snug text-slate-600">
-            <span className="font-bold tabular-nums text-[#4d47b6]">{i + 1}. </span>
-            <span className="font-bold text-[#1e1b4b]">{f.title}</span>
-            <span className="text-slate-500">: {f.hint}</span>
-          </li>
-        ))}
-      </ul>
-      {features.length > 4 ? (
-        <p className="text-[10px] font-semibold text-[#5b61ff]">+ อีก {features.length - 4} ข้อบนหน้าทดลอง</p>
-      ) : null}
+      <p className="break-words text-[11px] leading-snug text-slate-600">
+        {features
+          .slice(0, 3)
+          .map((f) => f.title)
+          .join(" · ")}
+        {features.length > 3 ? ` · +${features.length - 3}` : ""}
+      </p>
     </div>
   );
 }

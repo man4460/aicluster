@@ -145,11 +145,9 @@ export function ModuleTryPromoClient({
             <a href="#features" className={navLinkClass}>
               ความสามารถ
             </a>
-            {videos.length > 0 ? (
-              <a href="#videos" className={navLinkClass}>
-                วิดีโอ
-              </a>
-            ) : null}
+            <a href="#videos" className={navLinkClass}>
+              วิดีโอ
+            </a>
             <a href="#cta" className={navLinkClass}>
               เริ่มใช้
             </a>
@@ -238,9 +236,24 @@ export function ModuleTryPromoClient({
           </p>
         </section>
 
-        {videos.length > 0 ? (
-          <section id="videos" className="scroll-mt-6">
-            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">วิดีโอ</h2>
+        <section id="videos" className="scroll-mt-6">
+          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">วิดีโอเรียนรู้</h2>
+          <p className="mt-1 text-xs font-medium text-[#66638c] sm:mt-1.5 sm:text-sm">
+            กดการ์ดเพื่อเล่นคลิปบนหน้านี้
+          </p>
+          {videos.length === 0 ? (
+            <div
+              className={cn(
+                appPublicCheckInGlassCardClass,
+                "mt-3 rounded-2xl border border-dashed border-[#cfc9f0]/80 px-4 py-5 text-center sm:mt-4",
+              )}
+            >
+              <p className="text-sm font-bold text-[#5f5a8a]">ยังไม่มีคลิป YouTube</p>
+              <p className="mt-1 text-xs font-medium text-[#66638c]">
+                แอดมินเพิ่มลิงก์ได้ที่ ศูนย์แอดมิน → ลิงก์ทดลอง → ปุ่มวิดีโอของโมดูล
+              </p>
+            </div>
+          ) : (
             <div className={cn("mt-3", videoGridClass)}>
               {videos.map((v) => (
                 <button
@@ -267,12 +280,19 @@ export function ModuleTryPromoClient({
                       </span>
                     </span>
                   </div>
-                  <p className="line-clamp-1 px-2 py-1.5 text-[11px] font-black text-[#1e1b4b]">{v.title}</p>
+                  <div className="space-y-0.5 p-2 sm:p-2.5">
+                    <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
+                      {v.title}
+                    </p>
+                    {v.hint ? (
+                      <p className="line-clamp-1 text-[10px] font-medium text-[#66638c]">{v.hint}</p>
+                    ) : null}
+                  </div>
                 </button>
               ))}
             </div>
-          </section>
-        ) : null}
+          )}
+        </section>
 
         <section
           className={cn(
