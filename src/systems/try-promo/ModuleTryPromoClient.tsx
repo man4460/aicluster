@@ -299,10 +299,6 @@ export function ModuleTryPromoClient({
               );
             })}
           </ul>
-
-          <p className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/90 px-3 py-2 text-center text-xs font-black text-amber-950 sm:mt-4 sm:text-sm">
-            คุ้มค่า — เปิดใช้งานเพียงวันละ 1 บาท
-          </p>
         </section>
 
         <section id="videos" className="scroll-mt-6">
