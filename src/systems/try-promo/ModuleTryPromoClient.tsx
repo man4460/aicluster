@@ -51,6 +51,44 @@ const tryPromoCtaClass = cn(
 
 const videoGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
 
+/**
+ * เข้าทดลองจริง — ใช้ POST เมื่อเป็น demo enter
+ * (ห้ามใช้ Next <Link> ไป GET /api/auth/demo/enter — prefetch จะล็อกอินก่อนกด)
+ */
+function TryEnterCta({
+  tryHref,
+  className,
+  children,
+}: {
+  tryHref: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const isDemoEnter = tryHref.startsWith("/api/auth/demo/enter");
+  if (isDemoEnter) {
+    let next = "/dashboard";
+    try {
+      next = new URL(tryHref, "https://app.ma-well.com").searchParams.get("next") || "/dashboard";
+    } catch {
+      /* keep default */
+    }
+    if (!next.startsWith("/") || next.startsWith("//")) next = "/dashboard";
+    return (
+      <form action="/api/auth/demo/enter" method="POST" className="contents">
+        <input type="hidden" name="next" value={next} />
+        <button type="submit" className={className}>
+          {children}
+        </button>
+      </form>
+    );
+  }
+  return (
+    <Link href={tryHref} prefetch={false} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 const FEATURE_TONES = [
   { tile: "bg-violet-100 text-violet-700 ring-violet-200/80", border: "border-l-violet-400" },
   { tile: "bg-sky-100 text-sky-700 ring-sky-200/80", border: "border-l-sky-400" },
@@ -258,14 +296,15 @@ export function ModuleTryPromoClient({
           </p>
 
           <div id="cta" className="mt-5 flex flex-col gap-2.5 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            <Link
-              href={tryHref}
+            <TryEnterCta
+              tryHref={tryHref}
               className={cn(tryPromoCtaClass, "min-h-11 px-7 text-sm shadow-lg shadow-[#0000BF]/25 sm:min-h-12 sm:px-8")}
             >
               ทดลองใช้งาน
-            </Link>
+            </TryEnterCta>
             <Link
               href={registerHref}
+              prefetch={false}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/70 bg-white/95 px-7 text-sm font-black text-[#4d47b6] shadow-md backdrop-blur sm:min-h-12 sm:px-8"
             >
               สมัครสมาชิก
@@ -383,11 +422,12 @@ export function ModuleTryPromoClient({
             เข้าแดชบอร์ดจริง หรือสมัครเปิดใช้ {moduleTitle}
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:justify-center sm:gap-3">
-            <Link href={tryHref} className={cn(tryPromoCtaClass, "min-h-10 px-5 text-xs sm:min-h-11 sm:text-sm")}>
+            <TryEnterCta tryHref={tryHref} className={cn(tryPromoCtaClass, "min-h-10 px-5 text-xs sm:min-h-11 sm:text-sm")}>
               ทดลองใช้งาน
-            </Link>
+            </TryEnterCta>
             <Link
               href={registerHref}
+              prefetch={false}
               className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#5b61ff]/30 bg-white px-5 text-xs font-black text-[#4d47b6] sm:min-h-11 sm:text-sm"
             >
               สมัครสมาชิก

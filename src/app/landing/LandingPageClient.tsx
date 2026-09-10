@@ -25,13 +25,16 @@ import {
 import { LANDING_GALLERY, LANDING_GALLERY_URLS } from "@/app/landing/landing-media";
 import { buildLandingHeroSlides, LandingHeroSlideMeta, LandingHeroSlideshow } from "@/app/landing/LandingHeroSlideshow";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
-import { moduleTryPath, MODULE_TRY_ALL_PATH } from "@/lib/modules/try-link";
+import { moduleTryPath } from "@/lib/modules/try-link";
 import {
   clearLandingRestoreFlag,
   readLandingVisitState,
   saveLandingVisitState,
   type LandingModuleTab,
 } from "@/lib/landing/landing-visit-state";
+
+/** CTA «ขอสาธิต» → เลื่อนไปเลือกโมดูล (ยังไม่ล็อกอิน) */
+const LANDING_DEMO_CTA_HREF = "/#modules" as const;
 
 function ModuleShowcaseCard({
   item,
@@ -309,7 +312,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               เข้าสู่ระบบ
             </Link>
             <Link
-              href={MODULE_TRY_ALL_PATH}
+              href={LANDING_DEMO_CTA_HREF}
               className="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 px-3 py-2 text-sm font-black text-[#1e0f4a] shadow-md ring-2 ring-amber-200/80 transition hover:brightness-105 sm:px-4"
             >
               <span className="sm:hidden">ขอสาธิต</span>
@@ -362,7 +365,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               <p className="mt-0.5 text-xs font-semibold text-[#66638c]">โมดูลฟรีหลายระบบ · 1 บาท/วัน</p>
             </div>
             <Link
-              href={MODULE_TRY_ALL_PATH}
+              href={LANDING_DEMO_CTA_HREF}
               className={cn(
                 "landing-cta-primary inline-flex min-h-[52px] items-center justify-center rounded-[1rem] bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 px-6 text-sm font-black text-[#1a0d3a] shadow-md ring-2 ring-white/90",
                 heroCta.visible && "landing-cta-micro",
@@ -708,7 +711,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:shrink-0">
             <Link
-              href={MODULE_TRY_ALL_PATH}
+              href={LANDING_DEMO_CTA_HREF}
               className={cn(
                 "inline-flex min-h-[48px] min-w-[180px] items-center justify-center rounded-2xl bg-amber-400 px-6 py-3 text-base font-black text-[#1a0d3a] shadow-lg ring-2 ring-white/40 transition hover:brightness-110",
                 bottomCta.visible && "landing-cta-micro",

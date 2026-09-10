@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * ลิงก์/QR สาธารณะต่อโมดูล — หน้าเว็บโฆษณา (แบนเนอร์ · ฟีเจอร์ · วิดีโอ YouTube · CTA)
- * คลิปตั้งจากแอดมินที่ /dashboard/admin/module-try-links
+ * ลิงก์/QR สาธารณะต่อโมดูล — หน้าโฆษณา (ยังไม่ล็อกอิน)
+ * กด «ทดลองใช้งาน» จึงเข้าบัญชีทดลองไปแดชบอร์ด
  */
 export default async function ModuleTryPage({ params }: Props) {
   const { moduleSlug } = await params;

@@ -6,7 +6,7 @@ export function moduleTryPath(slug: string): string {
   return `/try/${encodeURIComponent(s)}`;
 }
 
-/** หน้าทดลองใช้ทุกโมดูล — เข้าบัญชี demo แล้วไประบบทั้งหมด */
+/** หน้าขอสาธิต / เลือกโมดูล — ยังไม่ล็อกอินอัตโนมัติ (ล็อกอินเมื่อกดเข้าทดลองจริง) */
 export const MODULE_TRY_ALL_PATH = "/try" as const;
 
 /** แดชบอร์ดหลังขอสาธิตฟรี — เมนูระบบทั้งหมดของบัญชีทดลอง */
