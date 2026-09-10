@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  AppEmptyState,
   AppImageLightbox,
   AppPublicCheckInGlassPage,
   AppYoutubeLightbox,
@@ -24,14 +23,14 @@ import {
 import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
 const navLinkClass =
-  "rounded-full px-3 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/25";
+  "rounded-full px-2.5 py-1 text-[11px] font-bold text-white/90 transition hover:bg-white/25 sm:px-3 sm:py-1.5 sm:text-xs";
 
 const tryPromoCtaClass = cn(
   "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
   appDashboardBrandGradientFillClass,
 );
 
-const videoGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4";
+const videoGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
 
 type Props = {
   moduleTitle: string;
@@ -126,9 +125,7 @@ export function ModuleTryPromoClient({
     const id = v.videoId ?? extractYoutubeVideoId(v.href);
     if (id) {
       ytLb.open(`https://www.youtube.com/watch?v=${id}`, v.title);
-      return;
     }
-    /* ไม่มี video id — ไม่เปิดลิงก์ภายนอก (กันคัดลอก/หลุดจากแอป) */
   }
 
   return (
@@ -137,20 +134,22 @@ export function ModuleTryPromoClient({
       <AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
 
       <header className={appSafeAreaPortalHeaderClass}>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2.5 sm:max-w-6xl sm:gap-3 sm:px-6 sm:py-3">
+          <p className="truncate text-xs font-black tracking-tight text-white drop-shadow sm:text-sm">
             MAWELL · {moduleTitle}
           </p>
           <nav
-            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl md:flex"
+            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl sm:flex"
             aria-label="เมนูหน้าโฆษณา"
           >
             <a href="#features" className={navLinkClass}>
               ความสามารถ
             </a>
-            <a href="#videos" className={navLinkClass}>
-              วิดีโอ
-            </a>
+            {videos.length > 0 ? (
+              <a href="#videos" className={navLinkClass}>
+                วิดีโอ
+              </a>
+            ) : null}
             <a href="#cta" className={navLinkClass}>
               เริ่มใช้
             </a>
@@ -158,101 +157,99 @@ export function ModuleTryPromoClient({
         </div>
       </header>
 
-      <section className="relative isolate min-h-[72vh] overflow-hidden sm:min-h-[80vh]">
+      {/* ฮีโร่กระชับบนมือถือ — ไม่กินจอทั้งหน้า */}
+      <section className="relative isolate overflow-hidden">
         <button
           type="button"
-          className="absolute inset-0 block"
+          className="relative block aspect-[16/10] w-full max-h-[42vh] sm:aspect-[21/9] sm:max-h-[min(52vh,420px)]"
           onClick={() => lb.open(banner)}
           aria-label="ดูแบนเนอร์"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={banner} alt="" className="h-full w-full object-cover object-center" />
+          <img src={banner} alt="" className="absolute inset-0 h-full w-full object-cover object-center" />
+          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1e1b4b]/85 via-[#1e1b4b]/35 to-[#1e1b4b]/20" />
         </button>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/35 via-[#1e1b4b]/15 to-[#faf9ff]/95" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/80 to-transparent" />
-
-        <div className={cn(
-            "relative z-10 mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-10 sm:min-h-[80vh] sm:px-6 sm:pb-14",
+        <div
+          className={cn(
+            "relative z-10 -mt-16 px-4 pb-3 sm:-mt-20 sm:px-6 sm:pb-4",
             appSafeAreaPortalHeroTopPadClass,
-          )}>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/85 drop-shadow">
-            {copy.eyebrow}
-          </p>
-          <h1 className="mt-2 max-w-3xl text-4xl font-black tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
-            {moduleTitle}
-          </h1>
-          <p className="mt-3 max-w-xl text-base font-semibold text-white/90 drop-shadow sm:text-lg">
-            {copy.tagline}
-          </p>
-
-          <div id="cta" className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Link
-              href={tryHref}
-              className={cn(tryPromoCtaClass, "min-h-12 px-8 text-sm shadow-lg shadow-[#0000BF]/25")}
-            >
-              ทดลองใช้งาน
-            </Link>
-            <Link
-              href={registerHref}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/70 bg-white/95 px-8 text-sm font-black text-[#4d47b6] shadow-md backdrop-blur"
-            >
-              สมัครสมาชิก
-            </Link>
+          )}
+        >
+          <div className="mx-auto max-w-3xl sm:max-w-6xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/85 drop-shadow sm:text-xs">
+              {copy.eyebrow}
+            </p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-white drop-shadow-md sm:text-4xl">
+              {moduleTitle}
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-xs font-semibold leading-snug text-white/95 drop-shadow sm:mt-2 sm:text-base sm:leading-relaxed">
+              {copy.tagline}
+            </p>
+            <div id="cta" className="mt-3 flex gap-2 sm:mt-4 sm:gap-3">
+              <Link
+                href={tryHref}
+                className={cn(tryPromoCtaClass, "min-h-10 flex-1 px-4 text-xs shadow-lg shadow-[#0000BF]/20 sm:min-h-11 sm:flex-none sm:px-6 sm:text-sm")}
+              >
+                ทดลองใช้งาน
+              </Link>
+              <Link
+                href={registerHref}
+                className="inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-white/70 bg-white/95 px-4 text-xs font-black text-[#4d47b6] shadow-md backdrop-blur sm:min-h-11 sm:flex-none sm:px-6 sm:text-sm"
+              >
+                สมัครสมาชิก
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-6xl space-y-14 px-4 pb-20 pt-2 sm:px-6">
-        <section id="features" className="scroll-mt-8">
-          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">
-            ความสามารถและฟังก์ชัน
-          </h2>
-          <p className="mt-2 text-sm font-medium text-[#66638c]">
-            ฟีเจอร์หลักของ {moduleTitle} ที่ใช้งานได้ในแดชบอร์ดจริง
+      <main className="relative z-10 mx-auto max-w-3xl space-y-6 px-4 pb-12 pt-1 sm:max-w-6xl sm:space-y-10 sm:px-6 sm:pb-16 sm:pt-2">
+        <section id="features" className="scroll-mt-6">
+          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ฟังก์ชันหลัก</h2>
+          <p className="mt-1.5 text-[13px] font-medium leading-snug text-[#66638c] sm:mt-2 sm:max-w-3xl sm:text-sm sm:leading-relaxed">
+            {copy.pitch}
           </p>
-          <ol className="mt-6 grid list-none gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
+          {/* รายการแนวโพส — แถวกระชับ ไม่ใช้การ์ดใหญ่ */}
+          <ol
+            className={cn(
+              appPublicCheckInGlassCardClass,
+              "mt-3 list-none divide-y divide-[#e8e6fc]/90 rounded-2xl p-0 sm:mt-4 sm:rounded-[1.25rem]",
+            )}
+          >
             {features.map((f, i) => (
-              <li
-                key={`${f.title}-${i}`}
-                className={cn(
-                  appPublicCheckInGlassCardClass,
-                  "flex gap-3 rounded-[1.25rem] p-4 sm:p-5",
-                )}
-              >
+              <li key={`${f.title}-${i}`} className="flex gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
                 <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-violet-100 text-xs font-black tabular-nums text-[#4d47b6]"
+                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#5b61ff]/12 text-[11px] font-black tabular-nums text-[#4d47b6] sm:h-7 sm:w-7 sm:text-xs"
                   aria-hidden
                 >
                   {i + 1}
                 </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-black text-[#1e1b4b]">{f.title}</p>
-                  <p className="mt-1 text-xs font-medium leading-relaxed text-[#66638c]">{f.hint}</p>
-                </div>
+                <p className="min-w-0 text-[13px] leading-snug text-[#5f5a8a] sm:text-sm sm:leading-relaxed">
+                  <span className="font-black text-[#1e1b4b]">{f.title}</span>
+                  <span className="font-semibold text-[#66638c]">: {f.hint}</span>
+                </p>
               </li>
             ))}
           </ol>
+
+          <p className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/90 px-3 py-2 text-center text-xs font-black text-amber-950 sm:mt-4 sm:text-sm">
+            คุ้มค่า — เปิดใช้งานเพียงวันละ 1 บาท
+          </p>
         </section>
 
-        <section id="videos" className="scroll-mt-8">
-          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">
-            วิดีโอเรียนรู้
-          </h2>
-          <p className="mt-2 text-sm font-medium text-[#66638c]">กดการ์ดเพื่อเล่นคลิปบนหน้านี้</p>
-          {videos.length === 0 ? (
-            <AppEmptyState tone="violet" className="mt-6">
-              ยังไม่มีคลิป — แอดมินเพิ่มลิงก์ YouTube ได้ที่หน้าลิงก์ทดลองโมดูล
-            </AppEmptyState>
-          ) : (
-            <div className={cn("mt-6", videoGridClass)}>
+        {videos.length > 0 ? (
+          <section id="videos" className="scroll-mt-6">
+            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">วิดีโอ</h2>
+            <div className={cn("mt-3", videoGridClass)}>
               {videos.map((v) => (
                 <button
                   key={v.id}
                   type="button"
                   onClick={() => onOpenVideo(v)}
-                  className="group relative overflow-hidden rounded-xl border border-white/70 bg-white/80 text-left shadow-sm ring-1 ring-inset ring-white/50 transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
+                  className="group relative overflow-hidden rounded-xl border border-white/70 bg-white/80 text-left shadow-sm ring-1 ring-inset ring-white/50"
                 >
-                  <div className="relative aspect-square overflow-hidden sm:aspect-[4/3]">
+                  <div className="relative aspect-video overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={v.thumbUrl}
@@ -263,49 +260,57 @@ export function ModuleTryPromoClient({
                       className="absolute inset-0 flex items-center justify-center bg-[#1e1b4b]/25"
                       aria-hidden
                     >
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-lg sm:h-12 sm:w-12">
-                        <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5 fill-current" aria-hidden>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-lg">
+                        <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4 fill-current" aria-hidden>
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </span>
                     </span>
                   </div>
-                  <div className="space-y-0.5 p-2.5 sm:p-3">
-                    <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
-                      {v.title}
-                    </p>
-                    {v.hint ? (
-                      <p className="line-clamp-1 text-[10px] font-medium text-[#66638c] sm:text-[11px]">
-                        {v.hint}
-                      </p>
-                    ) : null}
-                  </div>
+                  <p className="line-clamp-1 px-2 py-1.5 text-[11px] font-black text-[#1e1b4b]">{v.title}</p>
                 </button>
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        ) : null}
 
         <section
           className={cn(
             appPublicCheckInGlassCardClass,
-            "rounded-[1.5rem] p-6 text-center sm:rounded-[2rem] sm:p-8",
+            "rounded-2xl p-4 text-center sm:rounded-[1.5rem] sm:p-6",
           )}
         >
-          <h2 className="text-xl font-black text-[#1e1b4b] sm:text-2xl">พร้อมเริ่มแล้วหรือยัง</h2>
-          <p className="mt-2 text-sm font-medium text-[#66638c]">
-            ทดลองในแดชบอร์ดจริง หรือสมัครเพื่อเปิดใช้งาน {moduleTitle}
+          <h2 className="text-base font-black text-[#1e1b4b] sm:text-xl">พร้อมทดลองแล้วหรือยัง</h2>
+          <p className="mt-1 text-xs font-medium text-[#66638c] sm:mt-1.5 sm:text-sm">
+            เข้าแดชบอร์ดจริง หรือสมัครเปิดใช้ {moduleTitle}
           </p>
-          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href={tryHref} className={cn(tryPromoCtaClass, "min-h-11 px-6 text-sm")}>
+          <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:justify-center sm:gap-3">
+            <Link href={tryHref} className={cn(tryPromoCtaClass, "min-h-10 px-5 text-xs sm:min-h-11 sm:text-sm")}>
               ทดลองใช้งาน
             </Link>
             <Link
               href={registerHref}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#5b61ff]/30 bg-white px-6 text-sm font-black text-[#4d47b6]"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#5b61ff]/30 bg-white px-5 text-xs font-black text-[#4d47b6] sm:min-h-11 sm:text-sm"
             >
               สมัครสมาชิก
             </Link>
+          </div>
+          <div className="mt-3 space-y-0.5 text-[11px] font-semibold text-[#66638c] sm:mt-4 sm:text-xs">
+            <p>
+              สอบถาม:{" "}
+              <a href="tel:0966646914" className="font-black text-[#4d47b6]">
+                096-664-6914
+              </a>
+              {" · "}
+              <a
+                href="https://line.me/R/ti/p/@mawell"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-black text-emerald-700"
+              >
+                LINE @mawell
+              </a>
+            </p>
           </div>
         </section>
       </main>

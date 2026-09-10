@@ -2,6 +2,7 @@ import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-des
 import { getDefaultModuleCoverImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import {
   getModuleTryPromoFeatures,
+  getModuleTryPromoPack,
   type ModuleTryPromoFeature,
 } from "@/lib/modules/try-promo-features";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
@@ -25,7 +26,10 @@ export type ModuleTryPromoFallbackVideo = {
 
 export type ModuleTryPromoCopy = {
   eyebrow: string;
+  /** หัวข้อสั้นใต้ชื่อโมดูล (hook จากแพ็ก) */
   tagline: string;
+  /** ย่อหน้าขายใต้หัวข้อความสามารถ */
+  pitch: string;
   features: ModuleTryPromoFeature[];
   defaultBanner: string;
   /** คลิปสำรองเมื่อแอดมินยังไม่ตั้ง (มีเฉพาะบางโมดูล เช่น building-pos) */
@@ -51,26 +55,40 @@ function featuresFromCardDescription(slug: string): ModuleTryPromoFeature[] {
   return [...fromDesc, ...extras];
 }
 
-/** สำเนาหน้าโฆษณา /try/{slug} — ฟีเจอร์จากแคตตาล็อกความสามารถต่อโมดูล */
-export function getModuleTryPromoCopy(slug: string, title: string): ModuleTryPromoCopy {
+function fallbackTagline(slug: string, title: string, features: ModuleTryPromoFeature[]): string {
+  const pack = getModuleTryPromoPack(slug);
+  if (pack?.hook) return pack.hook;
+
   const lines = dashboardModuleCardDescription(slug)
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean);
-
-  const features = featuresFromCardDescription(slug);
-  const tagline =
+  return (
     lines.join(" · ") ||
     features
       .slice(0, 3)
       .map((f) => f.title)
       .join(" · ") ||
-    `ทดลอง ${title} บนแพลตฟอร์ม MAWELL`;
+    `ทดลอง ${title} บนแพลตฟอร์ม MAWELL`
+  );
+}
+
+/** สำเนาหน้าโฆษณา /try/{slug} — ฟีเจอร์จากแคตตาล็อกความสามารถต่อโมดูล */
+export function getModuleTryPromoCopy(slug: string, title: string): ModuleTryPromoCopy {
+  const pack = getModuleTryPromoPack(slug);
+  const features = featuresFromCardDescription(slug);
+  const tagline = fallbackTagline(slug, title, features);
+  const pitch =
+    pack?.pitch ||
+    `ทดลอง ${title} ในแดชบอร์ดจริง — ฟีเจอร์ด้านล่างมาจากเมนูใช้งานจริง ไม่แต่งเกินความสามารถในระบบ`;
 
   if (slug === BUILDING_POS_MODULE_SLUG) {
     return {
       eyebrow: "Restaurant POS",
-      tagline: "รับออเดอร์ · คิวครัว · QR สั่งที่โต๊ะ · จองออนไลน์ · การเงิน ในโมดูลเดียว",
+      tagline: pack?.hook ?? "ระบบ POS ร้านอาหาร ครบจบในระบบเดียว — ออเดอร์ คิวครัว QR และจองโต๊ะ",
+      pitch:
+        pack?.pitch ??
+        "รับออเดอร์หน้าร้าน ส่งครัวเรียลไทม์ ให้ลูกค้าสแกน QR สั่งที่โต๊ะ จองโต๊ะออนไลน์พร้อมมัดจำ ปิดบิลดูกราฟ และสะสมแต้มในโมดูลเดียว",
       features: getModuleTryPromoFeatures(slug) ?? features,
       defaultBanner: BUILDING_POS_TRY_BANNER,
       fallbackVideos: BUILDING_POS_TRY_VIDEOS.map((v) => ({
@@ -86,6 +104,7 @@ export function getModuleTryPromoCopy(slug: string, title: string): ModuleTryPro
   return {
     eyebrow: "ทดลองใช้งาน",
     tagline,
+    pitch,
     features,
     defaultBanner: getDefaultModuleCoverImageUrl(slug) ?? GENERIC_BANNER,
     fallbackVideos: [],
