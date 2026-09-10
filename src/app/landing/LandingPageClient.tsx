@@ -617,6 +617,14 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               >
                 LINE
               </a>
+              <a
+                href="https://www.facebook.com/profile.php?id=61569103503400"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-[44px] items-center rounded-full border border-[#1877F2]/25 bg-[#1877F2]/10 px-4 text-sm font-bold text-[#1877F2]"
+              >
+                Facebook
+              </a>
             </div>
           </div>
         </section>
