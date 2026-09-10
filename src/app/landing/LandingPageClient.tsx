@@ -26,14 +26,29 @@ import { LANDING_GALLERY, LANDING_GALLERY_URLS } from "@/app/landing/landing-med
 import { buildLandingHeroSlides, LandingHeroSlideMeta, LandingHeroSlideshow } from "@/app/landing/LandingHeroSlideshow";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
 import { moduleTryPath, MODULE_TRY_ALL_PATH } from "@/lib/modules/try-link";
+import {
+  clearLandingRestoreFlag,
+  readLandingVisitState,
+  saveLandingVisitState,
+  type LandingModuleTab,
+} from "@/lib/landing/landing-visit-state";
 
-function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; tier: "free" | "daily" }) {
+function ModuleShowcaseCard({
+  item,
+  tier,
+  onBeforeNavigate,
+}: {
+  item: LandingModuleShowcaseItem;
+  tier: "free" | "daily";
+  onBeforeNavigate?: () => void;
+}) {
   const title = displayAppModuleTitle(item.slug, item.slug);
   return (
     <li className="h-full">
       <Link
         href={moduleTryPath(item.slug)}
         aria-label={`${title} — ทดลองใช้งาน`}
+        onClick={() => onBeforeNavigate?.()}
         className={cn(
           "group relative flex h-full flex-col overflow-hidden rounded-xl border border-white/55 bg-white/75 shadow-[0_22px_55px_-30px_rgba(30,27,75,0.35)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition duration-500",
           "hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-[0_28px_64px_-26px_rgba(91,97,255,0.38)]",
@@ -171,7 +186,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [moduleTab, setModuleTab] = useState<"free" | "daily">("daily");
+  const [moduleTab, setModuleTab] = useState<LandingModuleTab>("daily");
   const [activeNav, setActiveNav] = useState<(typeof NAV)[number]["href"]>("#gallery");
   const heroCta = useReveal<HTMLDivElement>();
   const galleryBlock = useReveal<HTMLDivElement>();
@@ -181,6 +196,40 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
   const features = useReveal<HTMLDivElement>();
   const social = useReveal<HTMLDivElement>();
   const bottomCta = useReveal<HTMLDivElement>();
+  const restoredRef = useRef(false);
+
+  const rememberVisit = (markForRestore = false) => {
+    saveLandingVisitState({ tab: moduleTab, heroIndex, markForRestore });
+  };
+
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const saved = readLandingVisitState();
+    if (saved.tab) setModuleTab(saved.tab);
+    if (saved.heroIndex != null && saved.heroIndex >= 0 && saved.heroIndex < heroSlides.length) {
+      setHeroIndex(saved.heroIndex);
+    }
+    if (saved.shouldRestore && saved.scrollY != null && saved.scrollY > 0) {
+      const y = saved.scrollY;
+      const apply = () => window.scrollTo({ top: y, behavior: "auto" });
+      apply();
+      requestAnimationFrame(apply);
+      window.setTimeout(apply, 50);
+      window.setTimeout(apply, 200);
+      clearLandingRestoreFlag();
+      setActiveNav("#modules");
+    } else if (typeof window !== "undefined" && window.location.hash === "#modules") {
+      setActiveNav("#modules");
+      window.setTimeout(() => {
+        document.getElementById("modules")?.scrollIntoView({ behavior: "auto", block: "start" });
+      }, 40);
+    }
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    saveLandingVisitState({ tab: moduleTab, heroIndex, saveScroll: false });
+  }, [moduleTab, heroIndex]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
@@ -293,6 +342,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
                 onIndexChange={(i) => setHeroIndex(i)}
                 onOpen={(i) => lb.openGallery(heroSlides.map((s) => s.src), i)}
                 onPausedChange={setHeroPaused}
+                onBeforeTryNavigate={() => rememberVisit(true)}
               />
             </div>
           </div>
@@ -372,7 +422,12 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               return (
                 <li key={item.src} className={cn("relative", landingGalleryTileClass(idx))}>
                   {tryHref ? (
-                    <Link href={tryHref} className={tileClass} aria-label={`${item.label} — ทดลองใช้งาน`}>
+                    <Link
+                      href={tryHref}
+                      className={tileClass}
+                      aria-label={`${item.label} — ทดลองใช้งาน`}
+                      onClick={() => rememberVisit(true)}
+                    >
                       {media}
                     </Link>
                   ) : (
@@ -494,13 +549,23 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             {moduleTab === "daily" ? (
               <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                 {LANDING_DAILY_MODULE_SHOWCASE.map((item) => (
-                  <ModuleShowcaseCard key={item.slug} item={item} tier="daily" />
+                  <ModuleShowcaseCard
+                    key={item.slug}
+                    item={item}
+                    tier="daily"
+                    onBeforeNavigate={() => rememberVisit(true)}
+                  />
                 ))}
               </ul>
             ) : (
               <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {LANDING_FREE_MODULE_SHOWCASE.map((item) => (
-                  <ModuleShowcaseCard key={item.slug} item={item} tier="free" />
+                  <ModuleShowcaseCard
+                    key={item.slug}
+                    item={item}
+                    tier="free"
+                    onBeforeNavigate={() => rememberVisit(true)}
+                  />
                 ))}
               </ul>
             )}

@@ -39,6 +39,7 @@ import {
   type ModuleTryPromoFeature,
 } from "@/lib/modules/try-promo-page";
 import { extractYoutubeVideoId } from "@/lib/youtube-url";
+import { LANDING_HOME_MODULES_HREF, markLandingRestorePending } from "@/lib/landing/landing-visit-state";
 
 const navLinkClass =
   "rounded-full px-2.5 py-1 text-[11px] font-bold text-white/90 transition hover:bg-white/25 sm:px-3 sm:py-1.5 sm:text-xs";
@@ -191,10 +192,24 @@ export function ModuleTryPromoClient({
       <AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
 
       <header className={appSafeAreaPortalHeaderClass}>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
-          <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
-            MAWELL · {moduleTitle}
-          </p>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Link
+              href={LANDING_HOME_MODULES_HREF}
+              onClick={() => markLandingRestorePending()}
+              className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-white/45 bg-white/20 px-2.5 py-1.5 text-xs font-black text-white backdrop-blur-md transition hover:bg-white/30 sm:min-h-10 sm:px-3 sm:text-sm"
+              aria-label="กลับหน้าแรก"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="hidden sm:inline">กลับหน้าแรก</span>
+              <span className="sm:hidden">หน้าแรก</span>
+            </Link>
+            <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
+              MAWELL · {moduleTitle}
+            </p>
+          </div>
           <nav
             className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl md:flex"
             aria-label="เมนูหน้าโฆษณา"

@@ -86,12 +86,14 @@ export function LandingHeroSlideMeta({
   onIndexChange,
   onOpen,
   onPausedChange,
+  onBeforeTryNavigate,
 }: {
   slides: LandingGalleryItem[];
   index: number;
   onIndexChange: (next: number) => void;
   onOpen: (index: number) => void;
   onPausedChange: (paused: boolean) => void;
+  onBeforeTryNavigate?: () => void;
 }) {
   const current = slides[index];
   const labels = useMemo(() => slides.map((s) => s.label), [slides]);
@@ -103,6 +105,7 @@ export function LandingHeroSlideMeta({
         {tryHref ? (
           <Link
             href={tryHref}
+            onClick={() => onBeforeTryNavigate?.()}
             className="text-left text-lg font-black text-white drop-shadow transition hover:underline sm:text-2xl"
             aria-live="polite"
             aria-label={`${current.label} — ทดลองใช้งาน`}
