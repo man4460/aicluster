@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LANDING_HERO_BANNER, LANDING_HERO_SLIDE_INTERVAL_MS, LANDING_HERO_SLIDES, type LandingGalleryItem } from "@/app/landing/landing-media";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
 import { cn } from "@/lib/cn";
+import { moduleTryPath } from "@/lib/modules/try-link";
 
 export function buildLandingHeroSlides(bannerUrl: string | null | undefined): LandingGalleryItem[] {
   const custom =
@@ -94,18 +96,45 @@ export function LandingHeroSlideMeta({
   const current = slides[index];
   const labels = useMemo(() => slides.map((s) => s.label), [slides]);
   if (!current) return null;
+  const tryHref = current.slug ? moduleTryPath(current.slug) : null;
   return (
     <div onMouseEnter={() => onPausedChange(true)} onMouseLeave={() => onPausedChange(false)}>
-      <button
-        type="button"
-        className="text-left text-lg font-black text-white drop-shadow sm:text-2xl"
-        aria-live="polite"
-        onClick={() => onOpen(index)}
-      >
-        {current.label}
-      </button>
+      <div className="flex flex-wrap items-end gap-2 sm:gap-3">
+        {tryHref ? (
+          <Link
+            href={tryHref}
+            className="text-left text-lg font-black text-white drop-shadow transition hover:underline sm:text-2xl"
+            aria-live="polite"
+            aria-label={`${current.label} — ทดลองใช้งาน`}
+          >
+            {current.label}
+            <span className="mt-0.5 block text-xs font-bold text-white/90 sm:text-sm">ทดลองใช้งาน →</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className="text-left text-lg font-black text-white drop-shadow sm:text-2xl"
+            aria-live="polite"
+            onClick={() => onOpen(index)}
+          >
+            {current.label}
+          </button>
+        )}
+        <button
+          type="button"
+          className="mb-0.5 inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border border-white/50 bg-black/25 text-white backdrop-blur-sm transition hover:bg-black/40"
+          aria-label={`ดูรูป ${current.label}`}
+          title="ดูรูปเต็ม"
+          onClick={() => onOpen(index)}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
       {slides.length < 2 ? null : (
-        <div className="mt-3 flex flex-wrap items-center gap-0.5" role="tablist" aria-label="สไลด์โมดูล">
+        <div className="mt-3 flex max-h-16 flex-wrap items-center gap-0.5 overflow-y-auto sm:max-h-none" role="tablist" aria-label="สไลด์โมดูล">
           {labels.map((label, i) => {
             const active = i === index;
             return (

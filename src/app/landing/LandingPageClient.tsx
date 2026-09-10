@@ -73,6 +73,7 @@ function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; t
         </div>
         <div className="hidden border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20 px-3 py-2.5 sm:block sm:px-5 sm:py-4">
           <p className="text-pretty text-xs font-semibold leading-relaxed text-[#5f5a8a] sm:text-sm">{item.blurb}</p>
+          <p className="mt-2 text-[11px] font-black text-[#5b61ff] sm:text-xs">ทดลองใช้งาน →</p>
         </div>
       </Link>
     </li>
@@ -343,14 +344,12 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
                 : "translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
             )}
           >
-            {LANDING_GALLERY.map((item, idx) => (
-              <li key={item.src} className={cn("relative", landingGalleryTileClass(idx))}>
-                <button
-                  type="button"
-                  onClick={() => lb.openGallery(LANDING_GALLERY_URLS, idx)}
-                  className="group absolute inset-0 block overflow-hidden rounded-[1.25rem] border border-white/60 shadow-sm ring-1 ring-inset ring-white/60"
-                  aria-label={`ภาพรวม ${item.label}`}
-                >
+            {LANDING_GALLERY.map((item, idx) => {
+              const tryHref = item.slug ? moduleTryPath(item.slug) : null;
+              const tileClass =
+                "group absolute inset-0 block overflow-hidden rounded-[1.25rem] border border-white/60 shadow-sm ring-1 ring-inset ring-white/60";
+              const media = (
+                <>
                   <img
                     src={item.src}
                     alt=""
@@ -364,10 +363,31 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
                   />
                   <span className="absolute inset-x-0 bottom-0 z-10 p-3 text-left text-xs font-black text-white drop-shadow sm:p-4 sm:text-sm">
                     {item.label}
+                    {tryHref ? (
+                      <span className="mt-0.5 block text-[10px] font-bold text-white/85 sm:text-xs">ทดลองใช้งาน →</span>
+                    ) : null}
                   </span>
-                </button>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={item.src} className={cn("relative", landingGalleryTileClass(idx))}>
+                  {tryHref ? (
+                    <Link href={tryHref} className={tileClass} aria-label={`${item.label} — ทดลองใช้งาน`}>
+                      {media}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => lb.openGallery(LANDING_GALLERY_URLS, idx)}
+                      className={tileClass}
+                      aria-label={`ภาพรวม ${item.label}`}
+                    >
+                      {media}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
 

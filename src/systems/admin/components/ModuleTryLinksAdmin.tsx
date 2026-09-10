@@ -156,11 +156,14 @@ export function ModuleTryLinksAdmin({
   const [err, setErr] = useState<string | null>(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [qrRow, setQrRow] = useState<Row | null>(null);
+  const [siteQrOpen, setSiteQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
 
   const base = appBaseUrl.replace(/\/$/, "");
+  /** URL หน้าแรกสำหรับ QR / คัดลอก (เช่น https://app.ma-well.com) */
+  const siteHomeUrl = base || "https://app.ma-well.com";
   const hasActiveFilter = q.trim().length > 0;
 
   const load = useCallback(async () => {
@@ -192,11 +195,11 @@ export function ModuleTryLinksAdmin({
   }, [load]);
 
   useEffect(() => {
-    if (!qrRow || !base) {
+    const url = siteQrOpen ? siteHomeUrl : qrRow && base ? moduleTryAbsoluteUrl(base, qrRow.slug) : null;
+    if (!url) {
       setQrDataUrl(null);
       return;
     }
-    const url = moduleTryAbsoluteUrl(base, qrRow.slug);
     let cancelled = false;
     void QRCode.toDataURL(url, { width: 280, margin: 2, errorCorrectionLevel: "M" })
       .then((img) => {
@@ -208,7 +211,7 @@ export function ModuleTryLinksAdmin({
     return () => {
       cancelled = true;
     };
-  }, [qrRow, base]);
+  }, [qrRow, base, siteQrOpen, siteHomeUrl]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -242,9 +245,47 @@ export function ModuleTryLinksAdmin({
     flashCopy(ok ? `คัดลอกแล้ว · ${row.title}` : "คัดลอกไม่สำเร็จ");
   };
 
+  const onCopySiteHome = async () => {
+    const ok = await copyText(siteHomeUrl);
+    flashCopy(ok ? "คัดลอกแล้ว · หน้าแรก" : "คัดลอกไม่สำเร็จ");
+  };
+
   return (
     <>
       <div className="space-y-4 sm:space-y-6">
+        <AppDashboardSection tone="violet" className="space-y-3">
+          <AppSectionHeader title="QR หน้าแรก" tone="violet" />
+          <div className="flex flex-col gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="break-words text-sm font-black text-[#1e1b4b]">MAWELL — หน้าแรก</p>
+              <p className="mt-0.5 break-all font-mono text-xs font-semibold text-[#5f5a8a]">{siteHomeUrl}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className={iconBtn}
+                aria-label="คัดลอกลิงก์หน้าแรก"
+                title="คัดลอกลิงก์"
+                onClick={() => void onCopySiteHome()}
+              >
+                <CopyIcon className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className={iconBtn}
+                aria-label="สร้าง QR หน้าแรก"
+                title="สร้าง QR"
+                onClick={() => {
+                  setQrRow(null);
+                  setSiteQrOpen(true);
+                }}
+              >
+                <QrIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </AppDashboardSection>
+
         <AppDashboardSection className="space-y-4">
           <AppSectionHeader
             title="ลิงก์ทดลองโมดูล"
@@ -391,7 +432,10 @@ export function ModuleTryLinksAdmin({
                                   aria-label={`แสดง QR ${row.title}`}
                                   title="สร้าง QR"
                                   disabled={!base}
-                                  onClick={() => setQrRow(row)}
+                                  onClick={() => {
+                                    setSiteQrOpen(false);
+                                    setQrRow(row);
+                                  }}
                                 >
                                   <QrIcon className="h-3.5 w-3.5" />
                                 </button>
@@ -416,16 +460,27 @@ export function ModuleTryLinksAdmin({
       </div>
 
       <FormModal
-        open={Boolean(qrRow)}
-        onClose={() => setQrRow(null)}
-        title={qrRow ? `QR · ${qrRow.title}` : "QR"}
+        open={siteQrOpen || Boolean(qrRow)}
+        onClose={() => {
+          setSiteQrOpen(false);
+          setQrRow(null);
+        }}
+        title={siteQrOpen ? "QR · หน้าแรก MAWELL" : qrRow ? `QR · ${qrRow.title}` : "QR"}
         size="md"
         appearance="glass"
         glassTint="violet"
         mobileCentered
         footer={
           <div className="flex w-full flex-wrap items-center justify-end gap-2">
-            {qrRow && base ? (
+            {siteQrOpen ? (
+              <button
+                type="button"
+                className={cn(appTemplateOutlineButtonClass, "min-h-[40px]")}
+                onClick={() => void onCopySiteHome()}
+              >
+                คัดลอกลิงก์
+              </button>
+            ) : qrRow && base ? (
               <button
                 type="button"
                 className={cn(appTemplateOutlineButtonClass, "min-h-[40px]")}
@@ -437,20 +492,23 @@ export function ModuleTryLinksAdmin({
             <button
               type="button"
               className="app-btn-primary min-h-[40px] rounded-xl px-4"
-              onClick={() => setQrRow(null)}
+              onClick={() => {
+                setSiteQrOpen(false);
+                setQrRow(null);
+              }}
             >
               ปิด
             </button>
           </div>
         }
       >
-        {qrRow ? (
+        {siteQrOpen || qrRow ? (
           <div className="flex flex-col items-center gap-4 py-2">
             {qrDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrDataUrl}
-                alt={`QR ทดลอง ${qrRow.title}`}
+                alt={siteQrOpen ? "QR หน้าแรก MAWELL" : `QR ทดลอง ${qrRow?.title ?? ""}`}
                 className="h-56 w-56 rounded-2xl border border-white/60 bg-white p-2 shadow-sm"
               />
             ) : (
@@ -459,12 +517,12 @@ export function ModuleTryLinksAdmin({
               </div>
             )}
             <p className="max-w-full break-all text-center font-mono text-[11px] text-[#5f5a8a]">
-              {base ? moduleTryAbsoluteUrl(base, qrRow.slug) : ""}
+              {siteQrOpen ? siteHomeUrl : qrRow && base ? moduleTryAbsoluteUrl(base, qrRow.slug) : ""}
             </p>
             {qrDataUrl ? (
               <a
                 href={qrDataUrl}
-                download={`mawell-try-${qrRow.slug}.png`}
+                download={siteQrOpen ? "mawell-home-qr.png" : `mawell-try-${qrRow?.slug ?? "module"}.png`}
                 className={cn(appTemplateOutlineButtonClass, "min-h-[40px]")}
               >
                 ดาวน์โหลด PNG
