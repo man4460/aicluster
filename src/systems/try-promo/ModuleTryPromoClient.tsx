@@ -1,7 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Banknote,
+  Building2,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  Globe,
+  Images,
+  Link2,
+  Package,
+  QrCode,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  UserPlus,
+  Users,
+  Wallet,
+} from "lucide-react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
@@ -32,12 +50,51 @@ const tryPromoCtaClass = cn(
 
 const videoGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
 
+const FEATURE_TONES = [
+  { tile: "bg-violet-100 text-violet-700 ring-violet-200/80", border: "border-l-violet-400" },
+  { tile: "bg-sky-100 text-sky-700 ring-sky-200/80", border: "border-l-sky-400" },
+  { tile: "bg-emerald-100 text-emerald-700 ring-emerald-200/80", border: "border-l-emerald-400" },
+  { tile: "bg-amber-100 text-amber-800 ring-amber-200/80", border: "border-l-amber-400" },
+  { tile: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200/80", border: "border-l-fuchsia-400" },
+  { tile: "bg-rose-100 text-rose-700 ring-rose-200/80", border: "border-l-rose-400" },
+] as const;
+
+const FALLBACK_ICONS = [Sparkles, Package, Users, Wallet, Globe, CalendarDays, FileText, Link2] as const;
+
+function featureIcon(title: string, index: number): ReactNode {
+  const t = title.toLowerCase();
+  const cls = "h-4 w-4";
+  const sw = 2.2;
+  if (/กำหนด|ตาราง|จอง|คิว|ปฏิทิน|ย้อนหลัง/.test(t)) return <CalendarDays className={cls} strokeWidth={sw} aria-hidden />;
+  if (/รายละเอียด|ข้อมูล|เอกสาร|หนังสือ|เรซูเม่|โปรไฟล์/.test(t)) return <FileText className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ลงทะเบียน|เช็ค|ลงชื่อ|ตรวจนับ|audit/.test(t)) return <ClipboardCheck className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ค่าบำรุง|การเงิน|รายรับ|รายจ่าย|บิล|ชำระ|ฝาก|ถอน|ปันผล/.test(t)) return <Wallet className={cls} strokeWidth={sw} aria-hidden />;
+  if (/สมาชิก|ลูกค้า|นักเรียน|พนักงาน|ช่าง|หมอนวด/.test(t)) return <Users className={cls} strokeWidth={sw} aria-hidden />;
+  if (/สมัคร|เพิ่มบัญชี|ลูกค้าใหม่/.test(t)) return <UserPlus className={cls} strokeWidth={sw} aria-hidden />;
+  if (/โครงสร้าง|กรรมการ|องค์กร|หอ|หมู่บ้าน|อาคาร/.test(t)) return <Building2 className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ทรัพย์|สินค้า|คลัง|สต๊อก|แพ็ก|เมนู/.test(t)) return <Package className={cls} strokeWidth={sw} aria-hidden />;
+  if (/เว็บ|พอร์ทัล|\/club|\/resume|สาธารณะ/.test(t)) return <Globe className={cls} strokeWidth={sw} aria-hidden />;
+  if (/qr|ลิงก์|แชร์/.test(t)) return <QrCode className={cls} strokeWidth={sw} aria-hidden />;
+  if (/แกลเลอรี|รูป|สื่อ|ภาพ/.test(t)) return <Images className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ตั้งค่า|ระบบ/.test(t)) return <Settings className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ออเดอร์|ขาย|pos|หน้าร้าน/.test(t)) return <ShoppingBag className={cls} strokeWidth={sw} aria-hidden />;
+  if (/เงิน|ยอด|ราคา/.test(t)) return <Banknote className={cls} strokeWidth={sw} aria-hidden />;
+  if (/ลิงก์|เชื่อม/.test(t)) return <Link2 className={cls} strokeWidth={sw} aria-hidden />;
+  const Icon = FALLBACK_ICONS[index % FALLBACK_ICONS.length]!;
+  return <Icon className={cls} strokeWidth={sw} aria-hidden />;
+}
+
+function shortenHint(hint: string, max = 42): string {
+  const t = hint.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1).trim()}…`;
+}
+
 type Props = {
   moduleTitle: string;
   moduleSlug: string;
   tryHref: string;
   registerHref: string;
-  /** รูปปกจาก DB / landing — ทับ default ถ้ามี */
   initialBanner?: string | null;
 };
 
@@ -134,12 +191,12 @@ export function ModuleTryPromoClient({
       <AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
 
       <header className={appSafeAreaPortalHeaderClass}>
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2.5 sm:max-w-6xl sm:gap-3 sm:px-6 sm:py-3">
-          <p className="truncate text-xs font-black tracking-tight text-white drop-shadow sm:text-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+          <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
             MAWELL · {moduleTitle}
           </p>
           <nav
-            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl sm:flex"
+            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl md:flex"
             aria-label="เมนูหน้าโฆษณา"
           >
             <a href="#features" className={navLinkClass}>
@@ -155,81 +212,93 @@ export function ModuleTryPromoClient({
         </div>
       </header>
 
-      {/* ฮีโร่กระชับบนมือถือ — ไม่กินจอทั้งหน้า */}
-      <section className="relative isolate overflow-hidden">
+      {/* ชื่อระบบอยู่ในรูปแบนเนอร์ — แบบเดิม */}
+      <section className="relative isolate min-h-[58vh] overflow-hidden sm:min-h-[72vh]">
         <button
           type="button"
-          className="relative block aspect-[16/10] w-full max-h-[42vh] sm:aspect-[21/9] sm:max-h-[min(52vh,420px)]"
+          className="absolute inset-0 block"
           onClick={() => lb.open(banner)}
           aria-label="ดูแบนเนอร์"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={banner} alt="" className="absolute inset-0 h-full w-full object-cover object-center" />
-          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1e1b4b]/85 via-[#1e1b4b]/35 to-[#1e1b4b]/20" />
+          <img src={banner} alt="" className="h-full w-full object-cover object-center" />
         </button>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/35 via-[#1e1b4b]/15 to-[#faf9ff]/95" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/80 to-transparent sm:h-44" />
+
         <div
           className={cn(
-            "relative z-10 -mt-16 px-4 pb-3 sm:-mt-20 sm:px-6 sm:pb-4",
+            "relative z-10 mx-auto flex min-h-[58vh] max-w-6xl flex-col justify-end px-4 pb-8 sm:min-h-[72vh] sm:px-6 sm:pb-12",
             appSafeAreaPortalHeroTopPadClass,
           )}
         >
-          <div className="mx-auto max-w-3xl sm:max-w-6xl">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/85 drop-shadow sm:text-xs">
-              {copy.eyebrow}
-            </p>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-white drop-shadow-md sm:text-4xl">
-              {moduleTitle}
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-xs font-semibold leading-snug text-white/95 drop-shadow sm:mt-2 sm:text-base sm:leading-relaxed">
-              {copy.tagline}
-            </p>
-            <div id="cta" className="mt-3 flex gap-2 sm:mt-4 sm:gap-3">
-              <Link
-                href={tryHref}
-                className={cn(tryPromoCtaClass, "min-h-10 flex-1 px-4 text-xs shadow-lg shadow-[#0000BF]/20 sm:min-h-11 sm:flex-none sm:px-6 sm:text-sm")}
-              >
-                ทดลองใช้งาน
-              </Link>
-              <Link
-                href={registerHref}
-                className="inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-white/70 bg-white/95 px-4 text-xs font-black text-[#4d47b6] shadow-md backdrop-blur sm:min-h-11 sm:flex-none sm:px-6 sm:text-sm"
-              >
-                สมัครสมาชิก
-              </Link>
-            </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 drop-shadow sm:text-xs">
+            {copy.eyebrow}
+          </p>
+          <h1 className="mt-1.5 max-w-3xl text-3xl font-black tracking-tight text-white drop-shadow-md sm:mt-2 sm:text-5xl md:text-6xl">
+            {moduleTitle}
+          </h1>
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-snug text-white/90 drop-shadow sm:mt-3 sm:text-lg sm:leading-relaxed">
+            {copy.tagline}
+          </p>
+
+          <div id="cta" className="mt-5 flex flex-col gap-2.5 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <Link
+              href={tryHref}
+              className={cn(tryPromoCtaClass, "min-h-11 px-7 text-sm shadow-lg shadow-[#0000BF]/25 sm:min-h-12 sm:px-8")}
+            >
+              ทดลองใช้งาน
+            </Link>
+            <Link
+              href={registerHref}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/70 bg-white/95 px-7 text-sm font-black text-[#4d47b6] shadow-md backdrop-blur sm:min-h-12 sm:px-8"
+            >
+              สมัครสมาชิก
+            </Link>
           </div>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-3xl space-y-6 px-4 pb-12 pt-1 sm:max-w-6xl sm:space-y-10 sm:px-6 sm:pb-16 sm:pt-2">
+      <main className="relative z-10 mx-auto max-w-6xl space-y-8 px-4 pb-14 pt-1 sm:space-y-12 sm:px-6 sm:pb-20 sm:pt-2">
         <section id="features" className="scroll-mt-6">
-          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ฟังก์ชันหลัก</h2>
-          <p className="mt-1.5 text-[13px] font-medium leading-snug text-[#66638c] sm:mt-2 sm:max-w-3xl sm:text-sm sm:leading-relaxed">
+          <h2 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ฟังก์ชันหลัก</h2>
+          <p className="mt-1.5 line-clamp-2 max-w-3xl text-xs font-medium leading-snug text-[#66638c] sm:mt-2 sm:line-clamp-none sm:text-sm sm:leading-relaxed">
             {copy.pitch}
           </p>
 
-          {/* รายการแนวโพส — แถวกระชับ ไม่ใช้การ์ดใหญ่ */}
-          <ol
-            className={cn(
-              appPublicCheckInGlassCardClass,
-              "mt-3 list-none divide-y divide-[#e8e6fc]/90 rounded-2xl p-0 sm:mt-4 sm:rounded-[1.25rem]",
-            )}
-          >
-            {features.map((f, i) => (
-              <li key={`${f.title}-${i}`} className="flex gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
-                <span
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#5b61ff]/12 text-[11px] font-black tabular-nums text-[#4d47b6] sm:h-7 sm:w-7 sm:text-xs"
-                  aria-hidden
+          <ul className="mt-4 grid list-none grid-cols-1 gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3">
+            {features.map((f, i) => {
+              const tone = FEATURE_TONES[i % FEATURE_TONES.length]!;
+              return (
+                <li
+                  key={`${f.title}-${i}`}
+                  className={cn(
+                    "flex items-start gap-2.5 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2 shadow-sm ring-1 ring-inset ring-white/50",
+                    "border-l-[3px]",
+                    tone.border,
+                  )}
                 >
-                  {i + 1}
-                </span>
-                <p className="min-w-0 text-[13px] leading-snug text-[#5f5a8a] sm:text-sm sm:leading-relaxed">
-                  <span className="font-black text-[#1e1b4b]">{f.title}</span>
-                  <span className="font-semibold text-[#66638c]">: {f.hint}</span>
-                </p>
-              </li>
-            ))}
-          </ol>
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
+                      tone.tile,
+                    )}
+                    aria-hidden
+                  >
+                    {featureIcon(f.title, i)}
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="truncate text-[13px] font-black leading-tight text-[#1e1b4b] sm:text-sm">
+                      {f.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] font-medium leading-snug text-[#66638c] sm:text-xs">
+                      {shortenHint(f.hint)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
 
           <p className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/90 px-3 py-2 text-center text-xs font-black text-amber-950 sm:mt-4 sm:text-sm">
             คุ้มค่า — เปิดใช้งานเพียงวันละ 1 บาท
@@ -237,15 +306,13 @@ export function ModuleTryPromoClient({
         </section>
 
         <section id="videos" className="scroll-mt-6">
-          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-2xl">วิดีโอเรียนรู้</h2>
-          <p className="mt-1 text-xs font-medium text-[#66638c] sm:mt-1.5 sm:text-sm">
-            กดการ์ดเพื่อเล่นคลิปบนหน้านี้
-          </p>
+          <h2 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">วิดีโอเรียนรู้</h2>
+          <p className="mt-1 text-xs font-medium text-[#66638c] sm:text-sm">กดการ์ดเพื่อเล่นคลิปบนหน้านี้</p>
           {videos.length === 0 ? (
             <div
               className={cn(
                 appPublicCheckInGlassCardClass,
-                "mt-3 rounded-2xl border border-dashed border-[#cfc9f0]/80 px-4 py-5 text-center sm:mt-4",
+                "mt-3 rounded-2xl border border-dashed border-[#cfc9f0]/80 px-4 py-5 text-center",
               )}
             >
               <p className="text-sm font-bold text-[#5f5a8a]">ยังไม่มีคลิป YouTube</p>
@@ -301,7 +368,7 @@ export function ModuleTryPromoClient({
           )}
         >
           <h2 className="text-base font-black text-[#1e1b4b] sm:text-xl">พร้อมทดลองแล้วหรือยัง</h2>
-          <p className="mt-1 text-xs font-medium text-[#66638c] sm:mt-1.5 sm:text-sm">
+          <p className="mt-1 text-xs font-medium text-[#66638c] sm:text-sm">
             เข้าแดชบอร์ดจริง หรือสมัครเปิดใช้ {moduleTitle}
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:justify-center sm:gap-3">
@@ -315,7 +382,7 @@ export function ModuleTryPromoClient({
               สมัครสมาชิก
             </Link>
           </div>
-          <div className="mt-3 space-y-0.5 text-[11px] font-semibold text-[#66638c] sm:mt-4 sm:text-xs">
+          <div className="mt-3 text-[11px] font-semibold text-[#66638c] sm:mt-4 sm:text-xs">
             <p>
               สอบถาม:{" "}
               <a href="tel:0966646914" className="font-black text-[#4d47b6]">
