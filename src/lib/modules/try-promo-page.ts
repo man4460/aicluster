@@ -1,16 +1,19 @@
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { getDefaultModuleCoverImageUrl } from "@/lib/modules/dashboard-module-cover-images";
+import {
+  getModuleTryPromoFeatures,
+  type ModuleTryPromoFeature,
+} from "@/lib/modules/try-promo-features";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import {
   BUILDING_POS_TRY_BANNER,
-  BUILDING_POS_TRY_FEATURES,
   BUILDING_POS_TRY_VIDEOS,
 } from "@/systems/building-pos/lib/try-promo-content";
 
+export type { ModuleTryPromoFeature };
+
 const GENERIC_BANNER =
   "https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1920&q=80";
-
-export type ModuleTryPromoFeature = { title: string; hint: string };
 
 export type ModuleTryPromoFallbackVideo = {
   id: string;
@@ -30,6 +33,9 @@ export type ModuleTryPromoCopy = {
 };
 
 function featuresFromCardDescription(slug: string): ModuleTryPromoFeature[] {
+  const catalog = getModuleTryPromoFeatures(slug);
+  if (catalog && catalog.length > 0) return catalog;
+
   const lines = dashboardModuleCardDescription(slug)
     .split("\n")
     .map((s) => s.trim())
@@ -42,16 +48,30 @@ function featuresFromCardDescription(slug: string): ModuleTryPromoFeature[] {
     { title: "ทดลองใช้งานจริง", hint: "เข้าแดชบอร์ดผ่านปุ่มทดลองด้านบน" },
     { title: "วิดีโอเรียนรู้", hint: "กดดูคลิปบนหน้านี้เมื่อแอดมินเพิ่มแล้ว" },
   ];
-  return [...fromDesc, ...extras].slice(0, 4);
+  return [...fromDesc, ...extras];
 }
 
-/** สำเนาหน้าโฆษณา /try/{slug} — building-pos มีเนื้อหาเฉพาะ · โมดูลอื่นจากคำอธิบายการ์ด */
+/** สำเนาหน้าโฆษณา /try/{slug} — ฟีเจอร์จากแคตตาล็อกความสามารถต่อโมดูล */
 export function getModuleTryPromoCopy(slug: string, title: string): ModuleTryPromoCopy {
+  const lines = dashboardModuleCardDescription(slug)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const features = featuresFromCardDescription(slug);
+  const tagline =
+    lines.join(" · ") ||
+    features
+      .slice(0, 3)
+      .map((f) => f.title)
+      .join(" · ") ||
+    `ทดลอง ${title} บนแพลตฟอร์ม MAWELL`;
+
   if (slug === BUILDING_POS_MODULE_SLUG) {
     return {
       eyebrow: "Restaurant POS",
       tagline: "รับออเดอร์ · คิวครัว · QR สั่งที่โต๊ะ · จองออนไลน์ · การเงิน ในโมดูลเดียว",
-      features: BUILDING_POS_TRY_FEATURES,
+      features: getModuleTryPromoFeatures(slug) ?? features,
       defaultBanner: BUILDING_POS_TRY_BANNER,
       fallbackVideos: BUILDING_POS_TRY_VIDEOS.map((v) => ({
         id: v.id,
@@ -63,15 +83,10 @@ export function getModuleTryPromoCopy(slug: string, title: string): ModuleTryPro
     };
   }
 
-  const lines = dashboardModuleCardDescription(slug)
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
   return {
     eyebrow: "ทดลองใช้งาน",
-    tagline: lines.join(" · ") || `ทดลอง ${title} บนแพลตฟอร์ม MAWELL`,
-    features: featuresFromCardDescription(slug),
+    tagline,
+    features,
     defaultBanner: getDefaultModuleCoverImageUrl(slug) ?? GENERIC_BANNER,
     fallbackVideos: [],
   };

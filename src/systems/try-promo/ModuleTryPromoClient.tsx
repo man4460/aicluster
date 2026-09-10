@@ -146,7 +146,7 @@ export function ModuleTryPromoClient({
             aria-label="เมนูหน้าโฆษณา"
           >
             <a href="#features" className={navLinkClass}>
-              ฟีเจอร์
+              ความสามารถ
             </a>
             <a href="#videos" className={navLinkClass}>
               วิดีโอ
@@ -204,18 +204,34 @@ export function ModuleTryPromoClient({
 
       <main className="relative z-10 mx-auto max-w-6xl space-y-14 px-4 pb-20 pt-2 sm:px-6">
         <section id="features" className="scroll-mt-8">
-          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">ทำอะไรได้บ้าง</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className={cn(appPublicCheckInGlassCardClass, "rounded-[1.25rem] p-4 sm:p-5")}
+          <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">
+            ความสามารถและฟังก์ชัน
+          </h2>
+          <p className="mt-2 text-sm font-medium text-[#66638c]">
+            ฟีเจอร์หลักของ {moduleTitle} ที่ใช้งานได้ในแดชบอร์ดจริง
+          </p>
+          <ol className="mt-6 grid list-none gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f, i) => (
+              <li
+                key={`${f.title}-${i}`}
+                className={cn(
+                  appPublicCheckInGlassCardClass,
+                  "flex gap-3 rounded-[1.25rem] p-4 sm:p-5",
+                )}
               >
-                <p className="text-sm font-black text-[#1e1b4b]">{f.title}</p>
-                <p className="mt-1 text-xs font-medium leading-relaxed text-[#66638c]">{f.hint}</p>
-              </div>
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-violet-100 text-xs font-black tabular-nums text-[#4d47b6]"
+                  aria-hidden
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-[#1e1b4b]">{f.title}</p>
+                  <p className="mt-1 text-xs font-medium leading-relaxed text-[#66638c]">{f.hint}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
         <section id="videos" className="scroll-mt-8">

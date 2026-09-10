@@ -16,6 +16,7 @@ import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import { moduleTryAbsoluteUrl } from "@/lib/modules/try-link";
+import { getModuleTryPromoFeatures } from "@/lib/modules/try-promo-features";
 import { ModuleTryPromoVideosAdmin } from "@/systems/admin/components/ModuleTryPromoVideosAdmin";
 
 type Row = {
@@ -103,10 +104,35 @@ function groupChipClass(groupId: number): string {
 function catalogLine(slug: string): string {
   return (
     dashboardModuleCardDescription(slug)
-      .split("\n")[0]
-      ?.trim()
-      .replace(/^กลุ่ม\s*\d+\s*\([^)]*\)\s*[—–\-:]?\s*/u, "")
-      .trim() || "—"
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(" · ") || "—"
+  );
+}
+
+function ModuleCapabilityList({ slug }: { slug: string }) {
+  const features = getModuleTryPromoFeatures(slug);
+  if (!features?.length) {
+    return (
+      <p className="mt-0.5 break-words text-xs font-semibold leading-snug text-slate-500">{catalogLine(slug)}</p>
+    );
+  }
+  return (
+    <ul className="mt-1.5 space-y-1">
+      {features.slice(0, 6).map((f) => (
+        <li key={f.title} className="flex gap-1.5 text-[11px] leading-snug text-slate-600">
+          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#5b61ff]/70" aria-hidden />
+          <span className="min-w-0 break-words">
+            <span className="font-bold text-[#1e1b4b]">{f.title}</span>
+            <span className="text-slate-500"> — {f.hint}</span>
+          </span>
+        </li>
+      ))}
+      {features.length > 6 ? (
+        <li className="pl-2.5 text-[10px] font-semibold text-[#5b61ff]">+ อีก {features.length - 6} ฟังก์ชันบนหน้าทดลอง</li>
+      ) : null}
+    </ul>
   );
 }
 
@@ -443,9 +469,7 @@ export function ModuleTryLinksAdmin({
                             </div>
                             <div className="min-w-0">
                               <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{row.title}</p>
-                              <p className="mt-0.5 break-words text-xs font-semibold leading-snug text-slate-500">
-                                {catalogLine(row.slug)}
-                              </p>
+                              <ModuleCapabilityList slug={row.slug} />
                             </div>
                           </div>
                         </li>
