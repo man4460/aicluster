@@ -79,9 +79,8 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ใบประกาศนียบัตร ${code}</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-
+  /* สโคปทั้งหมดใต้ #lms-cert-root — ห้ามใช้ html/body/.title/.body ล้วน (รั่วเข้าแดชบอร์ดตอนจับภาพ) */
+  #lms-cert-root, #lms-cert-root * { box-sizing: border-box; }
   #lms-cert-root {
     width: ${LMS_CERT_PX.width}px;
     height: ${LMS_CERT_PX.height}px;
@@ -95,7 +94,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
   }
 
   /* —— ถ้วยลายน้ำ (CSS shapes — ไม่พึ่ง SVG ที่ html2canvas มักหาย) —— */
-  .trophy {
+  #lms-cert-root .trophy {
     position: absolute;
     top: 44%;
     width: 168px;
@@ -105,10 +104,10 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     opacity: 0.13;
     transform: translateY(-50%);
   }
-  .trophy--left { left: 48px; }
-  .trophy--right { right: 48px; transform: translateY(-50%) scaleX(-1); }
+  #lms-cert-root .trophy--left { left: 48px; }
+  #lms-cert-root .trophy--right { right: 48px; transform: translateY(-50%) scaleX(-1); }
 
-  .trophy-cup {
+  #lms-cert-root .trophy-cup {
     position: absolute;
     left: 34px;
     top: 28px;
@@ -117,7 +116,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: #b8bec8;
     border-radius: 8px 8px 42px 42px;
   }
-  .trophy-rim {
+  #lms-cert-root .trophy-rim {
     position: absolute;
     left: 28px;
     top: 22px;
@@ -126,7 +125,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: #c5cad3;
     border-radius: 6px;
   }
-  .trophy-handle {
+  #lms-cert-root .trophy-handle {
     position: absolute;
     top: 36px;
     width: 28px;
@@ -135,9 +134,9 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     border-radius: 50%;
     background: transparent;
   }
-  .trophy-handle--l { left: 6px; border-right: 0; border-radius: 50% 0 0 50%; }
-  .trophy-handle--r { right: 6px; border-left: 0; border-radius: 0 50% 50% 0; }
-  .trophy-stem {
+  #lms-cert-root .trophy-handle--l { left: 6px; border-right: 0; border-radius: 50% 0 0 50%; }
+  #lms-cert-root .trophy-handle--r { right: 6px; border-left: 0; border-radius: 0 50% 50% 0; }
+  #lms-cert-root .trophy-stem {
     position: absolute;
     left: 72px;
     top: 104px;
@@ -145,7 +144,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     height: 36px;
     background: #b8bec8;
   }
-  .trophy-base {
+  #lms-cert-root .trophy-base {
     position: absolute;
     left: 48px;
     top: 138px;
@@ -154,7 +153,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: #c5cad3;
     border-radius: 4px;
   }
-  .trophy-plinth {
+  #lms-cert-root .trophy-plinth {
     position: absolute;
     left: 40px;
     top: 150px;
@@ -165,7 +164,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
   }
 
   /* —— ริบบิ้นมุมล่างแบบตัวอย่าง (กรมท่าซ้อนหลายชั้น CSS) —— */
-  .ribbon {
+  #lms-cert-root .ribbon {
     position: absolute;
     bottom: 0;
     width: 420px;
@@ -174,21 +173,21 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     pointer-events: none;
     overflow: hidden;
   }
-  .ribbon--left { left: 0; }
-  .ribbon--right { right: 0; transform: scaleX(-1); }
+  #lms-cert-root .ribbon--left { left: 0; }
+  #lms-cert-root .ribbon--right { right: 0; transform: scaleX(-1); }
 
-  .ribbon-layer {
+  #lms-cert-root .ribbon-layer {
     position: absolute;
     left: -80px;
     bottom: -60px;
   }
-  .ribbon-l1 {
+  #lms-cert-root .ribbon-l1 {
     width: 460px;
     height: 320px;
     background: ${C.navy};
     border-radius: 0 85% 0 0;
   }
-  .ribbon-l2 {
+  #lms-cert-root .ribbon-l2 {
     width: 380px;
     height: 250px;
     left: -50px;
@@ -196,7 +195,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: ${C.navyMid};
     border-radius: 0 90% 0 0;
   }
-  .ribbon-l3 {
+  #lms-cert-root .ribbon-l3 {
     width: 300px;
     height: 190px;
     left: -20px;
@@ -204,7 +203,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: ${C.navyLight};
     border-radius: 0 95% 0 0;
   }
-  .ribbon-l4 {
+  #lms-cert-root .ribbon-l4 {
     width: 220px;
     height: 130px;
     left: 10px;
@@ -213,7 +212,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     border-radius: 0 100% 0 0;
     opacity: 0.95;
   }
-  .ribbon-l5 {
+  #lms-cert-root .ribbon-l5 {
     width: 150px;
     height: 70px;
     left: 30px;
@@ -222,7 +221,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     border-radius: 0 110% 0 0;
   }
 
-  .content {
+  #lms-cert-root .content {
     position: relative;
     z-index: 2;
     height: 100%;
@@ -233,7 +232,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     padding: 44px 150px 36px;
   }
 
-  .logo {
+  #lms-cert-root .logo {
     width: 72px;
     height: 72px;
     border-radius: 9999px;
@@ -245,15 +244,15 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     margin-bottom: 14px;
     flex-shrink: 0;
   }
-  .logo-img { width: 100%; height: 100%; object-fit: cover; }
-  .logo-fallback {
+  #lms-cert-root .logo-img { width: 100%; height: 100%; object-fit: cover; }
+  #lms-cert-root .logo-fallback {
     color: #fff;
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.04em;
   }
 
-  .title {
+  #lms-cert-root .title {
     margin: 0 0 12px;
     font-size: 38px;
     font-weight: 800;
@@ -262,14 +261,14 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     line-height: 1.3;
   }
 
-  .lead {
+  #lms-cert-root .lead {
     margin: 0 0 20px;
     font-size: 15px;
     font-weight: 400;
     color: #1a1a1a;
   }
 
-  .recipient {
+  #lms-cert-root .recipient {
     margin: 0 0 20px;
     padding: 0 8px;
     font-size: 48px;
@@ -280,7 +279,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     max-width: 860px;
   }
 
-  .body {
+  #lms-cert-root .body {
     margin: 0 0 4px;
     font-size: 17px;
     font-weight: 600;
@@ -289,7 +288,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     max-width: 760px;
   }
 
-  .course {
+  #lms-cert-root .course {
     margin: 0;
     font-size: 20px;
     font-weight: 800;
@@ -298,14 +297,14 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     max-width: 820px;
   }
 
-  .date {
+  #lms-cert-root .date {
     margin: 18px 0 0;
     font-size: 15px;
     font-weight: 400;
     color: #1a1a1a;
   }
 
-  .sign-block {
+  #lms-cert-root .sign-block {
     margin-top: auto;
     padding-top: 24px;
     padding-bottom: 8px;
@@ -314,13 +313,13 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     align-items: center;
     min-width: 220px;
   }
-  .sign-img {
+  #lms-cert-root .sign-img {
     height: 52px;
     max-width: 200px;
     object-fit: contain;
     margin-bottom: 4px;
   }
-  .sign-scribble {
+  #lms-cert-root .sign-scribble {
     width: 170px;
     height: 40px;
     margin-bottom: 4px;
@@ -334,33 +333,33 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background-position: 0 2px, 40px 0, 85px 2px, 130px 0;
     opacity: 0.9;
   }
-  .sign-name {
+  #lms-cert-root .sign-name {
     margin: 0;
     font-size: 14px;
     font-weight: 700;
     color: ${C.ink};
   }
-  .sign-role {
+  #lms-cert-root .sign-role {
     margin: 2px 0 0;
     font-size: 13px;
     font-weight: 400;
     color: #333;
   }
-  .note {
+  #lms-cert-root .note {
     margin-top: 8px;
     font-size: 11px;
     color: ${C.muted};
     max-width: 480px;
   }
 
-  .qr-plain {
+  #lms-cert-root .qr-plain {
     position: absolute;
     right: 44px;
     bottom: 44px;
     z-index: 4;
     text-align: center;
   }
-  .qr-img {
+  #lms-cert-root .qr-img {
     width: 88px;
     height: 88px;
     display: block;
@@ -368,7 +367,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: #fff;
     border-radius: 6px;
   }
-  .qr-hint {
+  #lms-cert-root .qr-hint {
     margin: 5px 0 0;
     font-size: 10px;
     font-weight: 700;

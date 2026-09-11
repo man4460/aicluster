@@ -40,8 +40,9 @@ export function mountLmsCertCaptureHost(fullHtml: string): { root: HTMLElement; 
   const host = document.createElement("div");
   host.setAttribute("data-lms-cert-capture-host", "1");
   host.setAttribute("aria-hidden", "true");
+  // อย่าใช้ visibility:hidden / opacity:0 — html2canvas จะได้ภาพขาวว่าง
   host.style.cssText =
-    "position:fixed;left:-10000px;top:0;width:1123px;height:794px;border:0;margin:0;padding:0;visibility:hidden;pointer-events:none;z-index:-1;overflow:hidden";
+    "position:fixed;left:-10000px;top:0;width:1123px;height:794px;border:0;margin:0;padding:0;visibility:visible;opacity:1;pointer-events:none;z-index:-1;overflow:hidden";
 
   for (const node of parsed.head.querySelectorAll("style")) {
     host.appendChild(node.cloneNode(true));

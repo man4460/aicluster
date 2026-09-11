@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { prepareImageFileForUpload } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   buildLmsCertificatePreviewInput,
   downloadLmsCertificatePdf,
-  renderLmsCertificateJpeg,
 } from "@/systems/lms/lib/lms-certificate-capture";
+import {
+  buildLmsCertificateDocumentHtml,
+  LMS_CERT_PX,
+} from "@/systems/lms/lib/lms-certificate-html";
 import {
   lmsFieldClass,
   lmsOutlineButtonClass,
@@ -39,8 +42,47 @@ type Props = {
 const rowBtn =
   "cw-btn cw-btn-stack inline-flex min-h-9 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-semibold leading-tight touch-manipulation sm:flex-row sm:gap-1.5 sm:px-2 sm:text-xs";
 
+/** พรีวิว HTML จริง (ไม่พึ่ง html2canvas) — เห็นลวดลายทันที */
+function LmsCertLivePreview({ html }: { html: string }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.45);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w > 0) setScale(w / LMS_CERT_PX.width);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [html]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative w-full overflow-hidden rounded-xl bg-white shadow-md sm:rounded-2xl sm:shadow-lg"
+      style={{ height: Math.max(120, Math.round(LMS_CERT_PX.height * scale)) }}
+    >
+      <iframe
+        title="พรีวิวใบประกาศนียบัตร"
+        srcDoc={html}
+        className="pointer-events-none absolute left-0 top-0 border-0"
+        style={{
+          width: LMS_CERT_PX.width,
+          height: LMS_CERT_PX.height,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      />
+    </div>
+  );
+}
+
 /**
- * ตั้งค่าใบประกาศ + พรีวิวสด (แบบแผงลิงก์ QR)
+ * ตั้งค่าใบประกาศ + พรีวิวสด (iframe HTML — ไม่ใช้ภาพขาวจาก html2canvas)
  */
 export function LmsCertificateSettingsPanel({
   value,
@@ -49,9 +91,10 @@ export function LmsCertificateSettingsPanel({
   trialExportBlocked = false,
 }: Props) {
   const [previewVisible, setPreviewVisible] = useState(true);
-  const [previewJpeg, setPreviewJpeg] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewTick, setPreviewTick] = useState(0);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
 
@@ -61,6 +104,7 @@ export function LmsCertificateSettingsPanel({
     const timer = window.setTimeout(() => {
       void (async () => {
         setPreviewBusy(true);
+        setPreviewError(null);
         try {
           const input = await buildLmsCertificatePreviewInput({
             instituteName: value.displayName,
@@ -71,19 +115,20 @@ export function LmsCertificateSettingsPanel({
             signatureUrl: value.certSignatureUrl,
             note: value.certTemplateNote,
           });
-          const jpeg = await renderLmsCertificateJpeg(input, { scale: 1 });
-          if (!cancelled) setPreviewJpeg(jpeg);
+          const html = buildLmsCertificateDocumentHtml(input);
+          if (!cancelled) setPreviewHtml(html);
         } catch (e) {
           console.error("[LmsCertificateSettingsPanel preview]", e);
           if (!cancelled) {
-            setPreviewJpeg(null);
-            notice.error("เรนเดอร์พรีวิวไม่สำเร็จ — กดรีเฟรชอีกครั้ง");
+            setPreviewHtml(null);
+            setPreviewError("สร้างพรีวิวไม่สำเร็จ — กดรีเฟรชอีกครั้ง");
+            notice.error("สร้างพรีวิวไม่สำเร็จ — กดรีเฟรชอีกครั้ง");
           }
         } finally {
           if (!cancelled) setPreviewBusy(false);
         }
       })();
-    }, 350);
+    }, 200);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -102,7 +147,6 @@ export function LmsCertificateSettingsPanel({
     value.certTemplateNote,
   ]);
 
-  // บังคับรีเฟรชพรีวิวเมื่อเปิดแท็บนี้ครั้งแรกหลังโหลดโค้ดใหม่
   useEffect(() => {
     setPreviewTick((n) => n + 1);
   }, []);
@@ -230,16 +274,13 @@ export function LmsCertificateSettingsPanel({
             id="lms-cert-preview"
             className="overflow-x-auto rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:rounded-2xl sm:border-white/50 sm:bg-white/30 sm:p-3 sm:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] sm:backdrop-blur-md"
           >
-            {previewJpeg ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={previewJpeg}
-                alt="พรีวิวใบประกาศนียบัตร"
-                className="mx-auto w-full max-w-[min(96vw,560px)] rounded-xl shadow-md sm:rounded-2xl sm:shadow-lg"
-              />
+            {previewHtml ? (
+              <LmsCertLivePreview html={previewHtml} />
             ) : (
-              <div className="mx-auto flex min-h-[160px] max-w-[min(96vw,560px)] items-center justify-center rounded-xl border border-slate-200/90 bg-white text-[11px] font-medium text-slate-600 sm:min-h-[200px] sm:rounded-2xl sm:text-xs">
-                {previewBusy ? "กำลังเรนเดอร์พรีวิว…" : "ยังไม่มีพรีวิว"}
+              <div className="mx-auto flex min-h-[160px] max-w-[min(96vw,560px)] items-center justify-center rounded-xl border border-slate-200/90 bg-white px-3 text-center text-[11px] font-medium text-slate-600 sm:min-h-[200px] sm:rounded-2xl sm:text-xs">
+                {previewBusy
+                  ? "กำลังสร้างพรีวิว…"
+                  : previewError || "ยังไม่มีพรีวิว — กดรีเฟรช"}
               </div>
             )}
           </div>
@@ -256,7 +297,7 @@ export function LmsCertificateSettingsPanel({
             title="รีเฟรช"
             disabled={previewBusy || !previewVisible}
             onClick={() => {
-              setPreviewJpeg(null);
+              setPreviewHtml(null);
               setPreviewTick((n) => n + 1);
             }}
             className={cn(rowBtn, "app-btn-soft text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-50")}
