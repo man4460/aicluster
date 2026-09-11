@@ -35,6 +35,7 @@ import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
 import { seedHotelResortProdDemoForOwner } from "../src/lib/trial/seed-hotel-resort";
+import { seedUsedCarShowroomProdDemoForOwner } from "../src/lib/trial/seed-used-car-showroom";
 import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
 import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-police";
 import {
@@ -54,6 +55,7 @@ import {
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
+  USED_CAR_SHOWROOM_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
@@ -392,6 +394,14 @@ async function main() {
       sortOrder: 36,
     },
     {
+      slug: "used-car-showroom",
+      title: "โชว์รูมรถมือสอง",
+      description:
+        "กลุ่ม 1 (Basic) — รับซื้อ สต็อก จอง ไฟแนนซ์ กำไรรายคัน และเว็บ /car/[slug]",
+      groupId: 1,
+      sortOrder: 38,
+    },
+    {
       slug: "pro-resume",
       title: "Pro Resume & Portfolio Builder",
       description:
@@ -535,6 +545,7 @@ async function main() {
     GENERAL_STORE_POS_MODULE_SLUG,
     DRINK_POS_MODULE_SLUG,
     HOTEL_RESORT_MODULE_SLUG,
+    USED_CAR_SHOWROOM_MODULE_SLUG,
     ECOMMERCE_STORE_MODULE_SLUG,
     SMART_POLICE_MODULE_SLUG,
   ] as const;
@@ -902,6 +913,19 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`hotel-resort (${email})`, () => seedHotelResortProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** โชว์รูมรถมือสอง — สต็อก ~20 · ลูกค้า · จอง · นัด · ไฟแนนซ์ · รายรับ-จ่าย */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`used-car-showroom (${email})`, () =>
+        seedUsedCarShowroomProdDemoForOwner(prisma, row.id),
+      );
     }
   }
 

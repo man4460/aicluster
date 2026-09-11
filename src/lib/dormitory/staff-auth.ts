@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveDormitoryStaffFromUrl } from "@/lib/dormitory/staff-request";
 import { DORMITORY_MODULE_SLUG } from "@/lib/modules/config";
-import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
+import { ensureOwnerModuleDailyChargeOnPublicUse, publicLinkDeniedMessage } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadDormitoryStaffDailyPinHash,
@@ -22,7 +22,7 @@ export async function requireDormitoryStaff(
   }
   const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, DORMITORY_MODULE_SLUG);
   if (!charge.ok) {
-    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
+    return { error: NextResponse.json({ error: publicLinkDeniedMessage(charge) }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadDormitoryStaffDailyPinHash(ctx.ownerId);

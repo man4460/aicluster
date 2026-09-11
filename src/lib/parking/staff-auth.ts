@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveParkingStaffFromUrl, type ParkingStaffContext } from "@/lib/parking/staff-request";
 import { PARKING_MODULE_SLUG } from "@/lib/modules/config";
-import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
+import { ensureOwnerModuleDailyChargeOnPublicUse, publicLinkDeniedMessage } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadParkingStaffDailyPinHash,
@@ -21,7 +21,7 @@ export async function requireParkingStaff(
   }
   const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, PARKING_MODULE_SLUG);
   if (!charge.ok) {
-    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
+    return { error: NextResponse.json({ error: publicLinkDeniedMessage(charge) }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadParkingStaffDailyPinHash(ctx.ownerId);

@@ -3,13 +3,17 @@ import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { canUseModuleQrLinks } from "@/lib/modules/qr-plan-gate";
+import {
+  canOwnerUseModulePublicLinks,
+  ownerHasActiveModuleTrial,
+} from "@/lib/modules/public-portal-access";
 import { isDailyTokenExemptModuleSlug, isQrLinkAllowedOnDailyPlan } from "@/lib/modules/config";
 
 const querySchema = z.object({
   moduleSlug: z.string().min(1).max(80),
 });
 
-/** สิทธิ์เปิดลิงก์/QR ของโมดูล — สายรายวันปิด (ยกเว้นโมดูลฟรี / LMS) · รายเดือน/แอดมินเปิด */
+/** สิทธิ์เปิดลิงก์/QR ของโมดูล — สายรายวันปิด (ยกเว้นโมดูลฟรี / LMS / ทดลอง ACTIVE) · รายเดือน/แอดมินเปิด */
 export async function GET(req: Request) {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,18 +28,23 @@ export async function GET(req: Request) {
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const moduleSlug = parsed.data.moduleSlug;
-  const allowed = canUseModuleQrLinks(ctx.access, moduleSlug);
+  const allowed = await canOwnerUseModulePublicLinks(ctx.billingUserId, moduleSlug, ctx.access);
+  const onTrial = !canUseModuleQrLinks(ctx.access, moduleSlug)
+    ? await ownerHasActiveModuleTrial(ctx.billingUserId, moduleSlug)
+    : false;
   const plan = !allowed
     ? "daily"
     : ctx.access.role === "ADMIN"
       ? "admin"
       : (ctx.access.monthly199Slugs ?? []).includes(moduleSlug)
         ? "monthly199"
-        : isDailyTokenExemptModuleSlug(moduleSlug)
-          ? "free"
-          : isQrLinkAllowedOnDailyPlan(moduleSlug)
-            ? "daily-qr"
-            : "free";
+        : onTrial
+          ? "trial"
+          : isDailyTokenExemptModuleSlug(moduleSlug)
+            ? "free"
+            : isQrLinkAllowedOnDailyPlan(moduleSlug)
+              ? "daily-qr"
+              : "free";
 
   return NextResponse.json({
     ok: true,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveEcommerceStaffFromUrl, type EcommerceStaffContext } from "@/lib/ecommerce/staff-request";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
-import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
+import { ensureOwnerModuleDailyChargeOnPublicUse, publicLinkDeniedMessage } from "@/lib/modules/public-portal-access";
 
 export async function requireEcommerceStaff(
   req: Request,
@@ -12,7 +12,7 @@ export async function requireEcommerceStaff(
   }
   const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, ECOMMERCE_STORE_MODULE_SLUG);
   if (!charge.ok) {
-    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
+    return { error: NextResponse.json({ error: publicLinkDeniedMessage(charge) }, { status: 403 }) };
   }
   return { ctx };
 }

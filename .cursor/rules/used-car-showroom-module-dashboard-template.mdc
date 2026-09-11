@@ -1,0 +1,126 @@
+---
+description: แม่แบบโมดูลโชว์รูมรถมือสอง (used-car-showroom) — ยึดซักผ้า·ชมรม·โรงแรม · กรอง+FormModal · ตั้งค่าครบ · กล่องเต็มขอบ
+globs:
+  - "**/systems/used-car-showroom/**"
+  - "**/app/**/dashboard/used-car-showroom/**"
+  - "**/app/car/**"
+  - "**/app/api/used-car-showroom/**"
+alwaysApply: false
+---
+
+# โชว์รูมรถมือสอง — แม่แบบโมดูล (used-car-showroom)
+
+**Slug:** `used-car-showroom` · **แสดง:** โชว์รูมรถมือสอง · **groupId:** 1  
+**แดชบอร์ด:** `/dashboard/used-car-showroom` · **พอร์ทัล:** `/car/[slug]` · หน้ารถ `/car/[slug]/v/[vehicleId]`
+
+**ยึดแม่แบบหลักก่อนเสมอ:**  
+`dashboard-module-design-check-laundry-first.mdc` · `laundry-module-dashboard-template.mdc` · `laundry-module-portal-website-template.mdc` · `dashboard-module-shop-settings-tabs.mdc` · `dashboard-module-list-filter.mdc` · `dashboard-page-width.mdc` · `dashboard-finance-module-template.mdc` · `club-event` (YouTube/แกลเลอรี) · `hotel-resort` (ชำระเงิน CASH|PROMPTPAY|TRANSFER|CREDIT_CARD)
+
+---
+
+## 0) ห้ามลืม (ทำไมเคยพลาด)
+
+| ผิด | ถูก |
+|-----|-----|
+| รายการจัดการไม่มีกรอง / เพิ่มแบบช่อง inline | **ทุกแท็บย่อย** มีปุ่มแสดง/ซ่อนกรอง + **+ เพิ่ม → FormModal** |
+| ตั้งค่ามีแค่ชื่อ/โลโก้ | พื้นฐาน · การเงิน (ภาษี·PIN·สลิป·มัดจำ) · เว็บ (แบนเนอร์·แกลเลอรี·โซเชียล) · เวลาเปิด · ลิงก์ QR |
+| `px-*` / `max-w-*` ซ้ำรอบเนื้อหา | `WIDE_MODULE` + `usedCarShowroomPageStackClass` · แผง `usedCarShowroomPanelClass` เต็มความกว้างใต้ Shell |
+| จองออนไลน์ไม่มีมัดจำ | **จองกันคัน = มัดจำ+สลิป** · **นัดดูรถ = ฟอร์มอย่างเดียว** |
+| ค่างวดซับซ้อน | **flat อย่างเดียว** (เทียบราคาหน้าเต็นท์) |
+
+---
+
+## 1) เมนูหลัก (dock 4)
+
+| key | หน้า |
+|-----|------|
+| dashboard | ภาพรวม · สต็อก · จอง · นัด · ไฟแนนซ์รอ · คิดค่างวด (flat) |
+| manage | รถ · P&L · พนักงาน · โปร · ลูกค้า · บริษัทไฟแนนซ์ |
+| finance | รายรับ/รายจ่าย · กรอง/กราฟ · สลิป · ค่าคอมต้อง `vehicleId` |
+| settings | basic · finance · portal · hours · link |
+
+Chrome: `UsedCarShowroomModuleChrome` · ยุบหัว → `UsedCarShowroomHeaderBarNav` ใน `DashboardShell`  
+Tokens: `src/systems/used-car-showroom/lib/ui-tokens.ts`  
+Sub-nav: `UsedCarShowroomPageSubNav` (panel เต็มขอบการ์ด)
+
+---
+
+## 2) การจัดการ — กรอง + FormModal (บังคับทุกแท็บ)
+
+คู่กับ `dashboard-module-list-filter.mdc` · `dashboard-mobile-list-header-actions.mdc`
+
+1. ปุ่ม **แสดง/ซ่อนกรอง** ทุก breakpoint (มือถือไอคอน · `sm+` มีข้อความ) + badge เมื่อกรองค้างและแผงปิด  
+2. แผงกรอง: ชิปสถานะ + ค้นหา + ล้างเมื่อค้าง  
+3. ปุ่ม **+ เพิ่ม** → `FormModal` + `mobileCentered` ใส่ฟิลด์ครบของแท็บนั้น  
+4. ลำดับ action ขวา: **กรอง → เพิ่ม**  
+5. P&L: มีกรองได้ · ไม่บังคับปุ่มเพิ่ม  
+6. ลบ: `useAppNoticePopup().confirm` เท่านั้น  
+7. วันที่โปร: `bangkokDateKey()` — ห้าม `toISOString().slice(0,10)`
+
+อ้างอิงโค้ด: `UsedCarShowroomManageClient.tsx` · แม่แบบ `LaundryPackagesClient` / `LaundryPurchasesClient`
+
+---
+
+## 3) ตั้งค่า — แท็บมาตรฐาน
+
+ตาม `dashboard-module-shop-settings-tabs.mdc`
+
+| tab | เนื้อหา |
+|-----|---------|
+| basic | ชื่อ · โลโก้ · คำโปรย · เบอร์ · ที่อยู่ · LINE |
+| finance | `AppModuleShopPaymentFields` (taxId · พร้อมเพย์ · ธนาคาร) · มัดจำ/โหมดจอง · `AppStaffDailyPinSettingsField` · `AppSlipPaperSizeSettingsField` |
+| portal | slug · เปิดเว็บ · FB/แผนที่ · **`UsedCarPortalMediaSettings`** (แบนเนอร์+แกลเลอรี) |
+| hours | `AppTime24Input` เปิด–ปิด (เวลาไทย) |
+| link | `ModuleQrMonthlyGate` **ครั้งเดียว** + การ์ดลิงก์ลูกค้า/พนักงาน |
+
+Prisma ร้าน: `taxId` · `slipPaperSize` · `portalBannerUrl` · `portalGalleryJson` · `staffDailyPinHash` · `portalBookingPaymentMode` · `depositAmountBaht`
+
+---
+
+## 4) กล่องเต็มขอบ
+
+1. `DashboardPagesShell` — `used-car-showroom` อยู่ใน `WIDE_MODULE_PREFIXES` + `DOCKED_MODULE_PREFIXES` → `max-w-none !px-0`  
+2. Shell หัวมี `px-4 sm:px-6` — **ห้าม** ห่อ `children` ด้วย `px-*` ซ้ำ  
+3. หน้าใช้ `usedCarShowroomPageStackClass` (`min-w-0 space-y-4`)  
+4. การ์ด = `usedCarShowroomPanelClass` + `usedCarShowroomPanelSectionClass` (padding **ใน**การ์ด)  
+5. มือถือ: `max-lg:pb-24` ให้พ้น dock
+
+---
+
+## 5) พอร์ทัลลูกค้า + เกตรายเดือน (บังคับ)
+
+- Listing: `UsedCarPortalPublicClient` · Detail: `UsedCarVehicleDetailClient`  
+- **จอง:** มัดจำ/เต็ม + สลิป (โหมด `NONE` = ปิดจอง รับแค่นัด)  
+- **นัด:** `POST …/public/portal/[slug]/appointments` ไม่มัดจำ  
+- สื่อ: YouTube lightbox · แกลเลอรี · แบนเนอร์จากตั้งค่า  
+- **ลิงก์/QR สาธารณะ = แพ็กรายเดือนเท่านั้น**
+  - UI: `ModuleQrMonthlyGate` ที่แท็บตั้งค่า `link`
+  - **ปลายทางกลาง:** `ensureOwnerModuleDailyChargeOnPublicUse` เกตรายเดือนทุกโมดูล (ยกเว้นฟรี / LMS / ทดลอง ACTIVE)
+  - เข้าจากลิงก์ภายนอก → บันทึก `user_module_daily_charges` (แพ็กรายเดือน = `tokensCharged: 0`) = นับว่าเดือนนั้นมีคนใช้งานแล้ว
+  - **ห้าม** ใส่ `used-car-showroom` ใน `QR_LINK_DAILY_ALLOWED_MODULE_SLUGS`
+  - แดชบอร์ดเจ้าของ (ล็อกอิน) ยังใช้สายรายวัน+หักโทเคนได้ตามปกติ — คนละเรื่องกับลิงก์สาธารณะ
+
+---
+
+## 6) เช็กลิสต์ก่อนถือว่างานจบ
+
+- [ ] Manage ทุกแท็บมีกรอง + FormModal เพิ่ม (ยกเว้น P&L เพิ่ม)  
+- [ ] Settings ครบ 5 แท็บ · PIN · ภาษี · แบนเนอร์/แกลเลอรี · เวลา  
+- [ ] ไม่มี `px`/`max-w` ซ้ำรอบหน้า · panel เต็มความกว้าง  
+- [ ] จอง = มัดจำ+สลิป · นัด = ฟอร์ม · ค่างวด = flat  
+- [ ] sidebar icon · landing cover · **seed ~20/ฟีเจอร์** · รูป Unsplash ตรวจ HEAD · `prisma generate` หลัง schema  
+- [ ] `npx tsc --noEmit` ผ่าน  
+
+## แผนที่ไฟล์หลัก
+
+| บทบาท | พาธ |
+|-------|-----|
+| Chrome / dock | `UsedCarShowroomModuleChrome.tsx` |
+| Manage | `UsedCarShowroomManageClient.tsx` |
+| Settings | `UsedCarShowroomSettingsClient.tsx` · `UsedCarPortalMediaSettings.tsx` |
+| Finance | `UsedCarShowroomFinanceClient.tsx` |
+| Dashboard | `UsedCarShowroomDashboardClient.tsx` |
+| Portal | `UsedCarPortalPublicClient.tsx` · `UsedCarVehicleDetailClient.tsx` |
+| Tokens | `lib/ui-tokens.ts` · `lib/card-tones.ts` |
+| Nav | `used-car-showroom-module-nav.tsx` |
+| Seed ทดลอง/demo | `src/lib/trial/seed-used-car-showroom.ts` · รูป `lib/portal-media.ts` |

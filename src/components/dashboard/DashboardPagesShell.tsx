@@ -28,6 +28,7 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/car-wash",
   "/dashboard/laundry",
   "/dashboard/club-event",
+  "/dashboard/used-car-showroom",
   "/dashboard/lms",
   "/dashboard/massage",
   "/dashboard/spa",
@@ -66,6 +67,7 @@ const WIDE_MODULE_PREFIXES = [
 const DOCKED_MODULE_PREFIXES = [
   "/dashboard/laundry",
   "/dashboard/club-event",
+  "/dashboard/used-car-showroom",
   "/dashboard/lms",
   "/dashboard/massage",
   "/dashboard/parking",

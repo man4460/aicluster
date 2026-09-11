@@ -94,6 +94,31 @@ export async function listModuleSlugsChargedToday(billingUserId: string): Promis
   return new Set(rows.map((r) => r.moduleSlug));
 }
 
+/**
+ * บันทึกว่ามีคนเข้าใช้ลิงก์ภายนอกวันนี้ (Bangkok)
+ * — ใช้เมื่อแพ็กรายเดือน/ฟรีไม่หักโทเคน แต่ยังต้องนับว่าเดือนนี้มีคนใช้งานแล้ว
+ * — `tokensCharged: 0` · ซ้ำวันเดียวกันไม่สร้างแถวใหม่
+ */
+export async function recordModulePublicUsageDay(
+  billingUserId: string,
+  moduleSlug: string,
+): Promise<void> {
+  if (!billingUserId || !moduleSlug) return;
+  const todayDate = bangkokDateOnly();
+  try {
+    await prisma.userModuleDailyCharge.create({
+      data: {
+        userId: billingUserId,
+        moduleSlug,
+        chargeDate: todayDate,
+        tokensCharged: 0,
+      },
+    });
+  } catch {
+    // unique (user, slug, day) — มีแถวอยู่แล้ว (หักโทเคนหรือ usage ก่อนหน้า)
+  }
+}
+
 export type ChargeModuleSubscribeDailyResult =
   | { ok: true; tokensRemaining: number; charged: boolean }
   | { ok: false; code: "INSUFFICIENT_TOKENS"; balance: number; requiredTokens: number }

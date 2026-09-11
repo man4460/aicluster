@@ -154,6 +154,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "used-car-showroom",
+    blurb: "เต็นท์รถ สต็อก จอง ไฟแนนซ์ โชว์รูมออนไลน์",
+    coverSrc:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "pro-resume",
     blurb: "เรซูเม่ ประวัติ ผลงาน เว็บสาธารณะ",
     coverSrc:

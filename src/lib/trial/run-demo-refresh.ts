@@ -17,6 +17,7 @@ import {
   GENERAL_STORE_POS_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
+  USED_CAR_SHOWROOM_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   LMS_MODULE_SLUG,
@@ -51,6 +52,7 @@ import { seedFootballTurfProdDemoForOwner } from "@/lib/trial/seed-football-turf
 import { seedGeneralStorePosProdDemoForOwner } from "@/lib/trial/seed-general-store-pos";
 import { seedHomeFinanceProdDemoForOwner } from "@/lib/trial/seed-home-finance";
 import { seedHotelResortProdDemoForOwner } from "@/lib/trial/seed-hotel-resort";
+import { seedUsedCarShowroomProdDemoForOwner } from "@/lib/trial/seed-used-car-showroom";
 import { seedInventoryProdDemoForOwner } from "@/lib/trial/seed-inventory";
 import { seedLmsProdDemoForOwner } from "@/lib/trial/seed-lms";
 import { seedLoyaltyStampProdDemoForOwner } from "@/lib/trial/seed-loyalty-stamp";
@@ -101,6 +103,7 @@ const SUBSCRIBE_SLUGS = [
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
+  USED_CAR_SHOWROOM_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
   LMS_MODULE_SLUG,
@@ -172,6 +175,7 @@ export async function runDemoRefreshForOwners(
       () => seedHotelResortProdDemoForOwner(prisma, id, { refreshDaily: true }),
       log,
     );
+    await trySeed(lines, "used-car-showroom", () => seedUsedCarShowroomProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "ecommerce-store (daily)", () => seedEcommerceStoreProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "club-event (daily)", () => seedClubEventProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "lms (daily)", () => seedLmsProdDemoForOwner(prisma, id), log);

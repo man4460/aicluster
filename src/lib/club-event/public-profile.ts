@@ -20,7 +20,7 @@ export async function resolveClubEventPublicTrialSessionId(
   return trial ? trialParam : TRIAL_PROD_SCOPE;
 }
 
-/** โปรไฟล์สาธารณะชมรม — หักโทเคนเจ้าของเมื่อมีการใช้ลิงก์ภายนอก */
+/** โปรไฟล์สาธารณะชมรม — เกตรายเดือน + หัก/บันทึก usage เมื่อใช้ลิงก์ภายนอก */
 export async function findClubEventPublicProfile(slug: string, trialParam: string | null = null) {
   const trialSessionId = await resolveClubEventPublicTrialSessionId(slug, trialParam);
   const profile = await prisma.clubEventProfile.findFirst({ where: { slug, trialSessionId } });

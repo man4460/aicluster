@@ -16,6 +16,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   FOOTBALL_TURF_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
+  USED_CAR_SHOWROOM_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -32,6 +33,7 @@ import { seedCommunityCoopTrialData } from "./seed-community-coop";
 import { seedLaundryTrialData } from "./seed-mqtt-laundry";
 import { seedFootballTurfTrialData } from "./seed-football-turf";
 import { seedHotelResortTrialData } from "./seed-hotel-resort";
+import { seedUsedCarShowroomTrialData } from "./seed-used-car-showroom";
 import { seedTrialModuleSettings } from "./seed-trial-module-settings";
 
 type Tx = Omit<
@@ -137,6 +139,25 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.hotelResortReview.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.hotelResortStaffLink.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.hotelResortProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.usedCarLedgerEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarFinanceCase.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarSale.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarReservation.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarAppointment.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarLead.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarCustomerDocument.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarCostLine.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarVehicleVideo.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarVehicleImage.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarVehicleDocument.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarPromotion.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarCustomer.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarVehicle.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarStaff.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarFinanceCompany.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarFinanceCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.usedCarShowroomShop.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /**
@@ -272,6 +293,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedFootballTurfTrialData(tx, userId, session.id);
     } else if (mod.slug === HOTEL_RESORT_MODULE_SLUG) {
       await seedHotelResortTrialData(tx, userId, session.id);
+    } else if (mod.slug === USED_CAR_SHOWROOM_MODULE_SLUG) {
+      await seedUsedCarShowroomTrialData(tx, userId, session.id);
     }
 
     await seedTrialModuleSettings(tx, userId, session.id, mod.slug);

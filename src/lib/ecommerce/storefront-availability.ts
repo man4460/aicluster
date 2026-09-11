@@ -12,7 +12,7 @@ export type StorefrontAvailability =
  * หน้าร้านสาธารณะเปิดได้เมื่อ:
  * - มีร้านและ Merchant ไม่ pause
  * - เจ้าของร้านยังมีสิทธิ์โมดูล (โทเคน/Buffet/หักวันนี้แล้ว)
- * - หักโทเคนรายวันเมื่อลูกค้าเข้าใช้ (แม้เจ้าของไม่เปิดแดชบอร์ด)
+ * - ลิงก์ภายนอกผ่านเกตรายเดือน (หรือฟรี/LMS/ทดลอง) + หัก/บันทึก usage
  */
 export async function getEcommerceStorefrontAvailability(
   storeId: string,

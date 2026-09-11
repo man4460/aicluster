@@ -2,9 +2,12 @@ import { hasMonthly199ForModule, type UserAccessFields } from "@/lib/modules/acc
 import { isQrLinkAllowedOnDailyPlan } from "@/lib/modules/config";
 
 /**
- * ลิงก์ / QR สาธารณะและพนักงานของโมดูล
+ * ลิงก์ / QR สาธารณะและพนักงานของโมดูล (sync — ไม่รวมทดลอง ACTIVE)
  * — สายรายวัน: ปิด (ยกเว้นโมดูลฟรี + LMS ฯลฯ ใน `isQrLinkAllowedOnDailyPlan`)
  * — แพ็กรายเดือน (199) / แอดมิน: เปิด
+ *
+ * ปลายทางจริงใช้ `canOwnerUseModulePublicLinks` / `ensureOwnerModuleDailyChargeOnPublicUse`
+ * (รวมทดลอง ACTIVE + บันทึก usage วันนั้นเมื่อเข้าจากลิงก์ภายนอก)
  */
 export function canUseModuleQrLinks(
   access: Pick<UserAccessFields, "role" | "monthly199Slugs">,

@@ -329,6 +329,21 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/used-car-showroom")) {
+    return (
+      <Svg>
+        <path
+          d="M5 17h14v-4l-1.5-4.5A2 2 0 0 0 15.6 7H8.4a2 2 0 0 0-1.9 1.5L5 13v4z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <circle cx="7.5" cy="17" r="1.5" stroke="currentColor" strokeWidth="2" />
+        <circle cx="16.5" cy="17" r="1.5" stroke="currentColor" strokeWidth="2" />
+        <path d="M5 13h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/pro-resume")) {
     return (
       <Svg>

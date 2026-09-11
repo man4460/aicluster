@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
-import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
+import { ensureOwnerModuleDailyChargeOnPublicUse, publicLinkDeniedMessage } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadBuildingPosStaffDailyPinHash,
@@ -17,7 +17,7 @@ export async function requireBuildingPosStaff(
   }
   const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, BUILDING_POS_MODULE_SLUG);
   if (!charge.ok) {
-    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
+    return { error: NextResponse.json({ error: publicLinkDeniedMessage(charge) }, { status: 403 }) };
   }
   const pinHash = await loadBuildingPosStaffDailyPinHash(ctx.ownerId);
   const blocked = await gateStaffDailyPin(req, "building-pos", ctx.ownerId, pinHash);

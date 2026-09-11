@@ -303,6 +303,16 @@ import {
   writeClubEventHeaderCollapsed,
 } from "@/systems/club-event/club-event-module-nav";
 import {
+  UsedCarShowroomHeaderBarNav,
+  UsedCarShowroomHeaderExpandButton,
+} from "@/systems/used-car-showroom/components/UsedCarShowroomHeaderBarNav";
+import {
+  USED_CAR_SHOWROOM_HEADER_COLLAPSE_EVENT,
+  isUsedCarShowroomModulePath,
+  readUsedCarShowroomHeaderCollapsed,
+  writeUsedCarShowroomHeaderCollapsed,
+} from "@/systems/used-car-showroom/used-car-showroom-module-nav";
+import {
   ProResumeHeaderBarNav,
   ProResumeHeaderExpandButton,
 } from "@/systems/pro-resume/components/ProResumeHeaderBarNav";
@@ -708,6 +718,7 @@ export function DashboardShell({
   const [villageHeaderCollapsed, setVillageHeaderCollapsed] = useState(false);
   const [laundryHeaderCollapsed, setLaundryHeaderCollapsed] = useState(false);
   const [clubEventHeaderCollapsed, setClubEventHeaderCollapsed] = useState(false);
+  const [usedCarShowroomHeaderCollapsed, setUsedCarShowroomHeaderCollapsed] = useState(false);
   const [proResumeHeaderCollapsed, setProResumeHeaderCollapsed] = useState(false);
   const [lmsHeaderCollapsed, setLmsHeaderCollapsed] = useState(false);
   const [parkingHeaderCollapsed, setParkingHeaderCollapsed] = useState(false);
@@ -751,6 +762,7 @@ export function DashboardShell({
   const onVillageModule = isVillageModulePath(pathname);
   const onLaundryModule = isLaundryModulePath(pathname);
   const onClubEventModule = isClubEventModulePath(pathname);
+  const onUsedCarShowroomModule = isUsedCarShowroomModulePath(pathname);
   const onProResumeModule = isProResumeModulePath(pathname);
   const onLmsModule = isLmsModulePath(pathname);
   const onParkingModule = isParkingModulePath(pathname);
@@ -783,6 +795,7 @@ export function DashboardShell({
   const showVillageHeaderBar = onVillageModule && villageHeaderCollapsed;
   const showLaundryHeaderBar = onLaundryModule && laundryHeaderCollapsed;
   const showClubEventHeaderBar = onClubEventModule && clubEventHeaderCollapsed;
+  const showUsedCarShowroomHeaderBar = onUsedCarShowroomModule && usedCarShowroomHeaderCollapsed;
   const showProResumeHeaderBar = onProResumeModule && proResumeHeaderCollapsed;
   const showLmsHeaderBar = onLmsModule && lmsHeaderCollapsed;
   const showParkingHeaderBar = onParkingModule && parkingHeaderCollapsed;
@@ -1272,6 +1285,21 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onClubEventModule]);
+
+  useEffect(() => {
+    if (!onUsedCarShowroomModule) {
+      setUsedCarShowroomHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setUsedCarShowroomHeaderCollapsed(readUsedCarShowroomHeaderCollapsed());
+    sync();
+    window.addEventListener(USED_CAR_SHOWROOM_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(USED_CAR_SHOWROOM_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onUsedCarShowroomModule]);
 
   useEffect(() => {
     if (!onProResumeModule) {
@@ -1931,6 +1959,21 @@ export function DashboardShell({
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showUsedCarShowroomHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <UsedCarShowroomHeaderBarNav onExpand={() => writeUsedCarShowroomHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
+                  />
+                  <UsedCarShowroomHeaderExpandButton onExpand={() => writeUsedCarShowroomHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showProResumeHeaderBar ? (

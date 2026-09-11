@@ -11,6 +11,7 @@ import {
   EDUCARE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
+  USED_CAR_SHOWROOM_MODULE_SLUG,
   PRO_RESUME_MODULE_SLUG,
   LMS_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -68,6 +69,10 @@ export function getLaundryDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getClubEventDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, CLUB_EVENT_MODULE_SLUG);
+}
+
+export function getUsedCarShowroomDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, USED_CAR_SHOWROOM_MODULE_SLUG);
 }
 
 export function getProResumeDataScope(userId: string): Promise<ModuleDataScope> {

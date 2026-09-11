@@ -12,7 +12,8 @@ export type StaffDailyPinModule =
   | "laundry"
   | "car-wash"
   | "parking"
-  | "dormitory";
+  | "dormitory"
+  | "used-car-showroom";
 
 export const STAFF_DAILY_UNLOCK_HEADER = "x-staff-daily-unlock";
 
