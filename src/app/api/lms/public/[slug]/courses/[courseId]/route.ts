@@ -9,6 +9,7 @@ import {
   mapLmsLessonProgress,
   mapLmsQuestionPublic,
 } from "@/systems/lms/lib/mappers";
+import { ensureLmsCertificateForCompletion } from "@/systems/lms/lib/progress";
 
 type Ctx = { params: Promise<{ slug: string; courseId: string }> };
 
@@ -50,11 +51,20 @@ export async function GET(req: Request, ctx: Ctx) {
       lessonIds.length > 0 &&
       lessonIds.every((id) => progresses.some((p) => p.lessonId === id && p.completed));
 
-    const certificate = await prisma.lmsCertificate.findUnique({
-      where: {
-        learnerId_courseId: { learnerId: session.learnerId, courseId },
-      },
-    });
+    let certificate =
+      enrollment.status === "COMPLETED"
+        ? await ensureLmsCertificateForCompletion({
+            ownerUserId: profile.ownerUserId,
+            trialSessionId: profile.trialSessionId,
+            learnerId: session.learnerId,
+            courseId,
+            completedAt: enrollment.completedAt,
+          })
+        : await prisma.lmsCertificate.findUnique({
+            where: {
+              learnerId_courseId: { learnerId: session.learnerId, courseId },
+            },
+          });
 
     const exam = enrollment.course.exam;
 

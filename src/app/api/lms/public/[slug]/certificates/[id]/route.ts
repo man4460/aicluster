@@ -28,8 +28,21 @@ export async function GET(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: "ไม่พบใบรับรอง" }, { status: 404 });
     }
 
+    const enrollment = await prisma.lmsEnrollment.findUnique({
+      where: {
+        learnerId_courseId: { learnerId: cert.learnerId, courseId: cert.courseId },
+      },
+      select: { completedAt: true, status: true },
+    });
+    const completedAt = enrollment?.completedAt ?? cert.issueDate;
+
     return NextResponse.json({
-      certificate: mapLmsCertificate(cert),
+      certificate: {
+        ...mapLmsCertificate(cert),
+        /** วันที่จบหลักสูตร — ใช้แสดงบนใบประกาศ */
+        completedAt: completedAt.toISOString(),
+        issueDate: completedAt.toISOString(),
+      },
       learner: mapLmsLearner(cert.learner),
       course: mapLmsCourse(cert.course),
       institute: {

@@ -3,6 +3,7 @@ import { readLmsLearnerSession } from "@/lib/lms/learner-session";
 import { findLmsPublicProfile } from "@/lib/lms/public-profile";
 import { prisma } from "@/lib/prisma";
 import { mapLmsCertificate, mapLmsCourse, mapLmsEnrollment } from "@/systems/lms/lib/mappers";
+import { ensureLmsCertificatesForCompletedEnrollments } from "@/systems/lms/lib/progress";
 import { ensureAccessForPendingPurchases } from "@/systems/lms/lib/purchases";
 
 type Ctx = { params: Promise<{ slug: string }> };
@@ -29,6 +30,13 @@ export async function GET(req: Request, ctx: Ctx) {
     }
 
     await ensureAccessForPendingPurchases(learner.id);
+
+    // ออกใบประกาศให้นักเรียนที่เรียนจบแล้วแต่ยังไม่มีใบ (เช่น มาร์กจบจากแอดมินก่อนมีระบบใบ)
+    await ensureLmsCertificatesForCompletedEnrollments({
+      ownerUserId: profile.ownerUserId,
+      trialSessionId: profile.trialSessionId,
+      learnerId: learner.id,
+    });
 
     const enrollments = await prisma.lmsEnrollment.findMany({
       where: { learnerId: learner.id },

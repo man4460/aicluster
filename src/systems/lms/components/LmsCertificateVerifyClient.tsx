@@ -105,7 +105,7 @@ export function LmsCertificateVerifyClient({ slug, code }: Props) {
                 <dd className="mt-0.5 font-semibold text-slate-900">{data.course.title}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">วันที่ออก</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">วันที่จบหลักสูตร</dt>
                 <dd className="mt-0.5 text-slate-800">{issueLabel || "—"}</dd>
               </div>
               <div>

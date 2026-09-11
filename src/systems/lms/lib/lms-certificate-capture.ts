@@ -30,6 +30,11 @@ export function formatThaiCertDate(isoOrDate: string | Date = new Date()): strin
   return `ให้ไว้ ณ วันที่ ${dayMonthYear}`;
 }
 
+/** ข้อความวันที่บนพรีวิวตั้งค่า — ระบุว่าใบจริงใช้วันจบหลักสูตร */
+export function formatThaiCertPreviewDateLabel(): string {
+  return `${formatThaiCertDate(new Date())} (ตัวอย่าง · ใบจริงใช้วันจบหลักสูตร)`;
+}
+
 export function mountLmsCertCaptureHost(fullHtml: string): { root: HTMLElement; cleanup: () => void } {
   const parsed = new DOMParser().parseFromString(fullHtml, "text/html");
   const root = parsed.getElementById("lms-cert-root");
@@ -175,7 +180,7 @@ export async function buildLmsCertificatePreviewInput(
     instituteName: fields.instituteName || "สถาบัน",
     learnerName: fields.sampleLearnerName?.trim() || "ตัวอย่าง ชื่อผู้เรียน",
     courseTitle: fields.sampleCourseTitle?.trim() || "ตัวอย่างหลักสูตรออนไลน์",
-    issueDateLabel: formatThaiCertDate(new Date()),
+    issueDateLabel: formatThaiCertPreviewDateLabel(),
     certCode,
     signerName: fields.signerName?.trim() || fields.instituteName || undefined,
     signerTitle: fields.signerTitle?.trim() || "ผู้ออกใบประกาศ",

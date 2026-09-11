@@ -3,7 +3,7 @@ import { readLmsLearnerSession } from "@/lib/lms/learner-session";
 import { findLmsPublicProfile } from "@/lib/lms/public-profile";
 import { prisma } from "@/lib/prisma";
 import { mapLmsCertificate } from "@/systems/lms/lib/mappers";
-import { generateLmsCertCode } from "@/systems/lms/lib/progress";
+import { ensureLmsCertificateForCompletion } from "@/systems/lms/lib/progress";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -97,36 +97,23 @@ export async function POST(req: Request, ctx: Ctx) {
 
     let certificate = null;
     if (passed) {
-      const result = await prisma.$transaction(async (tx) => {
-        await tx.lmsEnrollment.update({
-          where: { id: enrollment.id },
-          data: {
-            examScorePercent: scorePercent,
-            progressPercent: 100,
-            status: "COMPLETED",
-            completedAt: enrollment.completedAt ?? new Date(),
-          },
-        });
-
-        const existingCert = await tx.lmsCertificate.findUnique({
-          where: {
-            learnerId_courseId: { learnerId: session.learnerId, courseId },
-          },
-        });
-        if (existingCert) return existingCert;
-
-        return tx.lmsCertificate.create({
-          data: {
-            ownerUserId: profile.ownerUserId,
-            trialSessionId: profile.trialSessionId,
-            learnerId: session.learnerId,
-            courseId,
-            issueDate: new Date(),
-            certCode: generateLmsCertCode(courseId, session.learnerId),
-          },
-        });
+      const completedAt = enrollment.completedAt ?? new Date();
+      await prisma.lmsEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          examScorePercent: scorePercent,
+          progressPercent: 100,
+          status: "COMPLETED",
+          completedAt,
+        },
       });
-      certificate = result;
+      certificate = await ensureLmsCertificateForCompletion({
+        ownerUserId: profile.ownerUserId,
+        trialSessionId: profile.trialSessionId,
+        learnerId: session.learnerId,
+        courseId,
+        completedAt,
+      });
     } else {
       await prisma.lmsEnrollment.update({
         where: { id: enrollment.id },

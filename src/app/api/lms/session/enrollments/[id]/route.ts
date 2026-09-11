@@ -4,6 +4,7 @@ import { lmsOwnerFromAuth } from "@/lib/lms/api-owner";
 import { lmsOwnerWhere, lmsSessionContext } from "@/lib/lms/session-context";
 import { prisma } from "@/lib/prisma";
 import { mapLmsEnrollment } from "@/systems/lms/lib/mappers";
+import { ensureLmsCertificateForCompletion } from "@/systems/lms/lib/progress";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -48,6 +49,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
       },
       include: { learner: true, course: true },
     });
+
+    if (status === "COMPLETED") {
+      await ensureLmsCertificateForCompletion({
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        learnerId: row.learnerId,
+        courseId: row.courseId,
+        completedAt: row.completedAt,
+      });
+    }
 
     return NextResponse.json({ enrollment: mapLmsEnrollment(row) });
   } catch (e) {

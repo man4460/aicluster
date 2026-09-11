@@ -20,7 +20,7 @@ type Props = {
 
 type CertApiPayload = {
   error?: string;
-  certificate?: { certCode: string; issueDate: string };
+  certificate?: { certCode: string; issueDate: string; completedAt?: string | null };
   learner?: { fullName: string };
   course?: { title: string };
   institute?: {
@@ -64,6 +64,8 @@ export function LmsCertificateDownload({
       const certCode = data.certificate.certCode;
       const verifyUrl = `${window.location.origin}/lms/${encodeURIComponent(slug)}/verify/${encodeURIComponent(certCode)}`;
       const qrDataUrl = await buildLmsCertQrDataUrl(verifyUrl);
+      const completionDate =
+        data.certificate.completedAt || data.certificate.issueDate;
 
       await Promise.race([
         downloadLmsCertificatePdf(
@@ -71,7 +73,7 @@ export function LmsCertificateDownload({
             instituteName: data.institute?.displayName || "สถาบัน",
             learnerName: data.learner.fullName,
             courseTitle: data.course.title,
-            issueDateLabel: formatThaiCertDate(data.certificate.issueDate),
+            issueDateLabel: formatThaiCertDate(completionDate),
             certCode,
             signerName: data.institute?.certSignerName || data.institute?.displayName || undefined,
             signerTitle: data.institute?.certSignerTitle || "ผู้ออกใบประกาศ",

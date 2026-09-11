@@ -200,6 +200,7 @@ export function LmsCertificateSettingsPanel({
         <p className="text-xs font-black text-[#4d47b6]">ข้อมูลบนใบประกาศ</p>
         <p className="text-[11px] text-slate-500 sm:text-xs">
           โลโก้ใช้จากแท็บตั้งค่าพื้นฐาน · ปรับชื่อผู้ลงนาม ตำแหน่ง และลายเซ็นด้านล่าง
+          · วันที่บนใบจริงคือวันที่ผู้เรียนจบหลักสูตร (ไม่ใช่วันที่ดาวน์โหลด)
         </p>
         <label className="block space-y-1">
           <span className="text-xs font-bold text-[#4d47b6]">ชื่อผู้ลงนาม</span>
