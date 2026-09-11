@@ -41,7 +41,7 @@ export function mountLmsCertCaptureHost(fullHtml: string): { root: HTMLElement; 
   host.setAttribute("data-lms-cert-capture-host", "1");
   host.setAttribute("aria-hidden", "true");
   host.style.cssText =
-    "position:fixed;left:-9999px;top:0;width:1123px;height:794px;border:0;margin:0;padding:0;opacity:0;pointer-events:none;z-index:-1;overflow:hidden";
+    "position:fixed;left:-10000px;top:0;width:1123px;height:794px;border:0;margin:0;padding:0;visibility:hidden;pointer-events:none;z-index:-1;overflow:hidden";
 
   for (const node of parsed.head.querySelectorAll("style")) {
     host.appendChild(node.cloneNode(true));
@@ -109,7 +109,9 @@ export async function renderLmsCertificateJpeg(
   const { root, cleanup } = mountLmsCertCaptureHost(html);
   try {
     await waitImages(root);
+    // ให้ layout/paint เสร็จก่อนจับภาพ (กันลวดลาย CSS หายในพรีวิว)
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => setTimeout(r, 80));
     const canvas = await html2canvas(root, {
       scale: options?.scale ?? 1,
       useCORS: true,

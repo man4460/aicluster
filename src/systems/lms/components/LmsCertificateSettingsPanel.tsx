@@ -75,16 +75,21 @@ export function LmsCertificateSettingsPanel({
           if (!cancelled) setPreviewJpeg(jpeg);
         } catch (e) {
           console.error("[LmsCertificateSettingsPanel preview]", e);
-          if (!cancelled) setPreviewJpeg(null);
+          if (!cancelled) {
+            setPreviewJpeg(null);
+            notice.error("เรนเดอร์พรีวิวไม่สำเร็จ — กดรีเฟรชอีกครั้ง");
+          }
         } finally {
           if (!cancelled) setPreviewBusy(false);
         }
       })();
-    }, 450);
+    }, 350);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
+    // notice ไม่ใส่ deps — กัน loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     previewVisible,
     previewTick,
@@ -96,6 +101,11 @@ export function LmsCertificateSettingsPanel({
     value.certSignatureUrl,
     value.certTemplateNote,
   ]);
+
+  // บังคับรีเฟรชพรีวิวเมื่อเปิดแท็บนี้ครั้งแรกหลังโหลดโค้ดใหม่
+  useEffect(() => {
+    setPreviewTick((n) => n + 1);
+  }, []);
 
   async function uploadSignature(file: File) {
     setUploadBusy(true);

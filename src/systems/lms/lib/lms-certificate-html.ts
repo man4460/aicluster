@@ -1,4 +1,4 @@
-/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · ลวดลายตามตัวอย่าง · โทน LMS · ไม่มีกล่องข้อความ */
+/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · ลวดลาย CSS (html2canvas-safe) · ไม่มีกล่องข้อความ */
 
 export type LmsCertificateHtmlInput = {
   instituteName: string;
@@ -30,47 +30,18 @@ function escapeHtml(value: string): string {
 /** ขนาดพิกเซลอ้างอิง A4 landscape ที่ 96dpi ประมาณ 1123×794 */
 export const LMS_CERT_PX = { width: 1123, height: 794 } as const;
 
-/** โทนข้อความโมดูล LMS */
 const C = {
   ink: "#1e1b4b",
-  violet: "#4d47b6",
   navy: "#0b2a5b",
-  navyMid: "#163a72",
-  navyLight: "#1e4a8c",
+  navyMid: "#143868",
+  navyLight: "#1a4578",
+  navySoft: "#24508a",
   muted: "#66638c",
-  soft: "#5f5a8a",
 } as const;
-
-/** ถ้วยลายน้ำเทาอ่อน — แบบตัวอย่าง (html2canvas จับ <img>) */
-const TROPHY_IMG =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 190" fill="none">
-      <path fill="#c5cad3" d="M48 22h64v10H48zm10 10h44c3 24 10 38 22 46-8 5-13 13-13 24v8H49v-8c0-11-5-19-13-24 12-8 19-22 22-46zm-4 86h52v10H54zm8 10h36l5 28H57z"/>
-      <path fill="#b0b6c0" d="M38 32c-14 3-24 16-24 32 0 13 8 24 18 27 3-10 8-18 13-24V32zm84 0v35c5 6 10 14 13 24 10-3 18-14 18-27 0-16-10-29-24-32z"/>
-      <path fill="#d1d5db" d="M70 22h20v8H70zM62 148h36v8H62z"/>
-    </svg>`,
-  );
-
-/**
- * ริบบิ้นมุมล่างตามตัวอย่าง — คลื่นกรมท่าซ้อนหลายชั้น
- * ใช้ <img> data-URI (html2canvas ไม่เรนเดอร์ SVG inline ดี)
- */
-const WAVE_RIBBON_IMG =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" fill="none" preserveAspectRatio="none">
-      <path fill="#0b2a5b" d="M0 280V95c38 8 68 36 102 72 28 30 62 64 118 78 28 7 58 12 90 14 36 2 72 1 110-4V280H0z"/>
-      <path fill="#163a72" d="M0 280V128c32 6 58 28 88 56 26 24 56 52 100 64 24 6 50 10 78 12 30 2 60 1 92-3V280H0z"/>
-      <path fill="#1e4a8c" d="M0 280V158c26 4 48 20 74 42 22 18 48 40 86 50 20 5 42 8 66 9 26 1 52 0 80-3V280H0z"/>
-      <path fill="#0b2a5b" d="M0 280V188c20 3 36 14 56 30 18 14 40 30 70 38 16 4 34 6 52 7 22 1 44 0 68-2V280H0z"/>
-      <path fill="#254f96" opacity=".9" d="M0 280V210c16 2 28 10 44 22 14 10 32 22 56 28 12 3 26 5 40 5 18 1 36 0 54-1V280H0z"/>
-    </svg>`,
-  );
 
 /**
  * ลำดับขนาด: ชื่อผู้เรียน > หัวข้อ > ชื่อคอร์ส > บรรทัดผ่านอบรม > บทนำ/วันที่/ผู้ลงนาม
- * ลวดลาย: ถ้วยเทาซ้าย–ขวา + ริบบิ้นกรมท่ามุมล่างตามตัวอย่าง
+ * ลวดลาย: ถ้วยเทา (CSS) + ริบบิ้นกรมท่ามุมล่าง (CSS ล้วน — html2canvas จับได้จริง)
  * ไม่มีกล่องข้อความ · QR ล้วน
  */
 export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput): string {
@@ -123,35 +94,132 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     overflow: hidden;
   }
 
-  /* ถ้วยลายน้ำซ้าย–ขวา แบบตัวอย่าง */
+  /* —— ถ้วยลายน้ำ (CSS shapes — ไม่พึ่ง SVG ที่ html2canvas มักหาย) —— */
   .trophy {
     position: absolute;
-    top: 48%;
-    width: 240px;
-    height: 280px;
-    opacity: 0.14;
+    top: 44%;
+    width: 168px;
+    height: 200px;
     z-index: 0;
     pointer-events: none;
+    opacity: 0.13;
+    transform: translateY(-50%);
   }
-  .trophy--left { left: 8px; transform: translateY(-52%); }
-  .trophy--right { right: 8px; transform: translateY(-52%) scaleX(-1); }
+  .trophy--left { left: 48px; }
+  .trophy--right { right: 48px; transform: translateY(-50%) scaleX(-1); }
 
-  /* ริบบิ้นคลื่นมุมล่าง — กรมท่าซ้อนตามตัวอย่าง */
+  .trophy-cup {
+    position: absolute;
+    left: 34px;
+    top: 28px;
+    width: 100px;
+    height: 78px;
+    background: #b8bec8;
+    border-radius: 8px 8px 42px 42px;
+  }
+  .trophy-rim {
+    position: absolute;
+    left: 28px;
+    top: 22px;
+    width: 112px;
+    height: 16px;
+    background: #c5cad3;
+    border-radius: 6px;
+  }
+  .trophy-handle {
+    position: absolute;
+    top: 36px;
+    width: 28px;
+    height: 48px;
+    border: 10px solid #b0b6c0;
+    border-radius: 50%;
+    background: transparent;
+  }
+  .trophy-handle--l { left: 6px; border-right: 0; border-radius: 50% 0 0 50%; }
+  .trophy-handle--r { right: 6px; border-left: 0; border-radius: 0 50% 50% 0; }
+  .trophy-stem {
+    position: absolute;
+    left: 72px;
+    top: 104px;
+    width: 24px;
+    height: 36px;
+    background: #b8bec8;
+  }
+  .trophy-base {
+    position: absolute;
+    left: 48px;
+    top: 138px;
+    width: 72px;
+    height: 14px;
+    background: #c5cad3;
+    border-radius: 4px;
+  }
+  .trophy-plinth {
+    position: absolute;
+    left: 40px;
+    top: 150px;
+    width: 88px;
+    height: 18px;
+    background: #aeb4be;
+    border-radius: 4px;
+  }
+
+  /* —— ริบบิ้นมุมล่างแบบตัวอย่าง (กรมท่าซ้อนหลายชั้น CSS) —— */
   .ribbon {
     position: absolute;
     bottom: 0;
-    width: 400px;
-    height: 260px;
+    width: 420px;
+    height: 280px;
     z-index: 1;
     pointer-events: none;
+    overflow: hidden;
   }
   .ribbon--left { left: 0; }
   .ribbon--right { right: 0; transform: scaleX(-1); }
-  .ribbon img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: fill;
+
+  .ribbon-layer {
+    position: absolute;
+    left: -80px;
+    bottom: -60px;
+  }
+  .ribbon-l1 {
+    width: 460px;
+    height: 320px;
+    background: ${C.navy};
+    border-radius: 0 85% 0 0;
+  }
+  .ribbon-l2 {
+    width: 380px;
+    height: 250px;
+    left: -50px;
+    bottom: -40px;
+    background: ${C.navyMid};
+    border-radius: 0 90% 0 0;
+  }
+  .ribbon-l3 {
+    width: 300px;
+    height: 190px;
+    left: -20px;
+    bottom: -20px;
+    background: ${C.navyLight};
+    border-radius: 0 95% 0 0;
+  }
+  .ribbon-l4 {
+    width: 220px;
+    height: 130px;
+    left: 10px;
+    bottom: 0;
+    background: ${C.navySoft};
+    border-radius: 0 100% 0 0;
+    opacity: 0.95;
+  }
+  .ribbon-l5 {
+    width: 150px;
+    height: 70px;
+    left: 30px;
+    bottom: 0;
+    background: ${C.navy};
+    border-radius: 0 110% 0 0;
   }
 
   .content {
@@ -287,8 +355,8 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 
   .qr-plain {
     position: absolute;
-    right: 40px;
-    bottom: 40px;
+    right: 44px;
+    bottom: 44px;
     z-index: 4;
     text-align: center;
   }
@@ -305,7 +373,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     font-size: 10px;
     font-weight: 700;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(11, 42, 91, 0.5);
+    text-shadow: 0 1px 2px rgba(11, 42, 91, 0.55);
     max-width: 100px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -315,14 +383,38 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 </head>
 <body>
   <div id="lms-cert-root">
-    <img class="trophy trophy--left" src="${TROPHY_IMG}" alt="" />
-    <img class="trophy trophy--right" src="${TROPHY_IMG}" alt="" />
+    <div class="trophy trophy--left" aria-hidden="true">
+      <div class="trophy-rim"></div>
+      <div class="trophy-cup"></div>
+      <div class="trophy-handle trophy-handle--l"></div>
+      <div class="trophy-handle trophy-handle--r"></div>
+      <div class="trophy-stem"></div>
+      <div class="trophy-base"></div>
+      <div class="trophy-plinth"></div>
+    </div>
+    <div class="trophy trophy--right" aria-hidden="true">
+      <div class="trophy-rim"></div>
+      <div class="trophy-cup"></div>
+      <div class="trophy-handle trophy-handle--l"></div>
+      <div class="trophy-handle trophy-handle--r"></div>
+      <div class="trophy-stem"></div>
+      <div class="trophy-base"></div>
+      <div class="trophy-plinth"></div>
+    </div>
 
     <div class="ribbon ribbon--left" aria-hidden="true">
-      <img src="${WAVE_RIBBON_IMG}" alt="" />
+      <div class="ribbon-layer ribbon-l1"></div>
+      <div class="ribbon-layer ribbon-l2"></div>
+      <div class="ribbon-layer ribbon-l3"></div>
+      <div class="ribbon-layer ribbon-l4"></div>
+      <div class="ribbon-layer ribbon-l5"></div>
     </div>
     <div class="ribbon ribbon--right" aria-hidden="true">
-      <img src="${WAVE_RIBBON_IMG}" alt="" />
+      <div class="ribbon-layer ribbon-l1"></div>
+      <div class="ribbon-layer ribbon-l2"></div>
+      <div class="ribbon-layer ribbon-l3"></div>
+      <div class="ribbon-layer ribbon-l4"></div>
+      <div class="ribbon-layer ribbon-l5"></div>
     </div>
 
     <div class="content">
