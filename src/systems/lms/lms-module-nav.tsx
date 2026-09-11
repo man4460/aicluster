@@ -19,8 +19,8 @@ export type LmsDashboardTabKey = "overview" | "purchases";
 /** แท็บย่อยการจัดการ: คอร์ส · นักเรียน */
 export type LmsManageTabKey = "courses" | "learners";
 
-/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า */
-export type LmsSettingsTab = "basic" | "finance" | "portal";
+/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า · ใบประกาศ */
+export type LmsSettingsTab = "basic" | "finance" | "portal" | "certificate";
 
 export type LmsNavItem = {
   key: LmsModuleNavKey;
@@ -67,6 +67,7 @@ export const LMS_SETTINGS_TAB_ITEMS: {
   { key: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { key: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
   { key: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า", shortLabel: "เว็บ" },
+  { key: "certificate", label: "ใบประกาศนียบัตร", shortLabel: "ใบประกาศ" },
 ];
 
 export function isLmsModulePath(pathname: string): boolean {
@@ -114,7 +115,7 @@ export function lmsManageCourseHref(courseId: string): string {
 }
 
 export function parseLmsSettingsTab(raw: string | null | undefined): LmsSettingsTab {
-  if (raw === "finance" || raw === "portal") return raw;
+  if (raw === "finance" || raw === "portal" || raw === "certificate") return raw;
   return "basic";
 }
 

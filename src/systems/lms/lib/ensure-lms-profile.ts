@@ -49,6 +49,7 @@ export async function ensureLmsProfile(
         slug,
         displayName: "สถาบันของฉัน",
         certSignerName: "",
+        certSignerTitle: "ผู้ออกใบประกาศ",
         certTemplateNote: "",
       },
     });

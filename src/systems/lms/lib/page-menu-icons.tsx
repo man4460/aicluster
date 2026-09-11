@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Receipt,
+  ScrollText,
   Settings,
   ShoppingCart,
   Users,
@@ -92,6 +93,8 @@ export function lmsSettingsTabIcon(key: LmsSettingsTab): ReactNode {
       return <Wallet className={tabIconClass} strokeWidth={2.25} aria-hidden />;
     case "portal":
       return <Globe className={tabIconClass} strokeWidth={2.25} aria-hidden />;
+    case "certificate":
+      return <ScrollText className={tabIconClass} strokeWidth={2.25} aria-hidden />;
     default:
       return null;
   }

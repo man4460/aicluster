@@ -79,6 +79,10 @@ export async function PUT(req: Request) {
           typeof body.certSignerName === "string"
             ? body.certSignerName.slice(0, 160)
             : profile.certSignerName,
+        certSignerTitle:
+          typeof body.certSignerTitle === "string"
+            ? body.certSignerTitle.trim().slice(0, 160) || "ผู้ออกใบประกาศ"
+            : profile.certSignerTitle,
         certSignatureUrl:
           typeof body.certSignatureUrl === "string"
             ? body.certSignatureUrl.slice(0, 512)

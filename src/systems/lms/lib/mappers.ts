@@ -128,6 +128,7 @@ export function mapLmsProfile(p: LmsProfile) {
     contactPhone: p.contactPhone,
     contactLine: p.contactLine,
     certSignerName: p.certSignerName,
+    certSignerTitle: p.certSignerTitle || "ผู้ออกใบประกาศ",
     certSignatureUrl: p.certSignatureUrl,
     certTemplateNote: p.certTemplateNote,
     promptPayPhone: p.promptPayPhone,

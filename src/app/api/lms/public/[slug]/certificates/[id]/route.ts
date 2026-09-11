@@ -36,6 +36,7 @@ export async function GET(req: Request, ctx: Ctx) {
         displayName: profile.displayName,
         logoUrl: profile.logoUrl,
         certSignerName: profile.certSignerName,
+        certSignerTitle: profile.certSignerTitle,
         certSignatureUrl: profile.certSignatureUrl,
         certTemplateNote: profile.certTemplateNote,
         address: profile.address,

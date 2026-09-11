@@ -283,6 +283,24 @@ model User {
   clubEventLinkSubmissions           ClubEventLinkSubmission[]
   clubEventDuesPayments              ClubEventDuesPayment[]
   clubEventCheckIns                  ClubEventCheckIn[]
+  usedCarShowroomShops               UsedCarShowroomShop[]
+  usedCarVehicles                    UsedCarVehicle[]
+  usedCarVehicleImages               UsedCarVehicleImage[]
+  usedCarVehicleVideos               UsedCarVehicleVideo[]
+  usedCarVehicleDocuments            UsedCarVehicleDocument[]
+  usedCarCostLines                   UsedCarCostLine[]
+  usedCarPromotions                  UsedCarPromotion[]
+  usedCarCustomers                   UsedCarCustomer[]
+  usedCarCustomerDocuments           UsedCarCustomerDocument[]
+  usedCarLeads                       UsedCarLead[]
+  usedCarReservations                UsedCarReservation[]
+  usedCarSales                       UsedCarSale[]
+  usedCarFinanceCompanies            UsedCarFinanceCompany[]
+  usedCarFinanceCases                UsedCarFinanceCase[]
+  usedCarAppointments                UsedCarAppointment[]
+  usedCarStaffMembers                UsedCarStaff[]
+  usedCarFinanceCategories           UsedCarFinanceCategory[]
+  usedCarLedgerEntries               UsedCarLedgerEntry[]
   lmsProfiles                        LmsProfile[]
   lmsCourses                         LmsCourse[]
   lmsLessons                         LmsLesson[]
@@ -7789,6 +7807,7 @@ model LmsProfile {
   contactPhone        String?  @map("contact_phone") @db.VarChar(32)
   contactLine         String?  @map("contact_line") @db.VarChar(120)
   certSignerName      String   @default("") @map("cert_signer_name") @db.VarChar(160)
+  certSignerTitle     String   @default("ผู้ออกใบประกาศ") @map("cert_signer_title") @db.VarChar(160)
   certSignatureUrl    String?  @map("cert_signature_url") @db.VarChar(512)
   certTemplateNote    String   @default("") @map("cert_template_note") @db.Text
   promptPayPhone      String?  @map("prompt_pay_phone") @db.VarChar(20)
@@ -8206,6 +8225,556 @@ model ResumeViewAnalytics {
   @@index([profileId, viewedAt], map: "resume_view_profile_at_idx")
   @@index([ownerUserId, trialSessionId, viewedAt], map: "resume_view_owner_trial_at_idx")
   @@map("resume_view_analytics")
+}
+
+/**
+ * โชว์รูมรถมือสอง / เต็นท์รถ — โปรไฟล์ร้าน + slug พอร์ทัล /car/[slug]
+ */
+model UsedCarShowroomShop {
+  id                    String   @id @default(cuid())
+  ownerUserId           String   @map("owner_id") @db.VarChar(191)
+  owner                 User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId        String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  slug                  String   @db.VarChar(80)
+  displayName           String   @map("display_name") @db.VarChar(200)
+  logoUrl               String?  @map("logo_url") @db.VarChar(512)
+  tagline               String?  @db.VarChar(300)
+  address               String?  @db.Text
+  contactPhone          String?  @map("contact_phone") @db.VarChar(32)
+  contactLine           String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl           String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl                String?  @map("map_url") @db.VarChar(512)
+  openTimeHm            String?  @map("open_time_hm") @db.VarChar(5)
+  closeTimeHm           String?  @map("close_time_hm") @db.VarChar(5)
+  portalBannerUrl       String?  @map("portal_banner_url") @db.VarChar(512)
+  portalGalleryJson     String   @default("[]") @map("portal_gallery_json") @db.Text
+  portalEnabled         Boolean  @default(true) @map("portal_enabled")
+  portalBookingPaymentMode String @default("DEPOSIT") @map("portal_booking_payment_mode") @db.VarChar(16)
+  depositAmountBaht     Int      @default(5000) @map("deposit_amount_baht")
+  promptPayPhone        String?  @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl   String?  @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName              String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber     String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName       String?  @map("bank_account_name") @db.VarChar(200)
+  taxId                 String?  @map("tax_id") @db.VarChar(30)
+  slipPaperSize         String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /** bcrypt — รหัสเข้าเว็บ/ลิงก์พนักงานรายวัน */
+  staffDailyPinHash     String?  @map("staff_daily_pin_hash") @db.VarChar(100)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  vehicles         UsedCarVehicle[]
+  promotions       UsedCarPromotion[]
+  customers        UsedCarCustomer[]
+  leads            UsedCarLead[]
+  reservations     UsedCarReservation[]
+  sales            UsedCarSale[]
+  financeCompanies UsedCarFinanceCompany[]
+  financeCases     UsedCarFinanceCase[]
+  appointments     UsedCarAppointment[]
+  staffMembers     UsedCarStaff[]
+  financeCategories UsedCarFinanceCategory[]
+  ledgerEntries    UsedCarLedgerEntry[]
+
+  @@unique([ownerUserId, trialSessionId], map: "ucs_shop_owner_trial_uniq")
+  @@unique([slug, trialSessionId], map: "ucs_shop_slug_trial_uniq")
+  @@index([ownerUserId], map: "ucs_shop_owner_idx")
+  @@map("used_car_showroom_shops")
+}
+
+model UsedCarVehicle {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /**
+   * PREP | FOR_SALE | RESERVED | SOLD | DELIVERED
+   */
+  status           String   @default("PREP") @db.VarChar(24)
+  brand            String   @db.VarChar(80)
+  model            String   @db.VarChar(120)
+  year             Int?
+  color            String?  @db.VarChar(60)
+  mileageKm        Int?     @map("mileage_km")
+  /**
+   * AUTO | MANUAL | CVT | OTHER
+   */
+  transmission     String?  @db.VarChar(24)
+  /**
+   * GASOLINE | DIESEL | HYBRID | EV | OTHER
+   */
+  fuelType         String?  @map("fuel_type") @db.VarChar(24)
+  /**
+   * SEDAN | PICKUP | SUV | VAN | MPV | OTHER
+   */
+  bodyType         String?  @map("body_type") @db.VarChar(24)
+  plateNumber      String?  @map("plate_number") @db.VarChar(32)
+  vin              String?  @db.VarChar(64)
+  engineNumber     String?  @map("engine_number") @db.VarChar(64)
+  hasRegistrationBook Boolean @default(false) @map("has_registration_book")
+  purchaseCostBaht Int      @default(0) @map("purchase_cost_baht")
+  askingPriceBaht  Int      @default(0) @map("asking_price_baht")
+  coverImageUrl    String?  @map("cover_image_url") @db.VarChar(512)
+  description      String?  @db.Text
+  note             String?  @db.Text
+  purchasedAt      DateTime? @map("purchased_at")
+  soldAt           DateTime? @map("sold_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  images       UsedCarVehicleImage[]
+  videos       UsedCarVehicleVideo[]
+  documents    UsedCarVehicleDocument[]
+  costLines    UsedCarCostLine[]
+  reservations UsedCarReservation[]
+  sales        UsedCarSale[]
+  financeCases UsedCarFinanceCase[]
+  appointments UsedCarAppointment[]
+  leads        UsedCarLead[]
+  ledgerEntries UsedCarLedgerEntry[]
+  promotions   UsedCarPromotion[]
+
+  @@index([shopId, status], map: "ucs_vehicle_shop_status_idx")
+  @@index([ownerUserId, trialSessionId], map: "ucs_vehicle_owner_trial_idx")
+  @@map("used_car_vehicles")
+}
+
+model UsedCarVehicleImage {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  vehicleId      String   @map("vehicle_id")
+  vehicle        UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  imageUrl       String   @map("image_url") @db.VarChar(512)
+  isCover        Boolean  @default(false) @map("is_cover")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([vehicleId, sortOrder], map: "ucs_vimg_vehicle_sort_idx")
+  @@map("used_car_vehicle_images")
+}
+
+model UsedCarVehicleVideo {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  vehicleId      String   @map("vehicle_id")
+  vehicle        UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  youtubeUrl     String   @map("youtube_url") @db.VarChar(512)
+  title          String?  @db.VarChar(200)
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([vehicleId, sortOrder], map: "ucs_vvid_vehicle_sort_idx")
+  @@map("used_car_vehicle_videos")
+}
+
+model UsedCarVehicleDocument {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  vehicleId      String   @map("vehicle_id")
+  vehicle        UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  title          String   @db.VarChar(200)
+  fileUrl        String   @map("file_url") @db.VarChar(512)
+  note           String?  @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([vehicleId], map: "ucs_vdoc_vehicle_idx")
+  @@map("used_car_vehicle_documents")
+}
+
+model UsedCarCostLine {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  vehicleId      String   @map("vehicle_id")
+  vehicle        UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /**
+   * REPAIR | WASH | TAX | OTHER
+   */
+  kind           String   @db.VarChar(24)
+  label          String   @db.VarChar(200)
+  amountBaht     Int      @map("amount_baht")
+  slipImageUrl   String?  @map("slip_image_url") @db.VarChar(512)
+  spentAt        DateTime @default(now()) @map("spent_at")
+  note           String?  @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([vehicleId, spentAt], map: "ucs_cost_vehicle_spent_idx")
+  @@map("used_car_cost_lines")
+}
+
+model UsedCarPromotion {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /**
+   * ผูกคันเฉพาะ — null = โปรทั้งร้าน
+   */
+  vehicleId      String?  @map("vehicle_id")
+  vehicle        UsedCarVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  title          String   @db.VarChar(200)
+  description    String?  @db.Text
+  /**
+   * PERCENT | AMOUNT | GIFT
+   */
+  kind           String   @default("AMOUNT") @db.VarChar(16)
+  valueBaht      Int      @default(0) @map("value_baht")
+  valuePercent   Int      @default(0) @map("value_percent")
+  giftLabel      String?  @map("gift_label") @db.VarChar(200)
+  startsOn       String   @map("starts_on") @db.VarChar(10)
+  endsOn         String   @map("ends_on") @db.VarChar(10)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, isActive], map: "ucs_promo_shop_active_idx")
+  @@map("used_car_promotions")
+}
+
+model UsedCarCustomer {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  fullName       String   @map("full_name") @db.VarChar(200)
+  phone          String   @db.VarChar(32)
+  lineId         String?  @map("line_id") @db.VarChar(120)
+  email          String?  @db.VarChar(200)
+  address        String?  @db.Text
+  nationalId     String?  @map("national_id") @db.VarChar(20)
+  taxId          String?  @map("tax_id") @db.VarChar(30)
+  taxName        String?  @map("tax_name") @db.VarChar(200)
+  taxAddress     String?  @map("tax_address") @db.Text
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  documents    UsedCarCustomerDocument[]
+  leads        UsedCarLead[]
+  reservations UsedCarReservation[]
+  sales        UsedCarSale[]
+  appointments UsedCarAppointment[]
+  financeCases UsedCarFinanceCase[]
+
+  @@index([shopId, phone], map: "ucs_customer_shop_phone_idx")
+  @@index([ownerUserId, trialSessionId], map: "ucs_customer_owner_trial_idx")
+  @@map("used_car_customers")
+}
+
+model UsedCarCustomerDocument {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  customerId     String   @map("customer_id")
+  customer       UsedCarCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  title          String   @db.VarChar(200)
+  fileUrl        String   @map("file_url") @db.VarChar(512)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([customerId], map: "ucs_cdoc_customer_idx")
+  @@map("used_car_customer_documents")
+}
+
+model UsedCarLead {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId     String?  @map("customer_id")
+  customer       UsedCarCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleId      String?  @map("vehicle_id")
+  vehicle        UsedCarVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  staffId        String?  @map("staff_id")
+  staff          UsedCarStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  fullName       String   @map("full_name") @db.VarChar(200)
+  phone          String   @db.VarChar(32)
+  /**
+   * WEB | WALK_IN | PHONE | LINE | OTHER
+   */
+  source         String   @default("OTHER") @db.VarChar(24)
+  /**
+   * NEW | CONTACTED | INTERESTED | LOST | CONVERTED
+   */
+  status         String   @default("NEW") @db.VarChar(24)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, status], map: "ucs_lead_shop_status_idx")
+  @@map("used_car_leads")
+}
+
+model UsedCarReservation {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  vehicleId      String   @map("vehicle_id")
+  vehicle        UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  customerId     String?  @map("customer_id")
+  customer       UsedCarCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  staffId        String?  @map("staff_id")
+  staff          UsedCarStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  /**
+   * WEB | STAFF
+   */
+  source         String   @default("STAFF") @db.VarChar(16)
+  customerName   String   @map("customer_name") @db.VarChar(200)
+  customerPhone  String   @map("customer_phone") @db.VarChar(32)
+  depositBaht    Int      @default(0) @map("deposit_baht")
+  /**
+   * CASH | PROMPTPAY | TRANSFER | CREDIT_CARD | NONE
+   */
+  paymentMethod  String   @default("NONE") @map("payment_method") @db.VarChar(24)
+  slipImageUrl   String?  @map("slip_image_url") @db.VarChar(512)
+  /**
+   * PENDING | PAID | EXPIRED | CANCELLED | CONVERTED
+   */
+  status         String   @default("PENDING") @db.VarChar(24)
+  expiresOn      String?  @map("expires_on") @db.VarChar(10)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  sales UsedCarSale[]
+
+  @@index([shopId, status], map: "ucs_res_shop_status_idx")
+  @@index([vehicleId], map: "ucs_res_vehicle_idx")
+  @@map("used_car_reservations")
+}
+
+model UsedCarSale {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  vehicleId        String   @map("vehicle_id")
+  vehicle          UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  customerId       String?  @map("customer_id")
+  customer         UsedCarCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  reservationId    String?  @map("reservation_id")
+  reservation      UsedCarReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  staffId          String?  @map("staff_id")
+  staff            UsedCarStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  salePriceBaht    Int      @map("sale_price_baht")
+  discountBaht     Int      @default(0) @map("discount_baht")
+  taxInvoiceEnabled Boolean @default(false) @map("tax_invoice_enabled")
+  paymentMethod    String   @map("payment_method") @db.VarChar(24)
+  slipImageUrl     String?  @map("slip_image_url") @db.VarChar(512)
+  soldOn           String   @map("sold_on") @db.VarChar(10)
+  note             String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  financeCases UsedCarFinanceCase[]
+  ledgerEntries UsedCarLedgerEntry[]
+
+  @@index([shopId, soldOn], map: "ucs_sale_shop_sold_idx")
+  @@index([vehicleId], map: "ucs_sale_vehicle_idx")
+  @@map("used_car_sales")
+}
+
+model UsedCarFinanceCompany {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name           String   @db.VarChar(200)
+  contactName    String?  @map("contact_name") @db.VarChar(120)
+  contactPhone   String?  @map("contact_phone") @db.VarChar(32)
+  note           String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  cases UsedCarFinanceCase[]
+
+  @@index([shopId, isActive], map: "ucs_finco_shop_active_idx")
+  @@map("used_car_finance_companies")
+}
+
+model UsedCarFinanceCase {
+  id                String   @id @default(cuid())
+  ownerUserId       String   @map("owner_id") @db.VarChar(191)
+  owner             User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId            String   @map("shop_id")
+  shop              UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  vehicleId         String   @map("vehicle_id")
+  vehicle           UsedCarVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  saleId            String?  @map("sale_id")
+  sale              UsedCarSale? @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  customerId        String?  @map("customer_id")
+  customer          UsedCarCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  companyId         String?  @map("company_id")
+  company           UsedCarFinanceCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  financedAmountBaht Int     @default(0) @map("financed_amount_baht")
+  /**
+   * SUBMITTED | WAITING_DOCS | APPROVED | REJECTED | SIGNED
+   */
+  status            String   @default("SUBMITTED") @db.VarChar(24)
+  commissionBaht    Int      @default(0) @map("commission_baht")
+  commissionPaid    Boolean  @default(false) @map("commission_paid")
+  insuranceCompany  String?  @map("insurance_company") @db.VarChar(200)
+  signOn            String?  @map("sign_on") @db.VarChar(10)
+  note              String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, status], map: "ucs_fincase_shop_status_idx")
+  @@map("used_car_finance_cases")
+}
+
+model UsedCarAppointment {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  vehicleId      String?  @map("vehicle_id")
+  vehicle        UsedCarVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  customerId     String?  @map("customer_id")
+  customer       UsedCarCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  staffId        String?  @map("staff_id")
+  staff          UsedCarStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  /**
+   * VIEW | TEST_DRIVE
+   */
+  kind           String   @default("VIEW") @db.VarChar(24)
+  customerName   String   @map("customer_name") @db.VarChar(200)
+  customerPhone  String   @map("customer_phone") @db.VarChar(32)
+  /**
+   * YYYY-MM-DD
+   */
+  appointmentOn  String   @map("appointment_on") @db.VarChar(10)
+  /**
+   * HH:mm
+   */
+  appointmentHm  String   @map("appointment_hm") @db.VarChar(5)
+  /**
+   * SCHEDULED | DONE | CANCELLED | NO_SHOW
+   */
+  status         String   @default("SCHEDULED") @db.VarChar(24)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, appointmentOn], map: "ucs_appt_shop_on_idx")
+  @@map("used_car_appointments")
+}
+
+model UsedCarStaff {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  fullName       String   @map("full_name") @db.VarChar(200)
+  phone          String?  @db.VarChar(32)
+  /**
+   * SALES | MANAGER | ADMIN | OTHER
+   */
+  role           String   @default("SALES") @db.VarChar(24)
+  commissionPercent Int   @default(0) @map("commission_percent")
+  bonusNote      String?  @map("bonus_note") @db.VarChar(500)
+  startedOn      String?  @map("started_on") @db.VarChar(10)
+  isActive       Boolean  @default(true) @map("is_active")
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  leads        UsedCarLead[]
+  reservations UsedCarReservation[]
+  sales        UsedCarSale[]
+  appointments UsedCarAppointment[]
+
+  @@index([shopId, isActive], map: "ucs_staff_shop_active_idx")
+  @@map("used_car_staff")
+}
+
+model UsedCarFinanceCategory {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /**
+   * INCOME | EXPENSE
+   */
+  kind           String   @db.VarChar(16)
+  name           String   @db.VarChar(120)
+  /**
+   * PURCHASE | SALE | COMMISSION | OTHER — สำหรับ sync อัตโนมัติ
+   */
+  systemKey      String?  @map("system_key") @db.VarChar(32)
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  entries UsedCarLedgerEntry[]
+
+  @@index([shopId, kind], map: "ucs_fcat_shop_kind_idx")
+  @@map("used_car_finance_categories")
+}
+
+model UsedCarLedgerEntry {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           UsedCarShowroomShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId     String?  @map("category_id")
+  category       UsedCarFinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  vehicleId      String?  @map("vehicle_id")
+  vehicle        UsedCarVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  saleId         String?  @map("sale_id")
+  sale           UsedCarSale? @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  /**
+   * INCOME | EXPENSE
+   */
+  kind           String   @db.VarChar(16)
+  title          String   @db.VarChar(200)
+  amountBaht     Int      @map("amount_baht")
+  /**
+   * YYYY-MM-DD Bangkok
+   */
+  entryOn        String   @map("entry_on") @db.VarChar(10)
+  paymentMethod  String?  @map("payment_method") @db.VarChar(24)
+  slipImageUrl   String?  @map("slip_image_url") @db.VarChar(512)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, entryOn], map: "ucs_ledger_shop_on_idx")
+  @@index([vehicleId], map: "ucs_ledger_vehicle_idx")
+  @@map("used_car_ledger_entries")
 }
 
 /**

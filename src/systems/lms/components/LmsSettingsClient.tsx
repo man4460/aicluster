@@ -21,6 +21,7 @@ import {
   type LmsSettingsTab,
 } from "@/systems/lms/lms-module-nav";
 import { LmsPageSubNav } from "@/systems/lms/components/LmsPageSubNav";
+import { LmsCertificateSettingsPanel } from "@/systems/lms/components/LmsCertificateSettingsPanel";
 import type { LmsProfileDto } from "@/systems/lms/lib/mappers";
 import {
   lmsPageTitleIcon,
@@ -100,6 +101,10 @@ export function LmsSettingsClient({
           contactPhone: form.contactPhone,
           contactLine: form.contactLine,
           address: form.address,
+          certSignerName: form.certSignerName,
+          certSignerTitle: form.certSignerTitle,
+          certSignatureUrl: form.certSignatureUrl,
+          certTemplateNote: form.certTemplateNote,
           promptPayPhone: form.promptPayPhone,
           promptPayQrImageUrl: form.promptPayQrImageUrl,
           bankName: form.bankName,
@@ -271,6 +276,23 @@ export function LmsSettingsClient({
               downloadFilePrefix={`lms-portal-${form.slug || "portal"}`}
             />
           </div>
+        ) : null}
+
+        {tab === "certificate" ? (
+          <LmsCertificateSettingsPanel
+            value={{
+              displayName: form.displayName,
+              slug: form.slug,
+              logoUrl: form.logoUrl,
+              certSignerName: form.certSignerName ?? "",
+              certSignerTitle: form.certSignerTitle || "ผู้ออกใบประกาศ",
+              certSignatureUrl: form.certSignatureUrl ?? null,
+              certTemplateNote: form.certTemplateNote ?? "",
+            }}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            notice={notice}
+            trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
+          />
         ) : null}
 
         <div className={cn(lmsFixedBottomActionClass, "mt-4")}>
