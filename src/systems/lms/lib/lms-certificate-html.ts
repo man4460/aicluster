@@ -1,4 +1,4 @@
-/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · CSS decorations (html2canvas-safe) · QR */
+/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · โทน LMS · ไม่มีเส้น/กล่องข้อความ */
 
 export type LmsCertificateHtmlInput = {
   instituteName: string;
@@ -30,24 +30,31 @@ function escapeHtml(value: string): string {
 /** ขนาดพิกเซลอ้างอิง A4 landscape ที่ 96dpi ประมาณ 1123×794 */
 export const LMS_CERT_PX = { width: 1123, height: 794 } as const;
 
-/** ถ้วยรางวัลเป็น data-URI (html2canvas จับ <img> ได้ แต่จับ SVG inline+gradient ไม่ได้) */
+/** โทนโมดูล LMS (คู่กับ ui-tokens / brand gradient) */
+const C = {
+  ink: "#1e1b4b",
+  violet: "#4d47b6",
+  brand: "#5b61ff",
+  brandDeep: "#0000BF",
+  pink: "#ec4899",
+  muted: "#66638c",
+  soft: "#5f5a8a",
+} as const;
+
+/** ถ้วยรางวัล data-URI — โทนม่วงโมดูล (html2canvas จับ <img> ได้) */
 const TROPHY_IMG =
   "data:image/svg+xml," +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
-      <path fill="#c4a35a" d="M35 18h50v8H35zm8 8h34c2 18 8 28 17 34-6 4-10 10-10 18v6H36v-6c0-8-4-14-10-18 9-6 15-16 17-34zm-3 66h40v8H40zm6 8h28l4 22H42z"/>
-      <path fill="#0b2a5b" opacity=".55" d="M28 26c-10 2-18 12-18 24 0 10 6 18 14 20 2-8 6-14 10-18V26zm64 0v26c4 4 8 10 10 18 8-2 14-10 14-20 0-12-8-22-18-24z"/>
-      <path fill="#8b7340" d="M48 100h24l3 18H45z"/>
+      <path fill="#5b61ff" d="M35 18h50v8H35zm8 8h34c2 18 8 28 17 34-6 4-10 10-10 18v6H36v-6c0-8-4-14-10-18 9-6 15-16 17-34zm-3 66h40v8H40zm6 8h28l4 22H45z"/>
+      <path fill="#4d47b6" opacity=".7" d="M28 26c-10 2-18 12-18 24 0 10 6 18 14 20 2-8 6-14 10-18V26zm64 0v26c4 4 8 10 10 18 8-2 14-10 14-20 0-12-8-22-18-24z"/>
+      <path fill="#1e1b4b" d="M48 100h24l3 18H45z"/>
     </svg>`,
   );
 
 /**
- * ลำดับขนาดตัวอักษร (ใหญ่ → เล็ก)
- * 1. ชื่อผู้เรียน · 2. หัวข้อ · 3. ชื่อคอร์ส · 4. บรรทัดผ่านอบรม
- * 5. บทนำ/วันที่/ชื่อผู้ลงนาม · 6. ตำแหน่ง/หมายเหตุ/QR
- *
- * หมายเหตุ: ตกแต่งมุมใช้ CSS + <img> เท่านั้น — ห้าม SVG inline gradient
- * เพราะ html2canvas มักไม่เรนเดอร์ ทำให้พรีวิว/PDF ดูโล่ง
+ * ลำดับขนาด: ชื่อผู้เรียน > หัวข้อ > ชื่อคอร์ส > บรรทัดผ่านอบรม > บทนำ/วันที่/ผู้ลงนาม > ตำแหน่ง/QR
+ * ไม่มีเส้นตกแต่ง · ไม่มีกล่องข้อความ/แคปซูล · QR ล้วน
  */
 export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput): string {
   const institute = escapeHtml(input.instituteName || "สถาบัน");
@@ -70,18 +77,12 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     ? `<img class="sign-img" src="${signatureUrl}" alt="" crossorigin="anonymous" />`
     : `<div class="sign-scribble" aria-hidden="true"></div>`;
 
-  const qrInner = qrDataUrl
-    ? `<div class="qr-card">
-        <span class="qr-corner qr-corner--tl" aria-hidden="true"></span>
-        <span class="qr-corner qr-corner--tr" aria-hidden="true"></span>
-        <span class="qr-corner qr-corner--bl" aria-hidden="true"></span>
-        <span class="qr-corner qr-corner--br" aria-hidden="true"></span>
+  const qrBlock = qrDataUrl
+    ? `<div class="qr-plain">
         <img class="qr-img" src="${qrDataUrl}" alt="QR ตรวจสอบใบประกาศ" />
-      </div>
-      <div class="qr-pill">สแกนตรวจสอบ</div>
-      <p class="qr-code">${code}</p>`
-    : `<div class="qr-pill">รหัสใบประกาศ</div>
-       <p class="qr-code">${code}</p>`;
+        <p class="qr-hint">สแกนตรวจสอบ</p>
+      </div>`
+    : `<div class="qr-plain"><p class="qr-hint">${code}</p></div>`;
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -98,46 +99,25 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     height: ${LMS_CERT_PX.height}px;
     margin: 0;
     padding: 0;
-    background: linear-gradient(180deg, #ffffff 0%, #f5f7fc 48%, #e8eef8 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f7f4ff 55%, #eef0ff 100%);
     font-family: "Sarabun", "TH Sarabun New", "Tahoma", "Segoe UI", sans-serif;
-    color: #0f172a;
+    color: ${C.ink};
     position: relative;
     overflow: hidden;
   }
 
-  /* กรอบคู่ — ทอง + กรมท่า */
-  .edge-outer {
-    position: absolute;
-    inset: 12px;
-    border: 2px solid #c4a35a;
-    border-radius: 8px;
-    z-index: 1;
-    pointer-events: none;
-  }
-  .edge-inner {
-    position: absolute;
-    inset: 18px;
-    border: 1px solid #0b2a5b;
-    border-radius: 5px;
-    opacity: 0.35;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  /* ถ้วยลายน้ำ — <img> data-URI */
   .trophy {
     position: absolute;
     top: 46%;
     width: 200px;
     height: 230px;
-    opacity: 0.16;
+    opacity: 0.12;
     z-index: 0;
     pointer-events: none;
   }
   .trophy--left { left: 40px; transform: translateY(-50%); }
   .trophy--right { right: 40px; transform: translateY(-50%) scaleX(-1); }
 
-  /* มุมคลื่น — ชั้น CSS (html2canvas รองรับ) */
   .wave {
     position: absolute;
     bottom: 0;
@@ -155,7 +135,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     bottom: -40px;
     width: 320px;
     height: 260px;
-    background: #0b2a5b;
+    background: ${C.brandDeep};
     border-radius: 0 120% 0 0;
   }
   .wave-mid {
@@ -164,7 +144,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     bottom: -20px;
     width: 250px;
     height: 190px;
-    background: #1a3f7a;
+    background: ${C.violet};
     border-radius: 0 110% 0 0;
   }
   .wave-top {
@@ -173,19 +153,19 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     bottom: 0;
     width: 190px;
     height: 130px;
-    background: #5b61ff;
+    background: ${C.brand};
     border-radius: 0 100% 0 0;
-    opacity: 0.85;
+    opacity: 0.9;
   }
-  .wave-gold {
+  .wave-accent {
     position: absolute;
     left: -5px;
     bottom: -5px;
-    width: 160px;
-    height: 70px;
-    background: #c4a35a;
+    width: 150px;
+    height: 64px;
+    background: ${C.pink};
     border-radius: 0 90% 0 0;
-    opacity: 0.9;
+    opacity: 0.75;
   }
 
   .content {
@@ -196,22 +176,21 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 40px 140px 28px;
+    padding: 44px 140px 28px;
   }
 
   .logo {
-    width: 78px;
-    height: 78px;
+    width: 76px;
+    height: 76px;
     border-radius: 9999px;
-    background: #0b2a5b;
-    border: 4px solid #c4a35a;
-    box-shadow: 0 8px 20px rgba(11, 42, 91, 0.25);
+    background: linear-gradient(135deg, ${C.brandDeep}, ${C.brand} 50%, ${C.pink});
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     flex-shrink: 0;
+    box-shadow: 0 8px 22px rgba(91, 97, 255, 0.28);
   }
   .logo-img { width: 100%; height: 100%; object-fit: cover; }
   .logo-fallback {
@@ -222,89 +201,60 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
   }
 
   .title {
-    margin: 0 0 10px;
+    margin: 0 0 12px;
     font-size: 36px;
     font-weight: 800;
     letter-spacing: 0.04em;
-    color: #0b2a5b;
+    color: ${C.ink};
     line-height: 1.35;
-    padding-bottom: 2px;
-  }
-  .title-rule {
-    width: 140px;
-    height: 4px;
-    margin: 0 0 14px;
-    border-radius: 99px;
-    background: #c4a35a;
   }
 
   .lead {
     margin: 0 0 18px;
     font-size: 14px;
     font-weight: 500;
-    color: #64748b;
+    color: ${C.muted};
   }
 
-  /* ชื่อผู้เรียน — เว้นระยะใต้บรรทัดไทย (สระล่าง) ไม่ให้เส้นทับ */
-  .recipient-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    max-width: 860px;
-    margin: 0 0 18px;
-  }
   .recipient {
-    margin: 0;
-    padding: 0 8px 14px;
+    margin: 0 0 18px;
+    padding: 0 8px;
     font-size: 46px;
     font-weight: 800;
-    color: #0b2a5b;
-    line-height: 1.55;
+    color: ${C.ink};
+    line-height: 1.5;
     letter-spacing: 0.01em;
-  }
-  .recipient-rule {
-    width: 320px;
-    max-width: 65%;
-    height: 3px;
-    margin: 0;
-    border-radius: 99px;
-    background: #c4a35a;
-    flex-shrink: 0;
+    max-width: 860px;
   }
 
   .body {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     font-size: 16px;
     font-weight: 600;
-    color: #334155;
+    color: ${C.soft};
     line-height: 1.5;
     max-width: 760px;
   }
 
   .course {
-    display: inline-block;
     margin: 0;
     font-size: 22px;
     font-weight: 800;
-    line-height: 1.35;
-    color: #4d47b6;
-    background: #eef0ff;
-    padding: 6px 20px 8px;
-    border-radius: 999px;
-    border: 2px solid rgba(91, 97, 255, 0.35);
+    line-height: 1.4;
+    color: ${C.violet};
+    max-width: 820px;
   }
 
   .date {
     margin: 16px 0 0;
     font-size: 14px;
     font-weight: 500;
-    color: #64748b;
+    color: ${C.muted};
   }
 
   .sign-block {
     margin-top: auto;
-    padding-top: 18px;
+    padding-top: 20px;
     padding-bottom: 4px;
     display: flex;
     flex-direction: column;
@@ -315,129 +265,73 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     height: 52px;
     max-width: 200px;
     object-fit: contain;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
   }
   .sign-scribble {
     width: 170px;
     height: 36px;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
     background:
-      radial-gradient(circle at 12% 60%, transparent 40%, #0b2a5b 41%, #0b2a5b 48%, transparent 50%),
-      radial-gradient(circle at 38% 40%, transparent 42%, #0b2a5b 43%, #0b2a5b 50%, transparent 52%),
-      radial-gradient(circle at 62% 55%, transparent 40%, #0b2a5b 41%, #0b2a5b 48%, transparent 50%),
-      radial-gradient(circle at 88% 35%, transparent 42%, #0b2a5b 43%, #0b2a5b 50%, transparent 52%);
+      radial-gradient(circle at 12% 60%, transparent 40%, ${C.violet} 41%, ${C.violet} 48%, transparent 50%),
+      radial-gradient(circle at 38% 40%, transparent 42%, ${C.brand} 43%, ${C.brand} 50%, transparent 52%),
+      radial-gradient(circle at 62% 55%, transparent 40%, ${C.violet} 41%, ${C.violet} 48%, transparent 50%),
+      radial-gradient(circle at 88% 35%, transparent 42%, ${C.ink} 43%, ${C.ink} 50%, transparent 52%);
     background-size: 40px 36px, 48px 36px, 44px 36px, 40px 36px;
     background-repeat: no-repeat;
     background-position: 0 0, 40px 0, 85px 0, 130px 0;
-    opacity: 0.85;
-  }
-  .sign-line {
-    width: 200px;
-    border-top: 2px solid #0b2a5b;
-    margin: 4px 0 8px;
+    opacity: 0.9;
   }
   .sign-name {
     margin: 0;
     font-size: 15px;
     font-weight: 700;
-    color: #0b2a5b;
+    color: ${C.ink};
   }
   .sign-role {
     margin: 3px 0 0;
     font-size: 12px;
     font-weight: 500;
-    color: #64748b;
+    color: ${C.muted};
   }
   .note {
     margin-top: 8px;
     font-size: 11px;
-    color: #94a3b8;
+    color: ${C.muted};
     max-width: 480px;
+    opacity: 0.85;
   }
 
-  /* QR — สไตล์เดียวกับโปสเตอร์ลิงก์ QR (กรอบ indigo · มุม L · แคปซูล) */
-  .qr-box {
+  /* QR ล้วน — ไม่มีกล่อง / มุม L / แคปซูล */
+  .qr-plain {
     position: absolute;
-    right: 32px;
-    bottom: 32px;
+    right: 36px;
+    bottom: 36px;
     z-index: 4;
-    width: 148px;
-    padding: 12px 12px 10px;
-    border-radius: 20px;
-    background: #ffffff;
-    border: 3px solid rgba(91, 97, 255, 0.45);
-    box-shadow:
-      0 12px 28px rgba(30, 27, 75, 0.18),
-      0 0 0 4px rgba(255, 255, 255, 0.95);
     text-align: center;
   }
-  .qr-card {
-    position: relative;
-    width: 112px;
-    height: 112px;
-    margin: 0 auto 10px;
-    padding: 10px;
-    border-radius: 16px;
-    background: #f8f9fc;
-    border: 1px solid rgba(91, 97, 255, 0.18);
-  }
-  .qr-corner {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border-color: #4d47b6;
-    border-style: solid;
-    z-index: 2;
-  }
-  .qr-corner--tl { top: 4px; left: 4px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-  .qr-corner--tr { top: 4px; right: 4px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-  .qr-corner--bl { bottom: 4px; left: 4px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-  .qr-corner--br { bottom: 4px; right: 4px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
   .qr-img {
-    width: 100%;
-    height: 100%;
+    width: 96px;
+    height: 96px;
     display: block;
-    border-radius: 6px;
-    background: #fff;
-  }
-  .qr-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     margin: 0 auto;
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: #ffffff;
-    border: 1.5px solid rgba(91, 97, 255, 0.4);
-    box-shadow: 0 2px 8px rgba(91, 97, 255, 0.12);
-    font-size: 11px;
-    font-weight: 800;
-    color: #4d47b6;
-    line-height: 1.2;
+    background: #fff;
+    border-radius: 8px;
   }
-  .qr-code {
+  .qr-hint {
     margin: 6px 0 0;
-    font-size: 8px;
-    color: #94a3b8;
-    letter-spacing: 0.02em;
-    max-width: 124px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(30, 27, 75, 0.45);
+    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .qr-box--empty {
-    padding-top: 16px;
-    padding-bottom: 14px;
   }
 </style>
 </head>
 <body>
   <div id="lms-cert-root">
-    <div class="edge-outer" aria-hidden="true"></div>
-    <div class="edge-inner" aria-hidden="true"></div>
-
     <img class="trophy trophy--left" src="${TROPHY_IMG}" alt="" />
     <img class="trophy trophy--right" src="${TROPHY_IMG}" alt="" />
 
@@ -445,38 +339,33 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
       <div class="wave-base"></div>
       <div class="wave-mid"></div>
       <div class="wave-top"></div>
-      <div class="wave-gold"></div>
+      <div class="wave-accent"></div>
     </div>
     <div class="wave wave--right" aria-hidden="true">
       <div class="wave-base"></div>
       <div class="wave-mid"></div>
       <div class="wave-top"></div>
-      <div class="wave-gold"></div>
+      <div class="wave-accent"></div>
     </div>
 
     <div class="content">
       <div class="logo">${logoBlock}</div>
       <h1 class="title">ประกาศนียบัตร</h1>
-      <div class="title-rule" aria-hidden="true"></div>
       <p class="lead">ใบประกาศนียบัตรให้ไว้เพื่อแสดงว่า</p>
-      <div class="recipient-wrap">
-        <p class="recipient">${learner}</p>
-        <div class="recipient-rule" aria-hidden="true"></div>
-      </div>
+      <p class="recipient">${learner}</p>
       <p class="body">ได้ผ่านการฝึกอบรมออนไลน์ ในหัวข้อ</p>
       <p class="course">“ ${course} ”</p>
       <p class="date">${dateLabel}</p>
 
       <div class="sign-block">
         ${signVisual}
-        <div class="sign-line" aria-hidden="true"></div>
         <p class="sign-name">${signer}</p>
         <p class="sign-role">${signerTitle}</p>
         ${note ? `<p class="note">${note}</p>` : ""}
       </div>
     </div>
 
-    <div class="qr-box${qrDataUrl ? "" : " qr-box--empty"}">${qrInner}</div>
+    ${qrBlock}
   </div>
 </body>
 </html>`;
