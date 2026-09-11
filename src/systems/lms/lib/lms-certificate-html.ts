@@ -71,10 +71,16 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     : `<div class="sign-scribble" aria-hidden="true"></div>`;
 
   const qrInner = qrDataUrl
-    ? `<div class="qr-frame"><img class="qr-img" src="${qrDataUrl}" alt="QR ตรวจสอบใบประกาศ" /></div>
-       <p class="qr-label">สแกนตรวจสอบ</p>
-       <p class="qr-code">${code}</p>`
-    : `<p class="qr-label">รหัสใบประกาศ</p>
+    ? `<div class="qr-card">
+        <span class="qr-corner qr-corner--tl" aria-hidden="true"></span>
+        <span class="qr-corner qr-corner--tr" aria-hidden="true"></span>
+        <span class="qr-corner qr-corner--bl" aria-hidden="true"></span>
+        <span class="qr-corner qr-corner--br" aria-hidden="true"></span>
+        <img class="qr-img" src="${qrDataUrl}" alt="QR ตรวจสอบใบประกาศ" />
+      </div>
+      <div class="qr-pill">สแกนตรวจสอบ</div>
+      <p class="qr-code">${code}</p>`
+    : `<div class="qr-pill">รหัสใบประกาศ</div>
        <p class="qr-code">${code}</p>`;
 
   return `<!DOCTYPE html>
@@ -216,43 +222,55 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
   }
 
   .title {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
     font-size: 36px;
     font-weight: 800;
     letter-spacing: 0.04em;
     color: #0b2a5b;
-    line-height: 1.15;
+    line-height: 1.35;
+    padding-bottom: 2px;
   }
   .title-rule {
     width: 140px;
     height: 4px;
-    margin: 0 0 12px;
+    margin: 0 0 14px;
     border-radius: 99px;
     background: #c4a35a;
-    box-shadow: 0 0 0 2px rgba(91, 97, 255, 0.25);
   }
 
   .lead {
-    margin: 0 0 14px;
+    margin: 0 0 18px;
     font-size: 14px;
     font-weight: 500;
     color: #64748b;
   }
 
+  /* ชื่อผู้เรียน — เว้นระยะใต้บรรทัดไทย (สระล่าง) ไม่ให้เส้นทับ */
+  .recipient-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 860px;
+    margin: 0 0 18px;
+  }
   .recipient {
-    margin: 0 0 8px;
-    font-size: 48px;
+    margin: 0;
+    padding: 0 8px 14px;
+    font-size: 46px;
     font-weight: 800;
     color: #0b2a5b;
-    line-height: 1.18;
-    max-width: 860px;
+    line-height: 1.55;
+    letter-spacing: 0.01em;
   }
   .recipient-rule {
-    width: 380px;
-    max-width: 70%;
+    width: 320px;
+    max-width: 65%;
     height: 3px;
-    margin: 0 0 16px;
+    margin: 0;
+    border-radius: 99px;
     background: #c4a35a;
+    flex-shrink: 0;
   }
 
   .body {
@@ -274,7 +292,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     background: #eef0ff;
     padding: 6px 20px 8px;
     border-radius: 999px;
-    border: 2px solid #c4a35a;
+    border: 2px solid rgba(91, 97, 255, 0.35);
   }
 
   .date {
@@ -337,72 +355,81 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     max-width: 480px;
   }
 
-  /* QR — การ์ดบนมุมคลื่น โทนกรมท่า+ทอง */
+  /* QR — สไตล์เดียวกับโปสเตอร์ลิงก์ QR (กรอบ indigo · มุม L · แคปซูล) */
   .qr-box {
     position: absolute;
-    right: 28px;
-    bottom: 28px;
+    right: 32px;
+    bottom: 32px;
     z-index: 4;
-    width: 132px;
-    padding: 0;
-    border-radius: 16px;
-    overflow: hidden;
+    width: 148px;
+    padding: 12px 12px 10px;
+    border-radius: 20px;
     background: #ffffff;
-    border: 2px solid #c4a35a;
+    border: 3px solid rgba(91, 97, 255, 0.45);
     box-shadow:
-      0 10px 28px rgba(11, 42, 91, 0.28),
-      0 0 0 3px rgba(255, 255, 255, 0.9);
+      0 12px 28px rgba(30, 27, 75, 0.18),
+      0 0 0 4px rgba(255, 255, 255, 0.95);
     text-align: center;
   }
-  .qr-box-head {
-    background: #0b2a5b;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 6px 8px 5px;
-    line-height: 1.2;
+  .qr-card {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    margin: 0 auto 10px;
+    padding: 10px;
+    border-radius: 16px;
+    background: #f8f9fc;
+    border: 1px solid rgba(91, 97, 255, 0.18);
   }
-  .qr-box-body {
-    padding: 10px 10px 8px;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  .qr-corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-color: #4d47b6;
+    border-style: solid;
+    z-index: 2;
   }
-  .qr-frame {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 6px;
-    padding: 5px;
-    border-radius: 10px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    box-shadow: inset 0 0 0 2px #0b2a5b;
-  }
+  .qr-corner--tl { top: 4px; left: 4px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .qr-corner--tr { top: 4px; right: 4px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .qr-corner--bl { bottom: 4px; left: 4px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .qr-corner--br { bottom: 4px; right: 4px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
   .qr-img {
     width: 100%;
     height: 100%;
     display: block;
-    border-radius: 4px;
+    border-radius: 6px;
+    background: #fff;
   }
-  .qr-label {
-    margin: 0;
+  .qr-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1.5px solid rgba(91, 97, 255, 0.4);
+    box-shadow: 0 2px 8px rgba(91, 97, 255, 0.12);
     font-size: 11px;
     font-weight: 800;
-    color: #0b2a5b;
+    color: #4d47b6;
+    line-height: 1.2;
   }
   .qr-code {
-    margin: 2px 0 0;
+    margin: 6px 0 0;
     font-size: 8px;
     color: #94a3b8;
     letter-spacing: 0.02em;
-    max-width: 112px;
+    max-width: 124px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-left: auto;
     margin-right: auto;
   }
-  .qr-box--empty .qr-box-body {
-    padding: 14px 10px;
+  .qr-box--empty {
+    padding-top: 16px;
+    padding-bottom: 14px;
   }
 </style>
 </head>
@@ -432,8 +459,10 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
       <h1 class="title">ประกาศนียบัตร</h1>
       <div class="title-rule" aria-hidden="true"></div>
       <p class="lead">ใบประกาศนียบัตรให้ไว้เพื่อแสดงว่า</p>
-      <p class="recipient">${learner}</p>
-      <div class="recipient-rule" aria-hidden="true"></div>
+      <div class="recipient-wrap">
+        <p class="recipient">${learner}</p>
+        <div class="recipient-rule" aria-hidden="true"></div>
+      </div>
       <p class="body">ได้ผ่านการฝึกอบรมออนไลน์ ในหัวข้อ</p>
       <p class="course">“ ${course} ”</p>
       <p class="date">${dateLabel}</p>
@@ -447,10 +476,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
       </div>
     </div>
 
-    <div class="qr-box${qrDataUrl ? "" : " qr-box--empty"}">
-      <div class="qr-box-head">ตรวจสอบใบประกาศ</div>
-      <div class="qr-box-body">${qrInner}</div>
-    </div>
+    <div class="qr-box${qrDataUrl ? "" : " qr-box--empty"}">${qrInner}</div>
   </div>
 </body>
 </html>`;

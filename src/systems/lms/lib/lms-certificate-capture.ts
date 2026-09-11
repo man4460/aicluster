@@ -88,7 +88,7 @@ export async function buildLmsCertQrDataUrl(verifyUrl: string): Promise<string |
       width: 220,
       margin: 2,
       errorCorrectionLevel: "M",
-      color: { dark: "#0b2a5b", light: "#ffffff" },
+      color: { dark: "#1e1b4b", light: "#ffffff" },
     });
   } catch {
     return undefined;
