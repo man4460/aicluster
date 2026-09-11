@@ -85,8 +85,8 @@ async function waitImages(root: HTMLElement, maxMs = 8000): Promise<void> {
 export async function buildLmsCertQrDataUrl(verifyUrl: string): Promise<string | undefined> {
   try {
     return await QRCode.toDataURL(verifyUrl, {
-      width: 192,
-      margin: 1,
+      width: 220,
+      margin: 2,
       errorCorrectionLevel: "M",
       color: { dark: "#0b2a5b", light: "#ffffff" },
     });
@@ -122,6 +122,10 @@ export async function renderLmsCertificateJpeg(
       logging: false,
       imageTimeout: 10_000,
       foreignObjectRendering: false,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
     });
     return canvas.toDataURL("image/jpeg", 0.92);
   } finally {

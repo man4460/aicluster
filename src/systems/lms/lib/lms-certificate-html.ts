@@ -1,4 +1,4 @@
-/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · โทนกรมท่า+ทอง · QR ตรวจสอบ */
+/** HTML ใบประกาศนียบัตรจบหลักสูตร — A4 แนวนอน · CSS decorations (html2canvas-safe) · QR */
 
 export type LmsCertificateHtmlInput = {
   instituteName: string;
@@ -30,14 +30,24 @@ function escapeHtml(value: string): string {
 /** ขนาดพิกเซลอ้างอิง A4 landscape ที่ 96dpi ประมาณ 1123×794 */
 export const LMS_CERT_PX = { width: 1123, height: 794 } as const;
 
+/** ถ้วยรางวัลเป็น data-URI (html2canvas จับ <img> ได้ แต่จับ SVG inline+gradient ไม่ได้) */
+const TROPHY_IMG =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+      <path fill="#c4a35a" d="M35 18h50v8H35zm8 8h34c2 18 8 28 17 34-6 4-10 10-10 18v6H36v-6c0-8-4-14-10-18 9-6 15-16 17-34zm-3 66h40v8H40zm6 8h28l4 22H42z"/>
+      <path fill="#0b2a5b" opacity=".55" d="M28 26c-10 2-18 12-18 24 0 10 6 18 14 20 2-8 6-14 10-18V26zm64 0v26c4 4 8 10 10 18 8-2 14-10 14-20 0-12-8-22-18-24z"/>
+      <path fill="#8b7340" d="M48 100h24l3 18H45z"/>
+    </svg>`,
+  );
+
 /**
  * ลำดับขนาดตัวอักษร (ใหญ่ → เล็ก)
- * 1. ชื่อผู้เรียน — เด่นสุด
- * 2. หัวข้อ «ประกาศนียบัตร»
- * 3. ชื่อคอร์ส
- * 4. บรรทัดผ่านอบรม
- * 5. บทนำ / วันที่ / ชื่อผู้ลงนาม
- * 6. ตำแหน่ง · หมายเหตุ · QR
+ * 1. ชื่อผู้เรียน · 2. หัวข้อ · 3. ชื่อคอร์ส · 4. บรรทัดผ่านอบรม
+ * 5. บทนำ/วันที่/ชื่อผู้ลงนาม · 6. ตำแหน่ง/หมายเหตุ/QR
+ *
+ * หมายเหตุ: ตกแต่งมุมใช้ CSS + <img> เท่านั้น — ห้าม SVG inline gradient
+ * เพราะ html2canvas มักไม่เรนเดอร์ ทำให้พรีวิว/PDF ดูโล่ง
  */
 export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput): string {
   const institute = escapeHtml(input.instituteName || "สถาบัน");
@@ -58,20 +68,14 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 
   const signVisual = signatureUrl
     ? `<img class="sign-img" src="${signatureUrl}" alt="" crossorigin="anonymous" />`
-    : `<svg class="sign-scribble" viewBox="0 0 200 48" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 32 C28 8, 42 40, 58 22 C72 8, 78 36, 98 24 C118 10, 128 38, 148 20 C162 10, 172 30, 192 18" fill="none" stroke="#0b2a5b" stroke-width="2.4" stroke-linecap="round"/>
-      </svg>`;
+    : `<div class="sign-scribble" aria-hidden="true"></div>`;
 
-  const qrBlock = qrDataUrl
-    ? `<div class="qr-box">
-        <img class="qr-img" src="${qrDataUrl}" alt="QR ตรวจสอบใบประกาศ" />
-        <p class="qr-label">สแกนตรวจสอบ</p>
-        <p class="qr-code">${code}</p>
-      </div>`
-    : `<div class="qr-box qr-box--empty">
-        <p class="qr-label">รหัสใบประกาศ</p>
-        <p class="qr-code">${code}</p>
-      </div>`;
+  const qrInner = qrDataUrl
+    ? `<div class="qr-frame"><img class="qr-img" src="${qrDataUrl}" alt="QR ตรวจสอบใบประกาศ" /></div>
+       <p class="qr-label">สแกนตรวจสอบ</p>
+       <p class="qr-code">${code}</p>`
+    : `<p class="qr-label">รหัสใบประกาศ</p>
+       <p class="qr-code">${code}</p>`;
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -81,68 +85,102 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 <title>ใบประกาศนียบัตร ${code}</title>
 <style>
   * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #fff;
-  }
+  html, body { margin: 0; padding: 0; background: #fff; }
+
   #lms-cert-root {
     width: ${LMS_CERT_PX.width}px;
     height: ${LMS_CERT_PX.height}px;
     margin: 0;
     padding: 0;
-    background:
-      radial-gradient(ellipse 70% 55% at 50% 28%, rgba(196, 163, 90, 0.10), transparent 62%),
-      radial-gradient(ellipse 50% 40% at 12% 70%, rgba(91, 97, 255, 0.06), transparent 55%),
-      radial-gradient(ellipse 50% 40% at 88% 70%, rgba(11, 42, 91, 0.07), transparent 55%),
-      linear-gradient(180deg, #ffffff 0%, #f7f9fc 55%, #eef2f8 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f5f7fc 48%, #e8eef8 100%);
     font-family: "Sarabun", "TH Sarabun New", "Tahoma", "Segoe UI", sans-serif;
     color: #0f172a;
     position: relative;
     overflow: hidden;
   }
 
-  .edge-frame {
+  /* กรอบคู่ — ทอง + กรมท่า */
+  .edge-outer {
     position: absolute;
-    inset: 14px;
-    border: 1.5px solid rgba(196, 163, 90, 0.45);
-    border-radius: 6px;
-    pointer-events: none;
+    inset: 12px;
+    border: 2px solid #c4a35a;
+    border-radius: 8px;
     z-index: 1;
+    pointer-events: none;
   }
-  .edge-frame::before {
-    content: "";
+  .edge-inner {
     position: absolute;
-    inset: 5px;
-    border: 1px solid rgba(11, 42, 91, 0.18);
-    border-radius: 4px;
+    inset: 18px;
+    border: 1px solid #0b2a5b;
+    border-radius: 5px;
+    opacity: 0.35;
+    z-index: 1;
+    pointer-events: none;
   }
 
-  /* ถ้วยรางวัลลายน้ำ — โทนทองอ่อน */
+  /* ถ้วยลายน้ำ — <img> data-URI */
   .trophy {
     position: absolute;
-    top: 48%;
-    transform: translateY(-54%);
-    width: 220px;
-    height: 250px;
-    opacity: 0.14;
-    pointer-events: none;
+    top: 46%;
+    width: 200px;
+    height: 230px;
+    opacity: 0.16;
     z-index: 0;
+    pointer-events: none;
   }
-  .trophy--left { left: 28px; }
-  .trophy--right { right: 28px; transform: translateY(-54%) scaleX(-1); }
+  .trophy--left { left: 40px; transform: translateY(-50%); }
+  .trophy--right { right: 40px; transform: translateY(-50%) scaleX(-1); }
 
-  /* มุมคลื่น — กรมท่า + อินดิโก + ไฮไลต์ทอง */
+  /* มุมคลื่น — ชั้น CSS (html2canvas รองรับ) */
   .wave {
     position: absolute;
     bottom: 0;
-    width: 300px;
-    height: 220px;
+    width: 340px;
+    height: 250px;
     z-index: 1;
     pointer-events: none;
   }
   .wave--left { left: 0; }
   .wave--right { right: 0; transform: scaleX(-1); }
+
+  .wave-base {
+    position: absolute;
+    left: -30px;
+    bottom: -40px;
+    width: 320px;
+    height: 260px;
+    background: #0b2a5b;
+    border-radius: 0 120% 0 0;
+  }
+  .wave-mid {
+    position: absolute;
+    left: -10px;
+    bottom: -20px;
+    width: 250px;
+    height: 190px;
+    background: #1a3f7a;
+    border-radius: 0 110% 0 0;
+  }
+  .wave-top {
+    position: absolute;
+    left: 10px;
+    bottom: 0;
+    width: 190px;
+    height: 130px;
+    background: #5b61ff;
+    border-radius: 0 100% 0 0;
+    opacity: 0.85;
+  }
+  .wave-gold {
+    position: absolute;
+    left: -5px;
+    bottom: -5px;
+    width: 160px;
+    height: 70px;
+    background: #c4a35a;
+    border-radius: 0 90% 0 0;
+    opacity: 0.9;
+  }
 
   .content {
     position: relative;
@@ -152,18 +190,16 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 42px 130px 32px;
+    padding: 40px 140px 28px;
   }
 
   .logo {
-    width: 76px;
-    height: 76px;
+    width: 78px;
+    height: 78px;
     border-radius: 9999px;
-    background: linear-gradient(145deg, #0b2a5b 0%, #1e3a6e 55%, #4d47b6 100%);
-    box-shadow:
-      0 0 0 3px #fff,
-      0 0 0 6px rgba(196, 163, 90, 0.85),
-      0 10px 24px rgba(11, 42, 91, 0.22);
+    background: #0b2a5b;
+    border: 4px solid #c4a35a;
+    box-shadow: 0 8px 20px rgba(11, 42, 91, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,11 +207,7 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     margin-bottom: 12px;
     flex-shrink: 0;
   }
-  .logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .logo-img { width: 100%; height: 100%; object-fit: cover; }
   .logo-fallback {
     color: #fff;
     font-size: 14px;
@@ -183,9 +215,8 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     letter-spacing: 0.04em;
   }
 
-  /* 2) หัวข้อ — ใหญ่รองจากชื่อ */
   .title {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 36px;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -193,42 +224,39 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     line-height: 1.15;
   }
   .title-rule {
-    width: 120px;
-    height: 3px;
+    width: 140px;
+    height: 4px;
     margin: 0 0 12px;
     border-radius: 99px;
-    background: linear-gradient(90deg, transparent, #c4a35a 20%, #5b61ff 50%, #c4a35a 80%, transparent);
+    background: #c4a35a;
+    box-shadow: 0 0 0 2px rgba(91, 97, 255, 0.25);
   }
 
-  /* 5) บทนำ — เล็ก */
   .lead {
     margin: 0 0 14px;
     font-size: 14px;
     font-weight: 500;
     color: #64748b;
-    letter-spacing: 0.01em;
   }
 
-  /* 1) ชื่อผู้เรียน — ใหญ่สุด */
   .recipient {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 48px;
     font-weight: 800;
     color: #0b2a5b;
     line-height: 1.18;
     max-width: 860px;
-    letter-spacing: 0.01em;
   }
   .recipient-rule {
-    width: min(420px, 70%);
-    height: 2px;
+    width: 380px;
+    max-width: 70%;
+    height: 3px;
     margin: 0 0 16px;
-    background: linear-gradient(90deg, transparent, rgba(196,163,90,0.9), rgba(11,42,91,0.55), rgba(196,163,90,0.9), transparent);
+    background: #c4a35a;
   }
 
-  /* 4) บรรทัดผ่านอบรม — กลาง */
   .body {
-    margin: 0;
+    margin: 0 0 8px;
     font-size: 16px;
     font-weight: 600;
     color: #334155;
@@ -236,21 +264,19 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     max-width: 760px;
   }
 
-  /* 3) ชื่อคอร์ส — กลางใหญ่ + สีเน้น */
   .course {
     display: inline-block;
-    margin-top: 6px;
+    margin: 0;
     font-size: 22px;
     font-weight: 800;
     line-height: 1.35;
     color: #4d47b6;
-    background: linear-gradient(180deg, rgba(91, 97, 255, 0.08), rgba(196, 163, 90, 0.12));
-    padding: 4px 16px 6px;
+    background: #eef0ff;
+    padding: 6px 20px 8px;
     border-radius: 999px;
-    border: 1px solid rgba(196, 163, 90, 0.35);
+    border: 2px solid #c4a35a;
   }
 
-  /* 5) วันที่ — เล็ก */
   .date {
     margin: 16px 0 0;
     font-size: 14px;
@@ -260,8 +286,8 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 
   .sign-block {
     margin-top: auto;
-    padding-top: 22px;
-    padding-bottom: 6px;
+    padding-top: 18px;
+    padding-bottom: 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -274,23 +300,30 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     margin-bottom: 2px;
   }
   .sign-scribble {
-    width: 180px;
-    height: 44px;
+    width: 170px;
+    height: 36px;
     margin-bottom: 2px;
+    background:
+      radial-gradient(circle at 12% 60%, transparent 40%, #0b2a5b 41%, #0b2a5b 48%, transparent 50%),
+      radial-gradient(circle at 38% 40%, transparent 42%, #0b2a5b 43%, #0b2a5b 50%, transparent 52%),
+      radial-gradient(circle at 62% 55%, transparent 40%, #0b2a5b 41%, #0b2a5b 48%, transparent 50%),
+      radial-gradient(circle at 88% 35%, transparent 42%, #0b2a5b 43%, #0b2a5b 50%, transparent 52%);
+    background-size: 40px 36px, 48px 36px, 44px 36px, 40px 36px;
+    background-repeat: no-repeat;
+    background-position: 0 0, 40px 0, 85px 0, 130px 0;
+    opacity: 0.85;
   }
   .sign-line {
     width: 200px;
-    border-top: 1.5px solid #0b2a5b;
+    border-top: 2px solid #0b2a5b;
     margin: 4px 0 8px;
   }
-  /* 5) ชื่อผู้ลงนาม */
   .sign-name {
     margin: 0;
     font-size: 15px;
     font-weight: 700;
     color: #0b2a5b;
   }
-  /* 6) ตำแหน่ง */
   .sign-role {
     margin: 3px 0 0;
     font-size: 12px;
@@ -301,100 +334,98 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
     margin-top: 8px;
     font-size: 11px;
     color: #94a3b8;
-    max-width: 520px;
+    max-width: 480px;
   }
 
+  /* QR — การ์ดบนมุมคลื่น โทนกรมท่า+ทอง */
   .qr-box {
     position: absolute;
-    right: 40px;
-    bottom: 40px;
-    z-index: 3;
-    background: linear-gradient(180deg, #ffffff, #f8fafc);
-    border: 1.5px solid rgba(196, 163, 90, 0.55);
-    border-radius: 14px;
-    padding: 8px 8px 6px;
+    right: 28px;
+    bottom: 28px;
+    z-index: 4;
+    width: 132px;
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    border: 2px solid #c4a35a;
+    box-shadow:
+      0 10px 28px rgba(11, 42, 91, 0.28),
+      0 0 0 3px rgba(255, 255, 255, 0.9);
     text-align: center;
-    box-shadow: 0 8px 22px rgba(11, 42, 91, 0.16);
   }
-  .qr-box--empty {
-    min-width: 110px;
-    padding: 10px 12px;
-  }
-  .qr-img {
-    width: 92px;
-    height: 92px;
-    display: block;
-    margin: 0 auto;
-  }
-  .qr-label {
-    margin: 4px 0 0;
+  .qr-box-head {
+    background: #0b2a5b;
+    color: #fff;
     font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 6px 8px 5px;
+    line-height: 1.2;
+  }
+  .qr-box-body {
+    padding: 10px 10px 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  }
+  .qr-frame {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 6px;
+    padding: 5px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 0 0 2px #0b2a5b;
+  }
+  .qr-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 4px;
+  }
+  .qr-label {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
     color: #0b2a5b;
   }
   .qr-code {
-    margin: 1px 0 0;
-    font-size: 9px;
+    margin: 2px 0 0;
+    font-size: 8px;
     color: #94a3b8;
     letter-spacing: 0.02em;
-    max-width: 110px;
+    max-width: 112px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .qr-box--empty .qr-box-body {
+    padding: 14px 10px;
   }
 </style>
 </head>
 <body>
   <div id="lms-cert-root">
-    <div class="edge-frame" aria-hidden="true"></div>
+    <div class="edge-outer" aria-hidden="true"></div>
+    <div class="edge-inner" aria-hidden="true"></div>
 
-    <svg class="trophy trophy--left" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="tgL" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#c4a35a"/>
-          <stop offset="55%" stop-color="#8b7340"/>
-          <stop offset="100%" stop-color="#0b2a5b"/>
-        </linearGradient>
-      </defs>
-      <path fill="url(#tgL)" d="M35 18h50v8H35zm8 8h34c2 18 8 28 17 34-6 4-10 10-10 18v6H36v-6c0-8-4-14-10-18 9-6 15-16 17-34zm-3 66h40v8H40zm6 8h28l4 22H42z"/>
-      <path fill="url(#tgL)" d="M28 26c-10 2-18 12-18 24 0 10 6 18 14 20 2-8 6-14 10-18V26zm64 0v26c4 4 8 10 10 18 8-2 14-10 14-20 0-12-8-22-18-24z"/>
-    </svg>
-    <svg class="trophy trophy--right" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="tgR" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#c4a35a"/>
-          <stop offset="55%" stop-color="#8b7340"/>
-          <stop offset="100%" stop-color="#0b2a5b"/>
-        </linearGradient>
-      </defs>
-      <path fill="url(#tgR)" d="M35 18h50v8H35zm8 8h34c2 18 8 28 17 34-6 4-10 10-10 18v6H36v-6c0-8-4-14-10-18 9-6 15-16 17-34zm-3 66h40v8H40zm6 8h28l4 22H42z"/>
-      <path fill="url(#tgR)" d="M28 26c-10 2-18 12-18 24 0 10 6 18 14 20 2-8 6-14 10-18V26zm64 0v26c4 4 8 10 10 18 8-2 14-10 14-20 0-12-8-22-18-24z"/>
-    </svg>
+    <img class="trophy trophy--left" src="${TROPHY_IMG}" alt="" />
+    <img class="trophy trophy--right" src="${TROPHY_IMG}" alt="" />
 
-    <svg class="wave wave--left" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="wgL" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#5b61ff"/>
-          <stop offset="45%" stop-color="#1e3a6e"/>
-          <stop offset="100%" stop-color="#0b2a5b"/>
-        </linearGradient>
-      </defs>
-      <path fill="url(#wgL)" opacity="0.92" d="M0 220V72c30 8 52 30 78 56 24 24 52 52 96 62 20 4 40 8 62 8H0z"/>
-      <path fill="#0b2a5b" opacity="0.85" d="M0 220V118c24 6 42 20 64 40 20 18 44 36 78 44 16 4 32 6 48 6H0z"/>
-      <path fill="#c4a35a" opacity="0.55" d="M0 220V168c18 4 32 14 50 26 16 12 36 24 62 28 12 2 24 4 36 4H0z"/>
-    </svg>
-    <svg class="wave wave--right" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="wgR" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#5b61ff"/>
-          <stop offset="45%" stop-color="#1e3a6e"/>
-          <stop offset="100%" stop-color="#0b2a5b"/>
-        </linearGradient>
-      </defs>
-      <path fill="url(#wgR)" opacity="0.92" d="M0 220V72c30 8 52 30 78 56 24 24 52 52 96 62 20 4 40 8 62 8H0z"/>
-      <path fill="#0b2a5b" opacity="0.85" d="M0 220V118c24 6 42 20 64 40 20 18 44 36 78 44 16 4 32 6 48 6H0z"/>
-      <path fill="#c4a35a" opacity="0.55" d="M0 220V168c18 4 32 14 50 26 16 12 36 24 62 28 12 2 24 4 36 4H0z"/>
-    </svg>
+    <div class="wave wave--left" aria-hidden="true">
+      <div class="wave-base"></div>
+      <div class="wave-mid"></div>
+      <div class="wave-top"></div>
+      <div class="wave-gold"></div>
+    </div>
+    <div class="wave wave--right" aria-hidden="true">
+      <div class="wave-base"></div>
+      <div class="wave-mid"></div>
+      <div class="wave-top"></div>
+      <div class="wave-gold"></div>
+    </div>
 
     <div class="content">
       <div class="logo">${logoBlock}</div>
@@ -416,7 +447,10 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
       </div>
     </div>
 
-    ${qrBlock}
+    <div class="qr-box${qrDataUrl ? "" : " qr-box--empty"}">
+      <div class="qr-box-head">ตรวจสอบใบประกาศ</div>
+      <div class="qr-box-body">${qrInner}</div>
+    </div>
   </div>
 </body>
 </html>`;
