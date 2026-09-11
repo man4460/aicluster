@@ -354,29 +354,36 @@ export function buildLmsCertificateDocumentHtml(input: LmsCertificateHtmlInput):
 
   #lms-cert-root .qr-plain {
     position: absolute;
-    right: 44px;
-    bottom: 44px;
+    right: 36px;
+    bottom: 36px;
     z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     text-align: center;
   }
   #lms-cert-root .qr-img {
     width: 88px;
     height: 88px;
     display: block;
-    margin: 0 auto;
     background: #fff;
     border-radius: 6px;
+    flex-shrink: 0;
   }
+  /* พื้นเข้มใต้ข้อความ — กันครึ่งแถวขาว/กรมท่า + กันตัดบรรทัดไทย */
   #lms-cert-root .qr-hint {
-    margin: 5px 0 0;
-    font-size: 10px;
+    margin: 0;
+    padding: 4px 10px;
+    font-size: 11px;
     font-weight: 700;
+    line-height: 1.55;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(11, 42, 91, 0.55);
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    background: ${C.navy};
+    border-radius: 999px;
+    max-width: 120px;
     white-space: nowrap;
+    overflow: visible;
   }
 </style>
 </head>
