@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Car, CalendarClock, Filter, Landmark, ClipboardList, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Car, CalendarClock, Filter, Landmark, ClipboardList, Plus, TrendingUp, Wallet } from "lucide-react";
 import {
   AppEmptyState,
   AppImageThumb,
@@ -61,6 +61,7 @@ import {
   usedCarShowroomFilterChipShellClass,
   usedCarShowroomFinanceStatsGridClass,
   usedCarShowroomInlineSubNavBtnClass,
+  usedCarShowroomInlineSubNavShellClass,
   usedCarShowroomOutlineButtonClass,
   usedCarShowroomPageStackClass,
   usedCarShowroomPrimaryButtonClass,
@@ -924,6 +925,116 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
       </Link>
     );
 
+  const listFilterOpen =
+    tab === "stock"
+      ? stockFilterOpen
+      : tab === "reservations"
+        ? reserveFilterOpen
+        : tab === "appointments"
+          ? apptFilterOpen
+          : tab === "finance-pending"
+            ? financeFilterOpen
+            : false;
+  const listFiltersActive =
+    tab === "stock"
+      ? stockFiltersActive
+      : tab === "reservations"
+        ? reserveFiltersActive
+        : tab === "appointments"
+          ? apptFiltersActive
+          : tab === "finance-pending"
+            ? financeFiltersActive
+            : false;
+  const listFilterPanelId =
+    tab === "stock"
+      ? "ucs-stock-filter-panel"
+      : tab === "reservations"
+        ? "ucs-reservations-filter-panel"
+        : tab === "appointments"
+          ? "ucs-appointments-filter-panel"
+          : tab === "finance-pending"
+            ? "ucs-finance-pending-filter-panel"
+            : undefined;
+  const showListToolbar =
+    tab === "stock" ||
+    tab === "reservations" ||
+    tab === "appointments" ||
+    tab === "finance-pending";
+
+  function toggleListFilter() {
+    if (tab === "stock") setStockFilterOpen((o) => !o);
+    else if (tab === "reservations") setReserveFilterOpen((o) => !o);
+    else if (tab === "appointments") setApptFilterOpen((o) => !o);
+    else if (tab === "finance-pending") setFinanceFilterOpen((o) => !o);
+  }
+
+  const headerAction = (
+    <div className="flex shrink-0 flex-nowrap items-center gap-1">
+      {showListToolbar ? (
+        <div className={usedCarShowroomInlineSubNavShellClass}>
+          <button
+            type="button"
+            aria-expanded={listFilterOpen}
+            aria-controls={listFilterPanelId}
+            aria-label={listFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+            title={listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+            className={cn(
+              usedCarShowroomInlineSubNavBtnClass(listFilterOpen),
+              "relative",
+              listFiltersActive && !listFilterOpen && "ring-1 ring-amber-300/80",
+            )}
+            onClick={toggleListFilter}
+          >
+            <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">{listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+            {listFiltersActive && !listFilterOpen ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                aria-hidden
+              />
+            ) : null}
+          </button>
+          {tab === "stock" ? (
+            <Link
+              href={`${USED_CAR_SHOWROOM_MANAGE_PATH}?tab=vehicles`}
+              className={usedCarShowroomPrimaryButtonClass}
+              aria-label="เพิ่มรถ"
+              title="เพิ่มรถ"
+            >
+              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">+ เพิ่มรถ</span>
+            </Link>
+          ) : null}
+          {tab === "reservations" ? (
+            <button
+              type="button"
+              className={usedCarShowroomPrimaryButtonClass}
+              onClick={() => setReserveOpen(true)}
+              aria-label="จองให้ลูกค้า"
+              title="จองให้ลูกค้า"
+            >
+              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">จองให้ลูกค้า</span>
+            </button>
+          ) : null}
+          {tab === "appointments" ? (
+            <button
+              type="button"
+              className={usedCarShowroomPrimaryButtonClass}
+              onClick={() => setApptOpen(true)}
+              aria-label="นัดหมายใหม่"
+              title="นัดหมายใหม่"
+            >
+              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">นัดหมายใหม่</span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {backBtn}
+    </div>
+  );
+
   return (
     <div className={usedCarShowroomPageStackClass}>
       {notice.popup}
@@ -936,7 +1047,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         activeKey={tab}
         onSelect={(k) => setTab(k as UsedCarShowroomDashboardTabKey)}
         ariaLabel="เมนูย่อยแดชบอร์ด"
-        action={backBtn}
+        action={headerAction}
       >
         {tab === "overview" ? (
           <div className="space-y-4">
@@ -1079,37 +1190,6 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
         {tab === "stock" ? (
           <div className="space-y-3">
-            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
-              <button
-                type="button"
-                aria-expanded={stockFilterOpen}
-                aria-controls="ucs-stock-filter-panel"
-                aria-label={stockFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={stockFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  usedCarShowroomInlineSubNavBtnClass(stockFilterOpen),
-                  "relative",
-                  stockFiltersActive && !stockFilterOpen && "ring-1 ring-amber-300/80",
-                )}
-                onClick={() => setStockFilterOpen((o) => !o)}
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">{stockFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {stockFiltersActive && !stockFilterOpen ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-              <Link
-                href={`${USED_CAR_SHOWROOM_MANAGE_PATH}?tab=vehicles`}
-                className={usedCarShowroomPrimaryButtonClass}
-              >
-                + เพิ่มรถ
-              </Link>
-            </div>
-
             <div
               id="ucs-stock-filter-panel"
               className={cn("space-y-3", stockFilterOpen ? "block" : "hidden")}
@@ -1258,38 +1338,6 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
         {tab === "reservations" ? (
           <div className="space-y-3">
-            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
-              <button
-                type="button"
-                aria-expanded={reserveFilterOpen}
-                aria-controls="ucs-reservations-filter-panel"
-                aria-label={reserveFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={reserveFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  usedCarShowroomInlineSubNavBtnClass(reserveFilterOpen),
-                  "relative",
-                  reserveFiltersActive && !reserveFilterOpen && "ring-1 ring-amber-300/80",
-                )}
-                onClick={() => setReserveFilterOpen((o) => !o)}
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">{reserveFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {reserveFiltersActive && !reserveFilterOpen ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-              <button
-                type="button"
-                className={usedCarShowroomPrimaryButtonClass}
-                onClick={() => setReserveOpen(true)}
-              >
-                จองให้ลูกค้า
-              </button>
-            </div>
-
             <div
               id="ucs-reservations-filter-panel"
               className={cn("space-y-3", reserveFilterOpen ? "block" : "hidden")}
@@ -1410,34 +1458,6 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
         {tab === "appointments" ? (
           <div className="space-y-3">
-            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
-              <button
-                type="button"
-                aria-expanded={apptFilterOpen}
-                aria-controls="ucs-appointments-filter-panel"
-                aria-label={apptFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={apptFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  usedCarShowroomInlineSubNavBtnClass(apptFilterOpen),
-                  "relative",
-                  apptFiltersActive && !apptFilterOpen && "ring-1 ring-amber-300/80",
-                )}
-                onClick={() => setApptFilterOpen((o) => !o)}
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">{apptFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {apptFiltersActive && !apptFilterOpen ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-              <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => setApptOpen(true)}>
-                นัดหมายใหม่
-              </button>
-            </div>
-
             <div
               id="ucs-appointments-filter-panel"
               className={cn("space-y-3", apptFilterOpen ? "block" : "hidden")}
@@ -1634,31 +1654,6 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
         {tab === "finance-pending" ? (
           <div className="space-y-3">
-            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
-              <button
-                type="button"
-                aria-expanded={financeFilterOpen}
-                aria-controls="ucs-finance-pending-filter-panel"
-                aria-label={financeFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={financeFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  usedCarShowroomInlineSubNavBtnClass(financeFilterOpen),
-                  "relative",
-                  financeFiltersActive && !financeFilterOpen && "ring-1 ring-amber-300/80",
-                )}
-                onClick={() => setFinanceFilterOpen((o) => !o)}
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">{financeFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {financeFiltersActive && !financeFilterOpen ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-            </div>
-
             <div
               id="ucs-finance-pending-filter-panel"
               className={cn("space-y-3", financeFilterOpen ? "block" : "hidden")}
