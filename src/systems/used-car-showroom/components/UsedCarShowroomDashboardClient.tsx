@@ -244,8 +244,8 @@ function baht(n: number) {
   return `฿${n.toLocaleString("th-TH")}`;
 }
 
-/** จำนวนรถต่อหน้าในแท็บสต็อก */
-const STOCK_PAGE_SIZE = 10;
+/** จำนวนรายการต่อหน้าในแท็บสต็อก / นัดหมาย / ไฟแนนซ์รอ */
+const LIST_PAGE_SIZE = 10;
 
 export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: UsedCarShopDto }) {
   const router = useRouter();
@@ -278,6 +278,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [stockSaving, setStockSaving] = useState(false);
   const [stockUploading, setStockUploading] = useState(false);
   const [stockPage, setStockPage] = useState(0);
+  const [apptPage, setApptPage] = useState(0);
+  const [financePage, setFinancePage] = useState(0);
   const [stockFilterOpen, setStockFilterOpen] = useState(true);
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("ALL");
   const [stockKeyword, setStockKeyword] = useState("");
@@ -425,11 +427,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     return counts;
   }, [stockBaseVehicles]);
 
-  const stockTotalPages = Math.max(1, Math.ceil(stockVehicles.length / STOCK_PAGE_SIZE));
+  const stockTotalPages = Math.max(1, Math.ceil(stockVehicles.length / LIST_PAGE_SIZE));
   const stockSafePage = Math.min(stockPage, stockTotalPages - 1);
   const stockPageVehicles = useMemo(() => {
-    const start = stockSafePage * STOCK_PAGE_SIZE;
-    return stockVehicles.slice(start, start + STOCK_PAGE_SIZE);
+    const start = stockSafePage * LIST_PAGE_SIZE;
+    return stockVehicles.slice(start, start + LIST_PAGE_SIZE);
   }, [stockVehicles, stockSafePage]);
 
   useEffect(() => {
@@ -540,6 +542,42 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
       );
   }, [filteredAppointments]);
 
+  /** ลำดับแสดง: วันนี้ → ล่วงหน้า → ที่ผ่านมา — แล้วค่อยแบ่งหน้า */
+  const appointmentsOrdered = useMemo(
+    () => [...appointmentsToday, ...appointmentsUpcoming, ...appointmentsPast],
+    [appointmentsToday, appointmentsUpcoming, appointmentsPast],
+  );
+
+  const apptTotalPages = Math.max(1, Math.ceil(appointmentsOrdered.length / LIST_PAGE_SIZE));
+  const apptSafePage = Math.min(apptPage, apptTotalPages - 1);
+  const apptPageItems = useMemo(() => {
+    const start = apptSafePage * LIST_PAGE_SIZE;
+    return appointmentsOrdered.slice(start, start + LIST_PAGE_SIZE);
+  }, [appointmentsOrdered, apptSafePage]);
+
+  const apptPageToday = useMemo(() => {
+    const ids = new Set(appointmentsToday.map((a) => a.id));
+    return apptPageItems.filter((a) => ids.has(a.id));
+  }, [apptPageItems, appointmentsToday]);
+
+  const apptPageUpcoming = useMemo(() => {
+    const ids = new Set(appointmentsUpcoming.map((a) => a.id));
+    return apptPageItems.filter((a) => ids.has(a.id));
+  }, [apptPageItems, appointmentsUpcoming]);
+
+  const apptPagePast = useMemo(() => {
+    const ids = new Set(appointmentsPast.map((a) => a.id));
+    return apptPageItems.filter((a) => ids.has(a.id));
+  }, [apptPageItems, appointmentsPast]);
+
+  useEffect(() => {
+    setApptPage(0);
+  }, [apptStatusFilter, apptKeyword, tab]);
+
+  useEffect(() => {
+    setApptPage((p) => Math.min(p, Math.max(0, apptTotalPages - 1)));
+  }, [apptTotalPages]);
+
   const pendingFinanceBase = useMemo(
     () =>
       financeCases.filter((c) =>
@@ -577,6 +615,21 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     }
     return counts;
   }, [pendingFinanceBase]);
+
+  const financeTotalPages = Math.max(1, Math.ceil(pendingFinance.length / LIST_PAGE_SIZE));
+  const financeSafePage = Math.min(financePage, financeTotalPages - 1);
+  const financePageItems = useMemo(() => {
+    const start = financeSafePage * LIST_PAGE_SIZE;
+    return pendingFinance.slice(start, start + LIST_PAGE_SIZE);
+  }, [pendingFinance, financeSafePage]);
+
+  useEffect(() => {
+    setFinancePage(0);
+  }, [financeStatusFilter, financeKeyword, tab]);
+
+  useEffect(() => {
+    setFinancePage((p) => Math.min(p, Math.max(0, financeTotalPages - 1)));
+  }, [financeTotalPages]);
 
   function clearApptFilters() {
     setApptStatusFilter("ALL");
@@ -1273,8 +1326,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
             ) : (
               <>
                 <p className="text-[11px] font-semibold text-[#66638c]">
-                  หน้านี้ {stockSafePage * STOCK_PAGE_SIZE + 1}–
-                  {Math.min((stockSafePage + 1) * STOCK_PAGE_SIZE, stockVehicles.length)} จาก{" "}
+                  หน้านี้ {stockSafePage * LIST_PAGE_SIZE + 1}–
+                  {Math.min((stockSafePage + 1) * LIST_PAGE_SIZE, stockVehicles.length)} จาก{" "}
                   {stockVehicles.length} คัน
                 </p>
                 <ul className="space-y-2">
@@ -1572,14 +1625,18 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
             {appointments.length === 0 ? (
               <AppEmptyState>ยังไม่มีนัดหมาย</AppEmptyState>
-            ) : appointmentsToday.length === 0 &&
-              appointmentsUpcoming.length === 0 &&
-              appointmentsPast.length === 0 ? (
+            ) : appointmentsOrdered.length === 0 ? (
               <AppEmptyState>ไม่พบนัดหมายตามตัวกรอง</AppEmptyState>
             ) : (
               <div className="space-y-4">
-                <section className="space-y-2" aria-labelledby="ucs-appt-today-heading">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold text-[#66638c]">
+                  หน้านี้ {apptSafePage * LIST_PAGE_SIZE + 1}–
+                  {Math.min((apptSafePage + 1) * LIST_PAGE_SIZE, appointmentsOrdered.length)} จาก{" "}
+                  {appointmentsOrdered.length} นัด
+                </p>
+
+                {apptPageToday.length > 0 ? (
+                  <section className="space-y-2" aria-labelledby="ucs-appt-today-heading">
                     <h3 id="ucs-appt-today-heading" className={usedCarShowroomSectionHeadingClass}>
                       <span
                         className={usedCarShowroomCardIconTileClass("amber")}
@@ -1590,12 +1647,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       วันนี้
                       <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsToday.length})</span>
                     </h3>
-                  </div>
-                  {appointmentsToday.length === 0 ? (
-                    <AppEmptyState>วันนี้ยังไม่มีนัดหมาย</AppEmptyState>
-                  ) : (
                     <ul className="space-y-2">
-                      {appointmentsToday.map((a) => (
+                      {apptPageToday.map((a) => (
                         <li key={a.id} className={usedCarShowroomTonedRowCardClass("amber")}>
                           <button
                             type="button"
@@ -1618,11 +1671,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                         </li>
                       ))}
                     </ul>
-                  )}
-                </section>
+                  </section>
+                ) : null}
 
-                <section className="space-y-2" aria-labelledby="ucs-appt-upcoming-heading">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                {apptPageUpcoming.length > 0 ? (
+                  <section className="space-y-2" aria-labelledby="ucs-appt-upcoming-heading">
                     <h3 id="ucs-appt-upcoming-heading" className={usedCarShowroomSectionHeadingClass}>
                       <span
                         className={usedCarShowroomCardIconTileClass("cyan")}
@@ -1633,12 +1686,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       กำหนดที่ยังไม่ถึง
                       <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsUpcoming.length})</span>
                     </h3>
-                  </div>
-                  {appointmentsUpcoming.length === 0 ? (
-                    <AppEmptyState>ยังไม่มีนัดล่วงหน้า</AppEmptyState>
-                  ) : (
                     <ul className="space-y-2">
-                      {appointmentsUpcoming.map((a) => (
+                      {apptPageUpcoming.map((a) => (
                         <li key={a.id} className={usedCarShowroomTonedRowCardClass("cyan")}>
                           <button
                             type="button"
@@ -1661,10 +1710,10 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                         </li>
                       ))}
                     </ul>
-                  )}
-                </section>
+                  </section>
+                ) : null}
 
-                {appointmentsPast.length > 0 ? (
+                {apptPagePast.length > 0 ? (
                   <section className="space-y-2" aria-labelledby="ucs-appt-past-heading">
                     <h3 id="ucs-appt-past-heading" className={usedCarShowroomSectionHeadingClass}>
                       <span
@@ -1677,7 +1726,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsPast.length})</span>
                     </h3>
                     <ul className="space-y-2">
-                      {appointmentsPast.map((a) => (
+                      {apptPagePast.map((a) => (
                         <li key={a.id} className={usedCarShowroomTonedRowCardClass("slate")}>
                           <button
                             type="button"
@@ -1701,6 +1750,32 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       ))}
                     </ul>
                   </section>
+                ) : null}
+
+                {apptTotalPages > 1 ? (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={apptSafePage <= 0}
+                      onClick={() => setApptPage((p) => Math.max(0, p - 1))}
+                      aria-label="หน้าก่อนหน้า"
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <p className="text-xs font-semibold text-[#66638c]" aria-live="polite">
+                      หน้า {apptSafePage + 1} / {apptTotalPages}
+                    </p>
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={apptSafePage >= apptTotalPages - 1}
+                      onClick={() => setApptPage((p) => Math.min(apptTotalPages - 1, p + 1))}
+                      aria-label="หน้าถัดไป"
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
                 ) : null}
               </div>
             )}
@@ -1789,19 +1864,51 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
             ) : pendingFinance.length === 0 ? (
               <AppEmptyState>ไม่พบเคสตามตัวกรอง</AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {pendingFinance.map((c) => (
-                  <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-[#1e1b4b]">{c.vehicleTitle ?? c.id.slice(0, 8)}</p>
-                      <p className="text-xs text-[#66638c]">
-                        {usedCarFinanceCaseStatusLabel(c.status)}
-                        {c.companyName ? ` · ${c.companyName}` : ""} · ยอดจัด {baht(c.financedAmountBaht)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="text-[11px] font-semibold text-[#66638c]">
+                  หน้านี้ {financeSafePage * LIST_PAGE_SIZE + 1}–
+                  {Math.min((financeSafePage + 1) * LIST_PAGE_SIZE, pendingFinance.length)} จาก{" "}
+                  {pendingFinance.length} เคส
+                </p>
+                <ul className="space-y-2">
+                  {financePageItems.map((c) => (
+                    <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-[#1e1b4b]">{c.vehicleTitle ?? c.id.slice(0, 8)}</p>
+                        <p className="text-xs text-[#66638c]">
+                          {usedCarFinanceCaseStatusLabel(c.status)}
+                          {c.companyName ? ` · ${c.companyName}` : ""} · ยอดจัด {baht(c.financedAmountBaht)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {financeTotalPages > 1 ? (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={financeSafePage <= 0}
+                      onClick={() => setFinancePage((p) => Math.max(0, p - 1))}
+                      aria-label="หน้าก่อนหน้า"
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <p className="text-xs font-semibold text-[#66638c]" aria-live="polite">
+                      หน้า {financeSafePage + 1} / {financeTotalPages}
+                    </p>
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={financeSafePage >= financeTotalPages - 1}
+                      onClick={() => setFinancePage((p) => Math.min(financeTotalPages - 1, p + 1))}
+                      aria-label="หน้าถัดไป"
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
         ) : null}
