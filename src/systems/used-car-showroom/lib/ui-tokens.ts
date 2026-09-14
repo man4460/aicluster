@@ -44,6 +44,14 @@ export const usedCarShowroomFieldClass = cn(
   "px-3 text-sm font-semibold leading-none text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
 );
 
+/** ช่องค้นหาแถวเดียวกับชิปกรอง (เดสก์ท็อป) — ไม่ใช้ w-full */
+export const usedCarShowroomInlineSearchFieldClass = cn(
+  "app-input box-border w-44 min-w-0 shrink-0 lg:w-52",
+  usedCarShowroomBtnHeightClass,
+  usedCarShowroomBtnRadiusClass,
+  "px-3 text-sm font-semibold leading-none text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
+);
+
 export const usedCarShowroomTextareaClass = cn(
   "app-input box-border w-full min-h-[5.5rem] resize-y px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
   usedCarShowroomBtnRadiusClass,

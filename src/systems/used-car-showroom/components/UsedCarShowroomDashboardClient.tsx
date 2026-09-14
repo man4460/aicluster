@@ -60,6 +60,7 @@ import {
   usedCarShowroomFilterChipClass,
   usedCarShowroomFilterChipShellClass,
   usedCarShowroomFinanceStatsGridClass,
+  usedCarShowroomInlineSearchFieldClass,
   usedCarShowroomInlineSubNavBtnClass,
   usedCarShowroomInlineSubNavShellClass,
   usedCarShowroomOutlineButtonClass,
@@ -961,6 +962,41 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     tab === "appointments" ||
     tab === "finance-pending";
 
+  const listKeyword =
+    tab === "stock"
+      ? stockKeyword
+      : tab === "reservations"
+        ? reserveKeyword
+        : tab === "appointments"
+          ? apptKeyword
+          : tab === "finance-pending"
+            ? financeKeyword
+            : "";
+  const listKeywordPlaceholder =
+    tab === "stock"
+      ? "ยี่ห้อ · รุ่น · ทะเบียน"
+      : tab === "reservations"
+        ? "ชื่อ · เบอร์ · รถ"
+        : tab === "appointments"
+          ? "ชื่อ · เบอร์ · รถ"
+          : tab === "finance-pending"
+            ? "รถ · บริษัท · หมายเหตุ"
+            : "";
+
+  function setListKeyword(value: string) {
+    if (tab === "stock") setStockKeyword(value);
+    else if (tab === "reservations") setReserveKeyword(value);
+    else if (tab === "appointments") setApptKeyword(value);
+    else if (tab === "finance-pending") setFinanceKeyword(value);
+  }
+
+  function clearListFilters() {
+    if (tab === "stock") clearStockFilters();
+    else if (tab === "reservations") clearReserveFilters();
+    else if (tab === "appointments") clearApptFilters();
+    else if (tab === "finance-pending") clearFinanceFilters();
+  }
+
   function toggleListFilter() {
     if (tab === "stock") setStockFilterOpen((o) => !o);
     else if (tab === "reservations") setReserveFilterOpen((o) => !o);
@@ -969,67 +1005,88 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   }
 
   const headerAction = (
-    <div className="flex shrink-0 flex-nowrap items-center gap-1">
+    <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1">
       {showListToolbar ? (
-        <div className={usedCarShowroomInlineSubNavShellClass}>
-          <button
-            type="button"
-            aria-expanded={listFilterOpen}
-            aria-controls={listFilterPanelId}
-            aria-label={listFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-            title={listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-            className={cn(
-              usedCarShowroomInlineSubNavBtnClass(listFilterOpen),
-              "relative",
-              listFiltersActive && !listFilterOpen && "ring-1 ring-amber-300/80",
-            )}
-            onClick={toggleListFilter}
-          >
-            <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">{listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-            {listFiltersActive && !listFilterOpen ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
-                aria-hidden
-              />
+        <>
+          {/* เดสก์ท็อป: ช่องค้นหาแถวเดียวกับปุ่มกรอง/เพิ่ม ตามรูป */}
+          <input
+            id={`ucs-${tab}-kw-desk`}
+            type="search"
+            className={cn(usedCarShowroomInlineSearchFieldClass, "hidden sm:block")}
+            placeholder={listKeywordPlaceholder}
+            value={listKeyword}
+            onChange={(e) => setListKeyword(e.target.value)}
+            aria-label="ค้นหา"
+          />
+          {listFiltersActive ? (
+            <button
+              type="button"
+              className={cn(usedCarShowroomOutlineButtonClass, "hidden sm:inline-flex")}
+              onClick={clearListFilters}
+            >
+              ล้างกรอง
+            </button>
+          ) : null}
+          <div className={usedCarShowroomInlineSubNavShellClass}>
+            <button
+              type="button"
+              aria-expanded={listFilterOpen}
+              aria-controls={listFilterPanelId}
+              aria-label={listFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+              title={listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+              className={cn(
+                usedCarShowroomInlineSubNavBtnClass(listFilterOpen),
+                "relative",
+                listFiltersActive && !listFilterOpen && "ring-1 ring-amber-300/80",
+              )}
+              onClick={toggleListFilter}
+            >
+              <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">{listFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+              {listFiltersActive && !listFilterOpen ? (
+                <span
+                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                  aria-hidden
+                />
+              ) : null}
+            </button>
+            {tab === "stock" ? (
+              <Link
+                href={`${USED_CAR_SHOWROOM_MANAGE_PATH}?tab=vehicles`}
+                className={usedCarShowroomPrimaryButtonClass}
+                aria-label="เพิ่มรถ"
+                title="เพิ่มรถ"
+              >
+                <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">+ เพิ่มรถ</span>
+              </Link>
             ) : null}
-          </button>
-          {tab === "stock" ? (
-            <Link
-              href={`${USED_CAR_SHOWROOM_MANAGE_PATH}?tab=vehicles`}
-              className={usedCarShowroomPrimaryButtonClass}
-              aria-label="เพิ่มรถ"
-              title="เพิ่มรถ"
-            >
-              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">+ เพิ่มรถ</span>
-            </Link>
-          ) : null}
-          {tab === "reservations" ? (
-            <button
-              type="button"
-              className={usedCarShowroomPrimaryButtonClass}
-              onClick={() => setReserveOpen(true)}
-              aria-label="จองให้ลูกค้า"
-              title="จองให้ลูกค้า"
-            >
-              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">จองให้ลูกค้า</span>
-            </button>
-          ) : null}
-          {tab === "appointments" ? (
-            <button
-              type="button"
-              className={usedCarShowroomPrimaryButtonClass}
-              onClick={() => setApptOpen(true)}
-              aria-label="นัดหมายใหม่"
-              title="นัดหมายใหม่"
-            >
-              <Plus className="h-4 w-4 sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">นัดหมายใหม่</span>
-            </button>
-          ) : null}
-        </div>
+            {tab === "reservations" ? (
+              <button
+                type="button"
+                className={usedCarShowroomPrimaryButtonClass}
+                onClick={() => setReserveOpen(true)}
+                aria-label="จองให้ลูกค้า"
+                title="จองให้ลูกค้า"
+              >
+                <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">จองให้ลูกค้า</span>
+              </button>
+            ) : null}
+            {tab === "appointments" ? (
+              <button
+                type="button"
+                className={usedCarShowroomPrimaryButtonClass}
+                onClick={() => setApptOpen(true)}
+                aria-label="นัดหมายใหม่"
+                title="นัดหมายใหม่"
+              >
+                <Plus className="h-4 w-4 sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">นัดหมายใหม่</span>
+              </button>
+            ) : null}
+          </div>
+        </>
       ) : null}
       {backBtn}
     </div>
@@ -1221,8 +1278,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-stock-kw">
+              <div className="flex flex-col gap-3 sm:hidden">
+                <label className="min-w-0 flex-1" htmlFor="ucs-stock-kw">
                   <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
                   <input
                     id="ucs-stock-kw"
@@ -1369,8 +1426,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-reserve-kw">
+              <div className="flex flex-col gap-3 sm:hidden">
+                <label className="min-w-0 flex-1" htmlFor="ucs-reserve-kw">
                   <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
                   <input
                     id="ucs-reserve-kw"
@@ -1489,8 +1546,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-appt-kw">
+              <div className="flex flex-col gap-3 sm:hidden">
+                <label className="min-w-0 flex-1" htmlFor="ucs-appt-kw">
                   <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
                   <input
                     id="ucs-appt-kw"
@@ -1685,8 +1742,8 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-finance-kw">
+              <div className="flex flex-col gap-3 sm:hidden">
+                <label className="min-w-0 flex-1" htmlFor="ucs-finance-kw">
                   <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
                   <input
                     id="ucs-finance-kw"

@@ -76,8 +76,8 @@ export function UsedCarShowroomPageSubNav({
   return (
     <div className={cn(usedCarShowroomPanelClass, className)}>
       <div className={cn(usedCarShowroomPanelSectionClass, "print:hidden")}>
-        <div className="flex flex-nowrap items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
             {titleIcon ? (
               <span className={usedCarShowroomCardIconTileClass(titleTone)} aria-hidden>
                 {titleIcon}
@@ -103,7 +103,7 @@ export function UsedCarShowroomPageSubNav({
           </div>
 
           <div
-            className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+            className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
             role="group"
             aria-label={ariaLabel ?? "เครื่องมือหน้า"}
           >

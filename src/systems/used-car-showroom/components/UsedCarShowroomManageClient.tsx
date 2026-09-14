@@ -43,6 +43,7 @@ import {
   usedCarShowroomFieldClass,
   usedCarShowroomFilterChipClass,
   usedCarShowroomFilterChipShellClass,
+  usedCarShowroomInlineSearchFieldClass,
   usedCarShowroomInlineSubNavBtnClass,
   usedCarShowroomOutlineButtonClass,
   usedCarShowroomPageStackClass,
@@ -647,6 +648,24 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
 
   const headerAction = (
     <div className="flex shrink-0 flex-nowrap items-center gap-1">
+      <input
+        id={`used-car-kw-${tab}-desk`}
+        type="search"
+        className={cn(usedCarShowroomInlineSearchFieldClass, "hidden sm:block")}
+        placeholder="ชื่อ · เบอร์ · คำสำคัญ"
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        aria-label="ค้นหา"
+      />
+      {filtersActive ? (
+        <button
+          type="button"
+          className={cn(usedCarShowroomOutlineButtonClass, "hidden sm:inline-flex")}
+          onClick={clearFilters}
+        >
+          ล้างกรอง
+        </button>
+      ) : null}
       <button
         type="button"
         aria-expanded={filterOpen}
@@ -766,8 +785,8 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
       {tab === "staff" || tab === "promotions" || tab === "finance-companies"
         ? renderStatusChips("active")
         : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor={`used-car-kw-${tab}`}>
+      <div className="flex flex-col gap-3 sm:hidden">
+        <label className="min-w-0 flex-1" htmlFor={`used-car-kw-${tab}`}>
           <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
           <input
             id={`used-car-kw-${tab}`}
