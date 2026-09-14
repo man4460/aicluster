@@ -136,6 +136,9 @@ function matchKw(hay: string, kw: string) {
   return hay.toLowerCase().includes(kw.trim().toLowerCase());
 }
 
+/** จำนวนรายการต่อหน้าในแท็บการจัดการ */
+const LIST_PAGE_SIZE = 10;
+
 const emptyVehicleForm = {
   brand: "",
   model: "",
@@ -224,6 +227,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
   const [filterOpen, setFilterOpen] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [keyword, setKeyword] = useState("");
+  const [listPage, setListPage] = useState(0);
 
   const [addOpen, setAddOpen] = useState(false);
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
@@ -259,6 +263,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     setFilterOpen(true);
     setStatusFilter("ALL");
     setKeyword("");
+    setListPage(0);
     setAddOpen(false);
     setEditId(null);
   }, [tab]);
@@ -347,7 +352,95 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     });
   }, [companies, statusFilter, keyword]);
 
+  const listTotal =
+    tab === "vehicles"
+      ? filteredVehicles.length
+      : tab === "pnl"
+        ? pnlRows.length
+        : tab === "customers"
+          ? filteredCustomers.length
+          : tab === "staff"
+            ? filteredStaff.length
+            : tab === "promotions"
+              ? filteredPromos.length
+              : filteredCompanies.length;
+
+  const listTotalPages = Math.max(1, Math.ceil(listTotal / LIST_PAGE_SIZE));
+  const listSafePage = Math.min(listPage, listTotalPages - 1);
+
+  useEffect(() => {
+    setListPage(0);
+  }, [statusFilter, keyword]);
+
+  useEffect(() => {
+    setListPage((p) => Math.min(p, Math.max(0, listTotalPages - 1)));
+  }, [listTotalPages]);
+
+  const pageVehicles = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return filteredVehicles.slice(start, start + LIST_PAGE_SIZE);
+  }, [filteredVehicles, listSafePage]);
+  const pagePnl = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return pnlRows.slice(start, start + LIST_PAGE_SIZE);
+  }, [pnlRows, listSafePage]);
+  const pageCustomers = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return filteredCustomers.slice(start, start + LIST_PAGE_SIZE);
+  }, [filteredCustomers, listSafePage]);
+  const pageStaff = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return filteredStaff.slice(start, start + LIST_PAGE_SIZE);
+  }, [filteredStaff, listSafePage]);
+  const pagePromos = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return filteredPromos.slice(start, start + LIST_PAGE_SIZE);
+  }, [filteredPromos, listSafePage]);
+  const pageCompanies = useMemo(() => {
+    const start = listSafePage * LIST_PAGE_SIZE;
+    return filteredCompanies.slice(start, start + LIST_PAGE_SIZE);
+  }, [filteredCompanies, listSafePage]);
+
   const selected = editId ? vehicles.find((v) => v.id === editId) ?? null : null;
+
+  function listRangeText(unit: string) {
+    if (listTotal === 0) return null;
+    return (
+      <p className="text-[11px] font-semibold text-[#66638c]">
+        หน้านี้ {listSafePage * LIST_PAGE_SIZE + 1}–
+        {Math.min((listSafePage + 1) * LIST_PAGE_SIZE, listTotal)} จาก {listTotal} {unit}
+      </p>
+    );
+  }
+
+  function listPager() {
+    if (listTotalPages <= 1) return null;
+    return (
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <button
+          type="button"
+          className={usedCarShowroomOutlineButtonClass}
+          disabled={listSafePage <= 0}
+          onClick={() => setListPage((p) => Math.max(0, p - 1))}
+          aria-label="หน้าก่อนหน้า"
+        >
+          ก่อนหน้า
+        </button>
+        <p className="text-xs font-semibold text-[#66638c]" aria-live="polite">
+          หน้า {listSafePage + 1} / {listTotalPages}
+        </p>
+        <button
+          type="button"
+          className={usedCarShowroomOutlineButtonClass}
+          disabled={listSafePage >= listTotalPages - 1}
+          onClick={() => setListPage((p) => Math.min(listTotalPages - 1, p + 1))}
+          aria-label="หน้าถัดไป"
+        >
+          ถัดไป
+        </button>
+      </div>
+    );
+  }
 
   function resetAddForms() {
     setVehicleForm(emptyVehicleForm);
@@ -842,86 +935,90 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 {vehicles.length === 0 ? "ยังไม่มีรถ — กดเพิ่มรถเพื่อรับซื้อเข้าสต็อก" : "ไม่พบรถตามตัวกรอง"}
               </AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {filteredVehicles.map((v) => {
-                  const tone = usedCarVehicleStatusTone(v.status);
-                  return (
-                    <li key={v.id} className={usedCarShowroomTonedRowCardClass(tone)}>
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        {v.coverImageUrl ? (
-                          <AppImageThumb
-                            src={v.coverImageUrl}
-                            alt={v.title}
-                            className="h-14 w-14"
-                            onOpen={() => lb.open(v.coverImageUrl!)}
-                          />
-                        ) : (
-                          <span className={usedCarShowroomCardIconTileClass(tone, "lg")}>
-                            <Car className="h-6 w-6" aria-hidden />
-                          </span>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
-                          <p className="text-xs text-[#66638c]">
-                            {v.statusLabel} · ขาย {baht(v.askingPriceBaht)} · ทุน {baht(v.purchaseCostBaht)} ·
-                            ปรับสภาพ {baht(v.prepCostBaht)}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {VEHICLE_STATUSES.map((st) => (
-                              <button
-                                key={st}
-                                type="button"
-                                className={cn(
-                                  usedCarShowroomOutlineButtonClass,
-                                  "min-h-7 px-2 text-[10px]",
-                                  v.status === st && usedCarShowroomPrimaryButtonClass,
-                                )}
-                                onClick={() => void patchStatus(v.id, st)}
-                              >
-                                {usedCarVehicleStatusLabel(st)}
-                              </button>
-                            ))}
+              <div className="space-y-2">
+                {listRangeText("คัน")}
+                <ul className="space-y-2">
+                  {pageVehicles.map((v) => {
+                    const tone = usedCarVehicleStatusTone(v.status);
+                    return (
+                      <li key={v.id} className={usedCarShowroomTonedRowCardClass(tone)}>
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                          {v.coverImageUrl ? (
+                            <AppImageThumb
+                              src={v.coverImageUrl}
+                              alt={v.title}
+                              className="h-14 w-14"
+                              onOpen={() => lb.open(v.coverImageUrl!)}
+                            />
+                          ) : (
+                            <span className={usedCarShowroomCardIconTileClass(tone, "lg")}>
+                              <Car className="h-6 w-6" aria-hidden />
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
+                            <p className="text-xs text-[#66638c]">
+                              {v.statusLabel} · ขาย {baht(v.askingPriceBaht)} · ทุน {baht(v.purchaseCostBaht)} ·
+                              ปรับสภาพ {baht(v.prepCostBaht)}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {VEHICLE_STATUSES.map((st) => (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  className={cn(
+                                    usedCarShowroomOutlineButtonClass,
+                                    "min-h-7 px-2 text-[10px]",
+                                    v.status === st && usedCarShowroomPrimaryButtonClass,
+                                  )}
+                                  onClick={() => void patchStatus(v.id, st)}
+                                >
+                                  {usedCarVehicleStatusLabel(st)}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        {v.status === "FOR_SALE" || v.status === "RESERVED" ? (
+                        <div className="flex shrink-0 items-center gap-1">
+                          {v.status === "FOR_SALE" || v.status === "RESERVED" ? (
+                            <button
+                              type="button"
+                              className={cn(
+                                usedCarShowroomOutlineButtonClass,
+                                "min-h-[40px] px-2 text-[11px] font-bold text-emerald-700",
+                              )}
+                              aria-label={`บันทึกขาย ${v.title}`}
+                              title="บันทึกขาย"
+                              onClick={() => openSell(v)}
+                            >
+                              ขาย
+                            </button>
+                          ) : null}
                           <button
                             type="button"
-                            className={cn(
-                              usedCarShowroomOutlineButtonClass,
-                              "min-h-[40px] px-2 text-[11px] font-bold text-emerald-700",
-                            )}
-                            aria-label={`บันทึกขาย ${v.title}`}
-                            title="บันทึกขาย"
-                            onClick={() => openSell(v)}
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${v.title}`}
+                            title="แก้ไข"
+                            onClick={() => setEditId(v.id)}
                           >
-                            ขาย
+                            <IconRowEdit className="h-4 w-4" />
                           </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={assetRowEditIconButtonClass}
-                          aria-label={`แก้ไข ${v.title}`}
-                          title="แก้ไข"
-                          onClick={() => setEditId(v.id)}
-                        >
-                          <IconRowEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className={assetRowRemoveIconButtonClass}
-                          aria-label={`ลบ ${v.title}`}
-                          title="ลบ"
-                          onClick={() => void removeVehicle(v.id, v.title)}
-                        >
-                          <IconRowRemove className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${v.title}`}
+                            title="ลบ"
+                            onClick={() => void removeVehicle(v.id, v.title)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {listPager()}
+              </div>
             )
           ) : null}
 
@@ -1039,7 +1136,8 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
               </AppEmptyState>
             ) : (
               <div className="space-y-2">
-                {pnlRows.map((r) => (
+                {listRangeText("รายการ")}
+                {pagePnl.map((r) => (
                   <div
                     key={r.id}
                     className={usedCarShowroomTonedRowCardClass(r.profitBaht >= 0 ? "emerald" : "rose")}
@@ -1061,6 +1159,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                     </p>
                   </div>
                 ))}
+                {listPager()}
               </div>
             )
           ) : null}
@@ -1071,28 +1170,32 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 {customers.length === 0 ? "ยังไม่มีลูกค้า" : "ไม่พบลูกค้าตามตัวกรอง"}
               </AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {filteredCustomers.map((c) => (
-                  <li key={c.id} className={usedCarShowroomTonedRowCardClass("violet")}>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{c.fullName}</p>
-                      <p className="text-xs text-[#66638c]">
-                        {c.phone}
-                        {c.lineId ? ` · LINE ${c.lineId}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${c.fullName}`}
-                      title="ลบ"
-                      onClick={() => void removeRow("customers", c.id, c.fullName)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {listRangeText("คน")}
+                <ul className="space-y-2">
+                  {pageCustomers.map((c) => (
+                    <li key={c.id} className={usedCarShowroomTonedRowCardClass("violet")}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#1e1b4b]">{c.fullName}</p>
+                        <p className="text-xs text-[#66638c]">
+                          {c.phone}
+                          {c.lineId ? ` · LINE ${c.lineId}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${c.fullName}`}
+                        title="ลบ"
+                        onClick={() => void removeRow("customers", c.id, c.fullName)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
             )
           ) : null}
 
@@ -1102,28 +1205,32 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 {staff.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบพนักงานตามตัวกรอง"}
               </AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {filteredStaff.map((s) => (
-                  <li key={s.id} className={usedCarShowroomTonedRowCardClass("sky")}>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{s.fullName}</p>
-                      <p className="text-xs text-[#66638c]">
-                        {s.role} · {s.phone ?? "—"} · คอม {s.commissionPercent}% ·{" "}
-                        {s.isActive ? "ทำงาน" : "ปิด"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${s.fullName}`}
-                      title="ลบ"
-                      onClick={() => void removeRow("staff", s.id, s.fullName)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {listRangeText("คน")}
+                <ul className="space-y-2">
+                  {pageStaff.map((s) => (
+                    <li key={s.id} className={usedCarShowroomTonedRowCardClass("sky")}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#1e1b4b]">{s.fullName}</p>
+                        <p className="text-xs text-[#66638c]">
+                          {s.role} · {s.phone ?? "—"} · คอม {s.commissionPercent}% ·{" "}
+                          {s.isActive ? "ทำงาน" : "ปิด"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${s.fullName}`}
+                        title="ลบ"
+                        onClick={() => void removeRow("staff", s.id, s.fullName)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
             )
           ) : null}
 
@@ -1133,28 +1240,32 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 {promos.length === 0 ? "ยังไม่มีโปรโมชัน" : "ไม่พบโปรตามตัวกรอง"}
               </AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {filteredPromos.map((p) => (
-                  <li key={p.id} className={usedCarShowroomTonedRowCardClass("amber")}>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{p.title}</p>
-                      <p className="text-xs text-[#66638c]">
-                        {p.startsOn} → {p.endsOn} · {p.isActive ? "เปิด" : "ปิด"}
-                        {p.description ? ` · ${p.description}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${p.title}`}
-                      title="ลบ"
-                      onClick={() => void removeRow("promotions", p.id, p.title)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {listRangeText("รายการ")}
+                <ul className="space-y-2">
+                  {pagePromos.map((p) => (
+                    <li key={p.id} className={usedCarShowroomTonedRowCardClass("amber")}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#1e1b4b]">{p.title}</p>
+                        <p className="text-xs text-[#66638c]">
+                          {p.startsOn} → {p.endsOn} · {p.isActive ? "เปิด" : "ปิด"}
+                          {p.description ? ` · ${p.description}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${p.title}`}
+                        title="ลบ"
+                        onClick={() => void removeRow("promotions", p.id, p.title)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
             )
           ) : null}
 
@@ -1164,27 +1275,31 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 {companies.length === 0 ? "ยังไม่มีบริษัทไฟแนนซ์" : "ไม่พบรายการตามตัวกรอง"}
               </AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {filteredCompanies.map((c) => (
-                  <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{c.name}</p>
-                      <p className="text-xs text-[#66638c]">
-                        {c.contactName ?? "—"} · {c.contactPhone ?? "—"} · {c.isActive ? "ใช้งาน" : "ปิด"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${c.name}`}
-                      title="ลบ"
-                      onClick={() => void removeRow("finance-companies", c.id, c.name)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {listRangeText("รายการ")}
+                <ul className="space-y-2">
+                  {pageCompanies.map((c) => (
+                    <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#1e1b4b]">{c.name}</p>
+                        <p className="text-xs text-[#66638c]">
+                          {c.contactName ?? "—"} · {c.contactPhone ?? "—"} · {c.isActive ? "ใช้งาน" : "ปิด"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${c.name}`}
+                        title="ลบ"
+                        onClick={() => void removeRow("finance-companies", c.id, c.name)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
             )
           ) : null}
         </div>
