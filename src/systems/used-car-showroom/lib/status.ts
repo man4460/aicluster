@@ -133,3 +133,38 @@ export function usedCarReservationSourceLabel(source: string): string {
       return source;
   }
 }
+
+/** สถานะนัดดูรถ / ทดลองขับ */
+export const USED_CAR_APPOINTMENT_STATUSES = ["SCHEDULED", "DONE", "CANCELLED", "NO_SHOW"] as const;
+
+export type UsedCarAppointmentStatus = (typeof USED_CAR_APPOINTMENT_STATUSES)[number];
+
+export function usedCarAppointmentStatusLabel(status: string): string {
+  switch (status) {
+    case "SCHEDULED":
+      return "นัดแล้ว";
+    case "DONE":
+      return "มาแล้ว";
+    case "CANCELLED":
+      return "ยกเลิก";
+    case "NO_SHOW":
+      return "ไม่มา";
+    default:
+      return status;
+  }
+}
+
+export function usedCarAppointmentKindLabel(kind: string): string {
+  switch (kind) {
+    case "TEST_DRIVE":
+      return "ทดลองขับ";
+    case "VIEW":
+      return "ดูรถ";
+    default:
+      return kind;
+  }
+}
+
+export function isUsedCarAppointmentStatus(raw: unknown): raw is UsedCarAppointmentStatus {
+  return typeof raw === "string" && (USED_CAR_APPOINTMENT_STATUSES as readonly string[]).includes(raw);
+}

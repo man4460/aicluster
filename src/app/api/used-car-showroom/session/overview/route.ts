@@ -50,7 +50,19 @@ export async function GET() {
             appointmentOn: today,
             status: { not: "CANCELLED" },
           },
-          include: { vehicle: { select: { brand: true, model: true, year: true } } },
+          include: {
+            vehicle: {
+              select: {
+                brand: true,
+                model: true,
+                year: true,
+                color: true,
+                plateNumber: true,
+                coverImageUrl: true,
+                askingPriceBaht: true,
+              },
+            },
+          },
           orderBy: [{ appointmentHm: "asc" }],
           take: 50,
         }),

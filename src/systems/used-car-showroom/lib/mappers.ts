@@ -335,7 +335,15 @@ export function mapUsedCarAppointment(row: {
   status: string;
   note: string | null;
   createdAt: Date;
-  vehicle?: { brand: string; model: string; year: number | null } | null;
+  vehicle?: {
+    brand: string;
+    model: string;
+    year: number | null;
+    color?: string | null;
+    plateNumber?: string | null;
+    coverImageUrl?: string | null;
+    askingPriceBaht?: number | null;
+  } | null;
 }) {
   return {
     id: row.id,
@@ -351,6 +359,10 @@ export function mapUsedCarAppointment(row: {
     vehicleTitle: row.vehicle
       ? [row.vehicle.brand, row.vehicle.model, row.vehicle.year].filter(Boolean).join(" ")
       : null,
+    vehicleColor: row.vehicle?.color ?? null,
+    vehiclePlateNumber: row.vehicle?.plateNumber ?? null,
+    vehicleCoverImageUrl: row.vehicle?.coverImageUrl ?? null,
+    vehicleAskingPriceBaht: row.vehicle?.askingPriceBaht ?? null,
     isToday: row.appointmentOn === bangkokDateKey(),
   };
 }

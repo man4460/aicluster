@@ -41,7 +41,10 @@ import {
   usedCarShowroomPageTitleTone,
 } from "@/systems/used-car-showroom/lib/page-menu-icons";
 import {
+  USED_CAR_APPOINTMENT_STATUSES,
   USED_CAR_RESERVATION_STATUSES,
+  usedCarAppointmentKindLabel,
+  usedCarAppointmentStatusLabel,
   usedCarReservationSourceLabel,
   usedCarReservationStatusLabel,
   usedCarReservationStatusTone,
@@ -54,6 +57,7 @@ import {
   usedCarShowroomOutlineButtonClass,
   usedCarShowroomPageStackClass,
   usedCarShowroomPrimaryButtonClass,
+  usedCarShowroomSectionHeadingClass,
   usedCarShowroomStatInlineClass,
 } from "@/systems/used-car-showroom/lib/ui-tokens";
 
@@ -82,6 +86,23 @@ type ReservationRow = {
   expiresOn?: string | null;
   note?: string | null;
   createdAt?: string;
+};
+
+type AppointmentRow = {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  appointmentOn: string;
+  appointmentHm: string;
+  kind: string;
+  status: string;
+  note?: string | null;
+  vehicleId?: string | null;
+  vehicleTitle: string | null;
+  vehicleColor?: string | null;
+  vehiclePlateNumber?: string | null;
+  vehicleCoverImageUrl?: string | null;
+  vehicleAskingPriceBaht?: number | null;
 };
 
 type VehicleRow = {
@@ -132,9 +153,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [stats, setStats] = useState<Stats | null>(null);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
-  const [appointments, setAppointments] = useState<
-    { id: string; customerName: string; appointmentOn: string; appointmentHm: string; kind: string; status: string; vehicleTitle: string | null }[]
-  >([]);
+  const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [financeCases, setFinanceCases] = useState<
     { id: string; status: string; financedAmountBaht: number; vehicleTitle?: string | null }[]
   >([]);
@@ -155,6 +174,10 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   });
   const [apptOpen, setApptOpen] = useState(false);
   const [apptSaving, setApptSaving] = useState(false);
+  const [apptDetail, setApptDetail] = useState<AppointmentRow | null>(null);
+  const [apptDetailStatus, setApptDetailStatus] = useState("SCHEDULED");
+  const [apptDetailNote, setApptDetailNote] = useState("");
+  const [apptDetailSaving, setApptDetailSaving] = useState(false);
   const [apptForm, setApptForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -206,6 +229,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         fetch("/api/used-car-showroom/session/appointments", { credentials: "include" }).then((r) => r.json()),
         fetch("/api/used-car-showroom/session/finance-cases", { credentials: "include" }).then((r) => r.json()),
       ]);
+      if (ov.error || veh.error || res.error || appt.error || fin.error) {
+        notice.error(
+          ov.error || veh.error || res.error || appt.error || fin.error || "โหลดแดชบอร์ดไม่สำเร็จ",
+        );
+      }
       if (ov.stats) setStats(ov.stats);
       setVehicles(Array.isArray(veh.vehicles) ? veh.vehicles : []);
       setReservations(Array.isArray(res.reservations) ? res.reservations : []);
@@ -217,7 +245,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     } finally {
       setBusy(false);
     }
-  }, [notice]);
+  }, [notice.error]);
 
   useEffect(() => {
     void load();
@@ -236,6 +264,32 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
       .filter((a) => a.appointmentOn === today && a.status !== "CANCELLED")
       .slice()
       .sort((a, b) => a.appointmentHm.localeCompare(b.appointmentHm));
+  }, [appointments]);
+
+  /** นัดวันถัดไป (ยังไม่ถึงวันตามปฏิทินไทย) */
+  const appointmentsUpcoming = useMemo(() => {
+    const today = bangkokDateKey();
+    return appointments
+      .filter((a) => a.appointmentOn > today && a.status !== "CANCELLED")
+      .slice()
+      .sort((a, b) =>
+        a.appointmentOn === b.appointmentOn
+          ? a.appointmentHm.localeCompare(b.appointmentHm)
+          : a.appointmentOn.localeCompare(b.appointmentOn),
+      );
+  }, [appointments]);
+
+  /** นัดวันก่อนหน้า (อ้างอิงย้อนหลัง) */
+  const appointmentsPast = useMemo(() => {
+    const today = bangkokDateKey();
+    return appointments
+      .filter((a) => a.appointmentOn < today)
+      .slice()
+      .sort((a, b) =>
+        a.appointmentOn === b.appointmentOn
+          ? b.appointmentHm.localeCompare(a.appointmentHm)
+          : b.appointmentOn.localeCompare(a.appointmentOn),
+      );
   }, [appointments]);
 
   const pendingFinance = useMemo(
@@ -339,6 +393,44 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
       await load();
     } finally {
       setReserveDetailSaving(false);
+    }
+  }
+
+  function openApptDetail(a: AppointmentRow) {
+    setApptDetail(a);
+    setApptDetailStatus(a.status);
+    setApptDetailNote(a.note ?? "");
+  }
+
+  async function saveApptDetail() {
+    if (!apptDetail) return;
+    setApptDetailSaving(true);
+    try {
+      const res = await fetch("/api/used-car-showroom/session/appointments", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: apptDetail.id,
+          status: apptDetailStatus,
+          note: apptDetailNote.trim() || null,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; appointment?: AppointmentRow };
+      if (!res.ok) {
+        notice.error(data.error || "บันทึกสถานะไม่สำเร็จ");
+        return;
+      }
+      if (data.appointment) {
+        setAppointments((list) =>
+          list.map((row) => (row.id === data.appointment!.id ? { ...row, ...data.appointment! } : row)),
+        );
+        setApptDetail({ ...apptDetail, ...data.appointment });
+      }
+      notice.show("อัปเดตนัดหมายแล้ว");
+      await load();
+    } finally {
+      setApptDetailSaving(false);
     }
   }
 
@@ -533,16 +625,18 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       <button
                         type="button"
                         className="w-full min-w-0 text-left"
-                        onClick={() => setTab("appointments")}
+                        onClick={() => openApptDetail(a)}
+                        aria-label={`ดูรายละเอียดนัด ${a.customerName}`}
                       >
                         <p className="text-sm font-black text-[#1e1b4b]">
                           {a.appointmentHm} · {a.customerName}
                         </p>
                         <p className="text-xs font-semibold text-[#66638c]">
-                          {a.kind === "TEST_DRIVE" ? "ทดลองขับ" : "ดูรถ"}
+                          {usedCarAppointmentKindLabel(a.kind)}
                           {a.vehicleTitle ? ` · ${a.vehicleTitle}` : ""}
-                          {a.status !== "SCHEDULED" ? ` · ${a.status}` : ""}
+                          {a.status !== "SCHEDULED" ? ` · ${usedCarAppointmentStatusLabel(a.status)}` : ""}
                         </p>
+                        <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
                       </button>
                     </li>
                   ))}
@@ -675,26 +769,143 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         ) : null}
 
         {tab === "appointments" ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex justify-end">
               <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => setApptOpen(true)}>
                 นัดหมายใหม่
               </button>
             </div>
-            {appointments.length === 0 ? (
+            {appointmentsToday.length === 0 &&
+            appointmentsUpcoming.length === 0 &&
+            appointmentsPast.length === 0 ? (
               <AppEmptyState>ยังไม่มีนัดหมาย</AppEmptyState>
             ) : (
-              appointments.map((a) => (
-                <div key={a.id} className={usedCarShowroomTonedRowCardClass("cyan")}>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-[#1e1b4b]">{a.customerName}</p>
-                    <p className="text-xs text-[#66638c]">
-                      {a.appointmentOn} {a.appointmentHm} · {a.kind === "TEST_DRIVE" ? "ทดลองขับ" : "ดูรถ"} ·{" "}
-                      {a.vehicleTitle ?? "—"}
-                    </p>
+              <>
+                <section className="space-y-2" aria-labelledby="ucs-appt-today-heading">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 id="ucs-appt-today-heading" className={usedCarShowroomSectionHeadingClass}>
+                      <span
+                        className={usedCarShowroomCardIconTileClass("amber")}
+                        aria-hidden
+                      >
+                        <CalendarClock className="h-4 w-4" strokeWidth={2.25} />
+                      </span>
+                      วันนี้
+                      <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsToday.length})</span>
+                    </h3>
                   </div>
-                </div>
-              ))
+                  {appointmentsToday.length === 0 ? (
+                    <AppEmptyState>วันนี้ยังไม่มีนัดหมาย</AppEmptyState>
+                  ) : (
+                    <ul className="space-y-2">
+                      {appointmentsToday.map((a) => (
+                        <li key={a.id} className={usedCarShowroomTonedRowCardClass("amber")}>
+                          <button
+                            type="button"
+                            className="w-full min-w-0 text-left"
+                            onClick={() => openApptDetail(a)}
+                            aria-label={`ดูรายละเอียดนัด ${a.customerName}`}
+                          >
+                            <p className="text-sm font-black text-[#1e1b4b]">
+                              {a.appointmentHm} · {a.customerName}
+                            </p>
+                            <p className="text-xs font-semibold text-[#66638c]">
+                              {usedCarAppointmentKindLabel(a.kind)}
+                              {a.vehicleTitle ? ` · ${a.vehicleTitle}` : ""}
+                              {a.status !== "SCHEDULED"
+                                ? ` · ${usedCarAppointmentStatusLabel(a.status)}`
+                                : ""}
+                            </p>
+                            <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className="space-y-2" aria-labelledby="ucs-appt-upcoming-heading">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 id="ucs-appt-upcoming-heading" className={usedCarShowroomSectionHeadingClass}>
+                      <span
+                        className={usedCarShowroomCardIconTileClass("cyan")}
+                        aria-hidden
+                      >
+                        <CalendarClock className="h-4 w-4" strokeWidth={2.25} />
+                      </span>
+                      กำหนดที่ยังไม่ถึง
+                      <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsUpcoming.length})</span>
+                    </h3>
+                  </div>
+                  {appointmentsUpcoming.length === 0 ? (
+                    <AppEmptyState>ยังไม่มีนัดล่วงหน้า</AppEmptyState>
+                  ) : (
+                    <ul className="space-y-2">
+                      {appointmentsUpcoming.map((a) => (
+                        <li key={a.id} className={usedCarShowroomTonedRowCardClass("cyan")}>
+                          <button
+                            type="button"
+                            className="w-full min-w-0 text-left"
+                            onClick={() => openApptDetail(a)}
+                            aria-label={`ดูรายละเอียดนัด ${a.customerName}`}
+                          >
+                            <p className="text-sm font-black text-[#1e1b4b]">
+                              {a.appointmentOn} {a.appointmentHm} · {a.customerName}
+                            </p>
+                            <p className="text-xs font-semibold text-[#66638c]">
+                              {usedCarAppointmentKindLabel(a.kind)}
+                              {a.vehicleTitle ? ` · ${a.vehicleTitle}` : ""}
+                              {a.status !== "SCHEDULED"
+                                ? ` · ${usedCarAppointmentStatusLabel(a.status)}`
+                                : ""}
+                            </p>
+                            <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                {appointmentsPast.length > 0 ? (
+                  <section className="space-y-2" aria-labelledby="ucs-appt-past-heading">
+                    <h3 id="ucs-appt-past-heading" className={usedCarShowroomSectionHeadingClass}>
+                      <span
+                        className={usedCarShowroomCardIconTileClass("slate")}
+                        aria-hidden
+                      >
+                        <CalendarClock className="h-4 w-4" strokeWidth={2.25} />
+                      </span>
+                      ที่ผ่านมา
+                      <span className="text-xs font-semibold text-[#8b87a8]">({appointmentsPast.length})</span>
+                    </h3>
+                    <ul className="space-y-2">
+                      {appointmentsPast.map((a) => (
+                        <li key={a.id} className={usedCarShowroomTonedRowCardClass("slate")}>
+                          <button
+                            type="button"
+                            className="w-full min-w-0 text-left"
+                            onClick={() => openApptDetail(a)}
+                            aria-label={`ดูรายละเอียดนัด ${a.customerName}`}
+                          >
+                            <p className="text-sm font-black text-[#1e1b4b]">
+                              {a.appointmentOn} {a.appointmentHm} · {a.customerName}
+                            </p>
+                            <p className="text-xs font-semibold text-[#66638c]">
+                              {usedCarAppointmentKindLabel(a.kind)}
+                              {a.vehicleTitle ? ` · ${a.vehicleTitle}` : ""}
+                              {a.status !== "SCHEDULED"
+                                ? ` · ${usedCarAppointmentStatusLabel(a.status)}`
+                                : ""}
+                            </p>
+                            <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+              </>
             )}
           </div>
         ) : null}
@@ -984,6 +1195,155 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                 className={cn(usedCarShowroomFieldClass, "min-h-[72px] max-h-none py-2")}
                 value={reserveDetailNote}
                 onChange={(e) => setReserveDetailNote(e.target.value)}
+                rows={3}
+              />
+            </label>
+          </div>
+        ) : null}
+      </FormModal>
+
+      <FormModal
+        open={Boolean(apptDetail)}
+        onClose={() => setApptDetail(null)}
+        title="รายละเอียดนัดหมาย"
+        size="md"
+        mobileCentered
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setApptDetail(null)}
+            onSubmit={() => void saveApptDetail()}
+            submitLabel="บันทึกสถานะ"
+            loading={apptDetailSaving}
+          />
+        }
+      >
+        {apptDetail ? (
+          <div className="space-y-3">
+            <div className="flex min-w-0 items-start gap-3">
+              {apptDetail.vehicleCoverImageUrl ? (
+                <AppImageThumb
+                  src={apptDetail.vehicleCoverImageUrl}
+                  alt={apptDetail.vehicleTitle ?? "รถ"}
+                  className="h-16 w-16 shrink-0"
+                  onOpen={() =>
+                    apptDetail.vehicleCoverImageUrl && lb.open(apptDetail.vehicleCoverImageUrl)
+                  }
+                />
+              ) : (
+                <span className={cn(usedCarShowroomCardIconTileClass("cyan", "lg"), "shrink-0")} aria-hidden>
+                  <Car className="h-6 w-6" strokeWidth={2.1} />
+                </span>
+              )}
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-black text-[#1e1b4b]">{apptDetail.customerName}</p>
+                <p className="text-xs font-semibold text-[#66638c]">
+                  <a href={`tel:${apptDetail.customerPhone}`} className="underline-offset-2 hover:underline">
+                    {apptDetail.customerPhone}
+                  </a>
+                </p>
+                <p className="text-xs font-semibold text-[#66638c]">
+                  {apptDetail.vehicleTitle ?? "— ไม่ระบุรถ —"}
+                  {apptDetail.vehiclePlateNumber ? ` · ทะเบียน ${apptDetail.vehiclePlateNumber}` : ""}
+                </p>
+                <span
+                  className={cn(
+                    "inline-flex max-w-full items-center rounded-lg border px-2 py-0.5 text-[10px] font-bold",
+                    apptDetail.status === "DONE"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : apptDetail.status === "CANCELLED"
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                        : apptDetail.status === "NO_SHOW"
+                          ? "border-slate-200 bg-slate-50 text-slate-700"
+                          : "border-amber-200 bg-amber-50 text-amber-900",
+                  )}
+                >
+                  {usedCarAppointmentStatusLabel(apptDetail.status)}
+                </span>
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="font-bold text-[#8b87a8]">วันเวลา</dt>
+                <dd className="font-semibold text-[#1e1b4b]">
+                  {apptDetail.appointmentOn} · {apptDetail.appointmentHm} น.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ประเภท</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{usedCarAppointmentKindLabel(apptDetail.kind)}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">สถานที่นัด</dt>
+                <dd className="font-semibold text-[#1e1b4b]">
+                  {initialShop.displayName}
+                  {initialShop.address ? (
+                    <>
+                      <br />
+                      <span className="font-medium text-[#66638c]">{initialShop.address}</span>
+                    </>
+                  ) : (
+                    <span className="font-medium text-[#8b87a8]"> — ยังไม่ได้ตั้งที่อยู่ในตั้งค่าร้าน</span>
+                  )}
+                  {initialShop.mapUrl ? (
+                    <>
+                      {" · "}
+                      <a
+                        href={initialShop.mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[#4d47b6] underline-offset-2 hover:underline"
+                      >
+                        เปิดแผนที่
+                      </a>
+                    </>
+                  ) : null}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">รถที่จะดู</dt>
+                <dd className="font-semibold text-[#1e1b4b]">
+                  {apptDetail.vehicleTitle ? (
+                    <>
+                      {apptDetail.vehicleTitle}
+                      {apptDetail.vehicleColor ? ` · สี${apptDetail.vehicleColor}` : ""}
+                      {apptDetail.vehiclePlateNumber ? ` · ทะเบียน ${apptDetail.vehiclePlateNumber}` : ""}
+                      {typeof apptDetail.vehicleAskingPriceBaht === "number" &&
+                      apptDetail.vehicleAskingPriceBaht > 0 ? (
+                        <>
+                          <br />
+                          <span className="text-[#66638c]">ราคาถาม {baht(apptDetail.vehicleAskingPriceBaht)}</span>
+                        </>
+                      ) : null}
+                    </>
+                  ) : (
+                    "ยังไม่ระบุคัน — นัดทั่วไปที่โชว์รูม"
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              สถานะนัดหมาย
+              <select
+                className={usedCarShowroomFieldClass}
+                value={apptDetailStatus}
+                onChange={(e) => setApptDetailStatus(e.target.value)}
+              >
+                {USED_CAR_APPOINTMENT_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {usedCarAppointmentStatusLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              หมายเหตุ
+              <textarea
+                className={cn(usedCarShowroomFieldClass, "min-h-[72px] max-h-none py-2")}
+                value={apptDetailNote}
+                onChange={(e) => setApptDetailNote(e.target.value)}
                 rows={3}
               />
             </label>

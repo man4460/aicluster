@@ -82,7 +82,19 @@ export async function POST(req: Request, ctx: Ctx) {
         status: "SCHEDULED",
         note: typeof body.note === "string" ? body.note.slice(0, 500) : null,
       },
-      include: { vehicle: { select: { brand: true, model: true, year: true } } },
+      include: {
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            year: true,
+            color: true,
+            plateNumber: true,
+            coverImageUrl: true,
+            askingPriceBaht: true,
+          },
+        },
+      },
     });
 
     await prisma.usedCarLead.create({

@@ -23,7 +23,19 @@ export async function GET(req: Request) {
         ...(on && /^\d{4}-\d{2}-\d{2}$/.test(on) ? { appointmentOn: on } : {}),
         ...(todayOnly ? { appointmentOn: today } : {}),
       },
-      include: { vehicle: { select: { brand: true, model: true, year: true } } },
+      include: {
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            year: true,
+            color: true,
+            plateNumber: true,
+            coverImageUrl: true,
+            askingPriceBaht: true,
+          },
+        },
+      },
       orderBy: [{ appointmentOn: "asc" }, { appointmentHm: "asc" }],
       take: 300,
     });
@@ -73,7 +85,19 @@ export async function POST(req: Request) {
         status: typeof body.status === "string" ? body.status.slice(0, 24) : "SCHEDULED",
         note: typeof body.note === "string" ? body.note : null,
       },
-      include: { vehicle: { select: { brand: true, model: true, year: true } } },
+      include: {
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            year: true,
+            color: true,
+            plateNumber: true,
+            coverImageUrl: true,
+            askingPriceBaht: true,
+          },
+        },
+      },
     });
     return NextResponse.json({ appointment: mapUsedCarAppointment(row) }, { status: 201 });
   } catch (e) {
@@ -109,7 +133,19 @@ export async function PATCH(req: Request) {
         kind: body.kind === "TEST_DRIVE" || body.kind === "VIEW" ? body.kind : undefined,
         note: body.note === null ? null : typeof body.note === "string" ? body.note : undefined,
       },
-      include: { vehicle: { select: { brand: true, model: true, year: true } } },
+      include: {
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            year: true,
+            color: true,
+            plateNumber: true,
+            coverImageUrl: true,
+            askingPriceBaht: true,
+          },
+        },
+      },
     });
     return NextResponse.json({ appointment: mapUsedCarAppointment(row) });
   } catch (e) {
