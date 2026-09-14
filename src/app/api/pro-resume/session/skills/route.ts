@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { proResumeOwnerFromAuth } from "@/lib/pro-resume/api-owner";
 import { proResumeOwnerWhere, proResumeSessionContext } from "@/lib/pro-resume/session-context";
 import { prisma } from "@/lib/prisma";
-import { mapResumeSkill } from "@/systems/pro-resume/lib/mappers";
+import { mapResumeSkill, serializeImagesJson } from "@/systems/pro-resume/lib/mappers";
 import { applyOrderedIds } from "@/systems/pro-resume/lib/helpers";
 
 export async function GET() {
@@ -59,6 +59,15 @@ export async function POST(req: Request) {
       _max: { orderIndex: true },
     });
 
+    const images =
+      Array.isArray(body.images)
+        ? body.images.filter((u): u is string => typeof u === "string" && u.length > 0).slice(0, 24)
+        : [];
+    const coverImage =
+      typeof body.coverImage === "string" && body.coverImage.trim()
+        ? body.coverImage.trim().slice(0, 512)
+        : images[0] ?? null;
+
     const row = await prisma.resumeSkill.create({
       data: {
         ownerUserId: own.ownerId,
@@ -66,7 +75,10 @@ export async function POST(req: Request) {
         profileId: profile.id,
         name,
         level: typeof body.level === "string" ? body.level.trim().slice(0, 80) : "",
+        shortDesc: typeof body.shortDesc === "string" ? body.shortDesc.trim().slice(0, 500) : "",
         description: typeof body.description === "string" ? body.description : "",
+        coverImage,
+        imagesJson: serializeImagesJson(images.length ? images : coverImage ? [coverImage] : []),
         orderIndex: (maxOrder._max.orderIndex ?? -1) + 1,
       },
     });

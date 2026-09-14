@@ -255,23 +255,35 @@ export async function seedProResumeProdDemoForOwner(
     {
       name: "ออกแบบประสบการณ์ลูกค้า (CX)",
       level: "เชี่ยวชาญ",
+      shortDesc: "วิเคราะห์ Journey และออกแบบ touchpoint ให้ทีมใช้งานจริง",
       description:
-        "วิเคราะห์ Journey และออกแบบ touchpoint ให้ทีมขาย/บริการใช้งานจริงบนมือถือ",
+        "# จุดเด่น\nออกแบบ touchpoint ให้ทีมขาย/บริการใช้งานจริงบนมือถือ\n\n- Journey map ที่วัดผลได้\n- ทดสอบกับผู้ใช้จริงก่อนปล่อย",
+      coverImage: COVER_POOL[0]!,
+      images: [COVER_POOL[0]!, GALLERY_POOL[0]!, GALLERY_POOL[1]!],
     },
     {
       name: "นำเสนอแผนและปิดดีล B2B",
       level: "ดีมาก",
-      description: "สร้างสไลด์และเดโมสดที่สื่อสารคุณค่าธุรกิจท้องถิ่นได้ชัดใน 15 นาที",
+      shortDesc: "เดโมสดสื่อสารคุณค่าธุรกิจท้องถิ่นได้ชัดใน 15 นาที",
+      description: "# ผลลัพธ์\nสร้างสไลด์และเดโมสดที่สื่อสารคุณค่าธุรกิจท้องถิ่นได้ชัด",
+      coverImage: COVER_POOL[1]!,
+      images: [COVER_POOL[1]!, GALLERY_POOL[2]!],
     },
     {
       name: "เขียนสคริปต์ / วิดีโอสั้นโปรโมท",
       level: "ดี",
+      shortDesc: "วางโครงสร้างเนื้อหา + ตัดต่อคลิปแนะนำผลิตภัณฑ์",
       description: "วางโครงสร้างเนื้อหา + ถ่าย/ตัดต่อคลิปแนะนำผลิตภัณฑ์สำหรับโซเชียล",
+      coverImage: COVER_POOL[2]!,
+      images: [COVER_POOL[2]!],
     },
     {
       name: "อบรมทีมและถ่ายทอดความรู้",
       level: "ดีมาก",
+      shortDesc: "workshop ภายใน + วัดผลหลังอบรม",
       description: "จัด workshop ภายในให้พนักงานใช้งานระบบใหม่และวัดผลหลังอบรม",
+      coverImage: COVER_POOL[3]!,
+      images: [COVER_POOL[3]!, GALLERY_POOL[3]!],
     },
   ] as const;
 
@@ -284,7 +296,10 @@ export async function seedProResumeProdDemoForOwner(
         profileId: profile.id,
         name: s.name,
         level: s.level,
+        shortDesc: s.shortDesc,
         description: s.description,
+        coverImage: s.coverImage,
+        imagesJson: JSON.stringify([...s.images]),
         orderIndex: i,
       },
     });

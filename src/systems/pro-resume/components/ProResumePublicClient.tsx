@@ -676,30 +676,75 @@ export function ProResumePublicClient({
                 titleTone="amber"
               >
                 <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5">
-                  {data.skills.map((s) => (
-                    <li
-                      key={s.id}
-                      className="min-w-0 rounded-lg border border-amber-200/70 bg-amber-50/40 p-3 shadow-sm sm:rounded-xl sm:p-3.5"
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <span
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200/80"
-                          aria-hidden
-                        >
-                          {proResumeSectionIcon("skill")}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black leading-snug text-[#1e1b4b]">{s.name}</p>
-                          {s.level.trim() ? (
-                            <p className="mt-0.5 text-xs font-bold text-amber-800/90">{s.level}</p>
-                          ) : null}
+                  {data.skills.map((s) => {
+                    const gallery =
+                      s.coverImage && !s.images.includes(s.coverImage)
+                        ? [s.coverImage, ...s.images]
+                        : s.images.length
+                          ? s.images
+                          : s.coverImage
+                            ? [s.coverImage]
+                            : [];
+                    return (
+                      <li
+                        key={s.id}
+                        className="min-w-0 overflow-hidden rounded-lg border border-amber-200/70 bg-amber-50/40 shadow-sm sm:rounded-xl"
+                      >
+                        {s.coverImage ? (
+                          <button
+                            type="button"
+                            className="block w-full overflow-hidden bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+                            aria-label={`ดูรูป ${s.name}`}
+                            onClick={() => lb.open(s.coverImage!)}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={s.coverImage}
+                              alt=""
+                              className="aspect-[16/9] w-full object-cover"
+                            />
+                          </button>
+                        ) : null}
+                        <div className="space-y-1.5 p-3 sm:p-3.5">
+                          <div className="flex items-start gap-2.5">
+                            {!s.coverImage ? (
+                              <span
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200/80"
+                                aria-hidden
+                              >
+                                {proResumeSectionIcon("skill")}
+                              </span>
+                            ) : null}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-black leading-snug text-[#1e1b4b]">{s.name}</p>
+                              {s.level.trim() ? (
+                                <p className="mt-0.5 text-xs font-bold text-amber-800/90">{s.level}</p>
+                              ) : null}
+                              {s.shortDesc.trim() ? (
+                                <p className="mt-1 text-xs leading-snug text-[#66638c] sm:text-sm">{s.shortDesc}</p>
+                              ) : null}
+                            </div>
+                          </div>
                           {s.description.trim() ? (
-                            <ProResumeRichContent content={s.description} className="mt-1.5" />
+                            <ProResumeRichContent content={s.description} className="mt-1" />
+                          ) : null}
+                          {gallery.length > 1 ? (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {gallery.slice(0, 6).map((url) => (
+                                <AppImageThumb
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  className="h-12 w-12"
+                                  onOpen={() => lb.open(url)}
+                                />
+                              ))}
+                            </div>
                           ) : null}
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </ProResumePortalSection>
             ) : null}

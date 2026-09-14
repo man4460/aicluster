@@ -8176,7 +8176,13 @@ model ResumeSkill {
    * ระดับ เช่น พื้นฐาน · ดี · ดีมาก · เชี่ยวชาญ (ข้อความอิสระ)
    */
   level          String        @default("") @db.VarChar(80)
+  shortDesc      String        @default("") @map("short_desc") @db.VarChar(500)
   description    String        @default("") @db.Text
+  coverImage     String?       @map("cover_image") @db.VarChar(512)
+  /**
+   * JSON string[] — แกลเลอรีรูปทักษะ
+   */
+  imagesJson     String        @default("[]") @map("images_json") @db.Text
   orderIndex     Int           @default(0) @map("order_index")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")

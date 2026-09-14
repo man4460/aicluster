@@ -64,7 +64,10 @@ export type ResumeSkillDto = {
   id: string;
   name: string;
   level: string;
+  shortDesc: string;
   description: string;
+  coverImage: string | null;
+  images: string[];
   orderIndex: number;
 };
 
@@ -193,14 +196,20 @@ export function mapResumeSkill(row: {
   id: string;
   name: string;
   level: string;
+  shortDesc: string;
   description: string;
+  coverImage: string | null;
+  imagesJson: string;
   orderIndex: number;
 }): ResumeSkillDto {
   return {
     id: row.id,
     name: row.name,
     level: row.level,
+    shortDesc: row.shortDesc,
     description: row.description,
+    coverImage: row.coverImage,
+    images: parseImagesJson(row.imagesJson),
     orderIndex: row.orderIndex,
   };
 }

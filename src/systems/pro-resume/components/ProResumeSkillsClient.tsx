@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import {
+  AppImageLightbox,
+  AppImagePickCameraButtons,
+  AppImageThumb,
+  prepareImageFileForUpload,
+  useAppCameraCapture,
+  useAppImageLightbox,
+  useAppNoticePopup,
+} from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
@@ -9,19 +19,11 @@ import {
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
-import { useAppNoticePopup } from "@/components/app-templates";
 import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePagePanel";
 import { ProResumeRichTextField } from "@/systems/pro-resume/components/ProResumeRichTextField";
-import {
-  proResumeCardIconTileClass,
-  proResumeTonedRowCardClass,
-} from "@/systems/pro-resume/lib/card-tones";
+import { proResumeTonedRowCardClass } from "@/systems/pro-resume/lib/card-tones";
 import type { ResumeSkillDto } from "@/systems/pro-resume/lib/mappers";
-import {
-  proResumePageTitleIcon,
-  proResumePageTitleTone,
-  proResumeSectionIcon,
-} from "@/systems/pro-resume/lib/page-menu-icons";
+import { proResumePageTitleIcon, proResumePageTitleTone } from "@/systems/pro-resume/lib/page-menu-icons";
 import {
   proResumeFieldClass,
   proResumeFilterChipClass,
@@ -31,8 +33,8 @@ import {
   proResumeRowIconButtonClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
+const UPLOAD = "/api/pro-resume/session/upload";
 const labelClass = "block space-y-1 text-xs font-bold text-[#4d47b6]";
-
 const SKILL_LEVEL_PRESETS = ["พื้นฐาน", "ดี", "ดีมาก", "เชี่ยวชาญ"] as const;
 
 function ReorderButtons({
@@ -76,6 +78,7 @@ function ReorderButtons({
 
 export function ProResumeSkillsClient() {
   const notice = useAppNoticePopup();
+  const lb = useAppImageLightbox();
   const [skills, setSkills] = useState<ResumeSkillDto[]>([]);
   const [filterOpen, setFilterOpen] = useState(true);
   const [keyword, setKeyword] = useState("");
@@ -116,6 +119,7 @@ export function ProResumeSkillsClient() {
       return (
         s.name.toLowerCase().includes(q) ||
         s.level.toLowerCase().includes(q) ||
+        s.shortDesc.toLowerCase().includes(q) ||
         s.description.toLowerCase().includes(q)
       );
     });
@@ -164,10 +168,11 @@ export function ProResumeSkillsClient() {
   return (
     <>
       {notice.popup}
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปทักษะพิเศษ" />
 
       <ProResumePagePanel
         title="ทักษะพิเศษ"
-        subtitle="ความสามารถพิเศษที่จะนำเสนอบนเรซูเม่สาธารณะ"
+        subtitle="ความสามารถพิเศษ — แนบรูปและข้อความแบบผลงาน"
         titleIcon={proResumePageTitleIcon("skills")}
         titleTone={proResumePageTitleTone("skills")}
         action={
@@ -206,10 +211,7 @@ export function ProResumeSkillsClient() {
           </div>
         }
       >
-        <div
-          id="pro-resume-skills-filter-panel"
-          className={cn("space-y-3", filterOpen ? "block" : "hidden")}
-        >
+        <div id="pro-resume-skills-filter-panel" className={cn("space-y-3", filterOpen ? "block" : "hidden")}>
           <nav className={proResumeFilterChipShellClass} role="tablist" aria-label="กรองระดับทักษะ">
             <button
               type="button"
@@ -239,7 +241,7 @@ export function ProResumeSkillsClient() {
               className={proResumeFieldClass}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="ชื่อทักษะ · ระดับ · รายละเอียด"
+              placeholder="ชื่อทักษะ · ระดับ · ข้อความ"
             />
           </label>
           {filtersActive ? (
@@ -273,16 +275,24 @@ export function ProResumeSkillsClient() {
                       onDown={() => void moveItem(i, 1)}
                     />
                   ) : null}
-                  <span className={proResumeCardIconTileClass("amber", "md")} aria-hidden>
-                    {proResumeSectionIcon("skill")}
-                  </span>
+                  <AppImageThumb
+                    src={row.coverImage}
+                    alt={row.name}
+                    emptyLabel="ไม่มีรูป"
+                    className="h-14 w-14 shrink-0"
+                    onOpen={() => row.coverImage && lb.open(row.coverImage)}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{row.name}</p>
                     {row.level.trim() ? (
                       <p className="text-sm font-semibold text-[#4d47b6]">{row.level}</p>
                     ) : null}
-                    {row.description.trim() ? (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-[#66638c]">{row.description.replace(/<[^>]+>/g, " ")}</p>
+                    <p className="line-clamp-2 text-sm text-[#66638c]">
+                      {row.shortDesc.trim() ||
+                        (row.description.trim() ? row.description.replace(/<[^>]+>/g, " ").trim() : "—")}
+                    </p>
+                    {row.images.length > 1 ? (
+                      <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">{row.images.length} รูป</p>
                     ) : null}
                   </div>
                 </div>
@@ -316,7 +326,14 @@ export function ProResumeSkillsClient() {
         )}
       </ProResumePagePanel>
 
-      <SkillModal open={modal !== null} row={modal} onClose={() => setModal(null)} onSaved={load} notice={notice} />
+      <SkillModal
+        open={modal !== null}
+        row={modal}
+        onClose={() => setModal(null)}
+        onSaved={load}
+        notice={notice}
+        lb={lb}
+      />
     </>
   );
 }
@@ -327,24 +344,97 @@ function SkillModal({
   onClose,
   onSaved,
   notice,
+  lb,
 }: {
   open: boolean;
   row: ResumeSkillDto | "new" | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
   notice: ReturnType<typeof useAppNoticePopup>;
+  lb: ReturnType<typeof useAppImageLightbox>;
 }) {
-  const [form, setForm] = useState({ name: "", level: "", description: "" });
+  const [form, setForm] = useState({
+    name: "",
+    level: "",
+    shortDesc: "",
+    description: "",
+    coverImage: null as string | null,
+    images: [] as string[],
+  });
   const [busy, setBusy] = useState(false);
+  const galleryPickRef = useRef<HTMLInputElement>(null);
+  const galleryCamera = useAppCameraCapture();
 
   useEffect(() => {
     if (!open) return;
     if (row && row !== "new") {
-      setForm({ name: row.name, level: row.level, description: row.description });
+      const images =
+        row.coverImage && !row.images.includes(row.coverImage)
+          ? [row.coverImage, ...row.images]
+          : row.images;
+      setForm({
+        name: row.name,
+        level: row.level,
+        shortDesc: row.shortDesc,
+        description: row.description,
+        coverImage: row.coverImage,
+        images,
+      });
     } else {
-      setForm({ name: "", level: "", description: "" });
+      setForm({ name: "", level: "", shortDesc: "", description: "", coverImage: null, images: [] });
     }
   }, [open, row]);
+
+  const uploadImage = async (file: File) => {
+    const prepared = await prepareImageFileForUpload(file);
+    const fd = new FormData();
+    fd.set("file", prepared);
+    fd.set("kind", "images");
+    const res = await fetch(UPLOAD, { method: "POST", body: fd });
+    const data = (await res.json()) as { imageUrl?: string; error?: string };
+    if (!res.ok || !data.imageUrl) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
+    return data.imageUrl;
+  };
+
+  const appendGalleryImages = (urls: string[]) => {
+    if (!urls.length) return;
+    setForm((f) => {
+      const images = [...f.images, ...urls].slice(0, 24);
+      return {
+        ...f,
+        images,
+        coverImage: f.coverImage && images.includes(f.coverImage) ? f.coverImage : images[0] ?? null,
+      };
+    });
+  };
+
+  const removeGalleryImage = (url: string) => {
+    setForm((f) => {
+      const images = f.images.filter((u) => u !== url);
+      const coverImage =
+        f.coverImage === url
+          ? images[0] ?? null
+          : f.coverImage && images.includes(f.coverImage)
+            ? f.coverImage
+            : images[0] ?? null;
+      return { ...f, images, coverImage };
+    });
+  };
+
+  const onPickGalleryImages = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = "";
+    const uploaded: string[] = [];
+    for (const file of files) {
+      try {
+        uploaded.push(await uploadImage(file));
+      } catch (err) {
+        notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+        break;
+      }
+    }
+    appendGalleryImages(uploaded);
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -352,7 +442,10 @@ function SkillModal({
       const payload = {
         name: form.name,
         level: form.level,
+        shortDesc: form.shortDesc,
         description: form.description,
+        coverImage: form.coverImage,
+        images: form.images,
       };
       const isEdit = row && row !== "new";
       const res = await fetch(isEdit ? `/api/pro-resume/session/skills/${row.id}` : "/api/pro-resume/session/skills", {
@@ -376,8 +469,8 @@ function SkillModal({
       open={open}
       onClose={onClose}
       title={row === "new" ? "เพิ่มทักษะพิเศษ" : "แก้ไขทักษะพิเศษ"}
-      description="ชื่อและความสามารถพิเศษที่จะโชว์บนเรซูเม่สาธารณะ"
-      size="md"
+      description="แนบรูปและข้อความนำเสนอ — รูปแบบเดียวกับผลงาน"
+      size="lg"
       footer={
         <FormModalFooterActions
           onCancel={onClose}
@@ -422,19 +515,115 @@ function SkillModal({
             placeholder="หรือพิมพ์ระดับเอง"
           />
         </div>
+        <label className={labelClass}>
+          คำอธิบายสั้น
+          <input
+            className={proResumeFieldClass}
+            value={form.shortDesc}
+            disabled={busy}
+            onChange={(e) => setForm((f) => ({ ...f, shortDesc: e.target.value }))}
+            placeholder="สรุปสั้น ๆ ที่โชว์ในการ์ดรายการ"
+          />
+        </label>
         <ProResumeRichTextField
-          label="รายละเอียด / จุดเด่น"
+          label="รายละเอียด / ข้อความ"
           value={form.description}
           disabled={busy}
           onChange={(description) => setForm((f) => ({ ...f, description }))}
+          textareaClassName="min-h-[10rem]"
           placeholder={`# จุดเด่น
 ใช้ในงานนำเสนอและปิดการขาย
 
 ~ รายละเอียดเสริม
 
-- ตัวอย่างผลงานหรือบริบทการใช้
+## ตัวอย่างการใช้
+- บริบทงานหรือโครงการ
 - เครื่องมือ / เทคนิคที่เกี่ยวข้อง`}
         />
+        <div className="space-y-2">
+          <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
+          <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
+            อัปโหลดรูปแล้วกด «ตั้งเป็นปก» บนรูปที่ต้องการเป็นหน้าปก
+          </p>
+          {form.coverImage ? (
+            <div className="flex items-center gap-2 rounded-xl border border-[#0000BF]/15 bg-[#0000BF]/5 px-2.5 py-2">
+              <AppImageThumb
+                src={form.coverImage}
+                alt="หน้าปก"
+                className="h-12 w-12"
+                onOpen={() => lb.open(form.coverImage!)}
+              />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-[#4d47b6]">หน้าปกปัจจุบัน</p>
+                <p className="text-[10px] text-[#66638c]">เลือกใหม่ได้จากแกลเลอรีด้านล่าง</p>
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-[#66638c]">
+              ยังไม่มีหน้าปก — เพิ่มรูปแล้วตั้งเป็นปก
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {form.images.map((url) => {
+              const isCover = form.coverImage === url;
+              return (
+                <div key={url} className="relative">
+                  <div className={cn(isCover && "rounded-xl ring-2 ring-[#0000BF] ring-offset-2")}>
+                    <AppImageThumb src={url} alt="" onOpen={() => lb.open(url)} />
+                  </div>
+                  {isCover ? (
+                    <span className="absolute -left-1 -top-1 rounded-md bg-[#0000BF] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                      ปก
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="absolute bottom-1 left-1 right-1 rounded-md bg-white/95 px-1 py-0.5 text-[9px] font-bold text-[#4d47b6] shadow-sm ring-1 ring-[#0000BF]/20"
+                      onClick={() => setForm((f) => ({ ...f, coverImage: url }))}
+                    >
+                      ตั้งเป็นปก
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] text-white"
+                    aria-label="ลบรูป"
+                    onClick={() => removeGalleryImage(url)}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <AppImagePickCameraButtons
+            disabled={busy}
+            onPickGallery={() => galleryPickRef.current?.click()}
+            onPickCamera={() =>
+              galleryCamera.openCamera(async (file) => {
+                try {
+                  appendGalleryImages([await uploadImage(file)]);
+                } catch (err) {
+                  notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+                }
+              })
+            }
+            labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
+            buttonClassName={proResumeOutlineButtonClass}
+          />
+          <input
+            ref={galleryPickRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(e) => void onPickGalleryImages(e)}
+          />
+          {galleryCamera.cameraModal}
+        </div>
       </div>
     </FormModal>
   );
