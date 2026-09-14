@@ -361,6 +361,9 @@ function ProResumeSkillDetailPage({
                 src={coverImage}
                 alt=""
                 className="max-h-[min(56vh,26rem)] w-full object-cover"
+                loading="eager"
+                decoding="async"
+                referrerPolicy="no-referrer"
                 onError={(e) => {
                   const el = e.currentTarget;
                   el.style.display = "none";
@@ -870,6 +873,9 @@ export function ProResumePublicClient({
                                 src={cover}
                                 alt=""
                                 className="h-full w-full object-cover transition group-hover:scale-105"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
                                 onError={(e) => {
                                   const el = e.currentTarget;
                                   el.style.display = "none";
@@ -952,6 +958,9 @@ export function ProResumePublicClient({
                               src={item.coverImage}
                               alt=""
                               className="h-full w-full object-cover transition group-hover:scale-105"
+                              loading="lazy"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
                               onError={(e) => {
                                 const el = e.currentTarget;
                                 el.style.display = "none";

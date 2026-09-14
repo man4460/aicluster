@@ -55,6 +55,9 @@ export function AppImageThumb({
             "h-full w-full min-h-0 min-w-0 object-center",
             contain ? "object-contain" : "object-cover",
           )}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
         />
       </button>
