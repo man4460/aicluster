@@ -58,7 +58,7 @@ import {
 
 type PortalTab = "career" | "portfolio";
 
-/** มือถือ 2×2 · ไอแพดแนวตั้ง 3×2 · คอม 4×2 */
+/** มือถือ 3×2 · ไอแพดแนวตั้ง 3×2 · คอม 4×2 */
 function useProResumePortalPortfolioPageSize(): number {
   const [size, setSize] = useState(PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_DESKTOP);
 
@@ -834,7 +834,7 @@ export function ProResumePublicClient({
                     <li key={item.id} className="min-w-0">
                       <button
                         type="button"
-                        className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                        className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
                         onClick={() => void openItem(item)}
                       >
                         <div className="aspect-[4/3] overflow-hidden bg-slate-100">
@@ -853,15 +853,21 @@ export function ProResumePublicClient({
                             />
                           ) : null}
                           <div
-                            className="flex h-full items-center justify-center text-sm font-bold text-slate-400"
+                            className="flex h-full items-center justify-center text-[10px] font-bold text-slate-400 sm:text-sm"
                             hidden={Boolean(item.coverImage)}
                           >
                             ไม่มีรูปปก
                           </div>
                         </div>
-                        <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-4">
-                          <h3 className="truncate text-sm font-black text-[#1e1b4b] sm:text-base">{item.title}</h3>
-                          {item.shortDesc ? <p className="mt-1 truncate text-xs text-[#66638c] sm:text-sm">{item.shortDesc}</p> : null}
+                        <div className="flex min-w-0 flex-1 flex-col p-1.5 sm:p-4">
+                          <h3 className="truncate text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-base">
+                            {item.title}
+                          </h3>
+                          {item.shortDesc ? (
+                            <p className="mt-0.5 line-clamp-2 text-[9px] leading-snug text-[#66638c] sm:mt-1 sm:line-clamp-1 sm:text-sm">
+                              {item.shortDesc}
+                            </p>
+                          ) : null}
                         </div>
                       </button>
                     </li>
