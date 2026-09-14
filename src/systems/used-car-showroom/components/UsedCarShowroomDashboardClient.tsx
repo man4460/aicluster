@@ -43,10 +43,12 @@ import {
 } from "@/systems/used-car-showroom/lib/page-menu-icons";
 import {
   USED_CAR_APPOINTMENT_STATUSES,
+  USED_CAR_FINANCE_PENDING_STATUSES,
   USED_CAR_RESERVATION_STATUSES,
   USED_CAR_VEHICLE_STATUSES,
   usedCarAppointmentKindLabel,
   usedCarAppointmentStatusLabel,
+  usedCarFinanceCaseStatusLabel,
   usedCarReservationSourceLabel,
   usedCarReservationStatusLabel,
   usedCarReservationStatusTone,
@@ -256,7 +258,14 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [financeCases, setFinanceCases] = useState<
-    { id: string; status: string; financedAmountBaht: number; vehicleTitle?: string | null }[]
+    {
+      id: string;
+      status: string;
+      financedAmountBaht: number;
+      vehicleTitle?: string | null;
+      companyName?: string | null;
+      note?: string | null;
+    }[]
   >([]);
   const [busy, setBusy] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
@@ -273,6 +282,12 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [reserveFilterOpen, setReserveFilterOpen] = useState(true);
   const [reserveStatusFilter, setReserveStatusFilter] = useState<string>("ALL");
   const [reserveKeyword, setReserveKeyword] = useState("");
+  const [apptFilterOpen, setApptFilterOpen] = useState(true);
+  const [apptStatusFilter, setApptStatusFilter] = useState<string>("ALL");
+  const [apptKeyword, setApptKeyword] = useState("");
+  const [financeFilterOpen, setFinanceFilterOpen] = useState(true);
+  const [financeStatusFilter, setFinanceStatusFilter] = useState<string>("ALL");
+  const [financeKeyword, setFinanceKeyword] = useState("");
   const [reserveDetail, setReserveDetail] = useState<ReservationRow | null>(null);
   const [reserveDetailStatus, setReserveDetailStatus] = useState("PENDING");
   const [reserveDetailNote, setReserveDetailNote] = useState("");
@@ -439,7 +454,53 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     setTab("stock", { status: next === "ALL" ? null : next });
   }
 
+  const apptFiltersActive =
+    apptStatusFilter !== "ALL" || Boolean(apptKeyword.trim());
+
+  const filteredAppointments = useMemo(() => {
+    const q = apptKeyword.trim().toLowerCase();
+    return appointments.filter((a) => {
+      if (apptStatusFilter !== "ALL" && a.status !== apptStatusFilter) return false;
+      if (!q) return true;
+      const hay = [
+        a.customerName,
+        a.customerPhone,
+        a.vehicleTitle ?? "",
+        a.vehiclePlateNumber ?? "",
+        a.note ?? "",
+        usedCarAppointmentKindLabel(a.kind),
+        usedCarAppointmentStatusLabel(a.status),
+        a.appointmentOn,
+        a.appointmentHm,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [appointments, apptStatusFilter, apptKeyword]);
+
+  const apptStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: appointments.length };
+    for (const s of USED_CAR_APPOINTMENT_STATUSES) {
+      counts[s] = appointments.filter((a) => a.status === s).length;
+    }
+    return counts;
+  }, [appointments]);
+
   const appointmentsToday = useMemo(() => {
+    const today = bangkokDateKey();
+    return filteredAppointments
+      .filter((a) => {
+        if (a.appointmentOn !== today) return false;
+        if (apptStatusFilter === "ALL" && a.status === "CANCELLED") return false;
+        return true;
+      })
+      .slice()
+      .sort((a, b) => a.appointmentHm.localeCompare(b.appointmentHm));
+  }, [filteredAppointments, apptStatusFilter]);
+
+  /** นัดวันนี้บนภาพรวม — ไม่ผูกกับตัวกรองแท็บนัดหมาย */
+  const overviewAppointmentsToday = useMemo(() => {
     const today = bangkokDateKey();
     return appointments
       .filter((a) => a.appointmentOn === today && a.status !== "CANCELLED")
@@ -450,20 +511,24 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   /** นัดวันถัดไป (ยังไม่ถึงวันตามปฏิทินไทย) */
   const appointmentsUpcoming = useMemo(() => {
     const today = bangkokDateKey();
-    return appointments
-      .filter((a) => a.appointmentOn > today && a.status !== "CANCELLED")
+    return filteredAppointments
+      .filter((a) => {
+        if (a.appointmentOn <= today) return false;
+        if (apptStatusFilter === "ALL" && a.status === "CANCELLED") return false;
+        return true;
+      })
       .slice()
       .sort((a, b) =>
         a.appointmentOn === b.appointmentOn
           ? a.appointmentHm.localeCompare(b.appointmentHm)
           : a.appointmentOn.localeCompare(b.appointmentOn),
       );
-  }, [appointments]);
+  }, [filteredAppointments, apptStatusFilter]);
 
   /** นัดวันก่อนหน้า (อ้างอิงย้อนหลัง) */
   const appointmentsPast = useMemo(() => {
     const today = bangkokDateKey();
-    return appointments
+    return filteredAppointments
       .filter((a) => a.appointmentOn < today)
       .slice()
       .sort((a, b) =>
@@ -471,12 +536,55 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
           ? b.appointmentHm.localeCompare(a.appointmentHm)
           : b.appointmentOn.localeCompare(a.appointmentOn),
       );
-  }, [appointments]);
+  }, [filteredAppointments]);
 
-  const pendingFinance = useMemo(
-    () => financeCases.filter((c) => c.status === "SUBMITTED" || c.status === "WAITING_DOCS"),
+  const pendingFinanceBase = useMemo(
+    () =>
+      financeCases.filter((c) =>
+        (USED_CAR_FINANCE_PENDING_STATUSES as readonly string[]).includes(c.status),
+      ),
     [financeCases],
   );
+
+  const financeFiltersActive =
+    financeStatusFilter !== "ALL" || Boolean(financeKeyword.trim());
+
+  const pendingFinance = useMemo(() => {
+    const q = financeKeyword.trim().toLowerCase();
+    return pendingFinanceBase.filter((c) => {
+      if (financeStatusFilter !== "ALL" && c.status !== financeStatusFilter) return false;
+      if (!q) return true;
+      const hay = [
+        c.vehicleTitle ?? "",
+        c.companyName ?? "",
+        c.note ?? "",
+        c.id,
+        usedCarFinanceCaseStatusLabel(c.status),
+        String(c.financedAmountBaht),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [pendingFinanceBase, financeStatusFilter, financeKeyword]);
+
+  const financeStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: pendingFinanceBase.length };
+    for (const s of USED_CAR_FINANCE_PENDING_STATUSES) {
+      counts[s] = pendingFinanceBase.filter((c) => c.status === s).length;
+    }
+    return counts;
+  }, [pendingFinanceBase]);
+
+  function clearApptFilters() {
+    setApptStatusFilter("ALL");
+    setApptKeyword("");
+  }
+
+  function clearFinanceFilters() {
+    setFinanceStatusFilter("ALL");
+    setFinanceKeyword("");
+  }
 
   const reserveFiltersActive =
     reserveStatusFilter !== "ALL" || Boolean(reserveKeyword.trim());
@@ -938,11 +1046,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   </button>
                 </div>
               </div>
-              {appointmentsToday.length === 0 ? (
+              {overviewAppointmentsToday.length === 0 ? (
                 <AppEmptyState>วันนี้ยังไม่มีนัดหมาย</AppEmptyState>
               ) : (
                 <ul className="space-y-2">
-                  {appointmentsToday.map((a) => (
+                  {overviewAppointmentsToday.map((a) => (
                     <li key={a.id} className={usedCarShowroomTonedRowCardClass("cyan")}>
                       <button
                         type="button"
@@ -1301,18 +1409,100 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         ) : null}
 
         {tab === "appointments" ? (
-          <div className="space-y-4">
-            <div className="flex justify-end">
+          <div className="space-y-3">
+            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
+              <button
+                type="button"
+                aria-expanded={apptFilterOpen}
+                aria-controls="ucs-appointments-filter-panel"
+                aria-label={apptFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={apptFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  usedCarShowroomInlineSubNavBtnClass(apptFilterOpen),
+                  "relative",
+                  apptFiltersActive && !apptFilterOpen && "ring-1 ring-amber-300/80",
+                )}
+                onClick={() => setApptFilterOpen((o) => !o)}
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{apptFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {apptFiltersActive && !apptFilterOpen ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
               <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => setApptOpen(true)}>
                 นัดหมายใหม่
               </button>
             </div>
-            {appointmentsToday.length === 0 &&
-            appointmentsUpcoming.length === 0 &&
-            appointmentsPast.length === 0 ? (
+
+            <div
+              id="ucs-appointments-filter-panel"
+              className={cn("space-y-3", apptFilterOpen ? "block" : "hidden")}
+            >
+              <div
+                className={usedCarShowroomFilterChipShellClass}
+                role="tablist"
+                aria-label="กรองสถานะนัดหมาย"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={apptStatusFilter === "ALL"}
+                  className={usedCarShowroomFilterChipClass(apptStatusFilter === "ALL")}
+                  onClick={() => setApptStatusFilter("ALL")}
+                >
+                  ทั้งหมด ({apptStatusCounts.ALL ?? 0})
+                </button>
+                {USED_CAR_APPOINTMENT_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={apptStatusFilter === s}
+                    className={usedCarShowroomFilterChipClass(apptStatusFilter === s)}
+                    onClick={() => setApptStatusFilter(s)}
+                  >
+                    {usedCarAppointmentStatusLabel(s)} ({apptStatusCounts[s] ?? 0})
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-appt-kw">
+                  <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+                  <input
+                    id="ucs-appt-kw"
+                    className={cn(usedCarShowroomFieldClass, "mt-1 min-h-[44px]")}
+                    placeholder="ชื่อ · เบอร์ · รถ · วัน"
+                    value={apptKeyword}
+                    onChange={(e) => setApptKeyword(e.target.value)}
+                  />
+                </label>
+                {apptFiltersActive ? (
+                  <button
+                    type="button"
+                    className={usedCarShowroomOutlineButtonClass}
+                    onClick={clearApptFilters}
+                  >
+                    ล้างกรอง
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] font-semibold text-[#66638c]">
+                แสดง {filteredAppointments.length}/{appointments.length}
+              </p>
+            </div>
+
+            {appointments.length === 0 ? (
               <AppEmptyState>ยังไม่มีนัดหมาย</AppEmptyState>
+            ) : appointmentsToday.length === 0 &&
+              appointmentsUpcoming.length === 0 &&
+              appointmentsPast.length === 0 ? (
+              <AppEmptyState>ไม่พบนัดหมายตามตัวกรอง</AppEmptyState>
             ) : (
-              <>
+              <div className="space-y-4">
                 <section className="space-y-2" aria-labelledby="ucs-appt-today-heading">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 id="ucs-appt-today-heading" className={usedCarShowroomSectionHeadingClass}>
@@ -1437,26 +1627,113 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                     </ul>
                   </section>
                 ) : null}
-              </>
+              </div>
             )}
           </div>
         ) : null}
 
         {tab === "finance-pending" ? (
-          <div className="space-y-2">
-            {pendingFinance.length === 0 ? (
+          <div className="space-y-3">
+            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
+              <button
+                type="button"
+                aria-expanded={financeFilterOpen}
+                aria-controls="ucs-finance-pending-filter-panel"
+                aria-label={financeFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={financeFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  usedCarShowroomInlineSubNavBtnClass(financeFilterOpen),
+                  "relative",
+                  financeFiltersActive && !financeFilterOpen && "ring-1 ring-amber-300/80",
+                )}
+                onClick={() => setFinanceFilterOpen((o) => !o)}
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{financeFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {financeFiltersActive && !financeFilterOpen ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            </div>
+
+            <div
+              id="ucs-finance-pending-filter-panel"
+              className={cn("space-y-3", financeFilterOpen ? "block" : "hidden")}
+            >
+              <div
+                className={usedCarShowroomFilterChipShellClass}
+                role="tablist"
+                aria-label="กรองสถานะไฟแนนซ์รอ"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={financeStatusFilter === "ALL"}
+                  className={usedCarShowroomFilterChipClass(financeStatusFilter === "ALL")}
+                  onClick={() => setFinanceStatusFilter("ALL")}
+                >
+                  ทั้งหมด ({financeStatusCounts.ALL ?? 0})
+                </button>
+                {USED_CAR_FINANCE_PENDING_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={financeStatusFilter === s}
+                    className={usedCarShowroomFilterChipClass(financeStatusFilter === s)}
+                    onClick={() => setFinanceStatusFilter(s)}
+                  >
+                    {usedCarFinanceCaseStatusLabel(s)} ({financeStatusCounts[s] ?? 0})
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-finance-kw">
+                  <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+                  <input
+                    id="ucs-finance-kw"
+                    className={cn(usedCarShowroomFieldClass, "mt-1 min-h-[44px]")}
+                    placeholder="รถ · บริษัท · หมายเหตุ"
+                    value={financeKeyword}
+                    onChange={(e) => setFinanceKeyword(e.target.value)}
+                  />
+                </label>
+                {financeFiltersActive ? (
+                  <button
+                    type="button"
+                    className={usedCarShowroomOutlineButtonClass}
+                    onClick={clearFinanceFilters}
+                  >
+                    ล้างกรอง
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] font-semibold text-[#66638c]">
+                แสดง {pendingFinance.length}/{pendingFinanceBase.length}
+              </p>
+            </div>
+
+            {pendingFinanceBase.length === 0 ? (
               <AppEmptyState>ไม่มีเคสไฟแนนซ์รอ</AppEmptyState>
+            ) : pendingFinance.length === 0 ? (
+              <AppEmptyState>ไม่พบเคสตามตัวกรอง</AppEmptyState>
             ) : (
-              pendingFinance.map((c) => (
-                <div key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-[#1e1b4b]">{c.vehicleTitle ?? c.id.slice(0, 8)}</p>
-                    <p className="text-xs text-[#66638c]">
-                      {c.status} · ยอดจัด {baht(c.financedAmountBaht)}
-                    </p>
-                  </div>
-                </div>
-              ))
+              <ul className="space-y-2">
+                {pendingFinance.map((c) => (
+                  <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-[#1e1b4b]">{c.vehicleTitle ?? c.id.slice(0, 8)}</p>
+                      <p className="text-xs text-[#66638c]">
+                        {usedCarFinanceCaseStatusLabel(c.status)}
+                        {c.companyName ? ` · ${c.companyName}` : ""} · ยอดจัด {baht(c.financedAmountBaht)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         ) : null}

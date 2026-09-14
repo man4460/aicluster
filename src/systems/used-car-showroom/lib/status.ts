@@ -168,3 +168,40 @@ export function usedCarAppointmentKindLabel(kind: string): string {
 export function isUsedCarAppointmentStatus(raw: unknown): raw is UsedCarAppointmentStatus {
   return typeof raw === "string" && (USED_CAR_APPOINTMENT_STATUSES as readonly string[]).includes(raw);
 }
+
+/** สถานะเคสไฟแนนซ์ */
+export const USED_CAR_FINANCE_CASE_STATUSES = [
+  "SUBMITTED",
+  "WAITING_DOCS",
+  "APPROVED",
+  "REJECTED",
+  "SIGNED",
+] as const;
+
+export type UsedCarFinanceCaseStatus = (typeof USED_CAR_FINANCE_CASE_STATUSES)[number];
+
+/** สถานะที่ถือว่า «รอ» บนแท็บไฟแนนซ์รอ */
+export const USED_CAR_FINANCE_PENDING_STATUSES = ["SUBMITTED", "WAITING_DOCS"] as const;
+
+export type UsedCarFinancePendingStatus = (typeof USED_CAR_FINANCE_PENDING_STATUSES)[number];
+
+export function usedCarFinanceCaseStatusLabel(status: string): string {
+  switch (status) {
+    case "SUBMITTED":
+      return "ส่งแล้ว";
+    case "WAITING_DOCS":
+      return "รอเอกสาร";
+    case "APPROVED":
+      return "อนุมัติ";
+    case "REJECTED":
+      return "ไม่อนุมัติ";
+    case "SIGNED":
+      return "เซ็นสัญญา";
+    default:
+      return status;
+  }
+}
+
+export function isUsedCarFinancePendingStatus(raw: unknown): raw is UsedCarFinancePendingStatus {
+  return typeof raw === "string" && (USED_CAR_FINANCE_PENDING_STATUSES as readonly string[]).includes(raw);
+}
