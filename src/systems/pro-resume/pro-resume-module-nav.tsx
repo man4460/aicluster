@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 export const PRO_RESUME_BASE = "/dashboard/pro-resume";
 export const PRO_RESUME_PROFILE_PATH = `${PRO_RESUME_BASE}/profile`;
+export const PRO_RESUME_SKILLS_PATH = `${PRO_RESUME_BASE}/skills`;
 export const PRO_RESUME_PORTFOLIO_PATH = `${PRO_RESUME_BASE}/portfolio`;
 export const PRO_RESUME_SETTINGS_PATH = `${PRO_RESUME_BASE}/settings`;
 
@@ -9,7 +10,7 @@ export const PRO_RESUME_MODULE_DISPLAY_NAME = "Pro Resume";
 export const PRO_RESUME_HEADER_COLLAPSE_KEY = "mawell-pro-resume-module-header-collapsed";
 export const PRO_RESUME_HEADER_COLLAPSE_EVENT = "mawell-pro-resume-header-collapse";
 
-export type ProResumeModuleNavKey = "dashboard" | "profile" | "portfolio" | "settings";
+export type ProResumeModuleNavKey = "dashboard" | "profile" | "skills" | "portfolio" | "settings";
 
 export type ProResumeNavItem = {
   key: ProResumeModuleNavKey;
@@ -21,6 +22,7 @@ export type ProResumeNavItem = {
 export const PRO_RESUME_NAV_ITEMS: ProResumeNavItem[] = [
   { key: "dashboard", label: "แดชบอร์ด", shortLabel: "แดช", href: PRO_RESUME_BASE },
   { key: "profile", label: "โปรไฟล์", shortLabel: "โปร", href: PRO_RESUME_PROFILE_PATH },
+  { key: "skills", label: "ทักษะพิเศษ", shortLabel: "ทักษะ", href: PRO_RESUME_SKILLS_PATH },
   { key: "portfolio", label: "ผลงาน", shortLabel: "ผลงาน", href: PRO_RESUME_PORTFOLIO_PATH },
   {
     key: "settings",
@@ -42,6 +44,8 @@ export function isProResumeModuleNavItemActive(pathname: string, key: ProResumeM
       return norm === PRO_RESUME_BASE;
     case "profile":
       return norm === PRO_RESUME_PROFILE_PATH || norm.startsWith(`${PRO_RESUME_PROFILE_PATH}/`);
+    case "skills":
+      return norm === PRO_RESUME_SKILLS_PATH || norm.startsWith(`${PRO_RESUME_SKILLS_PATH}/`);
     case "portfolio":
       return norm === PRO_RESUME_PORTFOLIO_PATH || norm.startsWith(`${PRO_RESUME_PORTFOLIO_PATH}/`);
     case "settings":
@@ -66,6 +70,12 @@ export function proResumeModuleNavIcon(key: ProResumeModuleNavKey): ReactElement
         <>
           <circle cx="12" cy="8" r="4" />
           <path d="M6 20v-1a6 6 0 0 1 12 0v1" />
+        </>
+      );
+    case "skills":
+      return (
+        <>
+          <path d="M12 2l2.2 4.5L19 7.3l-3.5 3.4.8 4.8L12 13.8 7.7 15.5l.8-4.8L5 7.3l4.8-.8L12 2z" />
         </>
       );
     case "portfolio":

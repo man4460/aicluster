@@ -63,13 +63,14 @@ async function wipeProResumeDemoScope(
   await prisma.resumePortfolioItem.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.resumePortfolioCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.resumeCertificate.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await prisma.resumeSkill.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.resumeExperience.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.resumeEducation.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /**
  * ล้างแล้วใส่ชุดข้อมูลทดลองครบฟังก์ชัน: โปรไฟล์ · การศึกษา · ประวัติงาน · ใบประกาศ ·
- * หมวด/ชิ้นงานพอร์ตโฟลิโอ · สถิติเข้าชม/คลิก
+ * ทักษะพิเศษ · หมวด/ชิ้นงานพอร์ตโฟลิโอ · สถิติเข้าชม/คลิก
  */
 export async function seedProResumeProdDemoForOwner(
   prisma: PrismaClient,
@@ -245,6 +246,45 @@ export async function seedProResumeProdDemoForOwner(
         issuedBy: c.issuedBy,
         year: c.year,
         fileUrl: c.fileUrl,
+        orderIndex: i,
+      },
+    });
+  }
+
+  const skills = [
+    {
+      name: "ออกแบบประสบการณ์ลูกค้า (CX)",
+      level: "เชี่ยวชาญ",
+      description:
+        "วิเคราะห์ Journey และออกแบบ touchpoint ให้ทีมขาย/บริการใช้งานจริงบนมือถือ",
+    },
+    {
+      name: "นำเสนอแผนและปิดดีล B2B",
+      level: "ดีมาก",
+      description: "สร้างสไลด์และเดโมสดที่สื่อสารคุณค่าธุรกิจท้องถิ่นได้ชัดใน 15 นาที",
+    },
+    {
+      name: "เขียนสคริปต์ / วิดีโอสั้นโปรโมท",
+      level: "ดี",
+      description: "วางโครงสร้างเนื้อหา + ถ่าย/ตัดต่อคลิปแนะนำผลิตภัณฑ์สำหรับโซเชียล",
+    },
+    {
+      name: "อบรมทีมและถ่ายทอดความรู้",
+      level: "ดีมาก",
+      description: "จัด workshop ภายในให้พนักงานใช้งานระบบใหม่และวัดผลหลังอบรม",
+    },
+  ] as const;
+
+  for (let i = 0; i < skills.length; i += 1) {
+    const s = skills[i]!;
+    await prisma.resumeSkill.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        profileId: profile.id,
+        name: s.name,
+        level: s.level,
+        description: s.description,
         orderIndex: i,
       },
     });

@@ -94,6 +94,7 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.resumePortfolioItem.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.resumePortfolioCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.resumeCertificate.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeSkill.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.resumeExperience.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.resumeEducation.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.resumeProfile.deleteMany({ where: { ownerUserId, trialSessionId } });

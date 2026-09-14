@@ -46,7 +46,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 87: SiteSetting.adminTokenTopUpPinHash — รหัสเติมโทเคนแอดมิน */
 /** 89: HomeFinanceDocumentCategory + HomeFinanceAiPrompt */
 /** 90: HomeFinanceAiPromptCategory */
-const PRISMA_SINGLETON_VERSION = 91;
+const PRISMA_SINGLETON_VERSION = 92;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -193,6 +193,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     lmsLearner?: { findMany?: unknown };
     lmsCoursePurchase?: { findMany?: unknown };
     resumeProfile?: { findUnique?: unknown };
+    resumeSkill?: { findMany?: unknown };
     resumePortfolioItem?: { findMany?: unknown };
     usedCarShowroomShop?: { findUnique?: unknown };
     usedCarVehicle?: { findMany?: unknown };
@@ -336,6 +337,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.lmsLearner?.findMany === "function" &&
     typeof c.lmsCoursePurchase?.findMany === "function" &&
     typeof c.resumeProfile?.findUnique === "function" &&
+    typeof c.resumeSkill?.findMany === "function" &&
     typeof c.resumePortfolioItem?.findMany === "function"
   );
 }

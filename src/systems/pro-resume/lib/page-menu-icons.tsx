@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   Settings,
+  Sparkles,
   UserRound,
   Youtube,
 } from "lucide-react";
@@ -23,6 +24,8 @@ export function proResumePageTitleIcon(key: ProResumeModuleNavKey): ReactNode {
       return <LayoutDashboard className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "profile":
       return <UserRound className={iconClass} strokeWidth={2.25} aria-hidden />;
+    case "skills":
+      return <Sparkles className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "portfolio":
       return <FolderOpen className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "settings":
@@ -38,6 +41,8 @@ export function proResumePageTitleTone(key: ProResumeModuleNavKey): ProResumeCar
       return "sky";
     case "profile":
       return "violet";
+    case "skills":
+      return "amber";
     case "portfolio":
       return "emerald";
     case "settings":
@@ -47,7 +52,9 @@ export function proResumePageTitleTone(key: ProResumeModuleNavKey): ProResumeCar
   }
 }
 
-export function proResumeSectionIcon(kind: "education" | "experience" | "certificate" | "portfolio"): ReactNode {
+export function proResumeSectionIcon(
+  kind: "education" | "experience" | "certificate" | "skill" | "portfolio",
+): ReactNode {
   switch (kind) {
     case "education":
       return <GraduationCap className={iconClass} strokeWidth={2.25} aria-hidden />;
@@ -55,6 +62,8 @@ export function proResumeSectionIcon(kind: "education" | "experience" | "certifi
       return <Briefcase className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "certificate":
       return <Award className={iconClass} strokeWidth={2.25} aria-hidden />;
+    case "skill":
+      return <Sparkles className={iconClass} strokeWidth={2.25} aria-hidden />;
     case "portfolio":
       return <FolderOpen className={iconClass} strokeWidth={2.25} aria-hidden />;
     default:

@@ -9,6 +9,7 @@ import {
   mapResumePortfolioCategory,
   mapResumePortfolioItem,
   mapResumeProfile,
+  mapResumeSkill,
   type ResumePublicDto,
 } from "@/systems/pro-resume/lib/mappers";
 
@@ -50,7 +51,7 @@ export async function loadProResumePublicPortal(
   const profile = await findProResumePublicProfile(slug, trialParam);
   if (!profile) return null;
 
-  const [educations, experiences, certificates, categories, portfolioItems] = await Promise.all([
+  const [educations, experiences, certificates, skills, categories, portfolioItems] = await Promise.all([
     prisma.resumeEducation.findMany({
       where: { profileId: profile.id },
       orderBy: { orderIndex: "asc" },
@@ -60,6 +61,10 @@ export async function loadProResumePublicPortal(
       orderBy: { orderIndex: "asc" },
     }),
     prisma.resumeCertificate.findMany({
+      where: { profileId: profile.id },
+      orderBy: { orderIndex: "asc" },
+    }),
+    prisma.resumeSkill.findMany({
       where: { profileId: profile.id },
       orderBy: { orderIndex: "asc" },
     }),
@@ -78,6 +83,7 @@ export async function loadProResumePublicPortal(
     educations: educations.map(mapResumeEducation),
     experiences: experiences.map(mapResumeExperience),
     certificates: certificates.map(mapResumeCertificate),
+    skills: skills.map(mapResumeSkill),
     categories: categories.map(mapResumePortfolioCategory),
     portfolioItems: portfolioItems.map(mapResumePortfolioItem),
   };

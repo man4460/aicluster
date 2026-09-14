@@ -316,6 +316,7 @@ model User {
   resumeEducations                   ResumeEducation[]
   resumeExperiences                  ResumeExperience[]
   resumeCertificates                 ResumeCertificate[]
+  resumeSkills                       ResumeSkill[]
   resumePortfolioCategories          ResumePortfolioCategory[]
   resumePortfolioItems               ResumePortfolioItem[]
   resumeViewAnalytics                ResumeViewAnalytics[]
@@ -8087,6 +8088,7 @@ model ResumeProfile {
   educations          ResumeEducation[]
   experiences         ResumeExperience[]
   certificates        ResumeCertificate[]
+  skills              ResumeSkill[]
   portfolioCategories ResumePortfolioCategory[]
   portfolioItems      ResumePortfolioItem[]
   viewAnalytics       ResumeViewAnalytics[]
@@ -8157,6 +8159,31 @@ model ResumeCertificate {
   @@index([profileId, orderIndex], map: "resume_cert_profile_order_idx")
   @@index([ownerUserId, trialSessionId], map: "resume_cert_owner_trial_idx")
   @@map("resume_certificates")
+}
+
+/**
+ * ทักษะพิเศษ / ความสามารถพิเศษที่นำเสนอบนเรซูเม่สาธารณะ
+ */
+model ResumeSkill {
+  id             String        @id @default(cuid())
+  ownerUserId    String        @map("owner_id") @db.VarChar(191)
+  owner          User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String        @map("profile_id")
+  profile        ResumeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String        @db.VarChar(200)
+  /**
+   * ระดับ เช่น พื้นฐาน · ดี · ดีมาก · เชี่ยวชาญ (ข้อความอิสระ)
+   */
+  level          String        @default("") @db.VarChar(80)
+  description    String        @default("") @db.Text
+  orderIndex     Int           @default(0) @map("order_index")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([profileId, orderIndex], map: "resume_skill_profile_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_skill_owner_trial_idx")
+  @@map("resume_skills")
 }
 
 model ResumePortfolioCategory {

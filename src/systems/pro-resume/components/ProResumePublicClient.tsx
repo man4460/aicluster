@@ -292,7 +292,11 @@ export function ProResumePublicClient({
   const [portfolioPage, setPortfolioPage] = useState(0);
   const portfolioPageSize = useProResumePortalPortfolioPageSize();
 
-  const hasCareer = data.experiences.length > 0 || data.educations.length > 0 || data.certificates.length > 0;
+  const hasCareer =
+    data.experiences.length > 0 ||
+    data.educations.length > 0 ||
+    data.certificates.length > 0 ||
+    data.skills.length > 0;
   const hasPortfolio = data.portfolioItems.length > 0;
 
   const [tab, setTab] = useState<PortalTab>(() => {
@@ -658,6 +662,42 @@ export function ProResumePublicClient({
                           {c.year ? <p className="truncate text-[11px] leading-tight text-[#8b87b8] sm:text-xs">{c.year}</p> : null}
                         </div>
                       </button>
+                    </li>
+                  ))}
+                </ul>
+              </ProResumePortalSection>
+            ) : null}
+
+            {data.skills.length ? (
+              <ProResumePortalSection
+                title="ทักษะพิเศษ"
+                subtitle="ความสามารถพิเศษที่นำเสนอ"
+                titleIcon={proResumeSectionIcon("skill")}
+                titleTone="amber"
+              >
+                <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5">
+                  {data.skills.map((s) => (
+                    <li
+                      key={s.id}
+                      className="min-w-0 rounded-lg border border-amber-200/70 bg-amber-50/40 p-3 shadow-sm sm:rounded-xl sm:p-3.5"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200/80"
+                          aria-hidden
+                        >
+                          {proResumeSectionIcon("skill")}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black leading-snug text-[#1e1b4b]">{s.name}</p>
+                          {s.level.trim() ? (
+                            <p className="mt-0.5 text-xs font-bold text-amber-800/90">{s.level}</p>
+                          ) : null}
+                          {s.description.trim() ? (
+                            <ProResumeRichContent content={s.description} className="mt-1.5" />
+                          ) : null}
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>

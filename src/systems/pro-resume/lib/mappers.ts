@@ -60,6 +60,14 @@ export type ResumeCertificateDto = {
   orderIndex: number;
 };
 
+export type ResumeSkillDto = {
+  id: string;
+  name: string;
+  level: string;
+  description: string;
+  orderIndex: number;
+};
+
 export type ResumePortfolioCategoryDto = {
   id: string;
   name: string;
@@ -84,6 +92,7 @@ export type ResumePublicDto = {
   educations: ResumeEducationDto[];
   experiences: ResumeExperienceDto[];
   certificates: ResumeCertificateDto[];
+  skills: ResumeSkillDto[];
   categories: ResumePortfolioCategoryDto[];
   portfolioItems: ResumePortfolioItemDto[];
 };
@@ -176,6 +185,22 @@ export function mapResumeCertificate(row: {
     issuedBy: row.issuedBy,
     year: row.year,
     fileUrl: row.fileUrl,
+    orderIndex: row.orderIndex,
+  };
+}
+
+export function mapResumeSkill(row: {
+  id: string;
+  name: string;
+  level: string;
+  description: string;
+  orderIndex: number;
+}): ResumeSkillDto {
+  return {
+    id: row.id,
+    name: row.name,
+    level: row.level,
+    description: row.description,
     orderIndex: row.orderIndex,
   };
 }
