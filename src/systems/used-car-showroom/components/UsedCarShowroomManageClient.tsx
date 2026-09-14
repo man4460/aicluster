@@ -125,6 +125,8 @@ const MANAGE_TABS = USED_CAR_SHOWROOM_MANAGE_TAB_ITEMS.map((i) => ({
   icon: usedCarShowroomManageTabIcon(i.key),
 }));
 
+type DetailKind = "vehicles" | "customers" | "staff" | "promotions" | "finance-companies";
+
 const VEHICLE_STATUSES = ["PREP", "FOR_SALE", "RESERVED", "SOLD", "DELIVERED"] as const;
 
 function baht(n: number) {
@@ -237,7 +239,10 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const [busy, setBusy] = useState(false);
 
-  const [editId, setEditId] = useState<string | null>(null);
+  const [detailKind, setDetailKind] = useState<DetailKind | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailEditing, setDetailEditing] = useState(false);
+  const [detailSaving, setDetailSaving] = useState(false);
   const [costKind, setCostKind] = useState("REPAIR");
   const [costAmount, setCostAmount] = useState("");
   const [costLabel, setCostLabel] = useState("");
@@ -265,15 +270,31 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     setKeyword("");
     setListPage(0);
     setAddOpen(false);
-    setEditId(null);
+    setDetailKind(null);
+    setDetailId(null);
+    setDetailEditing(false);
+    setDetailSaving(false);
   }, [tab]);
 
   useEffect(() => {
     if (tab !== "vehicles" || !vehicleParam) return;
-    if (vehicles.some((v) => v.id === vehicleParam)) {
-      setEditId(vehicleParam);
-    }
-  }, [tab, vehicleParam, vehicles]);
+    if (detailKind === "vehicles" && detailId === vehicleParam) return;
+    const v = vehicles.find((row) => row.id === vehicleParam);
+    if (!v) return;
+    setVehicleForm({
+      brand: v.brand,
+      model: v.model,
+      year: v.year != null ? String(v.year) : "",
+      askingPriceBaht: String(v.askingPriceBaht || ""),
+      purchaseCostBaht: String(v.purchaseCostBaht || ""),
+      plateNumber: v.plateNumber ?? "",
+      description: v.description ?? "",
+      status: v.status,
+    });
+    setDetailKind("vehicles");
+    setDetailId(v.id);
+    setDetailEditing(false);
+  }, [tab, vehicleParam, vehicles, detailKind, detailId]);
 
   const load = useCallback(async () => {
     try {
@@ -401,7 +422,24 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     return filteredCompanies.slice(start, start + LIST_PAGE_SIZE);
   }, [filteredCompanies, listSafePage]);
 
-  const selected = editId ? vehicles.find((v) => v.id === editId) ?? null : null;
+  const selected =
+    detailKind === "vehicles" && detailId
+      ? (vehicles.find((v) => v.id === detailId) ?? null)
+      : null;
+  const detailCustomer =
+    detailKind === "customers" && detailId
+      ? (customers.find((c) => c.id === detailId) ?? null)
+      : null;
+  const detailStaff =
+    detailKind === "staff" && detailId ? (staff.find((s) => s.id === detailId) ?? null) : null;
+  const detailPromo =
+    detailKind === "promotions" && detailId
+      ? (promos.find((p) => p.id === detailId) ?? null)
+      : null;
+  const detailCompany =
+    detailKind === "finance-companies" && detailId
+      ? (companies.find((c) => c.id === detailId) ?? null)
+      : null;
 
   function listRangeText(unit: string) {
     if (listTotal === 0) return null;
@@ -450,9 +488,295 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     setCompanyForm(emptyCompanyForm);
   }
 
+  function fillFormsForDetail(kind: DetailKind, id: string): boolean {
+    if (kind === "vehicles") {
+      const v = vehicles.find((row) => row.id === id);
+      if (!v) return false;
+      setVehicleForm({
+        brand: v.brand,
+        model: v.model,
+        year: v.year != null ? String(v.year) : "",
+        askingPriceBaht: String(v.askingPriceBaht || ""),
+        purchaseCostBaht: String(v.purchaseCostBaht || ""),
+        plateNumber: v.plateNumber ?? "",
+        description: v.description ?? "",
+        status: v.status,
+      });
+      return true;
+    }
+    if (kind === "customers") {
+      const c = customers.find((row) => row.id === id);
+      if (!c) return false;
+      setCustomerForm({
+        fullName: c.fullName,
+        phone: c.phone,
+        lineId: c.lineId ?? "",
+        email: c.email ?? "",
+        address: c.address ?? "",
+        note: c.note ?? "",
+      });
+      return true;
+    }
+    if (kind === "staff") {
+      const s = staff.find((row) => row.id === id);
+      if (!s) return false;
+      setStaffForm({
+        fullName: s.fullName,
+        phone: s.phone ?? "",
+        role: s.role,
+        commissionPercent: String(s.commissionPercent ?? 0),
+        bonusNote: s.bonusNote ?? "",
+        isActive: s.isActive,
+        note: s.note ?? "",
+      });
+      return true;
+    }
+    if (kind === "promotions") {
+      const p = promos.find((row) => row.id === id);
+      if (!p) return false;
+      setPromoForm({
+        title: p.title,
+        description: p.description ?? "",
+        kind: p.kind,
+        valueBaht: String(p.valueBaht || ""),
+        valuePercent: String(p.valuePercent || ""),
+        giftLabel: p.giftLabel ?? "",
+        startsOn: p.startsOn,
+        endsOn: p.endsOn,
+        isActive: p.isActive,
+      });
+      return true;
+    }
+    const c = companies.find((row) => row.id === id);
+    if (!c) return false;
+    setCompanyForm({
+      name: c.name,
+      contactName: c.contactName ?? "",
+      contactPhone: c.contactPhone ?? "",
+      note: c.note ?? "",
+      isActive: c.isActive,
+    });
+    return true;
+  }
+
+  function openDetail(kind: DetailKind, id: string, editing = false) {
+    if (!fillFormsForDetail(kind, id)) return;
+    setAddOpen(false);
+    setDetailKind(kind);
+    setDetailId(id);
+    setDetailEditing(editing);
+  }
+
+  function closeDetail() {
+    setDetailKind(null);
+    setDetailId(null);
+    setDetailEditing(false);
+    setDetailSaving(false);
+    if (vehicleParam) {
+      router.replace(usedCarShowroomManageHref(tab === "pnl" ? "pnl" : "vehicles"));
+    }
+  }
+
+  function startDetailEdit() {
+    if (!detailKind || !detailId) return;
+    if (!fillFormsForDetail(detailKind, detailId)) return;
+    setDetailEditing(true);
+  }
+
+  function cancelDetailEdit() {
+    if (!detailKind || !detailId) return;
+    if (!fillFormsForDetail(detailKind, detailId)) return;
+    setDetailEditing(false);
+  }
+
+  function detailModalTitle(): string {
+    if (!detailKind) return "รายละเอียด";
+    if (detailEditing) {
+      switch (detailKind) {
+        case "vehicles":
+          return "แก้ไขรถ";
+        case "customers":
+          return "แก้ไขลูกค้า";
+        case "staff":
+          return "แก้ไขพนักงาน";
+        case "promotions":
+          return "แก้ไขโปร";
+        case "finance-companies":
+          return "แก้ไขไฟแนนซ์";
+      }
+    }
+    switch (detailKind) {
+      case "vehicles":
+        return "รายละเอียดรถ";
+      case "customers":
+        return "รายละเอียดลูกค้า";
+      case "staff":
+        return "รายละเอียดพนักงาน";
+      case "promotions":
+        return "รายละเอียดโปร";
+      case "finance-companies":
+        return "รายละเอียดไฟแนนซ์";
+    }
+  }
+
   function clearFilters() {
     setStatusFilter("ALL");
     setKeyword("");
+  }
+
+  async function saveDetail() {
+    if (!detailKind || !detailId) return;
+    setDetailSaving(true);
+    try {
+      if (detailKind === "vehicles") {
+        if (!vehicleForm.brand.trim() || !vehicleForm.model.trim()) {
+          notice.error("กรอกยี่ห้อและรุ่น");
+          return;
+        }
+        const res = await fetch(`/api/used-car-showroom/session/vehicles/${detailId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            brand: vehicleForm.brand,
+            model: vehicleForm.model,
+            year: vehicleForm.year ? Number(vehicleForm.year) : null,
+            plateNumber: vehicleForm.plateNumber || null,
+            purchaseCostBaht: Number(vehicleForm.purchaseCostBaht) || 0,
+            askingPriceBaht: Number(vehicleForm.askingPriceBaht) || 0,
+            description: vehicleForm.description || null,
+            status: vehicleForm.status,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          notice.error(data.error || "บันทึกไม่สำเร็จ");
+          return;
+        }
+        if (data.vehicle) {
+          setVehicles((list) => list.map((v) => (v.id === detailId ? { ...v, ...data.vehicle } : v)));
+        }
+      } else if (detailKind === "customers") {
+        if (!customerForm.fullName.trim() || !customerForm.phone.trim()) {
+          notice.error("กรอกชื่อและเบอร์");
+          return;
+        }
+        const res = await fetch("/api/used-car-showroom/session/customers", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: detailId,
+            fullName: customerForm.fullName,
+            phone: customerForm.phone,
+            lineId: customerForm.lineId || null,
+            email: customerForm.email || null,
+            address: customerForm.address || null,
+            note: customerForm.note || null,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          notice.error(data.error || "บันทึกไม่สำเร็จ");
+          return;
+        }
+        if (data.customer) {
+          setCustomers((list) => list.map((c) => (c.id === detailId ? data.customer : c)));
+        }
+      } else if (detailKind === "staff") {
+        if (!staffForm.fullName.trim()) {
+          notice.error("กรอกชื่อพนักงาน");
+          return;
+        }
+        const res = await fetch("/api/used-car-showroom/session/staff", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: detailId,
+            fullName: staffForm.fullName,
+            phone: staffForm.phone || null,
+            role: staffForm.role,
+            commissionPercent: Number(staffForm.commissionPercent) || 0,
+            isActive: staffForm.isActive,
+            note: staffForm.note || null,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          notice.error(data.error || "บันทึกไม่สำเร็จ");
+          return;
+        }
+        if (data.staff) {
+          setStaff((list) =>
+            list.map((s) => (s.id === detailId ? { ...s, ...data.staff, bonusNote: s.bonusNote } : s)),
+          );
+        }
+      } else if (detailKind === "promotions") {
+        if (!promoForm.title.trim()) {
+          notice.error("กรอกชื่อโปร");
+          return;
+        }
+        const res = await fetch("/api/used-car-showroom/session/promotions", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: detailId,
+            title: promoForm.title,
+            description: promoForm.description || null,
+            kind: promoForm.kind,
+            valueBaht: Number(promoForm.valueBaht) || 0,
+            valuePercent: Number(promoForm.valuePercent) || 0,
+            isActive: promoForm.isActive,
+            startsOn: promoForm.startsOn || bangkokDateKey(),
+            endsOn: promoForm.endsOn || bangkokDateKey(),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          notice.error(data.error || "บันทึกไม่สำเร็จ");
+          return;
+        }
+        if (data.promotion) {
+          setPromos((list) => list.map((p) => (p.id === detailId ? { ...p, ...data.promotion } : p)));
+        }
+      } else if (detailKind === "finance-companies") {
+        if (!companyForm.name.trim()) {
+          notice.error("กรอกชื่อไฟแนนซ์");
+          return;
+        }
+        const res = await fetch("/api/used-car-showroom/session/finance-companies", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: detailId,
+            name: companyForm.name,
+            contactName: companyForm.contactName || null,
+            contactPhone: companyForm.contactPhone || null,
+            note: companyForm.note || null,
+            isActive: companyForm.isActive,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          notice.error(data.error || "บันทึกไม่สำเร็จ");
+          return;
+        }
+        if (data.company) {
+          setCompanies((list) => list.map((c) => (c.id === detailId ? data.company : c)));
+        }
+      }
+      notice.show("บันทึกแล้ว");
+      await load();
+      setDetailEditing(false);
+    } catch (e) {
+      console.error(e);
+      notice.error("บันทึกไม่สำเร็จ");
+    } finally {
+      setDetailSaving(false);
+    }
   }
 
   async function saveAdd() {
@@ -615,7 +939,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
       notice.error("ลบไม่สำเร็จ");
       return;
     }
-    if (editId === id) setEditId(null);
+    if (detailKind === "vehicles" && detailId === id) closeDetail();
     await load();
   }
 
@@ -628,17 +952,18 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
       notice.error("ลบไม่สำเร็จ");
       return;
     }
+    if (detailKind === kind && detailId === id) closeDetail();
     await load();
   }
 
   async function addCost() {
-    if (!editId) return;
+    if (detailKind !== "vehicles" || !detailId) return;
     const amount = Math.round(Number(costAmount) || 0);
     if (amount <= 0) {
       notice.error("ระบุจำนวนเงินต้นทุน");
       return;
     }
-    const res = await fetch(`/api/used-car-showroom/session/vehicles/${editId}/costs`, {
+    const res = await fetch(`/api/used-car-showroom/session/vehicles/${detailId}/costs`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -654,11 +979,11 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
   }
 
   async function uploadImage(file: File) {
-    if (!editId) return;
+    if (detailKind !== "vehicles" || !detailId) return;
     const prepared = await prepareImageFileForUpload(file);
     const fd = new FormData();
     fd.set("file", prepared);
-    const res = await fetch(`/api/used-car-showroom/session/vehicles/${editId}/images`, {
+    const res = await fetch(`/api/used-car-showroom/session/vehicles/${detailId}/images`, {
       method: "POST",
       credentials: "include",
       body: fd,
@@ -671,8 +996,8 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
   }
 
   async function addYoutube() {
-    if (!editId || !ytUrl.trim()) return;
-    const res = await fetch(`/api/used-car-showroom/session/vehicles/${editId}/videos`, {
+    if (detailKind !== "vehicles" || !detailId || !ytUrl.trim()) return;
+    const res = await fetch(`/api/used-car-showroom/session/vehicles/${detailId}/videos`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -769,6 +1094,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
           className={usedCarShowroomPrimaryButtonClass}
           onClick={() => {
             resetAddForms();
+            closeDetail();
             setAddOpen(true);
           }}
           aria-label={addLabel(tab)}
@@ -941,77 +1267,98 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                   {pageVehicles.map((v) => {
                     const tone = usedCarVehicleStatusTone(v.status);
                     return (
-                      <li key={v.id} className={usedCarShowroomTonedRowCardClass(tone)}>
-                        <div className="flex min-w-0 flex-1 items-start gap-3">
-                          {v.coverImageUrl ? (
-                            <AppImageThumb
-                              src={v.coverImageUrl}
-                              alt={v.title}
-                              className="h-14 w-14"
-                              onOpen={() => lb.open(v.coverImageUrl!)}
-                            />
-                          ) : (
-                            <span className={usedCarShowroomCardIconTileClass(tone, "lg")}>
-                              <Car className="h-6 w-6" aria-hidden />
-                            </span>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
-                            <p className="text-xs text-[#66638c]">
-                              {v.statusLabel} · ขาย {baht(v.askingPriceBaht)} · ทุน {baht(v.purchaseCostBaht)} ·
-                              ปรับสภาพ {baht(v.prepCostBaht)}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {VEHICLE_STATUSES.map((st) => (
-                                <button
-                                  key={st}
-                                  type="button"
-                                  className={cn(
-                                    usedCarShowroomOutlineButtonClass,
-                                    "min-h-7 px-2 text-[10px]",
-                                    v.status === st && usedCarShowroomPrimaryButtonClass,
-                                  )}
-                                  onClick={() => void patchStatus(v.id, st)}
-                                >
-                                  {usedCarVehicleStatusLabel(st)}
-                                </button>
-                              ))}
+                      <li key={v.id}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className={cn(usedCarShowroomTonedRowCardClass(tone), "cursor-pointer")}
+                          onClick={() => openDetail("vehicles", v.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openDetail("vehicles", v.id);
+                            }
+                          }}
+                          aria-label={`ดูรายละเอียด ${v.title}`}
+                        >
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
+                            {v.coverImageUrl ? (
+                              <AppImageThumb
+                                src={v.coverImageUrl}
+                                alt={v.title}
+                                className="pointer-events-none h-14 w-14"
+                              />
+                            ) : (
+                              <span className={usedCarShowroomCardIconTileClass(tone, "lg")}>
+                                <Car className="h-6 w-6" aria-hidden />
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
+                              <p className="text-xs text-[#66638c]">
+                                {v.statusLabel} · ขาย {baht(v.askingPriceBaht)} · ทุน {baht(v.purchaseCostBaht)} ·
+                                ปรับสภาพ {baht(v.prepCostBaht)}
+                              </p>
+                              <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {VEHICLE_STATUSES.map((st) => (
+                                  <button
+                                    key={st}
+                                    type="button"
+                                    className={cn(
+                                      usedCarShowroomOutlineButtonClass,
+                                      "min-h-7 px-2 text-[10px]",
+                                      v.status === st && usedCarShowroomPrimaryButtonClass,
+                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void patchStatus(v.id, st);
+                                    }}
+                                  >
+                                    {usedCarVehicleStatusLabel(st)}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {v.status === "FOR_SALE" || v.status === "RESERVED" ? (
+                          <div
+                            className="flex shrink-0 items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
+                            {v.status === "FOR_SALE" || v.status === "RESERVED" ? (
+                              <button
+                                type="button"
+                                className={cn(
+                                  usedCarShowroomOutlineButtonClass,
+                                  "min-h-[40px] px-2 text-[11px] font-bold text-emerald-700",
+                                )}
+                                aria-label={`บันทึกขาย ${v.title}`}
+                                title="บันทึกขาย"
+                                onClick={() => openSell(v)}
+                              >
+                                ขาย
+                              </button>
+                            ) : null}
                             <button
                               type="button"
-                              className={cn(
-                                usedCarShowroomOutlineButtonClass,
-                                "min-h-[40px] px-2 text-[11px] font-bold text-emerald-700",
-                              )}
-                              aria-label={`บันทึกขาย ${v.title}`}
-                              title="บันทึกขาย"
-                              onClick={() => openSell(v)}
+                              className={assetRowEditIconButtonClass}
+                              aria-label={`แก้ไข ${v.title}`}
+                              title="แก้ไข"
+                              onClick={() => openDetail("vehicles", v.id, true)}
                             >
-                              ขาย
+                              <IconRowEdit className="h-4 w-4" />
                             </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className={assetRowEditIconButtonClass}
-                            aria-label={`แก้ไข ${v.title}`}
-                            title="แก้ไข"
-                            onClick={() => setEditId(v.id)}
-                          >
-                            <IconRowEdit className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className={assetRowRemoveIconButtonClass}
-                            aria-label={`ลบ ${v.title}`}
-                            title="ลบ"
-                            onClick={() => void removeVehicle(v.id, v.title)}
-                          >
-                            <IconRowRemove className="h-4 w-4" />
-                          </button>
+                            <button
+                              type="button"
+                              className={assetRowRemoveIconButtonClass}
+                              aria-label={`ลบ ${v.title}`}
+                              title="ลบ"
+                              onClick={() => void removeVehicle(v.id, v.title)}
+                            >
+                              <IconRowRemove className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </li>
                     );
@@ -1022,22 +1369,415 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
             )
           ) : null}
 
-          {tab === "vehicles" && selected ? (
-            <div className="space-y-3 rounded-xl border border-slate-200 p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-[#1e1b4b]">รายละเอียด · {selected.title}</h3>
-                <button
-                  type="button"
-                  className={usedCarShowroomOutlineButtonClass}
-                  onClick={() => {
-                    setEditId(null);
-                    if (vehicleParam) {
-                      router.replace(usedCarShowroomManageHref("vehicles"));
-                    }
-                  }}
-                >
-                  ปิด
-                </button>
+          {tab === "pnl" ? (
+            pnlRows.length === 0 ? (
+              <AppEmptyState>
+                {vehicles.length === 0 ? "ยังไม่มีข้อมูล P&L" : "ไม่พบรายการตามตัวกรอง"}
+              </AppEmptyState>
+            ) : (
+              <div className="space-y-2">
+                {listRangeText("รายการ")}
+                {pagePnl.map((r) => (
+                  <div
+                    key={r.id}
+                    role="button"
+                    tabIndex={0}
+                    className={cn(
+                      usedCarShowroomTonedRowCardClass(r.profitBaht >= 0 ? "emerald" : "rose"),
+                      "cursor-pointer",
+                    )}
+                    onClick={() => openDetail("vehicles", r.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openDetail("vehicles", r.id);
+                      }
+                    }}
+                    aria-label={`ดูรายละเอียด ${r.title}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-[#1e1b4b]">{r.title}</p>
+                      <p className="text-xs text-[#66638c]">
+                        ทุน {baht(r.purchaseCostBaht)} + ปรับสภาพ {baht(r.prepCostBaht)} · ราคา{" "}
+                        {baht(r.salePriceBaht)} · {r.statusLabel}
+                      </p>
+                      <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                    </div>
+                    <p
+                      className={cn(
+                        "shrink-0 text-lg font-black tabular-nums",
+                        r.profitBaht >= 0 ? "text-emerald-700" : "text-rose-600",
+                      )}
+                    >
+                      {baht(r.profitBaht)}
+                    </p>
+                  </div>
+                ))}
+                {listPager()}
+              </div>
+            )
+          ) : null}
+
+          {tab === "customers" ? (
+            filteredCustomers.length === 0 ? (
+              <AppEmptyState>
+                {customers.length === 0 ? "ยังไม่มีลูกค้า" : "ไม่พบลูกค้าตามตัวกรอง"}
+              </AppEmptyState>
+            ) : (
+              <div className="space-y-2">
+                {listRangeText("คน")}
+                <ul className="space-y-2">
+                  {pageCustomers.map((c) => (
+                    <li key={c.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={cn(usedCarShowroomTonedRowCardClass("violet"), "cursor-pointer")}
+                        onClick={() => openDetail("customers", c.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openDetail("customers", c.id);
+                          }
+                        }}
+                        aria-label={`ดูรายละเอียด ${c.fullName}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-[#1e1b4b]">{c.fullName}</p>
+                          <p className="text-xs text-[#66638c]">
+                            {c.phone}
+                            {c.lineId ? ` · LINE ${c.lineId}` : ""}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                        </div>
+                        <div
+                          className="flex shrink-0 items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${c.fullName}`}
+                            title="แก้ไข"
+                            onClick={() => openDetail("customers", c.id, true)}
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${c.fullName}`}
+                            title="ลบ"
+                            onClick={() => void removeRow("customers", c.id, c.fullName)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
+            )
+          ) : null}
+
+          {tab === "staff" ? (
+            filteredStaff.length === 0 ? (
+              <AppEmptyState>
+                {staff.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบพนักงานตามตัวกรอง"}
+              </AppEmptyState>
+            ) : (
+              <div className="space-y-2">
+                {listRangeText("คน")}
+                <ul className="space-y-2">
+                  {pageStaff.map((s) => (
+                    <li key={s.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={cn(usedCarShowroomTonedRowCardClass("sky"), "cursor-pointer")}
+                        onClick={() => openDetail("staff", s.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openDetail("staff", s.id);
+                          }
+                        }}
+                        aria-label={`ดูรายละเอียด ${s.fullName}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-[#1e1b4b]">{s.fullName}</p>
+                          <p className="text-xs text-[#66638c]">
+                            {s.role} · {s.phone ?? "—"} · คอม {s.commissionPercent}% ·{" "}
+                            {s.isActive ? "ทำงาน" : "ปิด"}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                        </div>
+                        <div
+                          className="flex shrink-0 items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${s.fullName}`}
+                            title="แก้ไข"
+                            onClick={() => openDetail("staff", s.id, true)}
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${s.fullName}`}
+                            title="ลบ"
+                            onClick={() => void removeRow("staff", s.id, s.fullName)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
+            )
+          ) : null}
+
+          {tab === "promotions" ? (
+            filteredPromos.length === 0 ? (
+              <AppEmptyState>
+                {promos.length === 0 ? "ยังไม่มีโปรโมชัน" : "ไม่พบโปรตามตัวกรอง"}
+              </AppEmptyState>
+            ) : (
+              <div className="space-y-2">
+                {listRangeText("รายการ")}
+                <ul className="space-y-2">
+                  {pagePromos.map((p) => (
+                    <li key={p.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={cn(usedCarShowroomTonedRowCardClass("amber"), "cursor-pointer")}
+                        onClick={() => openDetail("promotions", p.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openDetail("promotions", p.id);
+                          }
+                        }}
+                        aria-label={`ดูรายละเอียด ${p.title}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-[#1e1b4b]">{p.title}</p>
+                          <p className="text-xs text-[#66638c]">
+                            {p.startsOn} → {p.endsOn} · {p.isActive ? "เปิด" : "ปิด"}
+                            {p.description ? ` · ${p.description}` : ""}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                        </div>
+                        <div
+                          className="flex shrink-0 items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${p.title}`}
+                            title="แก้ไข"
+                            onClick={() => openDetail("promotions", p.id, true)}
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${p.title}`}
+                            title="ลบ"
+                            onClick={() => void removeRow("promotions", p.id, p.title)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
+            )
+          ) : null}
+
+          {tab === "finance-companies" ? (
+            filteredCompanies.length === 0 ? (
+              <AppEmptyState>
+                {companies.length === 0 ? "ยังไม่มีบริษัทไฟแนนซ์" : "ไม่พบรายการตามตัวกรอง"}
+              </AppEmptyState>
+            ) : (
+              <div className="space-y-2">
+                {listRangeText("รายการ")}
+                <ul className="space-y-2">
+                  {pageCompanies.map((c) => (
+                    <li key={c.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={cn(usedCarShowroomTonedRowCardClass("indigo"), "cursor-pointer")}
+                        onClick={() => openDetail("finance-companies", c.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openDetail("finance-companies", c.id);
+                          }
+                        }}
+                        aria-label={`ดูรายละเอียด ${c.name}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-[#1e1b4b]">{c.name}</p>
+                          <p className="text-xs text-[#66638c]">
+                            {c.contactName ?? "—"} · {c.contactPhone ?? "—"} · {c.isActive ? "ใช้งาน" : "ปิด"}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                        </div>
+                        <div
+                          className="flex shrink-0 items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${c.name}`}
+                            title="แก้ไข"
+                            onClick={() => openDetail("finance-companies", c.id, true)}
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${c.name}`}
+                            title="ลบ"
+                            onClick={() => void removeRow("finance-companies", c.id, c.name)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {listPager()}
+              </div>
+            )
+          ) : null}
+        </div>
+      </UsedCarShowroomPageSubNav>
+
+      <FormModal
+        open={Boolean(detailKind && detailId)}
+        onClose={closeDetail}
+        title={detailModalTitle()}
+        size="lg"
+        mobileCentered
+        footer={
+          detailEditing ? (
+            <FormModalFooterActions
+              onCancel={cancelDetailEdit}
+              cancelLabel="ยกเลิก"
+              onSubmit={() => void saveDetail()}
+              submitLabel="บันทึก"
+              loading={detailSaving}
+            />
+          ) : (
+            <FormModalFooterActions
+              onCancel={closeDetail}
+              cancelLabel="ปิด"
+              onSubmit={startDetailEdit}
+              submitLabel="แก้ไข"
+            />
+          )
+        }
+      >
+        {detailKind === "vehicles" && selected ? (
+          detailEditing ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ยี่ห้อ
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.brand}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, brand: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  รุ่น
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.model}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, model: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ปี
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.year}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, year: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ทะเบียน
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.plateNumber}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ทุนซื้อ (บาท)
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.purchaseCostBaht}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, purchaseCostBaht: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ราคาขาย (บาท)
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.askingPriceBaht}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, askingPriceBaht: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                  สถานะ
+                  <select
+                    className={usedCarShowroomFieldClass}
+                    value={vehicleForm.status}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, status: e.target.value }))}
+                  >
+                    {VEHICLE_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {usedCarVehicleStatusLabel(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                  รายละเอียด
+                  <textarea
+                    className={usedCarShowroomTextareaClass}
+                    value={vehicleForm.description}
+                    onChange={(e) => setVehicleForm((f) => ({ ...f, description: e.target.value }))}
+                  />
+                </label>
               </div>
               <div>
                 <p className="mb-1 text-xs font-bold text-[#4d47b6]">รูปรถ</p>
@@ -1055,7 +1795,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                     <li key={img.id}>
                       <AppImageThumb
                         src={img.imageUrl}
-                        alt=""
+                        alt={selected.title}
                         className="h-16 w-16"
                         onOpen={() => lb.open(img.imageUrl)}
                       />
@@ -1096,7 +1836,11 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
               <div>
                 <p className="mb-1 text-xs font-bold text-[#4d47b6]">ต้นทุนปรับสภาพ (ไม่มีค่าคอม)</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <select className={usedCarShowroomFieldClass} value={costKind} onChange={(e) => setCostKind(e.target.value)}>
+                  <select
+                    className={usedCarShowroomFieldClass}
+                    value={costKind}
+                    onChange={(e) => setCostKind(e.target.value)}
+                  >
                     <option value="REPAIR">ซ่อม</option>
                     <option value="WASH">ล้าง</option>
                     <option value="TAX">ภาษี/ทะเบียน</option>
@@ -1127,183 +1871,536 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
                 </ul>
               </div>
             </div>
-          ) : null}
-
-          {tab === "pnl" ? (
-            pnlRows.length === 0 ? (
-              <AppEmptyState>
-                {vehicles.length === 0 ? "ยังไม่มีข้อมูล P&L" : "ไม่พบรายการตามตัวกรอง"}
-              </AppEmptyState>
-            ) : (
-              <div className="space-y-2">
-                {listRangeText("รายการ")}
-                {pagePnl.map((r) => (
-                  <div
-                    key={r.id}
-                    className={usedCarShowroomTonedRowCardClass(r.profitBaht >= 0 ? "emerald" : "rose")}
+          ) : (
+            <div className="space-y-3">
+              <div className="flex min-w-0 items-start gap-3">
+                {selected.coverImageUrl ? (
+                  <AppImageThumb
+                    src={selected.coverImageUrl}
+                    alt={selected.title}
+                    className="h-20 w-20 shrink-0"
+                    onOpen={() => selected.coverImageUrl && lb.open(selected.coverImageUrl)}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      usedCarShowroomCardIconTileClass(usedCarVehicleStatusTone(selected.status), "lg"),
+                      "shrink-0",
+                    )}
+                    aria-hidden
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{r.title}</p>
-                      <p className="text-xs text-[#66638c]">
-                        ทุน {baht(r.purchaseCostBaht)} + ปรับสภาพ {baht(r.prepCostBaht)} · ราคา{" "}
-                        {baht(r.salePriceBaht)} · {r.statusLabel}
-                      </p>
-                    </div>
-                    <p
-                      className={cn(
-                        "shrink-0 text-lg font-black tabular-nums",
-                        r.profitBaht >= 0 ? "text-emerald-700" : "text-rose-600",
-                      )}
-                    >
-                      {baht(r.profitBaht)}
-                    </p>
-                  </div>
-                ))}
-                {listPager()}
+                    <Car className="h-6 w-6" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-black text-[#1e1b4b]">{selected.title}</p>
+                  <p className="text-xs font-semibold text-[#66638c]">{selected.statusLabel}</p>
+                  <p className="text-sm font-black text-emerald-700">{baht(selected.askingPriceBaht)}</p>
+                </div>
               </div>
-            )
-          ) : null}
-
-          {tab === "customers" ? (
-            filteredCustomers.length === 0 ? (
-              <AppEmptyState>
-                {customers.length === 0 ? "ยังไม่มีลูกค้า" : "ไม่พบลูกค้าตามตัวกรอง"}
-              </AppEmptyState>
-            ) : (
-              <div className="space-y-2">
-                {listRangeText("คน")}
-                <ul className="space-y-2">
-                  {pageCustomers.map((c) => (
-                    <li key={c.id} className={usedCarShowroomTonedRowCardClass("violet")}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#1e1b4b]">{c.fullName}</p>
-                        <p className="text-xs text-[#66638c]">
-                          {c.phone}
-                          {c.lineId ? ` · LINE ${c.lineId}` : ""}
-                        </p>
-                      </div>
+              <dl className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ยี่ห้อ / รุ่น</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">
+                    {selected.brand} {selected.model}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ปี</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{selected.year ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ทะเบียน</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{selected.plateNumber || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">สถานะ</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{selected.statusLabel}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ทุนซื้อ</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{baht(selected.purchaseCostBaht)}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ราคาขาย</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{baht(selected.askingPriceBaht)}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ปรับสภาพ</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{baht(selected.prepCostBaht)}</dd>
+                </div>
+              </dl>
+              {selected.description ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-[#4d47b6]">รายละเอียด</p>
+                  <p className="whitespace-pre-wrap text-xs font-semibold text-[#66638c]">{selected.description}</p>
+                </div>
+              ) : null}
+              <div>
+                <p className="mb-1 text-xs font-bold text-[#4d47b6]">รูปรถ</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadImage(f);
+                    e.target.value = "";
+                  }}
+                />
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {selected.images.map((img) => (
+                    <li key={img.id}>
+                      <AppImageThumb
+                        src={img.imageUrl}
+                        alt={selected.title}
+                        className="h-16 w-16"
+                        onOpen={() => lb.open(img.imageUrl)}
+                      />
+                      {img.isCover ? (
+                        <span className="block text-center text-[10px] font-bold text-emerald-700">ปก</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-bold text-[#4d47b6]">YouTube</p>
+                <div className="flex gap-2">
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    placeholder="วางลิงก์ YouTube"
+                    value={ytUrl}
+                    onChange={(e) => setYtUrl(e.target.value)}
+                  />
+                  <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => void addYoutube()}>
+                    เพิ่ม
+                  </button>
+                </div>
+                <ul className={cn(usedCarShowroomYoutubeCardGridClass, "mt-2")}>
+                  {selected.videos.map((v) => (
+                    <li key={v.id}>
                       <button
                         type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${c.fullName}`}
-                        title="ลบ"
-                        onClick={() => void removeRow("customers", c.id, c.fullName)}
+                        className="aspect-video w-full rounded-lg bg-slate-900 text-xs font-bold text-white"
+                        onClick={() => yt.open(v.youtubeUrl, v.title)}
                       >
-                        <IconRowRemove className="h-4 w-4" />
+                        เล่น
                       </button>
                     </li>
                   ))}
                 </ul>
-                {listPager()}
               </div>
-            )
-          ) : null}
-
-          {tab === "staff" ? (
-            filteredStaff.length === 0 ? (
-              <AppEmptyState>
-                {staff.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบพนักงานตามตัวกรอง"}
-              </AppEmptyState>
-            ) : (
-              <div className="space-y-2">
-                {listRangeText("คน")}
-                <ul className="space-y-2">
-                  {pageStaff.map((s) => (
-                    <li key={s.id} className={usedCarShowroomTonedRowCardClass("sky")}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#1e1b4b]">{s.fullName}</p>
-                        <p className="text-xs text-[#66638c]">
-                          {s.role} · {s.phone ?? "—"} · คอม {s.commissionPercent}% ·{" "}
-                          {s.isActive ? "ทำงาน" : "ปิด"}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${s.fullName}`}
-                        title="ลบ"
-                        onClick={() => void removeRow("staff", s.id, s.fullName)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
+              <div>
+                <p className="mb-1 text-xs font-bold text-[#4d47b6]">ต้นทุนปรับสภาพ (ไม่มีค่าคอม)</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <select
+                    className={usedCarShowroomFieldClass}
+                    value={costKind}
+                    onChange={(e) => setCostKind(e.target.value)}
+                  >
+                    <option value="REPAIR">ซ่อม</option>
+                    <option value="WASH">ล้าง</option>
+                    <option value="TAX">ภาษี/ทะเบียน</option>
+                    <option value="OTHER">อื่น ๆ</option>
+                  </select>
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    placeholder="ยอด"
+                    value={costAmount}
+                    onChange={(e) => setCostAmount(e.target.value)}
+                  />
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    placeholder="ชื่อรายการ"
+                    value={costLabel}
+                    onChange={(e) => setCostLabel(e.target.value)}
+                  />
+                  <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => void addCost()}>
+                    เพิ่มต้นทุน
+                  </button>
+                </div>
+                <ul className="mt-2 space-y-1">
+                  {selected.costLines.map((c) => (
+                    <li key={c.id} className="text-xs text-[#66638c]">
+                      {usedCarCostKindLabel(c.kind)} · {c.label} · {baht(c.amountBaht)}
                     </li>
                   ))}
                 </ul>
-                {listPager()}
               </div>
-            )
-          ) : null}
+            </div>
+          )
+        ) : null}
 
-          {tab === "promotions" ? (
-            filteredPromos.length === 0 ? (
-              <AppEmptyState>
-                {promos.length === 0 ? "ยังไม่มีโปรโมชัน" : "ไม่พบโปรตามตัวกรอง"}
-              </AppEmptyState>
-            ) : (
-              <div className="space-y-2">
-                {listRangeText("รายการ")}
-                <ul className="space-y-2">
-                  {pagePromos.map((p) => (
-                    <li key={p.id} className={usedCarShowroomTonedRowCardClass("amber")}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#1e1b4b]">{p.title}</p>
-                        <p className="text-xs text-[#66638c]">
-                          {p.startsOn} → {p.endsOn} · {p.isActive ? "เปิด" : "ปิด"}
-                          {p.description ? ` · ${p.description}` : ""}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${p.title}`}
-                        title="ลบ"
-                        onClick={() => void removeRow("promotions", p.id, p.title)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {listPager()}
+        {detailKind === "customers" && detailCustomer ? (
+          detailEditing ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                ชื่อ-นามสกุล
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={customerForm.fullName}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, fullName: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                เบอร์โทร
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                LINE
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={customerForm.lineId}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, lineId: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                อีเมล
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={customerForm.email}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, email: e.target.value }))}
+                />
+              </label>
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                ที่อยู่
+                <textarea
+                  className={usedCarShowroomTextareaClass}
+                  value={customerForm.address}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, address: e.target.value }))}
+                />
+              </label>
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                หมายเหตุ
+                <textarea
+                  className={usedCarShowroomTextareaClass}
+                  value={customerForm.note}
+                  onChange={(e) => setCustomerForm((f) => ({ ...f, note: e.target.value }))}
+                />
+              </label>
+            </div>
+          ) : (
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ชื่อ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCustomer.fullName}</dd>
               </div>
-            )
-          ) : null}
+              <div>
+                <dt className="font-bold text-[#8b87a8]">เบอร์โทร</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCustomer.phone}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">LINE</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCustomer.lineId || "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">อีเมล</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCustomer.email || "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">ที่อยู่</dt>
+                <dd className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">
+                  {detailCustomer.address || "—"}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">หมายเหตุ</dt>
+                <dd className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">{detailCustomer.note || "—"}</dd>
+              </div>
+            </dl>
+          )
+        ) : null}
 
-          {tab === "finance-companies" ? (
-            filteredCompanies.length === 0 ? (
-              <AppEmptyState>
-                {companies.length === 0 ? "ยังไม่มีบริษัทไฟแนนซ์" : "ไม่พบรายการตามตัวกรอง"}
-              </AppEmptyState>
-            ) : (
-              <div className="space-y-2">
-                {listRangeText("รายการ")}
-                <ul className="space-y-2">
-                  {pageCompanies.map((c) => (
-                    <li key={c.id} className={usedCarShowroomTonedRowCardClass("indigo")}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#1e1b4b]">{c.name}</p>
-                        <p className="text-xs text-[#66638c]">
-                          {c.contactName ?? "—"} · {c.contactPhone ?? "—"} · {c.isActive ? "ใช้งาน" : "ปิด"}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${c.name}`}
-                        title="ลบ"
-                        onClick={() => void removeRow("finance-companies", c.id, c.name)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {listPager()}
+        {detailKind === "staff" && detailStaff ? (
+          detailEditing ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                ชื่อพนักงาน
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={staffForm.fullName}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, fullName: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                เบอร์โทร
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={staffForm.phone}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                บทบาท
+                <select
+                  className={usedCarShowroomFieldClass}
+                  value={staffForm.role}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, role: e.target.value }))}
+                >
+                  <option value="SALES">ขาย</option>
+                  <option value="MANAGER">ผู้จัดการ</option>
+                  <option value="ADMIN">แอดมิน</option>
+                  <option value="OTHER">อื่น ๆ</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                ค่าคอม (%)
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={staffForm.commissionPercent}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, commissionPercent: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                สถานะ
+                <select
+                  className={usedCarShowroomFieldClass}
+                  value={staffForm.isActive ? "1" : "0"}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, isActive: e.target.value === "1" }))}
+                >
+                  <option value="1">ทำงาน</option>
+                  <option value="0">ปิด</option>
+                </select>
+              </label>
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                หมายเหตุ
+                <textarea
+                  className={usedCarShowroomTextareaClass}
+                  value={staffForm.note}
+                  onChange={(e) => setStaffForm((f) => ({ ...f, note: e.target.value }))}
+                />
+              </label>
+            </div>
+          ) : (
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ชื่อ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.fullName}</dd>
               </div>
-            )
-          ) : null}
-        </div>
-      </UsedCarShowroomPageSubNav>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">เบอร์โทร</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.phone || "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">บทบาท</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.role}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ค่าคอม</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.commissionPercent}%</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">สถานะ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.isActive ? "ทำงาน" : "ปิด"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">โบนัส / หมายเหตุคอม</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailStaff.bonusNote || "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">หมายเหตุ</dt>
+                <dd className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">{detailStaff.note || "—"}</dd>
+              </div>
+            </dl>
+          )
+        ) : null}
+
+        {detailKind === "promotions" && detailPromo ? (
+          detailEditing ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                ชื่อโปร
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.title}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, title: e.target.value }))}
+                />
+              </label>
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                คำอธิบาย
+                <textarea
+                  className={usedCarShowroomTextareaClass}
+                  value={promoForm.description}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                ประเภท
+                <select
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.kind}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, kind: e.target.value }))}
+                >
+                  <option value="AMOUNT">ลดเป็นบาท</option>
+                  <option value="PERCENT">ลด %</option>
+                  <option value="GIFT">ของแถม</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                มูลค่า (บาท)
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.valueBaht}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, valueBaht: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                เปอร์เซ็นต์
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.valuePercent}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, valuePercent: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                เริ่ม (YYYY-MM-DD · เวลาไทย)
+                <input
+                  type="date"
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.startsOn}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, startsOn: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                สิ้นสุด (YYYY-MM-DD · เวลาไทย)
+                <input
+                  type="date"
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.endsOn}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, endsOn: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                สถานะ
+                <select
+                  className={usedCarShowroomFieldClass}
+                  value={promoForm.isActive ? "1" : "0"}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, isActive: e.target.value === "1" }))}
+                >
+                  <option value="1">เปิด</option>
+                  <option value="0">ปิด</option>
+                </select>
+              </label>
+            </div>
+          ) : (
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">ชื่อโปร</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailPromo.title}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">คำอธิบาย</dt>
+                <dd className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">
+                  {detailPromo.description || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ประเภท</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailPromo.kind}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">สถานะ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailPromo.isActive ? "เปิด" : "ปิด"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">มูลค่า (บาท)</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{baht(detailPromo.valueBaht)}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">เปอร์เซ็นต์</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailPromo.valuePercent}%</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ของแถม</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailPromo.giftLabel || "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ช่วงวัน</dt>
+                <dd className="font-semibold text-[#1e1b4b]">
+                  {detailPromo.startsOn} → {detailPromo.endsOn}
+                </dd>
+              </div>
+            </dl>
+          )
+        ) : null}
+
+        {detailKind === "finance-companies" && detailCompany ? (
+          detailEditing ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                ชื่อบริษัท
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={companyForm.name}
+                  onChange={(e) => setCompanyForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                ผู้ติดต่อ
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={companyForm.contactName}
+                  onChange={(e) => setCompanyForm((f) => ({ ...f, contactName: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                เบอร์ติดต่อ
+                <input
+                  className={usedCarShowroomFieldClass}
+                  value={companyForm.contactPhone}
+                  onChange={(e) => setCompanyForm((f) => ({ ...f, contactPhone: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+                สถานะ
+                <select
+                  className={usedCarShowroomFieldClass}
+                  value={companyForm.isActive ? "1" : "0"}
+                  onChange={(e) => setCompanyForm((f) => ({ ...f, isActive: e.target.value === "1" }))}
+                >
+                  <option value="1">ใช้งาน</option>
+                  <option value="0">ปิด</option>
+                </select>
+              </label>
+              <label className="col-span-full space-y-1 text-xs font-bold text-[#4d47b6]">
+                หมายเหตุ
+                <textarea
+                  className={usedCarShowroomTextareaClass}
+                  value={companyForm.note}
+                  onChange={(e) => setCompanyForm((f) => ({ ...f, note: e.target.value }))}
+                />
+              </label>
+            </div>
+          ) : (
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">ชื่อบริษัท</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCompany.name}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">ผู้ติดต่อ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCompany.contactName || "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">เบอร์ติดต่อ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCompany.contactPhone || "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[#8b87a8]">สถานะ</dt>
+                <dd className="font-semibold text-[#1e1b4b]">{detailCompany.isActive ? "ใช้งาน" : "ปิด"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-bold text-[#8b87a8]">หมายเหตุ</dt>
+                <dd className="whitespace-pre-wrap font-semibold text-[#1e1b4b]">{detailCompany.note || "—"}</dd>
+              </div>
+            </dl>
+          )
+        ) : null}
+      </FormModal>
 
       <FormModal
         open={addOpen && canAdd}
