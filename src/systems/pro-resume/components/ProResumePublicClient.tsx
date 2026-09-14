@@ -24,6 +24,7 @@ import type {
   ResumePortfolioItemDto,
   ResumeProfileDto,
   ResumePublicDto,
+  ResumeSkillDto,
 } from "@/systems/pro-resume/lib/mappers";
 import {
   proResumePortalContactIcon,
@@ -44,6 +45,7 @@ import {
   proResumePortalPageSubtitleClass,
   proResumePortalPageTitleClass,
   proResumePortalPortfolioGridClass,
+  proResumePortalSkillsGridClass,
   proResumePortalPrimaryBtnClass,
   proResumePortalShopNameHeroClass,
   proResumePortalTabDockDesktopClass,
@@ -288,6 +290,7 @@ export function ProResumePublicClient({
   const [filterCat, setFilterCat] = useState<string>("all");
   const [detailItem, setDetailItem] = useState<ResumePortfolioItemDto | null>(null);
   const [certDetail, setCertDetail] = useState<ResumeCertificateDto | null>(null);
+  const [skillDetail, setSkillDetail] = useState<ResumeSkillDto | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [portfolioPage, setPortfolioPage] = useState(0);
   const portfolioPageSize = useProResumePortalPortfolioPageSize();
@@ -505,6 +508,72 @@ export function ProResumePublicClient({
         ) : null}
       </FormModal>
 
+      <FormModal
+        open={skillDetail !== null}
+        onClose={() => setSkillDetail(null)}
+        title={skillDetail?.name ?? "ทักษะพิเศษ"}
+        size="md"
+        mobileCentered
+      >
+        {skillDetail ? (
+          <div className="space-y-4">
+            {skillDetail.coverImage ? (
+              <button
+                type="button"
+                className="block w-full overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+                aria-label={`ดูรูป ${skillDetail.name}`}
+                onClick={() => lb.open(skillDetail.coverImage!)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={skillDetail.coverImage}
+                  alt={skillDetail.name}
+                  className="max-h-[min(55vh,22rem)] w-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm font-semibold text-slate-400">
+                ไม่มีรูปปก
+              </div>
+            )}
+            <dl className="space-y-2.5 text-sm">
+              <div>
+                <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ชื่อทักษะ</dt>
+                <dd className="mt-0.5 font-black text-[#1e1b4b]">{skillDetail.name}</dd>
+              </div>
+              {(skillDetail.level ?? "").trim() ? (
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ระดับ</dt>
+                  <dd className="mt-0.5 font-semibold text-amber-800/90">{skillDetail.level}</dd>
+                </div>
+              ) : null}
+              {(skillDetail.shortDesc ?? "").trim() ? (
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">สรุป</dt>
+                  <dd className="mt-0.5 font-semibold text-[#66638c]">{skillDetail.shortDesc}</dd>
+                </div>
+              ) : null}
+            </dl>
+            {(skillDetail.description ?? "").trim() ? (
+              <ProResumeRichContent content={skillDetail.description ?? ""} />
+            ) : null}
+            {Array.isArray(skillDetail.images) && skillDetail.images.length > 1 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {skillDetail.images.map((url) => (
+                  <AppImageThumb
+                    key={url}
+                    src={url}
+                    alt=""
+                    className="h-14 w-14"
+                    onOpen={() => lb.open(url)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </FormModal>
+
       <header
         className={cn(
           "relative overflow-hidden px-4 pb-8 sm:px-6 sm:pb-10",
@@ -671,81 +740,59 @@ export function ProResumePublicClient({
             {data.skills.length ? (
               <ProResumePortalSection
                 title="ทักษะพิเศษ"
-                subtitle="ความสามารถพิเศษที่นำเสนอ"
                 titleIcon={proResumeSectionIcon("skill")}
                 titleTone="amber"
               >
-                <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5">
+                <ul className={proResumePortalSkillsGridClass} aria-label="รายการทักษะพิเศษ">
                   {data.skills.map((s) => {
-                    const images = Array.isArray(s.images) ? s.images : [];
-                    const level = (s.level ?? "").trim();
                     const shortDesc = (s.shortDesc ?? "").trim();
-                    const description = (s.description ?? "").trim();
-                    const gallery =
-                      s.coverImage && !images.includes(s.coverImage)
-                        ? [s.coverImage, ...images]
-                        : images.length
-                          ? images
-                          : s.coverImage
-                            ? [s.coverImage]
-                            : [];
+                    const level = (s.level ?? "").trim();
                     return (
-                      <li
-                        key={s.id}
-                        className="min-w-0 overflow-hidden rounded-lg border border-amber-200/70 bg-amber-50/40 shadow-sm sm:rounded-xl"
-                      >
-                        {s.coverImage ? (
-                          <button
-                            type="button"
-                            className="block w-full overflow-hidden bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
-                            aria-label={`ดูรูป ${s.name}`}
-                            onClick={() => lb.open(s.coverImage!)}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={s.coverImage}
-                              alt=""
-                              className="aspect-[16/9] w-full object-cover"
-                            />
-                          </button>
-                        ) : null}
-                        <div className="space-y-1.5 p-3 sm:p-3.5">
-                          <div className="flex items-start gap-2.5">
-                            {!s.coverImage ? (
-                              <span
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200/80"
-                                aria-hidden
-                              >
-                                {proResumeSectionIcon("skill")}
-                              </span>
+                      <li key={s.id} className="min-w-0">
+                        <button
+                          type="button"
+                          className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
+                          aria-label={`ดูรายละเอียดทักษะ ${s.name}`}
+                          onClick={() => setSkillDetail(s)}
+                        >
+                          <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+                            {s.coverImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={s.coverImage}
+                                alt=""
+                                className="h-full w-full object-cover transition group-hover:scale-105"
+                                onError={(e) => {
+                                  const el = e.currentTarget;
+                                  el.style.display = "none";
+                                  const fallback = el.nextElementSibling;
+                                  if (fallback instanceof HTMLElement) fallback.hidden = false;
+                                }}
+                              />
                             ) : null}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-black leading-snug text-[#1e1b4b]">{s.name}</p>
-                              {level ? (
-                                <p className="mt-0.5 text-xs font-bold text-amber-800/90">{level}</p>
-                              ) : null}
-                              {shortDesc ? (
-                                <p className="mt-1 text-xs leading-snug text-[#66638c] sm:text-sm">{shortDesc}</p>
-                              ) : null}
+                            <div
+                              className="flex h-full items-center justify-center text-[10px] font-bold text-slate-400 sm:text-sm"
+                              hidden={Boolean(s.coverImage)}
+                            >
+                              ไม่มีรูปปก
                             </div>
                           </div>
-                          {description ? (
-                            <ProResumeRichContent content={s.description ?? ""} className="mt-1" />
-                          ) : null}
-                          {gallery.length > 1 ? (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {gallery.slice(0, 6).map((url) => (
-                                <AppImageThumb
-                                  key={url}
-                                  src={url}
-                                  alt=""
-                                  className="h-12 w-12"
-                                  onOpen={() => lb.open(url)}
-                                />
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
+                          <div className="flex min-w-0 flex-1 flex-col p-1.5 sm:p-3">
+                            <h3 className="truncate text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-base">
+                              {s.name}
+                            </h3>
+                            {level ? (
+                              <p className="mt-0.5 truncate text-[9px] font-bold text-amber-800/90 sm:text-xs">
+                                {level}
+                              </p>
+                            ) : null}
+                            {shortDesc ? (
+                              <p className="mt-0.5 line-clamp-2 text-[9px] leading-snug text-[#66638c] sm:mt-1 sm:line-clamp-1 sm:text-sm">
+                                {shortDesc}
+                              </p>
+                            ) : null}
+                          </div>
+                        </button>
                       </li>
                     );
                   })}

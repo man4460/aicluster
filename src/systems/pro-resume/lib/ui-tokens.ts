@@ -106,6 +106,10 @@ export function proResumeFilterChipClass(active = false): string {
 export const proResumePortalPortfolioGridClass =
   "grid list-none grid-cols-2 gap-2 p-0 md:grid-cols-3 md:gap-3 lg:grid-cols-4 lg:gap-4";
 
+/** กริดทักษะพิเศษสาธารณะ — มือถือ 3 · ไอแพด 3 · คอม 4 (การ์ดแบบผลงาน) */
+export const proResumePortalSkillsGridClass =
+  "grid list-none grid-cols-3 gap-1.5 p-0 sm:gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 lg:gap-4";
+
 /** 2 แถวต่อหน้า */
 export const PRO_RESUME_PORTAL_PORTFOLIO_ROWS = 2;
 export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_MOBILE = 2 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
