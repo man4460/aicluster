@@ -323,6 +323,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [instDown, setInstDown] = useState("100000");
   const [instRate, setInstRate] = useState("3.5");
   const [instMonths, setInstMonths] = useState("48");
+  const [instPage, setInstPage] = useState(0);
 
   const installment = useMemo(
     () =>
@@ -334,6 +335,22 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
       }),
     [instPrice, instDown, instRate, instMonths],
   );
+
+  const instSchedule = installment?.schedule ?? [];
+  const instTotalPages = Math.max(1, Math.ceil(instSchedule.length / LIST_PAGE_SIZE));
+  const instSafePage = Math.min(instPage, instTotalPages - 1);
+  const instPageRows = useMemo(() => {
+    const start = instSafePage * LIST_PAGE_SIZE;
+    return instSchedule.slice(start, start + LIST_PAGE_SIZE);
+  }, [instSchedule, instSafePage]);
+
+  useEffect(() => {
+    setInstPage(0);
+  }, [instPrice, instDown, instRate, instMonths, tab]);
+
+  useEffect(() => {
+    setInstPage((p) => Math.min(p, Math.max(0, instTotalPages - 1)));
+  }, [instTotalPages]);
 
   const setTab = useCallback(
     (next: UsedCarShowroomDashboardTabKey, extra?: Record<string, string | null>) => {
@@ -1958,6 +1975,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                   ยอดจัด {baht(installment.financedBaht)} · ดอกเบี้ยรวม {baht(installment.totalInterestBaht)} · รวมชำระ{" "}
                   {baht(installment.totalPaymentBaht)}
                 </p>
+                <p className="shrink-0 text-[11px] font-semibold text-[#66638c]">
+                  หน้านี้ {instSafePage * LIST_PAGE_SIZE + 1}–
+                  {Math.min((instSafePage + 1) * LIST_PAGE_SIZE, instSchedule.length)} จาก{" "}
+                  {instSchedule.length} งวด
+                </p>
                 <div className="min-h-0 flex-1 overflow-auto">
                   <table className="w-full text-left text-[11px]">
                     <thead className="sticky top-0 bg-slate-50/95">
@@ -1969,7 +1991,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       </tr>
                     </thead>
                     <tbody>
-                      {installment.schedule.map((row) => (
+                      {instPageRows.map((row) => (
                         <tr key={row.period} className="border-t border-slate-200/80">
                           <td className="py-1">{row.period}</td>
                           <td>{baht(row.principalBaht)}</td>
@@ -1980,6 +2002,31 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                     </tbody>
                   </table>
                 </div>
+                {instTotalPages > 1 ? (
+                  <div className="flex shrink-0 items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={instSafePage <= 0}
+                      onClick={() => setInstPage((p) => Math.max(0, p - 1))}
+                      aria-label="หน้าก่อนหน้า"
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <p className="text-xs font-semibold text-[#66638c]" aria-live="polite">
+                      หน้า {instSafePage + 1} / {instTotalPages}
+                    </p>
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={instSafePage >= instTotalPages - 1}
+                      onClick={() => setInstPage((p) => Math.min(instTotalPages - 1, p + 1))}
+                      aria-label="หน้าถัดไป"
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col justify-center">
