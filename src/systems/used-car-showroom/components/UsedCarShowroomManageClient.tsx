@@ -648,24 +648,6 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
 
   const headerAction = (
     <div className="flex shrink-0 flex-nowrap items-center gap-1">
-      <input
-        id={`used-car-kw-${tab}-desk`}
-        type="search"
-        className={cn(usedCarShowroomInlineSearchFieldClass, "hidden sm:block")}
-        placeholder="ชื่อ · เบอร์ · คำสำคัญ"
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-        aria-label="ค้นหา"
-      />
-      {filtersActive ? (
-        <button
-          type="button"
-          className={cn(usedCarShowroomOutlineButtonClass, "hidden sm:inline-flex")}
-          onClick={clearFilters}
-        >
-          ล้างกรอง
-        </button>
-      ) : null}
       <button
         type="button"
         aria-expanded={filterOpen}
@@ -726,22 +708,18 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
           count: vehicles.filter((v) => v.status === s).length,
         })),
       ];
-      return (
-        <div className={usedCarShowroomFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
-          {chips.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              role="tab"
-              aria-selected={statusFilter === c.key}
-              className={usedCarShowroomFilterChipClass(statusFilter === c.key)}
-              onClick={() => setStatusFilter(c.key)}
-            >
-              {c.label} ({c.count})
-            </button>
-          ))}
-        </div>
-      );
+      return chips.map((c) => (
+        <button
+          key={c.key}
+          type="button"
+          role="tab"
+          aria-selected={statusFilter === c.key}
+          className={usedCarShowroomFilterChipClass(statusFilter === c.key)}
+          onClick={() => setStatusFilter(c.key)}
+        >
+          {c.label} ({c.count})
+        </button>
+      ));
     }
     const activeCount =
       tab === "staff"
@@ -757,34 +735,54 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
           : companies.filter((c) => !c.isActive).length;
     const total =
       tab === "staff" ? staff.length : tab === "promotions" ? promos.length : companies.length;
-    return (
-      <div className={usedCarShowroomFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
-        {[
-          { key: "ALL", label: "ทั้งหมด", count: total },
-          { key: "ACTIVE", label: "ใช้งาน", count: activeCount },
-          { key: "INACTIVE", label: "ปิด", count: inactiveCount },
-        ].map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            role="tab"
-            aria-selected={statusFilter === c.key}
-            className={usedCarShowroomFilterChipClass(statusFilter === c.key)}
-            onClick={() => setStatusFilter(c.key)}
-          >
-            {c.label} ({c.count})
-          </button>
-        ))}
-      </div>
-    );
+    return [
+      { key: "ALL", label: "ทั้งหมด", count: total },
+      { key: "ACTIVE", label: "ใช้งาน", count: activeCount },
+      { key: "INACTIVE", label: "ปิด", count: inactiveCount },
+    ].map((c) => (
+      <button
+        key={c.key}
+        type="button"
+        role="tab"
+        aria-selected={statusFilter === c.key}
+        className={usedCarShowroomFilterChipClass(statusFilter === c.key)}
+        onClick={() => setStatusFilter(c.key)}
+      >
+        {c.label} ({c.count})
+      </button>
+    ));
   }
 
   const filterPanel = (
     <div id={filterPanelId} className={cn("space-y-3", filterOpen ? "block" : "hidden")}>
-      {tab === "vehicles" || tab === "pnl" ? renderStatusChips("vehicle") : null}
-      {tab === "staff" || tab === "promotions" || tab === "finance-companies"
-        ? renderStatusChips("active")
-        : null}
+      <div
+        className={usedCarShowroomFilterChipShellClass}
+        role="tablist"
+        aria-label="กรองรายการ"
+      >
+        <input
+          id={`used-car-kw-${tab}-desk`}
+          type="search"
+          className={cn(usedCarShowroomInlineSearchFieldClass, "hidden sm:block")}
+          placeholder="ชื่อ · เบอร์ · คำสำคัญ"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          aria-label="ค้นหา"
+        />
+        {tab === "vehicles" || tab === "pnl" ? renderStatusChips("vehicle") : null}
+        {tab === "staff" || tab === "promotions" || tab === "finance-companies"
+          ? renderStatusChips("active")
+          : null}
+        {filtersActive ? (
+          <button
+            type="button"
+            className={cn(usedCarShowroomOutlineButtonClass, "hidden sm:inline-flex")}
+            onClick={clearFilters}
+          >
+            ล้างกรอง
+          </button>
+        ) : null}
+      </div>
       <div className="flex flex-col gap-3 sm:hidden">
         <label className="min-w-0 flex-1" htmlFor={`used-car-kw-${tab}`}>
           <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
