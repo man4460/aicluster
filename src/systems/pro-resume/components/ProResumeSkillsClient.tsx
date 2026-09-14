@@ -373,9 +373,7 @@ function SkillModal({
   });
   const [busy, setBusy] = useState(false);
   const galleryPickRef = useRef<HTMLInputElement>(null);
-  const coverPickRef = useRef<HTMLInputElement>(null);
   const galleryCamera = useAppCameraCapture();
-  const coverCamera = useAppCameraCapture();
 
   useEffect(() => {
     if (!open) return;
@@ -405,13 +403,6 @@ function SkillModal({
     const url = normalizeResumeMediaUrl(data.imageUrl);
     if (!url) throw new Error("ลิงก์รูปไม่ถูกต้อง");
     return url;
-  };
-
-  const setCoverFromUpload = (url: string) => {
-    setForm((f) => {
-      const images = f.images.includes(url) ? f.images : [url, ...f.images].slice(0, 24);
-      return { ...f, coverImage: url, images };
-    });
   };
 
   const appendGalleryImages = (urls: string[]) => {
@@ -458,17 +449,6 @@ function SkillModal({
     appendGalleryImages(uploaded);
   };
 
-  const onPickCoverImage = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    try {
-      setCoverFromUpload(await uploadImage(file));
-    } catch (err) {
-      notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
-    }
-  };
-
   const submit = async () => {
     setBusy(true);
     try {
@@ -507,7 +487,7 @@ function SkillModal({
       open={open}
       onClose={onClose}
       title={row === "new" ? "เพิ่มทักษะพิเศษ" : "แก้ไขทักษะพิเศษ"}
-      description="แนบรูปปก + แกลเลอรี และข้อความนำเสนอ — รูปแบบเดียวกับผลงาน"
+      description="แนบแกลเลอรีแล้วตั้งรูปปกจากรูปในแกลเลอรี — รูปแบบเดียวกับผลงาน"
       size="lg"
       footer={
         <FormModalFooterActions
@@ -579,73 +559,29 @@ function SkillModal({
 - เครื่องมือ / เทคนิคที่เกี่ยวข้อง`}
         />
 
-        <div className="space-y-2 rounded-2xl border border-[#0000BF]/12 bg-[#0000BF]/5 p-3">
-          <p className={labelClass}>รูปปก</p>
-          <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
-            รูปหลักที่โชว์ในการ์ดและหัวหน้ารายละเอียด — อัปโหลดแยก หรือเลือกจากแกลเลอรีด้านล่าง
-          </p>
-          {form.coverImage ? (
-            <div className="flex items-center gap-2">
-              <AppImageThumb
-                src={form.coverImage}
-                alt="หน้าปก"
-                className="h-16 w-16"
-                onOpen={() => lb.open(form.coverImage!)}
-              />
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-[11px] font-bold text-[#4d47b6]">หน้าปกปัจจุบัน</p>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="text-[11px] font-semibold text-rose-600 underline-offset-2 hover:underline"
-                  onClick={() =>
-                    setForm((f) => ({
-                      ...f,
-                      coverImage: f.images.find((u) => u !== f.coverImage) ?? null,
-                    }))
-                  }
-                >
-                  ลบการตั้งเป็นปก
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 bg-white/80 px-3 py-2 text-[11px] text-[#66638c]">
-              ยังไม่มีรูปปก
-            </p>
-          )}
-          <AppImagePickCameraButtons
-            disabled={busy}
-            onPickGallery={() => coverPickRef.current?.click()}
-            onPickCamera={() =>
-              coverCamera.openCamera(async (file) => {
-                try {
-                  setCoverFromUpload(await uploadImage(file));
-                } catch (err) {
-                  notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
-                }
-              })
-            }
-            labels={{ gallery: "เลือกรูปปก", camera: "ถ่ายรูปปก", busy: "กำลังอัปโหลด…" }}
-            buttonClassName={proResumeOutlineButtonClass}
-          />
-          <input
-            ref={coverPickRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            tabIndex={-1}
-            aria-hidden
-            onChange={(e) => void onPickCoverImage(e)}
-          />
-          {coverCamera.cameraModal}
-        </div>
-
         <div className="space-y-2">
           <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
           <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
-            รูปเพิ่มเติมในหน้ารายละเอียด — กด «ตั้งเป็นปก» เพื่อใช้เป็นรูปปก
+            อัปโหลดรูปในแกลเลอรี แล้วกด «ตั้งเป็นปก» — ไม่ต้องอัปโหลดรูปปกแยก
           </p>
+          {form.coverImage ? (
+            <div className="flex items-center gap-2 rounded-xl border border-[#0000BF]/15 bg-[#0000BF]/5 px-2.5 py-2">
+              <AppImageThumb
+                src={form.coverImage}
+                alt="หน้าปก"
+                className="h-12 w-12"
+                onOpen={() => lb.open(form.coverImage!)}
+              />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-[#4d47b6]">หน้าปกปัจจุบัน</p>
+                <p className="text-[10px] text-[#66638c]">เลือกใหม่ได้จากแกลเลอรีด้านล่าง</p>
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-[#66638c]">
+              ยังไม่มีหน้าปก — เพิ่มรูปแล้วตั้งเป็นปก
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {form.images.map((url) => {
               const isCover = form.coverImage === url;
@@ -692,7 +628,7 @@ function SkillModal({
                 }
               })
             }
-            labels={{ gallery: "เพิ่มแกลเลอรี", camera: "ถ่ายเพิ่ม", busy: "กำลังอัปโหลด…" }}
+            labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
             buttonClassName={proResumeOutlineButtonClass}
           />
           <input

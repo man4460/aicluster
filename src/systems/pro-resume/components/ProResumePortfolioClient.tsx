@@ -620,7 +620,7 @@ function ItemModal({
         <div className="space-y-2">
           <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
           <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
-            อัปโหลดรูปแล้วกด «ตั้งเป็นปก» บนรูปที่ต้องการเป็นหน้าปก
+            อัปโหลดรูปในแกลเลอรี แล้วกด «ตั้งเป็นปก» — ไม่ต้องอัปโหลดรูปปกแยก
           </p>
           {form.coverImage ? (
             <div className="flex items-center gap-2 rounded-xl border border-[#0000BF]/15 bg-[#0000BF]/5 px-2.5 py-2">
