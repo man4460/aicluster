@@ -42,6 +42,7 @@ export function UsedCarShowroomPageSubNav({
   mobileSelect,
   children,
   className,
+  contentClassName,
 }: {
   title: string;
   titleIcon?: ReactNode;
@@ -59,6 +60,8 @@ export function UsedCarShowroomPageSubNav({
   } | false;
   children?: ReactNode;
   className?: string;
+  /** คลาสห่อเนื้อหาใต้หัวเมนู (เช่น flex-1 สำหรับเต็มความสูง) */
+  contentClassName?: string;
 }) {
   const autoId = useId();
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
@@ -75,7 +78,7 @@ export function UsedCarShowroomPageSubNav({
 
   return (
     <div className={cn(usedCarShowroomPanelClass, className)}>
-      <div className={cn(usedCarShowroomPanelSectionClass, "print:hidden")}>
+      <div className={cn(usedCarShowroomPanelSectionClass, "shrink-0 print:hidden")}>
         <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
             {titleIcon ? (
@@ -202,7 +205,15 @@ export function UsedCarShowroomPageSubNav({
       </div>
 
       {children != null ? (
-        <div className={cn(usedCarShowroomPanelSectionClass, usedCarShowroomPanelDividerClass)}>{children}</div>
+        <div
+          className={cn(
+            usedCarShowroomPanelSectionClass,
+            usedCarShowroomPanelDividerClass,
+            contentClassName,
+          )}
+        >
+          {children}
+        </div>
       ) : null}
     </div>
   );

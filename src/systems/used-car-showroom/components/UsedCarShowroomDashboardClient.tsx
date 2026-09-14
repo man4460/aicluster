@@ -1090,7 +1090,12 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   );
 
   return (
-    <div className={usedCarShowroomPageStackClass}>
+    <div
+      className={cn(
+        usedCarShowroomPageStackClass,
+        tab === "installment" && "flex min-h-0 flex-1 flex-col",
+      )}
+    >
       {notice.popup}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปรถ" />
       <UsedCarShowroomPageSubNav
@@ -1102,6 +1107,14 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         onSelect={(k) => setTab(k as UsedCarShowroomDashboardTabKey)}
         ariaLabel="เมนูย่อยแดชบอร์ด"
         action={headerAction}
+        className={
+          tab === "installment"
+            ? "flex min-h-[calc(100dvh-12rem)] flex-1 flex-col max-lg:min-h-[calc(100dvh-14rem)]"
+            : undefined
+        }
+        contentClassName={
+          tab === "installment" ? "flex min-h-0 flex-1 flex-col" : undefined
+        }
       >
         {tab === "overview" ? (
           <div className="space-y-4">
@@ -1914,11 +1927,11 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
         ) : null}
 
         {tab === "installment" ? (
-          <div className="space-y-4">
-            <p className="text-xs font-semibold text-[#66638c]">
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <p className="shrink-0 text-xs font-semibold text-[#66638c]">
               คำนวณแบบดอกเบี้ยคงที่ (flat) — ใช้เทียบราคาหน้าเต็นท์ · ไม่ใช่ตารางลดต้นลดดอกของไฟแนนซ์
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
               <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
                 ราคาขาย
                 <input className={usedCarShowroomFieldClass} value={instPrice} onChange={(e) => setInstPrice(e.target.value)} />
@@ -1937,17 +1950,17 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
               </label>
             </div>
             {installment ? (
-              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-sm font-black text-[#1e1b4b]">
+              <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <p className="shrink-0 text-sm font-black text-[#1e1b4b]">
                   ค่างวดประมาณ {baht(installment.monthlyPaymentBaht)} / เดือน
                 </p>
-                <p className="text-xs text-[#66638c]">
+                <p className="shrink-0 text-xs text-[#66638c]">
                   ยอดจัด {baht(installment.financedBaht)} · ดอกเบี้ยรวม {baht(installment.totalInterestBaht)} · รวมชำระ{" "}
                   {baht(installment.totalPaymentBaht)}
                 </p>
-                <div className="max-h-48 overflow-auto">
+                <div className="min-h-0 flex-1 overflow-auto">
                   <table className="w-full text-left text-[11px]">
-                    <thead>
+                    <thead className="sticky top-0 bg-slate-50/95">
                       <tr className="text-[#66638c]">
                         <th className="py-1">งวด</th>
                         <th>เงินต้น</th>
@@ -1956,7 +1969,7 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       </tr>
                     </thead>
                     <tbody>
-                      {installment.schedule.slice(0, 12).map((row) => (
+                      {installment.schedule.map((row) => (
                         <tr key={row.period} className="border-t border-slate-200/80">
                           <td className="py-1">{row.period}</td>
                           <td>{baht(row.principalBaht)}</td>
@@ -1966,13 +1979,12 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                       ))}
                     </tbody>
                   </table>
-                  {installment.schedule.length > 12 ? (
-                    <p className="mt-1 text-[10px] text-[#66638c]">แสดง 12 งวดแรกจากทั้งหมด {installment.schedule.length}</p>
-                  ) : null}
                 </div>
               </div>
             ) : (
-              <AppEmptyState>กรอกตัวเลขเพื่อคำนวณ</AppEmptyState>
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <AppEmptyState>กรอกตัวเลขเพื่อคำนวณ</AppEmptyState>
+              </div>
             )}
           </div>
         ) : null}
