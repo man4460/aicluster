@@ -5,14 +5,53 @@ export function parseImagesJson(raw: string | null | undefined): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((u): u is string => typeof u === "string" && u.length > 0).slice(0, 24);
+    return parsed
+      .filter((u): u is string => typeof u === "string")
+      .map((u) => normalizeResumeMediaUrl(u))
+      .filter((u): u is string => Boolean(u))
+      .slice(0, 24);
   } catch {
     return [];
   }
 }
 
+/** รับเฉพาะ path อัปโหลดหรือ URL http(s) ที่ใช้ได้บนพอร์ทัล */
+export function normalizeResumeMediaUrl(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const url = raw.trim();
+  if (!url) return null;
+  if (url.startsWith("/uploads/")) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  // data URL ยาวไม่เก็บในรายการสาธารณะ
+  if (url.startsWith("data:image/")) return null;
+  return null;
+}
+
 export function serializeImagesJson(images: string[]): string {
-  return JSON.stringify(images.filter((u) => typeof u === "string" && u.length > 0).slice(0, 24));
+  return JSON.stringify(
+    images
+      .map((u) => normalizeResumeMediaUrl(u))
+      .filter((u): u is string => Boolean(u))
+      .slice(0, 24),
+  );
+}
+
+/** รวมปก + แกลเลอรี โดยไม่ซ้ำ — ใช้แสดงบนพอร์ทัล */
+export function resumeSkillGalleryUrls(skill: {
+  coverImage?: string | null;
+  images?: string[] | null;
+}): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string | null | undefined) => {
+    const url = normalizeResumeMediaUrl(raw);
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    out.push(url);
+  };
+  push(skill.coverImage);
+  for (const u of skill.images ?? []) push(u);
+  return out;
 }
 
 export type ResumeProfileDto = {
@@ -202,14 +241,16 @@ export function mapResumeSkill(row: {
   imagesJson?: string | null;
   orderIndex: number;
 }): ResumeSkillDto {
+  const images = parseImagesJson(row.imagesJson);
+  const coverImage = normalizeResumeMediaUrl(row.coverImage) ?? images[0] ?? null;
   return {
     id: row.id,
     name: row.name,
     level: row.level ?? "",
     shortDesc: row.shortDesc ?? "",
     description: row.description ?? "",
-    coverImage: row.coverImage ?? null,
-    images: parseImagesJson(row.imagesJson),
+    coverImage,
+    images: resumeSkillGalleryUrls({ coverImage, images }),
     orderIndex: row.orderIndex,
   };
 }

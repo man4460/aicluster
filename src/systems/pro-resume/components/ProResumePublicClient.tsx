@@ -26,6 +26,7 @@ import type {
   ResumePublicDto,
   ResumeSkillDto,
 } from "@/systems/pro-resume/lib/mappers";
+import { resumeSkillGalleryUrls } from "@/systems/pro-resume/lib/mappers";
 import {
   proResumePortalContactIcon,
   proResumePortalTabIcon,
@@ -275,6 +276,150 @@ function ProResumePortfolioDetailPage({
   );
 }
 
+/** หน้ารายละเอียดทักษะพิเศษ — โครงเดียวกับหน้ารายละเอียดผลงาน */
+function ProResumeSkillDetailPage({
+  skill,
+  profile,
+  onBack,
+  onOpenImage,
+  onOpenGallery,
+}: {
+  skill: ResumeSkillDto;
+  profile: ResumeProfileDto;
+  onBack: () => void;
+  onOpenImage: (url: string) => void;
+  onOpenGallery: (urls: string[], index: number) => void;
+}) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [skill.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
+
+  const displayName = profile.fullName.trim() || "Resume";
+  const galleryUrls = resumeSkillGalleryUrls(skill);
+  const coverImage = skill.coverImage || galleryUrls[0] || null;
+  const level = (skill.level ?? "").trim();
+  const shortDesc = (skill.shortDesc ?? "").trim();
+  const description = (skill.description ?? "").trim();
+
+  return (
+    <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
+      <header className={appDashboardHeaderBarClass}>
+        <div className={cn(appDashboardHeaderBarInnerClass, "justify-between")}>
+          <button
+            type="button"
+            className="flex min-w-0 max-w-[min(100%,18rem)] items-center gap-2 text-left sm:max-w-xs sm:gap-2.5"
+            aria-label={`กลับไปโปรไฟล์ ${displayName}`}
+            onClick={onBack}
+          >
+            {profile.profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.profileImageUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/35"
+              />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-black text-white ring-2 ring-white/35">
+                {displayName.slice(0, 1) || "?"}
+              </span>
+            )}
+            <p className="min-w-0 truncate text-sm font-bold tracking-tight text-white sm:text-base">{displayName}</p>
+          </button>
+
+          <button
+            type="button"
+            className={cn(appDashboardHeaderIconButtonClass, "min-w-10 gap-1.5 sm:min-w-0 sm:px-2")}
+            aria-label="กลับไปหน้ารายการทักษะพิเศษ"
+            title="กลับ"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden strokeWidth={2.25} />
+            <span className="hidden text-sm font-bold sm:inline">กลับ</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:space-y-14 sm:px-6 sm:py-10">
+        <section className="space-y-4" aria-labelledby="skill-item-title">
+          {coverImage ? (
+            <button
+              type="button"
+              className="block w-full overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+              aria-label={`ดูรูปปก ${skill.name}`}
+              onClick={() => onOpenImage(coverImage)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverImage}
+                alt=""
+                className="max-h-[min(56vh,26rem)] w-full object-cover"
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  el.style.display = "none";
+                }}
+              />
+            </button>
+          ) : null}
+
+          <div className="min-w-0 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">ทักษะพิเศษ</p>
+            <h1 id="skill-item-title" className={proResumePortalPageTitleClass}>
+              {skill.name}
+            </h1>
+            {level ? <p className="text-sm font-bold text-amber-800/90">{level}</p> : null}
+            {shortDesc ? <p className={proResumePortalPageSubtitleClass}>{shortDesc}</p> : null}
+          </div>
+
+          {description ? <ProResumeRichContent content={skill.description ?? ""} className="max-w-3xl" /> : null}
+        </section>
+
+        {galleryUrls.length ? (
+          <ProResumePortalSection
+            id="skill-gallery"
+            title="แกลเลอรี"
+            titleIcon={proResumeSectionIcon("skill")}
+            titleTone="amber"
+          >
+            <ul className={proResumePortalGalleryCardGridClass}>
+              {galleryUrls.map((url, index) => (
+                <li key={url} className="min-w-0">
+                  <AppImageThumb
+                    src={url}
+                    alt=""
+                    className="aspect-square h-auto w-full rounded-xl"
+                    onOpen={() => onOpenGallery(galleryUrls, index)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </ProResumePortalSection>
+        ) : null}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            className={cn(proResumeOutlineButtonClass, "min-h-11 gap-1.5 px-4")}
+            aria-label="กลับไปหน้ารายการทักษะพิเศษ"
+            title="กลับ"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden strokeWidth={2.25} />
+            <span className="text-sm font-bold">กลับ</span>
+          </button>
+        </div>
+      </main>
+    </AppPublicCheckInGlassPage>
+  );
+}
+
 export function ProResumePublicClient({
   slug,
   trialParam,
@@ -336,6 +481,13 @@ export function ProResumePublicClient({
 
   const closeDetail = useCallback(() => {
     setDetailItem(null);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  }, []);
+
+  const closeSkillDetail = useCallback(() => {
+    setSkillDetail(null);
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
     });
@@ -442,6 +594,27 @@ export function ProResumePublicClient({
     );
   }
 
+  if (skillDetail) {
+    return (
+      <>
+        <AppImageLightbox
+          src={lb.src}
+          sources={lb.sources}
+          initialIndex={lb.initialIndex}
+          onClose={lb.close}
+          alt="รูปทักษะพิเศษ"
+        />
+        <ProResumeSkillDetailPage
+          skill={skillDetail}
+          profile={profile}
+          onBack={closeSkillDetail}
+          onOpenImage={(url) => lb.open(url)}
+          onOpenGallery={(urls, index) => lb.openGallery(urls, index)}
+        />
+      </>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -504,72 +677,6 @@ export function ProResumePublicClient({
                 </div>
               ) : null}
             </dl>
-          </div>
-        ) : null}
-      </FormModal>
-
-      <FormModal
-        open={skillDetail !== null}
-        onClose={() => setSkillDetail(null)}
-        title={skillDetail?.name ?? "ทักษะพิเศษ"}
-        size="md"
-        mobileCentered
-      >
-        {skillDetail ? (
-          <div className="space-y-4">
-            {skillDetail.coverImage ? (
-              <button
-                type="button"
-                className="block w-full overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
-                aria-label={`ดูรูป ${skillDetail.name}`}
-                onClick={() => lb.open(skillDetail.coverImage!)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={skillDetail.coverImage}
-                  alt={skillDetail.name}
-                  className="max-h-[min(55vh,22rem)] w-full object-cover"
-                />
-              </button>
-            ) : (
-              <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm font-semibold text-slate-400">
-                ไม่มีรูปปก
-              </div>
-            )}
-            <dl className="space-y-2.5 text-sm">
-              <div>
-                <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ชื่อทักษะ</dt>
-                <dd className="mt-0.5 font-black text-[#1e1b4b]">{skillDetail.name}</dd>
-              </div>
-              {(skillDetail.level ?? "").trim() ? (
-                <div>
-                  <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">ระดับ</dt>
-                  <dd className="mt-0.5 font-semibold text-amber-800/90">{skillDetail.level}</dd>
-                </div>
-              ) : null}
-              {(skillDetail.shortDesc ?? "").trim() ? (
-                <div>
-                  <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8b87b8]">สรุป</dt>
-                  <dd className="mt-0.5 font-semibold text-[#66638c]">{skillDetail.shortDesc}</dd>
-                </div>
-              ) : null}
-            </dl>
-            {(skillDetail.description ?? "").trim() ? (
-              <ProResumeRichContent content={skillDetail.description ?? ""} />
-            ) : null}
-            {Array.isArray(skillDetail.images) && skillDetail.images.length > 1 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {skillDetail.images.map((url) => (
-                  <AppImageThumb
-                    key={url}
-                    src={url}
-                    alt=""
-                    className="h-14 w-14"
-                    onOpen={() => lb.open(url)}
-                  />
-                ))}
-              </div>
-            ) : null}
           </div>
         ) : null}
       </FormModal>
@@ -747,6 +854,7 @@ export function ProResumePublicClient({
                   {data.skills.map((s) => {
                     const shortDesc = (s.shortDesc ?? "").trim();
                     const level = (s.level ?? "").trim();
+                    const cover = resumeSkillGalleryUrls(s)[0] ?? s.coverImage ?? null;
                     return (
                       <li key={s.id} className="min-w-0">
                         <button
@@ -756,10 +864,10 @@ export function ProResumePublicClient({
                           onClick={() => setSkillDetail(s)}
                         >
                           <div className="aspect-[4/3] overflow-hidden bg-slate-100">
-                            {s.coverImage ? (
+                            {cover ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={s.coverImage}
+                                src={cover}
                                 alt=""
                                 className="h-full w-full object-cover transition group-hover:scale-105"
                                 onError={(e) => {
@@ -772,7 +880,7 @@ export function ProResumePublicClient({
                             ) : null}
                             <div
                               className="flex h-full items-center justify-center text-[10px] font-bold text-slate-400 sm:text-sm"
-                              hidden={Boolean(s.coverImage)}
+                              hidden={Boolean(cover)}
                             >
                               ไม่มีรูปปก
                             </div>
