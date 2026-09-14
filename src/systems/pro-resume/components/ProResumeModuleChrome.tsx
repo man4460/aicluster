@@ -135,6 +135,7 @@ function ProResumeModuleChromeInner({
             content: (
               <ol className="list-decimal space-y-1.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
                 <li>เมนู โปรไฟล์ — กรอกข้อมูลส่วนตัว · การศึกษา · ประสบการณ์ · ใบรับรอง</li>
+                <li>เมนู ทักษะพิเศษ — เพิ่มความสามารถพิเศษที่จะนำเสนอ</li>
                 <li>เมนู ผลงาน — เพิ่มหมวดและรายการพอร์ตโฟลิโอ · รูป · ลิงก์</li>
                 <li>เมนู ตั้งค่า — ตั้ง slug · เปิด/ปิดเว็บสาธารณะ · ลิงก์/QR (แพ็กรายเดือน)</li>
                 <li>เมนู แดชบอร์ด — ดูสถิติการเข้าชมและผลงานยอดนิยม</li>
@@ -142,7 +143,7 @@ function ProResumeModuleChromeInner({
             ),
           },
           {
-            title: "เมนูหลักโมดูล (4 รายการ)",
+            title: "เมนูหลักโมดูล (5 รายการ)",
             content: (
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
@@ -150,6 +151,9 @@ function ProResumeModuleChromeInner({
                 </li>
                 <li>
                   <strong>โปรไฟล์</strong> — ข้อมูลส่วนตัว · การศึกษา · ประสบการณ์ · ใบรับรอง
+                </li>
+                <li>
+                  <strong>ทักษะพิเศษ</strong> — ความสามารถพิเศษที่นำเสนอบนเรซูเม่สาธารณะ
                 </li>
                 <li>
                   <strong>ผลงาน</strong> — หมวดและรายการพอร์ตโฟลิโอ · รูป · ลิงก์ภายนอก
@@ -182,6 +186,16 @@ function ProResumeModuleChromeInner({
             ),
           },
           {
+            title: "เมนู: ทักษะพิเศษ",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>เพิ่มทักษะ / ความสามารถพิเศษ — ชื่อ · ระดับ · รายละเอียด</li>
+                <li>จัดลำดับ — รายการด้านบนแสดงก่อนบนหน้าสาธารณะ</li>
+                <li>โชว์ในแท็บอาชีพของเรซูเม่สาธารณะ คู่กับประสบการณ์และใบรับรอง</li>
+              </ul>
+            ),
+          },
+          {
             title: "เมนู: ผลงาน",
             content: (
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
@@ -209,7 +223,7 @@ function ProResumeModuleChromeInner({
       {children}
 
       <AppMobileDockShell ariaLabel="เมนูล่าง Pro Resume">
-        <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
+        <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
           {PRO_RESUME_NAV_ITEMS.map((item) => {
             const active = isProResumeModuleNavItemActive(pathname, item.key);
             return (
