@@ -3,6 +3,7 @@ import { DEMO_MODULE_CONTACT, DEMO_MODULE_LOGO_URL } from "@/lib/trial/demo-modu
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { ensureResumeProfile } from "@/systems/pro-resume/lib/ensure-resume-profile";
+import { resolveResumeSkillMedia } from "@/systems/pro-resume/lib/mappers";
 
 const DEMO_MARKER = "seed:pro-resume-demo-v1";
 
@@ -289,6 +290,7 @@ export async function seedProResumeProdDemoForOwner(
 
   for (let i = 0; i < skills.length; i += 1) {
     const s = skills[i]!;
+    const media = resolveResumeSkillMedia({ coverImage: s.coverImage, images: [...s.images] });
     await prisma.resumeSkill.create({
       data: {
         ownerUserId,
@@ -298,8 +300,8 @@ export async function seedProResumeProdDemoForOwner(
         level: s.level,
         shortDesc: s.shortDesc,
         description: s.description,
-        coverImage: s.coverImage,
-        imagesJson: JSON.stringify([...s.images]),
+        coverImage: media.coverImage,
+        imagesJson: JSON.stringify(media.images),
         orderIndex: i,
       },
     });

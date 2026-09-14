@@ -22,7 +22,11 @@ import {
 import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePagePanel";
 import { ProResumeRichTextField } from "@/systems/pro-resume/components/ProResumeRichTextField";
 import { proResumeTonedRowCardClass } from "@/systems/pro-resume/lib/card-tones";
-import type { ResumeSkillDto } from "@/systems/pro-resume/lib/mappers";
+import {
+  normalizeResumeMediaUrl,
+  resumeSkillGalleryUrls,
+  type ResumeSkillDto,
+} from "@/systems/pro-resume/lib/mappers";
 import { proResumePageTitleIcon, proResumePageTitleTone } from "@/systems/pro-resume/lib/page-menu-icons";
 import {
   proResumeFieldClass,
@@ -263,7 +267,10 @@ export function ProResumeSkillsClient() {
 
         {filtered.length ? (
           <ul className="space-y-2">
-            {filtered.map((row, i) => (
+            {filtered.map((row, i) => {
+              const gallery = resumeSkillGalleryUrls(row);
+              const cover = gallery[0] ?? null;
+              return (
               <li key={row.id} className={proResumeTonedRowCardClass("amber")}>
                 <div className="flex min-w-0 flex-1 items-start gap-3">
                   {!filtersActive ? (
@@ -276,11 +283,11 @@ export function ProResumeSkillsClient() {
                     />
                   ) : null}
                   <AppImageThumb
-                    src={row.coverImage}
+                    src={cover}
                     alt={row.name}
                     emptyLabel="ไม่มีรูป"
                     className="h-14 w-14 shrink-0"
-                    onOpen={() => row.coverImage && lb.open(row.coverImage)}
+                    onOpen={() => cover && lb.open(cover)}
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#1e1b4b]">{row.name}</p>
@@ -293,8 +300,8 @@ export function ProResumeSkillsClient() {
                           ? (row.description ?? "").replace(/<[^>]+>/g, " ").trim()
                           : "—")}
                     </p>
-                    {row.images.length > 1 ? (
-                      <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">{row.images.length} รูป</p>
+                    {gallery.length > 1 ? (
+                      <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">{gallery.length} รูป</p>
                     ) : null}
                   </div>
                 </div>
@@ -319,7 +326,8 @@ export function ProResumeSkillsClient() {
                   </button>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         ) : (
           <p className="text-sm text-[#66638c]">
@@ -365,21 +373,20 @@ function SkillModal({
   });
   const [busy, setBusy] = useState(false);
   const galleryPickRef = useRef<HTMLInputElement>(null);
+  const coverPickRef = useRef<HTMLInputElement>(null);
   const galleryCamera = useAppCameraCapture();
+  const coverCamera = useAppCameraCapture();
 
   useEffect(() => {
     if (!open) return;
     if (row && row !== "new") {
-      const images =
-        row.coverImage && !row.images.includes(row.coverImage)
-          ? [row.coverImage, ...row.images]
-          : row.images;
+      const images = resumeSkillGalleryUrls(row);
       setForm({
         name: row.name,
         level: row.level,
         shortDesc: row.shortDesc,
         description: row.description,
-        coverImage: row.coverImage,
+        coverImage: images[0] ?? null,
         images,
       });
     } else {
@@ -391,21 +398,34 @@ function SkillModal({
     const prepared = await prepareImageFileForUpload(file);
     const fd = new FormData();
     fd.set("file", prepared);
-    fd.set("kind", "images");
+    fd.set("kind", "skills");
     const res = await fetch(UPLOAD, { method: "POST", body: fd });
     const data = (await res.json()) as { imageUrl?: string; error?: string };
     if (!res.ok || !data.imageUrl) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
-    return data.imageUrl;
+    const url = normalizeResumeMediaUrl(data.imageUrl);
+    if (!url) throw new Error("ลิงก์รูปไม่ถูกต้อง");
+    return url;
+  };
+
+  const setCoverFromUpload = (url: string) => {
+    setForm((f) => {
+      const images = f.images.includes(url) ? f.images : [url, ...f.images].slice(0, 24);
+      return { ...f, coverImage: url, images };
+    });
   };
 
   const appendGalleryImages = (urls: string[]) => {
     if (!urls.length) return;
     setForm((f) => {
-      const images = [...f.images, ...urls].slice(0, 24);
+      const images = [...f.images];
+      for (const url of urls) {
+        if (!images.includes(url)) images.push(url);
+      }
+      const next = images.slice(0, 24);
       return {
         ...f,
-        images,
-        coverImage: f.coverImage && images.includes(f.coverImage) ? f.coverImage : images[0] ?? null,
+        images: next,
+        coverImage: f.coverImage && next.includes(f.coverImage) ? f.coverImage : next[0] ?? null,
       };
     });
   };
@@ -438,16 +458,32 @@ function SkillModal({
     appendGalleryImages(uploaded);
   };
 
+  const onPickCoverImage = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setCoverFromUpload(await uploadImage(file));
+    } catch (err) {
+      notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+    }
+  };
+
   const submit = async () => {
     setBusy(true);
     try {
+      const images = form.images
+        .map((u) => normalizeResumeMediaUrl(u))
+        .filter((u): u is string => Boolean(u));
+      const coverImage =
+        normalizeResumeMediaUrl(form.coverImage) ?? images[0] ?? null;
       const payload = {
         name: form.name,
         level: form.level,
         shortDesc: form.shortDesc,
         description: form.description,
-        coverImage: form.coverImage,
-        images: form.images,
+        coverImage,
+        images: coverImage && !images.includes(coverImage) ? [coverImage, ...images] : images,
       };
       const isEdit = row && row !== "new";
       const res = await fetch(isEdit ? `/api/pro-resume/session/skills/${row.id}` : "/api/pro-resume/session/skills", {
@@ -471,7 +507,7 @@ function SkillModal({
       open={open}
       onClose={onClose}
       title={row === "new" ? "เพิ่มทักษะพิเศษ" : "แก้ไขทักษะพิเศษ"}
-      description="แนบรูปและข้อความนำเสนอ — รูปแบบเดียวกับผลงาน"
+      description="แนบรูปปก + แกลเลอรี และข้อความนำเสนอ — รูปแบบเดียวกับผลงาน"
       size="lg"
       footer={
         <FormModalFooterActions
@@ -542,29 +578,74 @@ function SkillModal({
 - บริบทงานหรือโครงการ
 - เครื่องมือ / เทคนิคที่เกี่ยวข้อง`}
         />
-        <div className="space-y-2">
-          <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
+
+        <div className="space-y-2 rounded-2xl border border-[#0000BF]/12 bg-[#0000BF]/5 p-3">
+          <p className={labelClass}>รูปปก</p>
           <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
-            อัปโหลดรูปแล้วกด «ตั้งเป็นปก» บนรูปที่ต้องการเป็นหน้าปก
+            รูปหลักที่โชว์ในการ์ดและหัวหน้ารายละเอียด — อัปโหลดแยก หรือเลือกจากแกลเลอรีด้านล่าง
           </p>
           {form.coverImage ? (
-            <div className="flex items-center gap-2 rounded-xl border border-[#0000BF]/15 bg-[#0000BF]/5 px-2.5 py-2">
+            <div className="flex items-center gap-2">
               <AppImageThumb
                 src={form.coverImage}
                 alt="หน้าปก"
-                className="h-12 w-12"
+                className="h-16 w-16"
                 onOpen={() => lb.open(form.coverImage!)}
               />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-[11px] font-bold text-[#4d47b6]">หน้าปกปัจจุบัน</p>
-                <p className="text-[10px] text-[#66638c]">เลือกใหม่ได้จากแกลเลอรีด้านล่าง</p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="text-[11px] font-semibold text-rose-600 underline-offset-2 hover:underline"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      coverImage: f.images.find((u) => u !== f.coverImage) ?? null,
+                    }))
+                  }
+                >
+                  ลบการตั้งเป็นปก
+                </button>
               </div>
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-[#66638c]">
-              ยังไม่มีหน้าปก — เพิ่มรูปแล้วตั้งเป็นปก
+            <p className="rounded-xl border border-dashed border-slate-200 bg-white/80 px-3 py-2 text-[11px] text-[#66638c]">
+              ยังไม่มีรูปปก
             </p>
           )}
+          <AppImagePickCameraButtons
+            disabled={busy}
+            onPickGallery={() => coverPickRef.current?.click()}
+            onPickCamera={() =>
+              coverCamera.openCamera(async (file) => {
+                try {
+                  setCoverFromUpload(await uploadImage(file));
+                } catch (err) {
+                  notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+                }
+              })
+            }
+            labels={{ gallery: "เลือกรูปปก", camera: "ถ่ายรูปปก", busy: "กำลังอัปโหลด…" }}
+            buttonClassName={proResumeOutlineButtonClass}
+          />
+          <input
+            ref={coverPickRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(e) => void onPickCoverImage(e)}
+          />
+          {coverCamera.cameraModal}
+        </div>
+
+        <div className="space-y-2">
+          <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
+          <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
+            รูปเพิ่มเติมในหน้ารายละเอียด — กด «ตั้งเป็นปก» เพื่อใช้เป็นรูปปก
+          </p>
           <div className="flex flex-wrap gap-2">
             {form.images.map((url) => {
               const isCover = form.coverImage === url;
@@ -611,7 +692,7 @@ function SkillModal({
                 }
               })
             }
-            labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
+            labels={{ gallery: "เพิ่มแกลเลอรี", camera: "ถ่ายเพิ่ม", busy: "กำลังอัปโหลด…" }}
             buttonClassName={proResumeOutlineButtonClass}
           />
           <input

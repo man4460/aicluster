@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { proResumeOwnerFromAuth } from "@/lib/pro-resume/api-owner";
 import { saveOwnerModuleUploadImage } from "@/lib/upload/save-owner-module-image";
 
-const ALLOWED_KIND = new Set(["images", "profiles", "certs"]);
+const ALLOWED_KIND = new Set(["images", "profiles", "certs", "skills"]);
 
 export async function POST(req: Request) {
   try {

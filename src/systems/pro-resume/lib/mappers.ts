@@ -15,15 +15,37 @@ export function parseImagesJson(raw: string | null | undefined): string[] {
   }
 }
 
-/** รับเฉพาะ path อัปโหลดหรือ URL http(s) ที่ใช้ได้บนพอร์ทัล */
+/**
+ * ลิงก์รูปที่เก็บ/แสดงได้จริง
+ * - `/uploads/...` (ตัดโดเมน localhost/prod ออก เหลือ path)
+ * - `https://...` ภายนอก (เช่น Unsplash)
+ * - ตัดความยาวไม่เกิน 512 กันคอลัมน์ขาด
+ */
 export function normalizeResumeMediaUrl(raw: string | null | undefined): string | null {
   if (typeof raw !== "string") return null;
-  const url = raw.trim();
+  let url = raw.trim();
   if (!url) return null;
-  if (url.startsWith("/uploads/")) return url;
-  if (/^https?:\/\//i.test(url)) return url;
-  // data URL ยาวไม่เก็บในรายการสาธารณะ
   if (url.startsWith("data:image/")) return null;
+  if (/^(javascript|vbscript|file):/i.test(url)) return null;
+
+  if (url.startsWith("uploads/")) url = `/${url}`;
+
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.startsWith("/uploads/")) {
+        return parsed.pathname.slice(0, 512);
+      }
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return url.slice(0, 512);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (url.startsWith("/uploads/")) return url.slice(0, 512);
   return null;
 }
 
@@ -52,6 +74,50 @@ export function resumeSkillGalleryUrls(skill: {
   push(skill.coverImage);
   for (const u of skill.images ?? []) push(u);
   return out;
+}
+
+/** ตรวจ/จัดรูปปก+แกลเลอรีก่อนบันทึก DB — กันลิงก์เสียและปกหลุดจากแกลเลอรี */
+export function resolveResumeSkillMedia(input: {
+  coverImage?: unknown;
+  images?: unknown;
+}): { coverImage: string | null; images: string[] } {
+  const fromList = Array.isArray(input.images)
+    ? input.images
+        .filter((u): u is string => typeof u === "string")
+        .map((u) => normalizeResumeMediaUrl(u))
+        .filter((u): u is string => Boolean(u))
+    : [];
+
+  let cover =
+    typeof input.coverImage === "string"
+      ? normalizeResumeMediaUrl(input.coverImage)
+      : input.coverImage === null
+        ? null
+        : undefined;
+
+  const images: string[] = [];
+  const seen = new Set<string>();
+  const push = (url: string | null | undefined) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    images.push(url);
+  };
+
+  if (cover) push(cover);
+  for (const u of fromList) push(u);
+
+  if (cover === undefined) {
+    cover = images[0] ?? null;
+  } else if (cover === null && images.length) {
+    cover = images[0]!;
+  }
+
+  if (cover && images[0] !== cover) {
+    const rest = images.filter((u) => u !== cover);
+    return { coverImage: cover, images: [cover, ...rest].slice(0, 24) };
+  }
+
+  return { coverImage: cover ?? null, images: images.slice(0, 24) };
 }
 
 export type ResumeProfileDto = {
@@ -241,16 +307,18 @@ export function mapResumeSkill(row: {
   imagesJson?: string | null;
   orderIndex: number;
 }): ResumeSkillDto {
-  const images = parseImagesJson(row.imagesJson);
-  const coverImage = normalizeResumeMediaUrl(row.coverImage) ?? images[0] ?? null;
+  const resolved = resolveResumeSkillMedia({
+    coverImage: row.coverImage,
+    images: parseImagesJson(row.imagesJson),
+  });
   return {
     id: row.id,
     name: row.name,
     level: row.level ?? "",
     shortDesc: row.shortDesc ?? "",
     description: row.description ?? "",
-    coverImage,
-    images: resumeSkillGalleryUrls({ coverImage, images }),
+    coverImage: resolved.coverImage,
+    images: resolved.images,
     orderIndex: row.orderIndex,
   };
 }

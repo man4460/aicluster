@@ -3,7 +3,12 @@ import { requireSession } from "@/lib/api-auth";
 import { proResumeOwnerFromAuth } from "@/lib/pro-resume/api-owner";
 import { proResumeOwnerWhere, proResumeSessionContext } from "@/lib/pro-resume/session-context";
 import { prisma } from "@/lib/prisma";
-import { mapResumeSkill, serializeImagesJson } from "@/systems/pro-resume/lib/mappers";
+import {
+  mapResumeSkill,
+  parseImagesJson,
+  resolveResumeSkillMedia,
+  serializeImagesJson,
+} from "@/systems/pro-resume/lib/mappers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,24 +31,13 @@ export async function PUT(req: Request, ctx: Ctx) {
       typeof body.name === "string" ? body.name.trim().slice(0, 200) : existing.name;
     if (!name) return NextResponse.json({ error: "กรอกชื่อทักษะพิเศษ" }, { status: 400 });
 
-    const images =
-      Array.isArray(body.images)
-        ? body.images.filter((u): u is string => typeof u === "string" && u.length > 0).slice(0, 24)
-        : undefined;
-    const coverFromBody =
-      typeof body.coverImage === "string"
-        ? body.coverImage.trim().slice(0, 512) || null
-        : body.coverImage === null
-          ? null
-          : undefined;
-
-    const nextImages = images ?? undefined;
-    const nextCover =
-      coverFromBody !== undefined
-        ? coverFromBody
-        : nextImages
-          ? nextImages[0] ?? null
-          : undefined;
+    const hasMediaUpdate = "coverImage" in body || "images" in body;
+    const media = hasMediaUpdate
+      ? resolveResumeSkillMedia({
+          coverImage: "coverImage" in body ? body.coverImage : existing.coverImage,
+          images: "images" in body ? body.images : parseImagesJson(existing.imagesJson),
+        })
+      : null;
 
     const updated = await prisma.resumeSkill.update({
       where: { id },
@@ -53,16 +47,10 @@ export async function PUT(req: Request, ctx: Ctx) {
         shortDesc:
           typeof body.shortDesc === "string" ? body.shortDesc.trim().slice(0, 500) : existing.shortDesc,
         description: typeof body.description === "string" ? body.description : existing.description,
-        ...(nextCover !== undefined ? { coverImage: nextCover } : {}),
-        ...(nextImages !== undefined
+        ...(media
           ? {
-              imagesJson: serializeImagesJson(
-                nextImages.length
-                  ? nextImages
-                  : nextCover
-                    ? [nextCover]
-                    : [],
-              ),
+              coverImage: media.coverImage,
+              imagesJson: serializeImagesJson(media.images),
             }
           : {}),
       },
