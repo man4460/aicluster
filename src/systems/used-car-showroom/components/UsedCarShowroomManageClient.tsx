@@ -43,6 +43,7 @@ import {
   usedCarShowroomFieldClass,
   usedCarShowroomFilterChipClass,
   usedCarShowroomFilterChipShellClass,
+  usedCarShowroomInlineSubNavBtnClass,
   usedCarShowroomOutlineButtonClass,
   usedCarShowroomPageStackClass,
   usedCarShowroomPrimaryButtonClass,
@@ -247,6 +248,8 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     customerId: "",
   });
 
+  const vehicleParam = searchParams.get("vehicle");
+
   const setTab = (next: UsedCarShowroomManageTabKey) => {
     router.push(usedCarShowroomManageHref(next));
   };
@@ -258,6 +261,13 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
     setAddOpen(false);
     setEditId(null);
   }, [tab]);
+
+  useEffect(() => {
+    if (tab !== "vehicles" || !vehicleParam) return;
+    if (vehicles.some((v) => v.id === vehicleParam)) {
+      setEditId(vehicleParam);
+    }
+  }, [tab, vehicleParam, vehicles]);
 
   const load = useCallback(async () => {
     try {
@@ -636,7 +646,7 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
   const filterPanelId = `used-car-manage-filter-${tab}`;
 
   const headerAction = (
-    <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
+    <div className="flex shrink-0 flex-nowrap items-center gap-1">
       <button
         type="button"
         aria-expanded={filterOpen}
@@ -644,18 +654,17 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
         aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
         title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
         className={cn(
-          usedCarShowroomOutlineButtonClass,
-          "relative min-h-[40px] min-w-[40px] sm:min-w-0",
-          filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-          filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+          usedCarShowroomInlineSubNavBtnClass(filterOpen),
+          "relative",
+          filtersActive && !filterOpen && "ring-1 ring-amber-300/80",
         )}
         onClick={() => setFilterOpen((o) => !o)}
       >
-        <Filter className="h-4 w-4 shrink-0" aria-hidden />
+        <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-        {filtersActive ? (
+        {filtersActive && !filterOpen ? (
           <span
-            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
             aria-hidden
           />
         ) : null}
@@ -903,7 +912,16 @@ export function UsedCarShowroomManageClient({ initialShop }: { initialShop: Used
             <div className="space-y-3 rounded-xl border border-slate-200 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold text-[#1e1b4b]">รายละเอียด · {selected.title}</h3>
-                <button type="button" className={usedCarShowroomOutlineButtonClass} onClick={() => setEditId(null)}>
+                <button
+                  type="button"
+                  className={usedCarShowroomOutlineButtonClass}
+                  onClick={() => {
+                    setEditId(null);
+                    if (vehicleParam) {
+                      router.replace(usedCarShowroomManageHref("vehicles"));
+                    }
+                  }}
+                >
                   ปิด
                 </button>
               </div>

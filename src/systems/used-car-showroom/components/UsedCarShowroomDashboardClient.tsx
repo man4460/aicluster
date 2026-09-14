@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Car, CalendarClock, Landmark, ClipboardList, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Car, CalendarClock, Filter, Landmark, ClipboardList, TrendingUp, Wallet } from "lucide-react";
 import {
   AppEmptyState,
   AppImageThumb,
   AppLabeledImageThumb,
   AppTime24Input,
+  prepareImageFileForUpload,
   useAppImageLightbox,
   AppImageLightbox,
   useAppNoticePopup,
@@ -43,6 +44,7 @@ import {
 import {
   USED_CAR_APPOINTMENT_STATUSES,
   USED_CAR_RESERVATION_STATUSES,
+  USED_CAR_VEHICLE_STATUSES,
   usedCarAppointmentKindLabel,
   usedCarAppointmentStatusLabel,
   usedCarReservationSourceLabel,
@@ -53,7 +55,10 @@ import {
 } from "@/systems/used-car-showroom/lib/status";
 import {
   usedCarShowroomFieldClass,
+  usedCarShowroomFilterChipClass,
+  usedCarShowroomFilterChipShellClass,
   usedCarShowroomFinanceStatsGridClass,
+  usedCarShowroomInlineSubNavBtnClass,
   usedCarShowroomOutlineButtonClass,
   usedCarShowroomPageStackClass,
   usedCarShowroomPrimaryButtonClass,
@@ -113,9 +118,102 @@ type VehicleRow = {
   status: string;
   statusLabel: string;
   askingPriceBaht: number;
+  purchaseCostBaht?: number;
+  prepCostBaht?: number;
   coverImageUrl: string | null;
   title: string;
+  color?: string | null;
+  mileageKm?: number | null;
+  transmission?: string | null;
+  fuelType?: string | null;
+  bodyType?: string | null;
+  plateNumber?: string | null;
+  vin?: string | null;
+  engineNumber?: string | null;
+  hasRegistrationBook?: boolean;
+  description?: string | null;
+  note?: string | null;
+  purchasedAt?: string | null;
+  soldAt?: string | null;
+  images?: { id: string; imageUrl: string; isCover: boolean; sortOrder: number }[];
+  videos?: { id: string; youtubeUrl: string; title: string | null; youtubeId?: string | null }[];
+  costLines?: { id: string; kind: string; label: string; amountBaht: number }[];
 };
+
+function vehicleStatusPillClass(status: string): string {
+  const tone = usedCarVehicleStatusTone(status);
+  const map: Record<string, string> = {
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    rose: "border-rose-200 bg-rose-50 text-rose-700",
+    amber: "border-amber-200 bg-amber-50 text-amber-900",
+    sky: "border-sky-200 bg-sky-50 text-sky-800",
+    cyan: "border-cyan-200 bg-cyan-50 text-cyan-800",
+    violet: "border-violet-200 bg-violet-50 text-violet-800",
+    slate: "border-slate-200 bg-slate-50 text-slate-700",
+  };
+  return cn(
+    "inline-flex max-w-full items-center rounded-lg border px-2 py-0.5 text-[10px] font-bold",
+    map[tone] ?? map.sky,
+  );
+}
+
+type StockEditForm = {
+  brand: string;
+  model: string;
+  year: string;
+  color: string;
+  mileageKm: string;
+  transmission: string;
+  fuelType: string;
+  plateNumber: string;
+  vin: string;
+  purchaseCostBaht: string;
+  askingPriceBaht: string;
+  status: string;
+  description: string;
+  note: string;
+  hasRegistrationBook: boolean;
+};
+
+function emptyStockEditForm(): StockEditForm {
+  return {
+    brand: "",
+    model: "",
+    year: "",
+    color: "",
+    mileageKm: "",
+    transmission: "",
+    fuelType: "",
+    plateNumber: "",
+    vin: "",
+    purchaseCostBaht: "",
+    askingPriceBaht: "",
+    status: "PREP",
+    description: "",
+    note: "",
+    hasRegistrationBook: false,
+  };
+}
+
+function vehicleToStockEditForm(v: VehicleRow): StockEditForm {
+  return {
+    brand: v.brand,
+    model: v.model,
+    year: v.year != null ? String(v.year) : "",
+    color: v.color ?? "",
+    mileageKm: v.mileageKm != null ? String(v.mileageKm) : "",
+    transmission: v.transmission ?? "",
+    fuelType: v.fuelType ?? "",
+    plateNumber: v.plateNumber ?? "",
+    vin: v.vin ?? "",
+    purchaseCostBaht: String(v.purchaseCostBaht ?? 0),
+    askingPriceBaht: String(v.askingPriceBaht ?? 0),
+    status: v.status,
+    description: v.description ?? "",
+    note: v.note ?? "",
+    hasRegistrationBook: Boolean(v.hasRegistrationBook),
+  };
+}
 
 function reservationStatusPillClass(status: string): string {
   const tone = usedCarReservationStatusTone(status);
@@ -142,6 +240,9 @@ function baht(n: number) {
   return `฿${n.toLocaleString("th-TH")}`;
 }
 
+/** จำนวนรถต่อหน้าในแท็บสต็อก */
+const STOCK_PAGE_SIZE = 10;
+
 export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: UsedCarShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,6 +261,18 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
   const [busy, setBusy] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [reserveSaving, setReserveSaving] = useState(false);
+  const [stockDetail, setStockDetail] = useState<VehicleRow | null>(null);
+  const [stockEditing, setStockEditing] = useState(false);
+  const [stockEditForm, setStockEditForm] = useState<StockEditForm>(emptyStockEditForm);
+  const [stockSaving, setStockSaving] = useState(false);
+  const [stockUploading, setStockUploading] = useState(false);
+  const [stockPage, setStockPage] = useState(0);
+  const [stockFilterOpen, setStockFilterOpen] = useState(true);
+  const [stockStatusFilter, setStockStatusFilter] = useState<string>("ALL");
+  const [stockKeyword, setStockKeyword] = useState("");
+  const [reserveFilterOpen, setReserveFilterOpen] = useState(true);
+  const [reserveStatusFilter, setReserveStatusFilter] = useState<string>("ALL");
+  const [reserveKeyword, setReserveKeyword] = useState("");
   const [reserveDetail, setReserveDetail] = useState<ReservationRow | null>(null);
   const [reserveDetailStatus, setReserveDetailStatus] = useState("PENDING");
   const [reserveDetailNote, setReserveDetailNote] = useState("");
@@ -251,12 +364,80 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     void load();
   }, [load]);
 
+  const stockBaseVehicles = useMemo(
+    () =>
+      vehicles.filter((v) =>
+        ["PREP", "FOR_SALE", "RESERVED", "SOLD", "DELIVERED"].includes(v.status),
+      ),
+    [vehicles],
+  );
+
+  const stockFiltersActive =
+    stockStatusFilter !== "ALL" || Boolean(stockKeyword.trim());
+
   const stockVehicles = useMemo(() => {
-    let list = vehicles;
-    if (statusFilter) list = list.filter((v) => v.status === statusFilter);
-    else if (tab === "stock") list = list.filter((v) => ["PREP", "FOR_SALE", "RESERVED", "SOLD", "DELIVERED"].includes(v.status));
+    let list = stockBaseVehicles;
+    if (stockStatusFilter !== "ALL") {
+      list = list.filter((v) => v.status === stockStatusFilter);
+    }
+    const q = stockKeyword.trim().toLowerCase();
+    if (q) {
+      list = list.filter((v) => {
+        const hay = [
+          v.title,
+          v.brand,
+          v.model,
+          v.plateNumber ?? "",
+          v.color ?? "",
+          v.vin ?? "",
+          v.statusLabel,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
     return list;
-  }, [vehicles, statusFilter, tab]);
+  }, [stockBaseVehicles, stockStatusFilter, stockKeyword]);
+
+  const stockStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: stockBaseVehicles.length };
+    for (const s of USED_CAR_VEHICLE_STATUSES) {
+      counts[s] = stockBaseVehicles.filter((v) => v.status === s).length;
+    }
+    return counts;
+  }, [stockBaseVehicles]);
+
+  const stockTotalPages = Math.max(1, Math.ceil(stockVehicles.length / STOCK_PAGE_SIZE));
+  const stockSafePage = Math.min(stockPage, stockTotalPages - 1);
+  const stockPageVehicles = useMemo(() => {
+    const start = stockSafePage * STOCK_PAGE_SIZE;
+    return stockVehicles.slice(start, start + STOCK_PAGE_SIZE);
+  }, [stockVehicles, stockSafePage]);
+
+  useEffect(() => {
+    if (tab !== "stock") return;
+    setStockStatusFilter(statusFilter || "ALL");
+  }, [tab, statusFilter]);
+
+  useEffect(() => {
+    setStockPage(0);
+  }, [stockStatusFilter, stockKeyword, tab]);
+
+  useEffect(() => {
+    setStockPage((p) => Math.min(p, Math.max(0, stockTotalPages - 1)));
+  }, [stockTotalPages]);
+
+  function clearStockFilters() {
+    setStockStatusFilter("ALL");
+    setStockKeyword("");
+    setTab("stock", { status: null });
+  }
+
+  function setStockStatus(next: string) {
+    setStockStatusFilter(next);
+    setTab("stock", { status: next === "ALL" ? null : next });
+  }
 
   const appointmentsToday = useMemo(() => {
     const today = bangkokDateKey();
@@ -297,10 +478,151 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
     [financeCases],
   );
 
+  const reserveFiltersActive =
+    reserveStatusFilter !== "ALL" || Boolean(reserveKeyword.trim());
+
+  const filteredReservations = useMemo(() => {
+    const q = reserveKeyword.trim().toLowerCase();
+    return reservations.filter((r) => {
+      if (reserveStatusFilter !== "ALL" && r.status !== reserveStatusFilter) return false;
+      if (!q) return true;
+      const hay = [r.customerName, r.customerPhone, r.vehicleTitle ?? "", r.note ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [reservations, reserveStatusFilter, reserveKeyword]);
+
+  const reserveStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: reservations.length };
+    for (const s of USED_CAR_RESERVATION_STATUSES) {
+      counts[s] = reservations.filter((r) => r.status === s).length;
+    }
+    return counts;
+  }, [reservations]);
+
+  function clearReserveFilters() {
+    setReserveStatusFilter("ALL");
+    setReserveKeyword("");
+  }
+
   const reservableVehicles = useMemo(
     () => vehicles.filter((v) => v.status === "PREP" || v.status === "FOR_SALE"),
     [vehicles],
   );
+
+  function openStockDetail(v: VehicleRow) {
+    setStockDetail(v);
+    setStockEditForm(vehicleToStockEditForm(v));
+    setStockEditing(false);
+  }
+
+  function startStockEdit() {
+    if (!stockDetail) return;
+    setStockEditForm(vehicleToStockEditForm(stockDetail));
+    setStockEditing(true);
+  }
+
+  function cancelStockEdit() {
+    if (!stockDetail) return;
+    setStockEditForm(vehicleToStockEditForm(stockDetail));
+    setStockEditing(false);
+  }
+
+  function closeStockDetail() {
+    setStockDetail(null);
+    setStockEditing(false);
+    setStockEditForm(emptyStockEditForm());
+  }
+
+  async function saveStockDetail() {
+    if (!stockDetail) return;
+    const brand = stockEditForm.brand.trim();
+    const model = stockEditForm.model.trim();
+    if (!brand || !model) {
+      notice.error("กรอกยี่ห้อและรุ่น");
+      return;
+    }
+    setStockSaving(true);
+    try {
+      const yearRaw = stockEditForm.year.trim();
+      const year = yearRaw ? Number(yearRaw) : null;
+      const mileageRaw = stockEditForm.mileageKm.trim();
+      const mileageKm = mileageRaw ? Number(mileageRaw) : null;
+      const res = await fetch(`/api/used-car-showroom/session/vehicles/${stockDetail.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand,
+          model,
+          year: Number.isFinite(year) ? year : null,
+          color: stockEditForm.color.trim() || null,
+          mileageKm: Number.isFinite(mileageKm) ? Math.max(0, Math.round(mileageKm!)) : null,
+          transmission: stockEditForm.transmission.trim() || null,
+          fuelType: stockEditForm.fuelType.trim() || null,
+          plateNumber: stockEditForm.plateNumber.trim() || null,
+          vin: stockEditForm.vin.trim() || null,
+          purchaseCostBaht: Math.max(0, Math.round(Number(stockEditForm.purchaseCostBaht) || 0)),
+          askingPriceBaht: Math.max(0, Math.round(Number(stockEditForm.askingPriceBaht) || 0)),
+          status: stockEditForm.status,
+          description: stockEditForm.description.trim() || null,
+          note: stockEditForm.note.trim() || null,
+          hasRegistrationBook: stockEditForm.hasRegistrationBook,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notice.error(data.error || "บันทึกไม่สำเร็จ");
+        return;
+      }
+      if (data.vehicle) {
+        setStockDetail(data.vehicle);
+        setStockEditForm(vehicleToStockEditForm(data.vehicle));
+      }
+      notice.show("บันทึกรถแล้ว");
+      await load();
+      setStockEditing(false);
+    } catch (e) {
+      console.error(e);
+      notice.error("บันทึกไม่สำเร็จ");
+    } finally {
+      setStockSaving(false);
+    }
+  }
+
+  async function uploadStockImage(file: File) {
+    if (!stockDetail) return;
+    setStockUploading(true);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const fd = new FormData();
+      fd.set("file", prepared);
+      const res = await fetch(`/api/used-car-showroom/session/vehicles/${stockDetail.id}/images`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notice.error(data.error || "อัปโหลดรูปไม่สำเร็จ");
+        return;
+      }
+      const refreshed = await fetch(`/api/used-car-showroom/session/vehicles/${stockDetail.id}`, {
+        credentials: "include",
+      }).then((r) => r.json());
+      if (refreshed.vehicle) {
+        setStockDetail(refreshed.vehicle);
+      }
+      await load();
+      notice.show("อัปโหลดรูปแล้ว");
+    } catch (e) {
+      console.error(e);
+      notice.error("อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setStockUploading(false);
+    }
+  }
 
   async function createReservation() {
     const name = reserveForm.customerName.trim();
@@ -649,60 +971,208 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
 
         {tab === "stock" ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
-              {[null, "PREP", "FOR_SALE", "RESERVED", "SOLD", "DELIVERED"].map((s) => (
-                <button
-                  key={s ?? "all"}
-                  type="button"
-                  className={cn(
-                    usedCarShowroomOutlineButtonClass,
-                    (statusFilter ?? null) === s && usedCarShowroomPrimaryButtonClass,
-                  )}
-                  onClick={() => setTab("stock", { status: s })}
-                >
-                  {s ? usedCarVehicleStatusLabel(s) : "ทั้งหมด"}
-                </button>
-              ))}
+            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
+              <button
+                type="button"
+                aria-expanded={stockFilterOpen}
+                aria-controls="ucs-stock-filter-panel"
+                aria-label={stockFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={stockFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  usedCarShowroomInlineSubNavBtnClass(stockFilterOpen),
+                  "relative",
+                  stockFiltersActive && !stockFilterOpen && "ring-1 ring-amber-300/80",
+                )}
+                onClick={() => setStockFilterOpen((o) => !o)}
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{stockFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {stockFiltersActive && !stockFilterOpen ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+              <Link
+                href={`${USED_CAR_SHOWROOM_MANAGE_PATH}?tab=vehicles`}
+                className={usedCarShowroomPrimaryButtonClass}
+              >
+                + เพิ่มรถ
+              </Link>
             </div>
-            {stockVehicles.length === 0 ? (
-              <AppEmptyState>ยังไม่มีรถ — เพิ่มรถที่เมนูการจัดการ</AppEmptyState>
+
+            <div
+              id="ucs-stock-filter-panel"
+              className={cn("space-y-3", stockFilterOpen ? "block" : "hidden")}
+            >
+              <div
+                className={usedCarShowroomFilterChipShellClass}
+                role="tablist"
+                aria-label="กรองสถานะสต็อก"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={stockStatusFilter === "ALL"}
+                  className={usedCarShowroomFilterChipClass(stockStatusFilter === "ALL")}
+                  onClick={() => setStockStatus("ALL")}
+                >
+                  ทั้งหมด ({stockStatusCounts.ALL ?? 0})
+                </button>
+                {USED_CAR_VEHICLE_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={stockStatusFilter === s}
+                    className={usedCarShowroomFilterChipClass(stockStatusFilter === s)}
+                    onClick={() => setStockStatus(s)}
+                  >
+                    {usedCarVehicleStatusLabel(s)} ({stockStatusCounts[s] ?? 0})
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-stock-kw">
+                  <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+                  <input
+                    id="ucs-stock-kw"
+                    className={cn(usedCarShowroomFieldClass, "mt-1 min-h-[44px]")}
+                    placeholder="ยี่ห้อ · รุ่น · ทะเบียน · สี"
+                    value={stockKeyword}
+                    onChange={(e) => setStockKeyword(e.target.value)}
+                  />
+                </label>
+                {stockFiltersActive ? (
+                  <button
+                    type="button"
+                    className={usedCarShowroomOutlineButtonClass}
+                    onClick={clearStockFilters}
+                  >
+                    ล้างกรอง
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] font-semibold text-[#66638c]">
+                แสดง {stockVehicles.length}/{stockBaseVehicles.length}
+              </p>
+            </div>
+
+            {stockBaseVehicles.length === 0 ? (
+              <AppEmptyState>ยังไม่มีรถ — กดเพิ่มรถที่เมนูการจัดการ</AppEmptyState>
+            ) : stockVehicles.length === 0 ? (
+              <AppEmptyState>ไม่พบรถตามตัวกรอง</AppEmptyState>
             ) : (
-              <ul className="space-y-2">
-                {stockVehicles.map((v) => {
-                  const tone = usedCarVehicleStatusTone(v.status);
-                  return (
-                    <li key={v.id} className={usedCarShowroomTonedRowCardClass(tone)}>
-                      <div className="flex min-w-0 items-start gap-3">
-                        {v.coverImageUrl ? (
-                          <AppImageThumb
-                            src={v.coverImageUrl}
-                            alt={v.title}
-                            className="h-14 w-14"
-                            onOpen={() => lb.open(v.coverImageUrl!)}
-                          />
-                        ) : (
-                          <span className={usedCarShowroomCardIconTileClass(tone, "lg")}>
-                            <Car className="h-6 w-6" aria-hidden />
-                          </span>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
-                          <p className="text-xs font-semibold text-[#66638c]">
-                            {v.statusLabel} · {baht(v.askingPriceBaht)}
-                          </p>
+              <>
+                <p className="text-[11px] font-semibold text-[#66638c]">
+                  หน้านี้ {stockSafePage * STOCK_PAGE_SIZE + 1}–
+                  {Math.min((stockSafePage + 1) * STOCK_PAGE_SIZE, stockVehicles.length)} จาก{" "}
+                  {stockVehicles.length} คัน
+                </p>
+                <ul className="space-y-2">
+                  {stockPageVehicles.map((v) => {
+                    const tone = usedCarVehicleStatusTone(v.status);
+                    return (
+                      <li key={v.id}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className={cn(usedCarShowroomTonedRowCardClass(tone), "cursor-pointer")}
+                          onClick={() => openStockDetail(v)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openStockDetail(v);
+                            }
+                          }}
+                          aria-label={`ดูรายละเอียด ${v.title}`}
+                        >
+                          <div className="flex min-w-0 items-start gap-3">
+                            {v.coverImageUrl ? (
+                              <AppImageThumb
+                                src={v.coverImageUrl}
+                                alt={v.title}
+                                className="pointer-events-none h-14 w-14 shrink-0"
+                              />
+                            ) : (
+                              <span className={cn(usedCarShowroomCardIconTileClass(tone, "lg"), "shrink-0")}>
+                                <Car className="h-6 w-6" aria-hidden />
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="truncate text-sm font-black text-[#1e1b4b]">{v.title}</p>
+                                <span className={vehicleStatusPillClass(v.status)}>{v.statusLabel}</span>
+                              </div>
+                              <p className="text-xs font-semibold text-[#66638c]">
+                                {baht(v.askingPriceBaht)}
+                                {v.plateNumber ? ` · ทะเบียน ${v.plateNumber}` : ""}
+                                {v.color ? ` · ${v.color}` : ""}
+                              </p>
+                              <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {stockTotalPages > 1 ? (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={stockSafePage <= 0}
+                      onClick={() => setStockPage((p) => Math.max(0, p - 1))}
+                      aria-label="หน้าก่อนหน้า"
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <p className="text-xs font-semibold text-[#66638c]" aria-live="polite">
+                      หน้า {stockSafePage + 1} / {stockTotalPages}
+                    </p>
+                    <button
+                      type="button"
+                      className={usedCarShowroomOutlineButtonClass}
+                      disabled={stockSafePage >= stockTotalPages - 1}
+                      onClick={() => setStockPage((p) => Math.min(stockTotalPages - 1, p + 1))}
+                      aria-label="หน้าถัดไป"
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
         ) : null}
 
         {tab === "reservations" ? (
           <div className="space-y-3">
-            <div className="flex justify-end">
+            <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
+              <button
+                type="button"
+                aria-expanded={reserveFilterOpen}
+                aria-controls="ucs-reservations-filter-panel"
+                aria-label={reserveFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={reserveFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  usedCarShowroomInlineSubNavBtnClass(reserveFilterOpen),
+                  "relative",
+                  reserveFiltersActive && !reserveFilterOpen && "ring-1 ring-amber-300/80",
+                )}
+                onClick={() => setReserveFilterOpen((o) => !o)}
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{reserveFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {reserveFiltersActive && !reserveFilterOpen ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
               <button
                 type="button"
                 className={usedCarShowroomPrimaryButtonClass}
@@ -711,11 +1181,71 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                 จองให้ลูกค้า
               </button>
             </div>
+
+            <div
+              id="ucs-reservations-filter-panel"
+              className={cn("space-y-3", reserveFilterOpen ? "block" : "hidden")}
+            >
+              <div
+                className={usedCarShowroomFilterChipShellClass}
+                role="tablist"
+                aria-label="กรองสถานะการจอง"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={reserveStatusFilter === "ALL"}
+                  className={usedCarShowroomFilterChipClass(reserveStatusFilter === "ALL")}
+                  onClick={() => setReserveStatusFilter("ALL")}
+                >
+                  ทั้งหมด ({reserveStatusCounts.ALL ?? 0})
+                </button>
+                {USED_CAR_RESERVATION_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={reserveStatusFilter === s}
+                    className={usedCarShowroomFilterChipClass(reserveStatusFilter === s)}
+                    onClick={() => setReserveStatusFilter(s)}
+                  >
+                    {usedCarReservationStatusLabel(s)} ({reserveStatusCounts[s] ?? 0})
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <label className="min-w-0 flex-1 sm:max-w-[20rem]" htmlFor="ucs-reserve-kw">
+                  <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+                  <input
+                    id="ucs-reserve-kw"
+                    className={cn(usedCarShowroomFieldClass, "mt-1 min-h-[44px]")}
+                    placeholder="ชื่อ · เบอร์ · รถ"
+                    value={reserveKeyword}
+                    onChange={(e) => setReserveKeyword(e.target.value)}
+                  />
+                </label>
+                {reserveFiltersActive ? (
+                  <button
+                    type="button"
+                    className={usedCarShowroomOutlineButtonClass}
+                    onClick={clearReserveFilters}
+                  >
+                    ล้างกรอง
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] font-semibold text-[#66638c]">
+                แสดง {filteredReservations.length}/{reservations.length}
+              </p>
+            </div>
+
             {reservations.length === 0 ? (
               <AppEmptyState>ยังไม่มีการจอง</AppEmptyState>
+            ) : filteredReservations.length === 0 ? (
+              <AppEmptyState>ไม่พบการจองตามตัวกรอง</AppEmptyState>
             ) : (
               <ul className="space-y-2">
-                {reservations.map((r) => {
+                {filteredReservations.map((r) => {
                   const tone = usedCarReservationStatusTone(r.status);
                   return (
                     <li key={r.id}>
@@ -756,7 +1286,9 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
                               {r.vehicleTitle ? ` · ${r.vehicleTitle}` : ""}
                               {r.depositBaht > 0 ? ` · มัดจำ ${baht(r.depositBaht)}` : ""}
                             </p>
-                            <p className="text-[10px] font-semibold text-[#8b87a8]">แตะเพื่อดูรายละเอียด / เปลี่ยนสถานะ</p>
+                            <p className="text-[10px] font-semibold text-[#8b87a8]">
+                              แตะเพื่อดูรายละเอียด / เปลี่ยนสถานะ
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1096,6 +1628,390 @@ export function UsedCarShowroomDashboardClient({ initialShop }: { initialShop: U
             </>
           ) : null}
         </div>
+      </FormModal>
+
+      <FormModal
+        open={Boolean(stockDetail)}
+        onClose={closeStockDetail}
+        title={stockEditing ? "แก้ไขรถในสต็อก" : "รายละเอียดรถ"}
+        size="lg"
+        mobileCentered
+        footer={
+          stockEditing ? (
+            <FormModalFooterActions
+              onCancel={cancelStockEdit}
+              cancelLabel="ยกเลิก"
+              onSubmit={() => void saveStockDetail()}
+              submitLabel="บันทึก"
+              loading={stockSaving}
+              submitDisabled={stockUploading}
+            />
+          ) : (
+            <FormModalFooterActions
+              onCancel={closeStockDetail}
+              cancelLabel="ปิด"
+              onSubmit={startStockEdit}
+              submitLabel="แก้ไข"
+            />
+          )
+        }
+      >
+        {stockDetail ? (
+          stockEditing ? (
+            <div className="space-y-3">
+              <div className="flex min-w-0 items-start gap-3">
+                {stockDetail.coverImageUrl ? (
+                  <AppImageThumb
+                    src={stockDetail.coverImageUrl}
+                    alt={stockDetail.title}
+                    className="h-20 w-20 shrink-0"
+                    onOpen={() => stockDetail.coverImageUrl && lb.open(stockDetail.coverImageUrl)}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      usedCarShowroomCardIconTileClass(usedCarVehicleStatusTone(stockEditForm.status), "lg"),
+                      "shrink-0",
+                    )}
+                    aria-hidden
+                  >
+                    <Car className="h-6 w-6" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-black text-[#1e1b4b]">
+                    {[stockEditForm.brand, stockEditForm.model, stockEditForm.year].filter(Boolean).join(" ") ||
+                      stockDetail.title}
+                  </p>
+                  <span className={vehicleStatusPillClass(stockEditForm.status)}>
+                    {usedCarVehicleStatusLabel(stockEditForm.status)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-[#4d47b6]">สถานะ</p>
+                <div className="flex flex-wrap gap-1">
+                  {USED_CAR_VEHICLE_STATUSES.map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      className={cn(
+                        usedCarShowroomOutlineButtonClass,
+                        "min-h-7 px-2 text-[10px]",
+                        stockEditForm.status === st && usedCarShowroomPrimaryButtonClass,
+                      )}
+                      onClick={() => setStockEditForm((f) => ({ ...f, status: st }))}
+                    >
+                      {usedCarVehicleStatusLabel(st)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ยี่ห้อ
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.brand}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, brand: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  รุ่น
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.model}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, model: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ปี
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    inputMode="numeric"
+                    value={stockEditForm.year}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, year: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  สี
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.color}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, color: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ทะเบียน
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.plateNumber}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, plateNumber: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  เลขไมล์ (กม.)
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    inputMode="numeric"
+                    value={stockEditForm.mileageKm}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, mileageKm: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  เกียร์
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.transmission}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, transmission: e.target.value }))}
+                    placeholder="เช่น ออโต้ / ธรรมดา"
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  เชื้อเพลิง
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.fuelType}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, fuelType: e.target.value }))}
+                    placeholder="เช่น เบนซิน / ดีเซล"
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ทุนซื้อ (บาท)
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    inputMode="numeric"
+                    value={stockEditForm.purchaseCostBaht}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, purchaseCostBaht: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                  ราคาขาย (บาท)
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    inputMode="numeric"
+                    value={stockEditForm.askingPriceBaht}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, askingPriceBaht: e.target.value }))}
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-bold text-[#4d47b6] sm:col-span-2">
+                  VIN
+                  <input
+                    className={usedCarShowroomFieldClass}
+                    value={stockEditForm.vin}
+                    onChange={(e) => setStockEditForm((f) => ({ ...f, vin: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-[#4d47b6]">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300"
+                  checked={stockEditForm.hasRegistrationBook}
+                  onChange={(e) =>
+                    setStockEditForm((f) => ({ ...f, hasRegistrationBook: e.target.checked }))
+                  }
+                />
+                มีเล่มทะเบียน
+              </label>
+
+              <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                คำอธิบาย
+                <textarea
+                  className={cn(usedCarShowroomFieldClass, "min-h-[72px] max-h-none py-2")}
+                  value={stockEditForm.description}
+                  onChange={(e) => setStockEditForm((f) => ({ ...f, description: e.target.value }))}
+                  rows={3}
+                />
+              </label>
+
+              <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+                หมายเหตุภายใน
+                <textarea
+                  className={cn(usedCarShowroomFieldClass, "min-h-[56px] max-h-none py-2")}
+                  value={stockEditForm.note}
+                  onChange={(e) => setStockEditForm((f) => ({ ...f, note: e.target.value }))}
+                  rows={2}
+                />
+              </label>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-[#4d47b6]">รูปรถ</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={stockUploading || stockSaving}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadStockImage(f);
+                    e.target.value = "";
+                  }}
+                />
+                {stockUploading ? (
+                  <p className="text-[11px] font-semibold text-[#66638c]">กำลังอัปโหลด…</p>
+                ) : null}
+                {stockDetail.images && stockDetail.images.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {stockDetail.images.map((img) => (
+                      <li key={img.id}>
+                        <AppImageThumb
+                          src={img.imageUrl}
+                          alt={stockDetail.title}
+                          className="h-16 w-16"
+                          onOpen={() => lb.open(img.imageUrl)}
+                        />
+                        {img.isCover ? (
+                          <span className="block text-center text-[10px] font-bold text-emerald-700">ปก</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex min-w-0 items-start gap-3">
+                {stockDetail.coverImageUrl ? (
+                  <AppImageThumb
+                    src={stockDetail.coverImageUrl}
+                    alt={stockDetail.title}
+                    className="h-20 w-20 shrink-0"
+                    onOpen={() => stockDetail.coverImageUrl && lb.open(stockDetail.coverImageUrl)}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      usedCarShowroomCardIconTileClass(usedCarVehicleStatusTone(stockDetail.status), "lg"),
+                      "shrink-0",
+                    )}
+                    aria-hidden
+                  >
+                    <Car className="h-6 w-6" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-black text-[#1e1b4b]">{stockDetail.title}</p>
+                  <span className={vehicleStatusPillClass(stockDetail.status)}>{stockDetail.statusLabel}</span>
+                  <p className="text-sm font-black text-emerald-700">{baht(stockDetail.askingPriceBaht)}</p>
+                </div>
+              </div>
+
+              <dl className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ยี่ห้อ / รุ่น</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">
+                    {stockDetail.brand} {stockDetail.model}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ปี</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{stockDetail.year ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">สี</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{stockDetail.color || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">เลขไมล์</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">
+                    {stockDetail.mileageKm != null
+                      ? `${stockDetail.mileageKm.toLocaleString("th-TH")} กม.`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">เกียร์</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{stockDetail.transmission || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">เชื้อเพลิง</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{stockDetail.fuelType || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ทะเบียน</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{stockDetail.plateNumber || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">เล่มทะเบียน</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">
+                    {stockDetail.hasRegistrationBook ? "มี" : "ไม่มี / ไม่ระบุ"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ทุนซื้อ</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{baht(stockDetail.purchaseCostBaht ?? 0)}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-[#8b87a8]">ปรับสภาพ</dt>
+                  <dd className="font-semibold text-[#1e1b4b]">{baht(stockDetail.prepCostBaht ?? 0)}</dd>
+                </div>
+                {stockDetail.vin ? (
+                  <div className="col-span-2">
+                    <dt className="font-bold text-[#8b87a8]">VIN</dt>
+                    <dd className="break-all font-semibold text-[#1e1b4b]">{stockDetail.vin}</dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              {stockDetail.description ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-[#4d47b6]">คำอธิบาย</p>
+                  <p className="whitespace-pre-wrap text-xs font-semibold text-[#66638c]">
+                    {stockDetail.description}
+                  </p>
+                </div>
+              ) : null}
+
+              {stockDetail.note ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-[#4d47b6]">หมายเหตุภายใน</p>
+                  <p className="whitespace-pre-wrap text-xs font-semibold text-[#66638c]">{stockDetail.note}</p>
+                </div>
+              ) : null}
+
+              {stockDetail.images && stockDetail.images.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-[#4d47b6]">รูปรถ ({stockDetail.images.length})</p>
+                  <ul className="flex flex-wrap gap-2">
+                    {stockDetail.images.map((img) => (
+                      <li key={img.id}>
+                        <AppImageThumb
+                          src={img.imageUrl}
+                          alt={stockDetail.title}
+                          className="h-16 w-16"
+                          onOpen={() => lb.open(img.imageUrl)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {stockDetail.costLines && stockDetail.costLines.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-[#4d47b6]">รายการปรับสภาพ</p>
+                  <ul className="space-y-1">
+                    {stockDetail.costLines.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white/70 px-2.5 py-1.5 text-xs"
+                      >
+                        <span className="min-w-0 truncate font-semibold text-[#1e1b4b]">
+                          {c.label || c.kind}
+                        </span>
+                        <span className="shrink-0 font-bold text-rose-600">{baht(c.amountBaht)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          )
+        ) : null}
       </FormModal>
 
       <FormModal
