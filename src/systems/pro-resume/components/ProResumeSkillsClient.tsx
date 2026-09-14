@@ -118,9 +118,9 @@ export function ProResumeSkillsClient() {
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
-        s.level.toLowerCase().includes(q) ||
-        s.shortDesc.toLowerCase().includes(q) ||
-        s.description.toLowerCase().includes(q)
+        (s.level ?? "").toLowerCase().includes(q) ||
+        (s.shortDesc ?? "").toLowerCase().includes(q) ||
+        (s.description ?? "").toLowerCase().includes(q)
       );
     });
   }, [skills, keyword, levelFilter]);
@@ -288,8 +288,10 @@ export function ProResumeSkillsClient() {
                       <p className="text-sm font-semibold text-[#4d47b6]">{row.level}</p>
                     ) : null}
                     <p className="line-clamp-2 text-sm text-[#66638c]">
-                      {row.shortDesc.trim() ||
-                        (row.description.trim() ? row.description.replace(/<[^>]+>/g, " ").trim() : "—")}
+                      {(row.shortDesc ?? "").trim() ||
+                        ((row.description ?? "").trim()
+                          ? (row.description ?? "").replace(/<[^>]+>/g, " ").trim()
+                          : "—")}
                     </p>
                     {row.images.length > 1 ? (
                       <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">{row.images.length} รูป</p>

@@ -677,11 +677,15 @@ export function ProResumePublicClient({
               >
                 <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5">
                   {data.skills.map((s) => {
+                    const images = Array.isArray(s.images) ? s.images : [];
+                    const level = (s.level ?? "").trim();
+                    const shortDesc = (s.shortDesc ?? "").trim();
+                    const description = (s.description ?? "").trim();
                     const gallery =
-                      s.coverImage && !s.images.includes(s.coverImage)
-                        ? [s.coverImage, ...s.images]
-                        : s.images.length
-                          ? s.images
+                      s.coverImage && !images.includes(s.coverImage)
+                        ? [s.coverImage, ...images]
+                        : images.length
+                          ? images
                           : s.coverImage
                             ? [s.coverImage]
                             : [];
@@ -717,16 +721,16 @@ export function ProResumePublicClient({
                             ) : null}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-black leading-snug text-[#1e1b4b]">{s.name}</p>
-                              {s.level.trim() ? (
-                                <p className="mt-0.5 text-xs font-bold text-amber-800/90">{s.level}</p>
+                              {level ? (
+                                <p className="mt-0.5 text-xs font-bold text-amber-800/90">{level}</p>
                               ) : null}
-                              {s.shortDesc.trim() ? (
-                                <p className="mt-1 text-xs leading-snug text-[#66638c] sm:text-sm">{s.shortDesc}</p>
+                              {shortDesc ? (
+                                <p className="mt-1 text-xs leading-snug text-[#66638c] sm:text-sm">{shortDesc}</p>
                               ) : null}
                             </div>
                           </div>
-                          {s.description.trim() ? (
-                            <ProResumeRichContent content={s.description} className="mt-1" />
+                          {description ? (
+                            <ProResumeRichContent content={s.description ?? ""} className="mt-1" />
                           ) : null}
                           {gallery.length > 1 ? (
                             <div className="flex flex-wrap gap-1.5 pt-1">
