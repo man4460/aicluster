@@ -1,0 +1,471 @@
+import { randomBytes } from "crypto";
+import type { PrismaClient } from "@/generated/prisma/client";
+import { bangkokDateKeyMinusDays } from "@/lib/barber/bangkok-day";
+import {
+  DEMO_MODULE_CONTACT,
+  DEMO_MODULE_PAYMENT,
+  DEMO_PAYMENT_SLIP_URL,
+  trialDemoDisplayName,
+} from "@/lib/trial/demo-module-settings";
+import { bangkokDateKey } from "@/lib/time/bangkok";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
+import {
+  SMART_GUARD_PORTAL_SAMPLE_BANNER,
+  SMART_GUARD_PORTAL_SAMPLE_GALLERY,
+  SMART_GUARD_SAMPLE_LOGO,
+  SMART_GUARD_SAMPLE_YOUTUBE,
+  smartGuardCheckpointSampleImage,
+  smartGuardStaffSamplePhoto,
+} from "@/systems/smart-guard-tour/lib/portal-media";
+
+type Tx = Omit<
+  PrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends" | "$use"
+>;
+type DbLike = PrismaClient | Tx;
+
+const DEMO_NOTE = "[SGT_DEMO]";
+
+const CHECKPOINTS: ReadonlyArray<{
+  name: string;
+  slug: string;
+  zoneLabel: string;
+  buildingLabel: string;
+  floorLabel: string;
+  lat: number;
+  lng: number;
+}> = [
+  { name: "ประตูหลัก A", slug: "gate-a", zoneLabel: "ทางเข้า", buildingLabel: "อาคาร A", floorLabel: "G", lat: 13.7563, lng: 100.5018 },
+  { name: "ลานจอดรถ B1", slug: "parking-b1", zoneLabel: "จอดรถ", buildingLabel: "อาคาร B", floorLabel: "B1", lat: 13.7565, lng: 100.502 },
+  { name: "ห้องควบคุม CCTV", slug: "cctv-room", zoneLabel: "ศูนย์ควบคุม", buildingLabel: "อาคาร A", floorLabel: "2", lat: 13.7564, lng: 100.5019 },
+  { name: "คลังสินค้า C", slug: "warehouse-c", zoneLabel: "คลัง", buildingLabel: "อาคาร C", floorLabel: "1", lat: 13.7568, lng: 100.5022 },
+  { name: "หลังอาคาร D", slug: "rear-d", zoneLabel: "รอบรั้ว", buildingLabel: "อาคาร D", floorLabel: "G", lat: 13.757, lng: 100.5025 },
+  { name: "ลิฟต์ผู้โดยสาร 1", slug: "lift-1", zoneLabel: "ลิฟต์", buildingLabel: "อาคาร A", floorLabel: "G", lat: 13.75635, lng: 100.50185 },
+  { name: "ห้องไฟฟ้า", slug: "electrical", zoneLabel: "วิศวกรรม", buildingLabel: "อาคาร B", floorLabel: "B2", lat: 13.75655, lng: 100.50205 },
+  { name: "ดาดฟ้า", slug: "rooftop", zoneLabel: "ดาดฟ้า", buildingLabel: "อาคาร A", floorLabel: "R", lat: 13.75632, lng: 100.50182 },
+  { name: "ประตูฉุกเฉิน E", slug: "emergency-e", zoneLabel: "ฉุกเฉิน", buildingLabel: "อาคาร E", floorLabel: "G", lat: 13.7572, lng: 100.5028 },
+  { name: "จุดพัก รปภ.", slug: "guard-post", zoneLabel: "พักคอย", buildingLabel: "อาคาร A", floorLabel: "G", lat: 13.75628, lng: 100.50175 },
+  { name: "ห้องเซิร์ฟเวอร์", slug: "server-room", zoneLabel: "IT", buildingLabel: "อาคาร B", floorLabel: "3", lat: 13.7566, lng: 100.5021 },
+  { name: "รั้วด้านตะวันออก", slug: "fence-east", zoneLabel: "รอบรั้ว", buildingLabel: "ภายนอก", floorLabel: "G", lat: 13.7574, lng: 100.503 },
+];
+
+const STAFF_NAMES = [
+  "สมชาย รักษาการ",
+  "วิชัย ยามดี",
+  "ประยุทธ์ เฝ้าระวัง",
+  "สุรชัย ตรวจการณ์",
+  "มานพ ลาดตระเวน",
+  "กิตติ ดูแลไซต์",
+  "อนุชา กะดึก",
+  "ธีรพงศ์ กะเช้า",
+] as const;
+
+function phoneAt(i: number): string {
+  return `08${String(10000000 + i * 137).slice(0, 8)}`;
+}
+
+function qrToken(prefix: string, i: number): string {
+  return `${prefix}-${i}-${randomBytes(8).toString("hex")}`;
+}
+
+function bangkokAt(ymd: string, hour: number, minute = 0): Date {
+  return new Date(`${ymd}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+07:00`);
+}
+
+async function wipeSmartGuardDemoData(db: DbLike, ownerUserId: string, trialSessionId: string) {
+  const where = { ownerUserId, trialSessionId };
+  await db.smartGuardCheckpointVideo.deleteMany({ where });
+  await db.smartGuardIncidentImage.deleteMany({ where });
+  await db.smartGuardTourLog.deleteMany({ where });
+  await db.smartGuardIncident.deleteMany({ where });
+  await db.smartGuardShiftLog.deleteMany({ where });
+  await db.smartGuardCheckpoint.deleteMany({ where });
+  await db.smartGuardSchedule.deleteMany({ where });
+  await db.smartGuardLedgerEntry.deleteMany({ where });
+  await db.smartGuardAsset.deleteMany({ where });
+  await db.smartGuardContact.deleteMany({ where });
+  await db.smartGuardStaff.deleteMany({ where });
+  // หมวดการเงิน + ร้าน — ensure จะสร้างใหม่/เติมหมวด
+  await db.smartGuardFinanceCategory.deleteMany({ where });
+  await db.smartGuardShop.deleteMany({ where });
+}
+
+async function upsertDemoShop(db: DbLike, ownerUserId: string, trialSessionId: string, displayName: string) {
+  const shop = await ensureSmartGuardShop(db, ownerUserId, trialSessionId);
+  const galleryJson = JSON.stringify([...SMART_GUARD_PORTAL_SAMPLE_GALLERY]);
+  return db.smartGuardShop.update({
+    where: { id: shop.id },
+    data: {
+      displayName,
+      tagline: "จุดตรวจอัจฉริยะ · GPS · สายตรวจ · เหตุการณ์",
+      logoUrl: SMART_GUARD_SAMPLE_LOGO,
+      address: DEMO_MODULE_CONTACT.address,
+      contactPhone: DEMO_MODULE_CONTACT.contactPhone,
+      emergencyPhone: "191",
+      contactLine: DEMO_MODULE_CONTACT.lineId,
+      facebookUrl: DEMO_MODULE_CONTACT.facebookUrl,
+      mapUrl: DEMO_MODULE_CONTACT.mapUrl,
+      shopLat: 13.7563,
+      shopLng: 100.5018,
+      openTimeHm: "00:00",
+      closeTimeHm: "23:59",
+      portalBannerUrl: SMART_GUARD_PORTAL_SAMPLE_BANNER,
+      portalGalleryJson: galleryJson,
+      portalEnabled: true,
+      portalSosEnabled: true,
+      portalIntroHtml: "<p>ศูนย์ควบคุมจุดตรวจตัวอย่าง — สแกน QR ตามจุดตามตารางสายตรวจ</p>",
+      promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,
+      bankName: DEMO_MODULE_PAYMENT.bankName,
+      bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
+      bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
+      taxId: DEMO_MODULE_PAYMENT.taxId,
+    },
+  });
+}
+
+async function seedSmartGuardActivity(
+  db: DbLike,
+  ownerUserId: string,
+  trialSessionId: string,
+  shopId: string,
+): Promise<void> {
+  const today = bangkokDateKey();
+  const scope = { ownerUserId, trialSessionId, shopId };
+
+  const staffRows = await Promise.all(
+    STAFF_NAMES.map((displayName, i) =>
+      db.smartGuardStaff.create({
+        data: {
+          ...scope,
+          displayName,
+          phone: phoneAt(i + 10),
+          photoUrl: smartGuardStaffSamplePhoto(i),
+          workStartHm: i % 2 === 0 ? "08:00" : "20:00",
+          workEndHm: i % 2 === 0 ? "20:00" : "08:00",
+          wageBahtPerShift: 600 + (i % 3) * 50,
+          otBahtPerHour: 80,
+          isActive: i < 7,
+          note: DEMO_NOTE,
+        },
+      }),
+    ),
+  );
+
+  const checkpoints = await Promise.all(
+    CHECKPOINTS.map((cp, i) =>
+      db.smartGuardCheckpoint.create({
+        data: {
+          ...scope,
+          name: cp.name,
+          slug: cp.slug,
+          zoneLabel: cp.zoneLabel,
+          buildingLabel: cp.buildingLabel,
+          floorLabel: cp.floorLabel,
+          lat: cp.lat,
+          lng: cp.lng,
+          geofenceRadiusM: 60 + (i % 3) * 20,
+          coverImageUrl: smartGuardCheckpointSampleImage(i),
+          qrToken: qrToken("sgt-qr", i),
+          sortOrder: (i + 1) * 10,
+          isActive: i < 11,
+          note: DEMO_NOTE,
+        },
+      }),
+    ),
+  );
+
+  for (let i = 0; i < Math.min(4, checkpoints.length); i++) {
+    const cp = checkpoints[i]!;
+    await db.smartGuardCheckpointVideo.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        checkpointId: cp.id,
+        youtubeUrl: SMART_GUARD_SAMPLE_YOUTUBE[i % SMART_GUARD_SAMPLE_YOUTUBE.length]!,
+        title: `วิดีโอจุดตรวจ · ${cp.name}`,
+        sortOrder: 0,
+      },
+    });
+  }
+
+  const scheduleDay = await db.smartGuardSchedule.create({
+    data: {
+      ...scope,
+      name: "สายตรวจกลางวัน",
+      routeMode: "SEQUENTIAL",
+      intervalMinutes: 120,
+      checkpointIdsJson: JSON.stringify(checkpoints.slice(0, 6).map((c) => c.id)),
+      isActive: true,
+    },
+  });
+  const scheduleNight = await db.smartGuardSchedule.create({
+    data: {
+      ...scope,
+      name: "สายตรวจกลางคืน",
+      routeMode: "FREE",
+      intervalMinutes: 90,
+      checkpointIdsJson: JSON.stringify(checkpoints.slice(4, 10).map((c) => c.id)),
+      isActive: true,
+    },
+  });
+
+  const contacts = await Promise.all(
+    [
+      { displayName: "หัวหน้าศูนย์ควบคุม", phone: phoneAt(90), lineId: "@sgt-control" },
+      { displayName: "ผู้จัดการอาคาร", phone: phoneAt(91), lineId: "@sgt-facility" },
+      { displayName: "สายด่วนฉุกเฉิน", phone: "191", lineId: null },
+      { displayName: "ช่างซ่อมบำรุง", phone: phoneAt(92), lineId: "@sgt-tech" },
+    ].map((c) =>
+      db.smartGuardContact.create({
+        data: {
+          ...scope,
+          displayName: c.displayName,
+          phone: c.phone,
+          lineId: c.lineId,
+          isActive: true,
+          note: DEMO_NOTE,
+        },
+      }),
+    ),
+  );
+
+  const assets = await Promise.all(
+    [
+      { name: "วิทยุสื่อสาร #1", kind: "RADIO", assetCode: "RAD-001" },
+      { name: "วิทยุสื่อสาร #2", kind: "RADIO", assetCode: "RAD-002" },
+      { name: "ไฟฉาย LED", kind: "FLASHLIGHT", assetCode: "FL-01" },
+      { name: "รถตรวจการณ์", kind: "VEHICLE", assetCode: "VH-01" },
+      { name: "ชุดปฐมพยาบาล", kind: "OTHER", assetCode: "FA-01" },
+      { name: "กล้องตรวจการณ์มือถือ", kind: "OTHER", assetCode: "CAM-01" },
+    ].map((a, i) =>
+      db.smartGuardAsset.create({
+        data: {
+          ...scope,
+          name: a.name,
+          kind: a.kind,
+          assetCode: a.assetCode,
+          status: i === 5 ? "IN_USE" : "AVAILABLE",
+          note: DEMO_NOTE,
+        },
+      }),
+    ),
+  );
+
+  // กะวันนี้ — พนักงานกะเช้าเช็คอินแล้ว
+  for (let i = 0; i < 4; i++) {
+    const staff = staffRows[i]!;
+    await db.smartGuardShiftLog.create({
+      data: {
+        ...scope,
+        staffId: staff.id,
+        shiftOn: today,
+        checkInAt: bangkokAt(today, 7 + i, 45),
+        checkOutAt: i === 3 ? bangkokAt(today, 16, 0) : null,
+        note: DEMO_NOTE,
+      },
+    });
+  }
+
+  // สายตรวจย้อนหลัง + วันนี้
+  const statuses = ["CHECKED_OK", "CHECKED_OK", "CHECKED_ISSUE", "OVERDUE", "MISSED", "PENDING"] as const;
+  for (let dayAgo = 0; dayAgo < 7; dayAgo++) {
+    const day = bangkokDateKeyMinusDays(today, dayAgo);
+    for (let i = 0; i < checkpoints.length; i++) {
+      if (dayAgo > 0 && i > 5) continue;
+      const cp = checkpoints[i]!;
+      const staff = staffRows[i % staffRows.length]!;
+      const status = dayAgo === 0 && i >= 8 ? "PENDING" : statuses[i % statuses.length]!;
+      await db.smartGuardTourLog.create({
+        data: {
+          ...scope,
+          checkpointId: cp.id,
+          staffId: staff.id,
+          scheduleId: i % 2 === 0 ? scheduleDay.id : scheduleNight.id,
+          status,
+          scannedAt: status === "PENDING" || status === "MISSED" ? null : bangkokAt(day, 8 + (i % 10), (i * 7) % 60),
+          scanLat: status.startsWith("CHECKED") ? Number(cp.lat) + 0.00001 : null,
+          scanLng: status.startsWith("CHECKED") ? Number(cp.lng) + 0.00001 : null,
+          photoUrl: status === "CHECKED_OK" ? smartGuardCheckpointSampleImage(i) : null,
+          note: DEMO_NOTE,
+          scanToken: status.startsWith("CHECKED") ? qrToken("scan", i + dayAgo * 20) : null,
+          entryOn: day,
+        },
+      });
+    }
+  }
+
+  const openIncidents = [
+    {
+      title: "พบประตูฉุกเฉินเปิดค้าง",
+      kind: "ISSUE",
+      severity: "MEDIUM",
+      status: "PENDING",
+      checkpointId: checkpoints[8]!.id,
+    },
+    {
+      title: "SOS — ได้ยินเสียงดังผิดปกติ",
+      kind: "SOS_URGENT",
+      severity: "HIGH",
+      status: "IN_PROGRESS",
+      checkpointId: checkpoints[4]!.id,
+    },
+    {
+      title: "ไฟทางเดินชั้น 2 ดับ",
+      kind: "ISSUE",
+      severity: "LOW",
+      status: "PENDING",
+      checkpointId: checkpoints[5]!.id,
+    },
+  ] as const;
+
+  for (let i = 0; i < openIncidents.length; i++) {
+    const inc = openIncidents[i]!;
+    const row = await db.smartGuardIncident.create({
+      data: {
+        ...scope,
+        checkpointId: inc.checkpointId,
+        staffId: staffRows[i]!.id,
+        contactId: contacts[i % contacts.length]!.id,
+        kind: inc.kind,
+        status: inc.status,
+        severity: inc.severity,
+        title: inc.title,
+        detail: `${DEMO_NOTE} รายละเอียดเหตุการณ์ตัวอย่าง`,
+        reportLat: 13.7563 + i * 0.0002,
+        reportLng: 100.5018 + i * 0.0002,
+      },
+    });
+    await db.smartGuardIncidentImage.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        incidentId: row.id,
+        imageUrl: smartGuardCheckpointSampleImage(i + 2),
+        sortOrder: 0,
+      },
+    });
+  }
+
+  await db.smartGuardIncident.create({
+    data: {
+      ...scope,
+      checkpointId: checkpoints[2]!.id,
+      staffId: staffRows[0]!.id,
+      contactId: contacts[0]!.id,
+      kind: "OTHER",
+      status: "RESOLVED",
+      severity: "LOW",
+      title: "ตรวจพบกล้อง CCTV รีบูตเอง",
+      detail: DEMO_NOTE,
+      resolvedNote: "รีสตาร์ท NVR แล้วปกติ",
+      resolvedAt: bangkokAt(bangkokDateKeyMinusDays(today, 1), 14, 0),
+    },
+  });
+
+  const categories = await db.smartGuardFinanceCategory.findMany({
+    where: { shopId },
+    select: { id: true, kind: true, systemKey: true },
+  });
+  const incomeCat = categories.find((c) => c.systemKey === "SECURITY_SERVICE") ?? categories.find((c) => c.kind === "INCOME");
+  const wageCat = categories.find((c) => c.systemKey === "GUARD_WAGES");
+  const otCat = categories.find((c) => c.systemKey === "OT_BONUS");
+  const equipCat = categories.find((c) => c.systemKey === "TOUR_EQUIPMENT");
+
+  for (let dayAgo = 0; dayAgo < 14; dayAgo++) {
+    const day = bangkokDateKeyMinusDays(today, dayAgo);
+    if (incomeCat) {
+      await db.smartGuardLedgerEntry.create({
+        data: {
+          ...scope,
+          categoryId: incomeCat.id,
+          kind: "INCOME",
+          title: "ค่าบริการรักษาความปลอดภัย",
+          amountBaht: 15000 + (dayAgo % 5) * 500,
+          entryOn: day,
+          paymentMethod: dayAgo % 2 === 0 ? "TRANSFER" : "PROMPTPAY",
+          slipImageUrl: dayAgo % 3 === 0 ? DEMO_PAYMENT_SLIP_URL : null,
+          note: DEMO_NOTE,
+        },
+      });
+    }
+    if (wageCat && dayAgo % 2 === 0) {
+      await db.smartGuardLedgerEntry.create({
+        data: {
+          ...scope,
+          categoryId: wageCat.id,
+          staffId: staffRows[dayAgo % staffRows.length]!.id,
+          kind: "EXPENSE",
+          title: "ค่าแรง รปภ.",
+          amountBaht: 2400 + (dayAgo % 4) * 100,
+          entryOn: day,
+          paymentMethod: "CASH",
+          note: DEMO_NOTE,
+        },
+      });
+    }
+    if (otCat && dayAgo % 3 === 0) {
+      await db.smartGuardLedgerEntry.create({
+        data: {
+          ...scope,
+          categoryId: otCat.id,
+          staffId: staffRows[(dayAgo + 1) % staffRows.length]!.id,
+          kind: "EXPENSE",
+          title: "ค่า OT",
+          amountBaht: 320 + dayAgo * 10,
+          entryOn: day,
+          paymentMethod: "TRANSFER",
+          note: DEMO_NOTE,
+        },
+      });
+    }
+    if (equipCat && dayAgo === 2) {
+      await db.smartGuardLedgerEntry.create({
+        data: {
+          ...scope,
+          categoryId: equipCat.id,
+          assetId: assets[0]!.id,
+          kind: "EXPENSE",
+          title: "ซื้อแบตวิทยุสื่อสาร",
+          amountBaht: 1800,
+          entryOn: day,
+          paymentMethod: "TRANSFER",
+          slipImageUrl: DEMO_PAYMENT_SLIP_URL,
+          note: DEMO_NOTE,
+        },
+      });
+    }
+  }
+}
+
+export async function seedSmartGuardTourTrialData(
+  tx: Tx,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  if (!trialSessionId || trialSessionId === TRIAL_PROD_SCOPE) return;
+  await wipeSmartGuardDemoData(tx, ownerUserId, trialSessionId);
+  const shop = await upsertDemoShop(
+    tx,
+    ownerUserId,
+    trialSessionId,
+    trialDemoDisplayName("จุดตรวจ รปภ. มาเวล"),
+  );
+  await seedSmartGuardActivity(tx, ownerUserId, trialSessionId, shop.id);
+}
+
+export async function seedSmartGuardTourProdDemoForOwner(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  opts?: { refresh?: boolean },
+): Promise<void> {
+  const trialSessionId = TRIAL_PROD_SCOPE;
+  const refresh = opts?.refresh !== false;
+  if (!refresh) {
+    const n = await prisma.smartGuardCheckpoint.count({ where: { ownerUserId, trialSessionId } });
+    if (n >= 8) return;
+  }
+  await wipeSmartGuardDemoData(prisma, ownerUserId, trialSessionId);
+  const shop = await upsertDemoShop(prisma, ownerUserId, trialSessionId, "จุดตรวจ รปภ. มาเวล (ตัวอย่าง)");
+  await seedSmartGuardActivity(prisma, ownerUserId, trialSessionId, shop.id);
+}

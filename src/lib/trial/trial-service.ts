@@ -35,8 +35,8 @@ import { seedLaundryTrialData } from "./seed-mqtt-laundry";
 import { seedFootballTurfTrialData } from "./seed-football-turf";
 import { seedHotelResortTrialData } from "./seed-hotel-resort";
 import { seedUsedCarShowroomTrialData } from "./seed-used-car-showroom";
+import { seedSmartGuardTourTrialData } from "./seed-smart-guard-tour";
 import { seedTrialModuleSettings } from "./seed-trial-module-settings";
-import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
 
 type Tx = Omit<
   PrismaClient,
@@ -313,7 +313,7 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
     } else if (mod.slug === USED_CAR_SHOWROOM_MODULE_SLUG) {
       await seedUsedCarShowroomTrialData(tx, userId, session.id);
     } else if (mod.slug === SMART_GUARD_TOUR_MODULE_SLUG) {
-      await ensureSmartGuardShop(tx, userId, session.id);
+      await seedSmartGuardTourTrialData(tx, userId, session.id);
     }
 
     await seedTrialModuleSettings(tx, userId, session.id, mod.slug);

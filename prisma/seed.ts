@@ -36,6 +36,7 @@ import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-gener
 import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
 import { seedHotelResortProdDemoForOwner } from "../src/lib/trial/seed-hotel-resort";
 import { seedUsedCarShowroomProdDemoForOwner } from "../src/lib/trial/seed-used-car-showroom";
+import { seedSmartGuardTourProdDemoForOwner } from "../src/lib/trial/seed-smart-guard-tour";
 import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
 import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-police";
 import {
@@ -928,6 +929,19 @@ async function main() {
     if (row) {
       await tryDemoSeed(`used-car-showroom (${email})`, () =>
         seedUsedCarShowroomProdDemoForOwner(prisma, row.id),
+      );
+    }
+  }
+
+  /** จุดตรวจ รปภ. — จุดตรวจ · พนักงาน · สายตรวจ · เหตุการณ์ · การเงิน */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`smart-guard-tour (${email})`, () =>
+        seedSmartGuardTourProdDemoForOwner(prisma, row.id),
       );
     }
   }

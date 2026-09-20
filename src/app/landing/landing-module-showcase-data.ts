@@ -163,7 +163,7 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
     slug: "smart-guard-tour",
     blurb: "จุดตรวจ รปภ. สายตรวจ GPS เหตุการณ์",
     coverSrc:
-      "https://images.unsplash.com/photo-1582139329536-e7286bbbf16c?auto=format&fit=crop&w=900&q=78",
+      "https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=900&q=78",
   },
   {
     slug: "pro-resume",
