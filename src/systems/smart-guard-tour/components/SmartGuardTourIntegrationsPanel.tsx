@@ -126,13 +126,9 @@ export function SmartGuardTourIntegrationsPanel({
         });
         const syncData = await syncRes.json();
         if (!syncRes.ok) throw new Error(syncData.error || "ซิงค์พนักงานไม่สำเร็จ");
-        notice.success(
-          wasStaffSync
-            ? "บันทึกแล้ว และซิงค์พนักงานแล้ว"
-            : `เปิดซิงค์พนักงานแล้ว — จับคู่ ${syncData.matched ?? 0} · สร้าง รปภ. ${syncData.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${syncData.createdRoster ?? 0}`,
-        );
+        notice.success(wasStaffSync ? "บันทึกแล้ว" : "เปิดซิงค์แล้ว");
       } else {
-        notice.success("บันทึกการเชื่อมระบบแล้ว");
+        notice.success("บันทึกแล้ว");
       }
       await load();
     } catch (e) {
@@ -154,7 +150,7 @@ export function SmartGuardTourIntegrationsPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ซิงค์ไม่สำเร็จ");
       notice.success(
-        `ซิงค์แล้ว — จับคู่ ${data.matched ?? 0} · สร้าง รปภ. ${data.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${data.createdRoster ?? 0} · อัปเดต ${data.updated ?? 0}`,
+        `ซิงค์แล้ว · จับคู่ ${data.matched ?? 0} · สร้าง ${data.createdGuards ?? 0}/${data.createdRoster ?? 0} · อัปเดต ${data.updated ?? 0}`,
       );
       await load();
     } catch (e) {
@@ -193,9 +189,6 @@ export function SmartGuardTourIntegrationsPanel({
       <div className="space-y-3 rounded-[1.25rem] border border-dashed border-[#c4b5fd]/60 bg-violet-50/40 p-4">
         {notice.popup}
         <p className="text-sm font-bold text-[#1e1b4b]">ยังไม่ได้สมัครเช็คอินอัจฉริยะ</p>
-        <p className="text-xs text-[#66638c]">
-          สมัครโมดูลเช็คอินอัจฉริยะเพื่อเปิดลิงก์เข้ากะจาก GPS / ใบหน้า / QR ไปยังกะจุดตรวจ
-        </p>
         <Link
           href="/dashboard/modules"
           className={cn(smartGuardTourPrimaryButtonClass, "inline-flex")}
@@ -221,9 +214,6 @@ export function SmartGuardTourIntegrationsPanel({
         />
         <span>
           <span className="block text-sm font-black text-[#1e1b4b]">เชื่อมเข้ากะจากเช็คอิน</span>
-          <span className="mt-0.5 block text-xs text-[#66638c]">
-            เมื่อพนักงานเช็คอิน/เอาต์ในเช็คอินอัจฉริยะ ระบบจะเปิด/ปิดกะในจุดตรวจอัตโนมัติ
-          </span>
         </span>
       </label>
 
@@ -238,10 +228,7 @@ export function SmartGuardTourIntegrationsPanel({
           }
         />
         <span>
-          <span className="block text-sm font-black text-[#1e1b4b]">ซิงค์ข้อมูลพนักงาน</span>
-          <span className="mt-0.5 block text-xs text-[#66638c]">
-            เปิดแล้ว ชื่อ · เบอร์ · รูป · สถานะใช้งาน จะซิงค์สองทางระหว่างจุดตรวจกับรายชื่อเช็คอิน
-          </span>
+          <span className="block text-sm font-black text-[#1e1b4b]">ซิงค์พนักงาน</span>
         </span>
       </label>
 
@@ -253,17 +240,14 @@ export function SmartGuardTourIntegrationsPanel({
             disabled={busy}
             onClick={() => void syncStaffNow()}
           >
-            ซิงค์พนักงานตอนนี้
+            ซิงค์ตอนนี้
           </button>
-          <p className="text-[11px] text-[#66638c]">
-            สร้างคู่ที่ขาด · จับคู่เบอร์ · อัปเดตชื่อ/รูป/สถานะให้ตรงกัน
-          </p>
         </div>
       ) : null}
 
       <div className={cn("grid gap-3 sm:grid-cols-2", !shop.attendanceLinkEnabled && "opacity-60")}>
         <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
-          สาขาเช็คอิน (ว่าง = ทุกสาขา)
+          สาขาเช็คอิน
           <select
             className={smartGuardTourFieldClass}
             disabled={busy || !shop.attendanceLinkEnabled}
@@ -286,7 +270,7 @@ export function SmartGuardTourIntegrationsPanel({
           </select>
         </label>
         <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
-          จุดเช็คอินที่นับเป็นเข้ากะ (ว่าง = ทุกจุด)
+          จุดเช็คอิน
           <select
             className={smartGuardTourFieldClass}
             disabled={busy || !shop.attendanceLinkEnabled}
@@ -316,11 +300,7 @@ export function SmartGuardTourIntegrationsPanel({
             onShopPatched({ ...shop, attendanceRequireMatch: e.target.checked })
           }
         />
-        <span className="text-xs text-[#5f5a8a]">
-          <span className="font-bold text-[#1e1b4b]">ต้องมีแม็ปพนักงานถึงจะซิงก์</span>
-          {" — "}
-          ถ้าปิด จะจับคู่เบอร์โทรอัตโนมัติเมื่อไม่มีแม็ป
-        </span>
+        <span className="text-sm font-black text-[#1e1b4b]">ต้องแม็ปพนักงานก่อนซิงก์กะ</span>
       </label>
 
       <div className="space-y-2">
@@ -336,7 +316,7 @@ export function SmartGuardTourIntegrationsPanel({
           </button>
         </div>
         {guardStaff.length === 0 ? (
-          <p className="text-xs text-[#66638c]">ยังไม่มีรายชื่อ รปภ. — เพิ่มที่เมนูจัดการ → พนักงาน</p>
+          <p className="text-xs text-[#66638c]">ยังไม่มีพนักงาน</p>
         ) : (
           <ul className="space-y-2">
             {guardStaff.map((s) => (

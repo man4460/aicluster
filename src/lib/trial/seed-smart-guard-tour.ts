@@ -104,7 +104,7 @@ async function upsertDemoShop(db: DbLike, ownerUserId: string, trialSessionId: s
     where: { id: shop.id },
     data: {
       displayName,
-      tagline: "จุดตรวจอัจฉริยะ · GPS · สายตรวจ · เหตุการณ์",
+      tagline: "จุดตรวจ · สายตรวจ · กะ · เหตุการณ์",
       logoUrl: SMART_GUARD_SAMPLE_LOGO,
       address: DEMO_MODULE_CONTACT.address,
       contactPhone: DEMO_MODULE_CONTACT.contactPhone,
@@ -120,8 +120,7 @@ async function upsertDemoShop(db: DbLike, ownerUserId: string, trialSessionId: s
       portalGalleryJson: galleryJson,
       portalEnabled: true,
       portalSosEnabled: true,
-      portalIntroHtml:
-        "<p>ศูนย์ควบคุมจุดตรวจตัวอย่าง — สแกน QR ตามจุดตามตารางสายตรวจ</p><p>ทดลอง: พนักงาน · กะ · สายตรวจ · เหตุการณ์ · การเงิน · เชื่อมเช็คอิน</p>",
+      portalIntroHtml: "<p>ศูนย์ควบคุมจุดตรวจ</p>",
       payoutMode: "ADVANCE",
       staffDailyPinHash,
       promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,
@@ -384,7 +383,7 @@ async function seedSmartGuardActivity(
         status: inc.status,
         severity: inc.severity,
         title: inc.title,
-        detail: `${DEMO_NOTE} รายละเอียดเหตุการณ์ตัวอย่าง — แจ้งผู้ติดต่อและบันทึกหลักฐานแล้ว`,
+        detail: DEMO_NOTE,
         reportLat: 13.7563 + i * 0.0002,
         reportLng: 100.5018 + i * 0.0002,
       },

@@ -319,7 +319,7 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
               }
             />
             <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-              <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+              <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์</p>
               <p className="text-[11px] font-semibold text-[#8b87b8]">
                 ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคาร ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
               </p>
@@ -342,7 +342,7 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
                 </div>
               ) : null}
               <label className={cn(smartGuardTourOutlineButtonClass, "inline-flex cursor-pointer")}>
-                {shop.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                {shop.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกรูป QR"}
                 <input
                   type="file"
                   accept="image/*"
@@ -443,18 +443,15 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
                 />
               </label>
               <label className="space-y-1 text-xs font-bold text-[#4d47b6] sm:col-span-2">
-                LINE Notify Token (เฟสถัดไป)
+                LINE Notify Token
                 <input
                   className={smartGuardTourFieldClass}
                   value={shop.lineNotifyToken ?? ""}
                   onChange={(e) => setShop((s) => ({ ...s, lineNotifyToken: e.target.value }))}
-                  placeholder="เก็บไว้ก่อน — แจ้งเตือนจริงเปิดภายหลัง"
                 />
               </label>
             </div>
-            <p className="text-xs text-[#66638c]">
-              แบนเนอร์/แกลเลอรีสื่อ — เฟสถัดไป · ลิงก์พอร์ทัล: {portalUrl} — คัดลอก/QR อยู่แท็บลิงก์
-            </p>
+            <p className="text-xs font-semibold text-[#66638c]">พอร์ทัล: {portalUrl}</p>
           </div>
         ) : null}
 
@@ -491,7 +488,7 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
                 pageUrl={portalUrl}
                 shopLabel={shop.displayName}
                 logoUrl={shop.logoUrl}
-                tagline="สแกนเพื่อเข้าหน้าจุดตรวจ / พนักงาน"
+                tagline="จุดตรวจ / พนักงาน"
                 openLabel="เปิดเว็บ /guard"
               />
             </div>

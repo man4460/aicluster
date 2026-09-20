@@ -11,7 +11,6 @@ import {
   Route,
   Shield,
 } from "lucide-react";
-import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS,
@@ -203,12 +202,6 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
                 </button>
               ))}
             </div>
-            <AppEmptyState>
-              ข้อมูลตัวอย่างพร้อมทดลอง — กดการ์ดด้านบนหรือแท็บเมนูเพื่อดูรายการจริง
-              <span className="mt-1 block text-xs">
-                พนักงาน · จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · เชื่อมเช็คอิน
-              </span>
-            </AppEmptyState>
           </div>
         ) : tab === "checkpoints" ? (
           <SmartGuardTourCheckpointsList rows={data.checkpoints} />

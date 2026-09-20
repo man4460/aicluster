@@ -279,7 +279,6 @@ export function SmartGuardTourCheckpointsList({ rows }: { rows: CatalogCheckpoin
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="จุดตรวจ" />
       <ListShell
         title="จุดตรวจ"
-        description="โซน · อาคาร · GPS · geofence · วิดีโอ"
         filterOpen={filterOpen}
         setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
@@ -351,7 +350,6 @@ export function SmartGuardTourSchedulesList({ rows }: { rows: CatalogSchedule[] 
   return (
     <ListShell
       title="ตารางสายตรวจ"
-      description="โหมดเส้นทาง · ช่วงนาที · จำนวนจุด"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -415,7 +413,6 @@ export function SmartGuardTourIncidentsList({ rows }: { rows: CatalogIncident[] 
   return (
     <ListShell
       title="เหตุการณ์"
-      description="SOS · ปัญหา · สถานะ · ความรุนแรง"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -486,7 +483,6 @@ export function SmartGuardTourContactsList({ rows }: { rows: CatalogContact[] })
   return (
     <ListShell
       title="ผู้ติดต่อฉุกเฉิน"
-      description="เบอร์ · LINE · สถานะ"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -547,7 +543,6 @@ export function SmartGuardTourAssetsList({ rows }: { rows: CatalogAsset[] }) {
   return (
     <ListShell
       title="อุปกรณ์"
-      description="วิทยุ · ไฟฉาย · รถ · อื่นๆ"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -624,7 +619,6 @@ export function SmartGuardTourTourLogsList({ rows }: { rows: CatalogTourLog[] })
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปสายตรวจ" />
       <ListShell
         title="บันทึกสายตรวจ"
-        description="สถานะสแกน · จุด · พนักงาน · วัน"
         filterOpen={filterOpen}
         setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
@@ -713,7 +707,6 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
   return (
     <ListShell
       title="กะ / ผลัด"
-      description="เข้ากะ · ออกกะ · วันที่ (เวลาไทย)"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -811,7 +804,6 @@ export function SmartGuardTourFinancePanel({
 
       <ListShell
         title="รายการการเงิน"
-        description="รายรับ · รายจ่าย · สลิป (ข้อมูลตัวอย่าง)"
         filterOpen={filterOpen}
         setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
@@ -878,12 +870,12 @@ export function SmartGuardTourMapPlaceholder({ checkpoints }: { checkpoints: Cat
   return (
     <div className="min-w-0 space-y-3">
       <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">แผนที่จุดตรวจ</h3>
-      <p className="text-xs font-medium text-[#66638c]">
-        มีพิกัด {withGps.length}/{checkpoints.length} จุด — แผนที่โต้ตอบจะเปิดในเฟสถัดไป
+      <p className="text-xs font-bold tabular-nums text-[#2e2a58]">
+        {withGps.length}/{checkpoints.length} จุดมีพิกัด
       </p>
       <div className="space-y-2">
         {withGps.length === 0 ? (
-          <AppEmptyState>ยังไม่มีพิกัดจุดตรวจ</AppEmptyState>
+          <AppEmptyState>ยังไม่มีพิกัด</AppEmptyState>
         ) : (
           withGps.map((c) => (
             <RowCard

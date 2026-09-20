@@ -196,7 +196,7 @@ export function SmartGuardTourStaffPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ลบไม่สำเร็จ");
-      notice.success(data.softDeactivated ? "ปิดใช้งานแล้ว (ซิงค์ไปเช็คอิน)" : "ลบแล้ว");
+      notice.success(data.softDeactivated ? "ปิดใช้งานแล้ว" : "ลบแล้ว");
       await load();
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
@@ -213,9 +213,6 @@ export function SmartGuardTourStaffPanel() {
       <div className="flex flex-row items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
-          <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
-            ชื่อ · เบอร์ · รูป · สถานะ — เปิดซิงค์ในตั้งค่าเชื่อมระบบแล้วจะตรงกับรายชื่อเช็คอิน
-          </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
@@ -305,7 +302,7 @@ export function SmartGuardTourStaffPanel() {
           <p className="text-sm font-medium text-[#66638c]">กำลังโหลด…</p>
         ) : filtered.length === 0 ? (
           <AppEmptyState>
-            {rows.length === 0 ? "ยังไม่มีพนักงาน — กดเพิ่มพนักงาน" : "ไม่พบรายการตามตัวกรอง"}
+            {rows.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบตามตัวกรอง"}
           </AppEmptyState>
         ) : (
           filtered.map((row) => {
@@ -371,7 +368,6 @@ export function SmartGuardTourStaffPanel() {
         open={modalOpen}
         onClose={closeModal}
         title={editingId ? "แก้ไขพนักงาน" : "เพิ่มพนักงาน"}
-        description="เมื่อเปิดซิงค์พนักงานในตั้งค่า — ชื่อ เบอร์ รูป สถานะจะซิงค์สองทาง"
         size="md"
         footer={
           <FormModalFooterActions

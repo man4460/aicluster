@@ -26,8 +26,8 @@ export type SmartGuardTourPageSubNavItem = {
 };
 
 /**
- * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
- * แท็บ ≥2: มือถือใช้ select อัตโนมัติ (หรือส่ง mobileSelect) · sm+ แสดง pill
+ * หัวการ์ดหน้า + แท็บเมนูย่อย · เนื้อหา · เว็บ/คู่มือ ตามแม่แบบซักผ้า
+ * แท็บ ≥2: มือถือใช้ select · sm+ แสดง pill
  */
 export function SmartGuardTourPageSubNav({
   title,
@@ -53,14 +53,14 @@ export function SmartGuardTourPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** override ป้าย/id — ส่ง false เพื่อบังคับ pill บนมือถือ */
+  /** override ป้าย/id · ส่ง false เพื่อบังคับ pill บนมือถือ */
   mobileSelect?: {
     id: string;
     label: string;
   } | false;
   children?: ReactNode;
   className?: string;
-  /** คลาสห่อเนื้อหาใต้หัวเมนู (เช่น flex-1 สำหรับเต็มความสูง) */
+  /** คลาสห่อเนื้อหาใต้หัวเมนู */
   contentClassName?: string;
 }) {
   const autoId = useId();
@@ -144,7 +144,11 @@ export function SmartGuardTourPageSubNav({
                   </nav>
                 </div>
               ) : (
-                <nav className={smartGuardTourInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
+                <nav
+                  className={smartGuardTourInlineSubNavShellClass}
+                  role="tablist"
+                  aria-label={ariaLabel ?? "เมนูย่อย"}
+                >
                   {items!.map((item) => {
                     const active = activeKey === item.key;
                     const short = item.shortLabel ?? item.label;
@@ -219,7 +223,7 @@ export function SmartGuardTourPageSubNav({
   );
 }
 
-/** บล็อกย่อยในเนื้อหา — คั่นเส้นบาง (บล็อกแรกส่ง first) · ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
+/** บล็อกย่อยในเนื้อหา — เส้นคั่นจากบล็อกก่อน (ยกเว้น first) */
 export function SmartGuardTourPageBlock({
   title,
   titleIcon,
