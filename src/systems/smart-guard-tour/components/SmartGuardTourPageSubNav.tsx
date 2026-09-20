@@ -26,7 +26,7 @@ export type SmartGuardTourPageSubNavItem = {
 };
 
 /**
- * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย ? แท็บ/ปุ่มขวา ? เส้นบาง ? เนื้อหา
+ * หัวการ์ดแบบซักผ้า ? ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย ? แท็บ/ปุ่มขวา ? เส้นบาง ? เนื้อหา
  * แท็บ ?2: มือถือใช้ select อัตโนมัติ (หรือส่ง mobileSelect) ? sm+ แสดง pill
  */
 export function SmartGuardTourPageSubNav({
@@ -53,7 +53,7 @@ export function SmartGuardTourPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** override ป้าย/id — ส่ง false เพื่อบังคับ pill บนมือถือ */
+  /** override ป้าย/id ? ส่ง false เพื่อบังคับ pill บนมือถือ */
   mobileSelect?: {
     id: string;
     label: string;
@@ -219,7 +219,7 @@ export function SmartGuardTourPageSubNav({
   );
 }
 
-/** บล็อกย่อยในเนื้อหา — คั่นเส้นบาง (บล็อกแรกส่ง first) ? ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
+/** บล็อกย่อยในเนื้อหา ? คั่นเส้นบาง (บล็อกแรกส่ง first) ? ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
 export function SmartGuardTourPageBlock({
   title,
   titleIcon,
