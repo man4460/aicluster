@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Users } from "lucide-react";
 import {
   AppEmptyState,
   AppImageThumb,
-  AppSectionHeader,
   prepareImageFileForUpload,
   useAppImageLightbox,
   useAppNoticePopup,
@@ -19,9 +19,14 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
+  smartGuardTourCardIconTileClass,
+  smartGuardTourTonedRowCardClass,
+} from "@/systems/smart-guard-tour/lib/card-tones";
+import {
   smartGuardTourFieldClass,
+  smartGuardTourFilterChipClass,
+  smartGuardTourFilterChipShellClass,
   smartGuardTourOutlineButtonClass,
-  smartGuardTourPanelClass,
   smartGuardTourPrimaryButtonClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
@@ -46,6 +51,14 @@ const emptyForm = (): FormState => ({
   photoUrl: null,
   isActive: true,
 });
+
+function IconFilterFunnel({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function SmartGuardTourStaffPanel() {
   const notice = useAppNoticePopup();
@@ -80,6 +93,8 @@ export function SmartGuardTourStaffPanel() {
   }, [load]);
 
   const filtersActive = Boolean(q.trim()) || statusFilter !== "all";
+  const countActive = rows.filter((r) => r.isActive).length;
+  const countInactive = rows.length - countActive;
 
   const filtered = rows.filter((r) => {
     if (statusFilter === "active" && !r.isActive) return false;
@@ -87,8 +102,7 @@ export function SmartGuardTourStaffPanel() {
     const needle = q.trim().toLowerCase();
     if (!needle) return true;
     return (
-      r.displayName.toLowerCase().includes(needle) ||
-      (r.phone ?? "").includes(needle)
+      r.displayName.toLowerCase().includes(needle) || (r.phone ?? "").includes(needle)
     );
   });
 
@@ -192,73 +206,73 @@ export function SmartGuardTourStaffPanel() {
   }
 
   return (
-    <div className={cn(smartGuardTourPanelClass, "p-4 sm:p-5")}>
+    <div className="min-w-0 space-y-3">
       {notice.popup}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปพนักงาน" />
-      <AppSectionHeader
-        tone="violet"
-        title="พนักงาน รปภ."
-        description="ชื่อ · เบอร์ · รูป · สถานะ — เมื่อเปิดเชื่อมระบบจะซิงค์กับรายชื่อเช็คอิน"
-        className="flex flex-row items-start justify-between gap-3 sm:items-center"
-        actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-        action={
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              aria-expanded={filterOpen}
-              aria-controls="sgt-staff-filter"
-              aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-              className={cn(
-                smartGuardTourOutlineButtonClass,
-                "relative min-w-[40px] sm:min-w-0",
-                filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10",
-                filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-              )}
-              onClick={() => setFilterOpen((o) => !o)}
-            >
-              <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-              <span className="sm:hidden">⚙</span>
-              {filtersActive && !filterOpen ? (
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
-              ) : null}
-            </button>
-            <button
-              type="button"
-              aria-label="เพิ่มพนักงาน"
-              className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
-              onClick={openAdd}
-            >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">+ เพิ่มพนักงาน</span>
-            </button>
-          </div>
-        }
-      />
 
-      <div
-        id="sgt-staff-filter"
-        className={cn("mt-3 space-y-2", filterOpen ? "block" : "hidden")}
-      >
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="กรองสถานะ">
+      <div className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
+          <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
+            ชื่อ · เบอร์ · รูป · สถานะ — เปิดซิงค์ในตั้งค่าเชื่อมระบบแล้วจะตรงกับรายชื่อเช็คอิน
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            aria-expanded={filterOpen}
+            aria-controls="sgt-staff-filter"
+            aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+            title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+            className={cn(
+              smartGuardTourOutlineButtonClass,
+              "relative min-w-[40px] sm:min-w-0",
+              filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+              filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+            )}
+            onClick={() => setFilterOpen((o) => !o)}
+          >
+            <IconFilterFunnel className="h-4 w-4" />
+            <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+            {filtersActive ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+                aria-hidden
+              />
+            ) : null}
+          </button>
+          <button
+            type="button"
+            aria-label="เพิ่มพนักงาน"
+            className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
+            onClick={openAdd}
+          >
+            <span className="sm:hidden" aria-hidden>
+              +
+            </span>
+            <span className="hidden sm:inline">+ เพิ่มพนักงาน</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="sgt-staff-filter" className={cn("space-y-2.5", filterOpen ? "block" : "hidden")}>
+        <div className={smartGuardTourFilterChipShellClass} role="tablist" aria-label="กรองสถานะพนักงาน">
           {(
             [
-              ["all", "ทั้งหมด"],
-              ["active", "ใช้งาน"],
-              ["inactive", "ปิด"],
+              ["all", "ทั้งหมด", rows.length],
+              ["active", "ใช้งาน", countActive],
+              ["inactive", "ปิด", countInactive],
             ] as const
-          ).map(([key, label]) => (
+          ).map(([key, label, count]) => (
             <button
               key={key}
               type="button"
               role="tab"
               aria-selected={statusFilter === key}
-              className={cn(
-                smartGuardTourOutlineButtonClass,
-                statusFilter === key && "border-[#0000BF]/45 bg-[#0000BF]/10 text-[#4d47b6]",
-              )}
+              className={smartGuardTourFilterChipClass(statusFilter === key)}
               onClick={() => setStatusFilter(key)}
             >
-              {label}
+              {label} ({count})
             </button>
           ))}
         </div>
@@ -267,6 +281,7 @@ export function SmartGuardTourStaffPanel() {
           placeholder="ค้นหาชื่อหรือเบอร์"
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          aria-label="ค้นหาพนักงาน"
         />
         {filtersActive ? (
           <button
@@ -280,60 +295,75 @@ export function SmartGuardTourStaffPanel() {
             ล้างกรอง
           </button>
         ) : null}
+        <p className="text-xs font-bold tabular-nums text-[#2e2a58]">
+          {filtersActive ? `${filtered.length}/${rows.length}` : rows.length} รายการ
+        </p>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+          <p className="text-sm font-medium text-[#66638c]">กำลังโหลด…</p>
         ) : filtered.length === 0 ? (
           <AppEmptyState>
-            {rows.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบรายการตามตัวกรอง"}
+            {rows.length === 0 ? "ยังไม่มีพนักงาน — กดเพิ่มพนักงาน" : "ไม่พบรายการตามตัวกรอง"}
           </AppEmptyState>
         ) : (
-          filtered.map((row) => (
-            <div
-              key={row.id}
-              className="flex items-start gap-3 rounded-[1.25rem] border border-slate-200/80 bg-slate-50/50 p-3"
-            >
-              <AppImageThumb
-                src={row.photoUrl}
-                alt={row.displayName}
-                className="h-14 w-14 shrink-0"
-                onOpen={() => row.photoUrl && lb.open(row.photoUrl)}
-                emptyLabel="ไม่มีรูป"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-[#1e1b4b]">{row.displayName}</p>
-                <p className="truncate text-xs text-[#66638c]" title={row.phone ?? undefined}>
-                  {row.phone || "ไม่มีเบอร์"}
-                </p>
-                <p className="mt-0.5 text-[10px] font-bold text-[#5f5a8a]">
-                  {row.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                </p>
+          filtered.map((row) => {
+            const tone = row.isActive ? "emerald" : "slate";
+            return (
+              <div key={row.id} className={smartGuardTourTonedRowCardClass(tone)}>
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  {row.photoUrl ? (
+                    <AppImageThumb
+                      src={row.photoUrl}
+                      alt={row.displayName}
+                      className="h-10 w-10 shrink-0 sm:h-12 sm:w-12"
+                      onOpen={() => lb.open(row.photoUrl!)}
+                    />
+                  ) : (
+                    <span className={smartGuardTourCardIconTileClass(tone)} aria-hidden>
+                      <Users className="h-5 w-5" strokeWidth={2.25} />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1 pr-1">
+                    <p className="line-clamp-2 text-balance text-sm font-black text-[#1e1b4b]">
+                      {row.displayName}
+                    </p>
+                    <p
+                      className="truncate text-xs font-medium text-[#66638c]"
+                      title={row.phone ?? undefined}
+                    >
+                      {row.phone || "ไม่มีเบอร์"}
+                    </p>
+                    <p className={cn("mt-0.5 text-[10px] font-bold", row.isActive ? "text-emerald-800/80" : "text-slate-600")}>
+                      {row.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 self-start sm:self-center">
+                  <button
+                    type="button"
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไข ${row.displayName}`}
+                    title="แก้ไข"
+                    onClick={() => openEdit(row)}
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบ ${row.displayName}`}
+                    title="ลบ / ปิดใช้งาน"
+                    disabled={busy}
+                    onClick={() => void removeRow(row)}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <button
-                  type="button"
-                  className={assetRowEditIconButtonClass}
-                  aria-label={`แก้ไข ${row.displayName}`}
-                  title="แก้ไข"
-                  onClick={() => openEdit(row)}
-                >
-                  <IconRowEdit className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className={assetRowRemoveIconButtonClass}
-                  aria-label={`ลบ ${row.displayName}`}
-                  title="ลบ / ปิดใช้งาน"
-                  disabled={busy}
-                  onClick={() => void removeRow(row)}
-                >
-                  <IconRowRemove className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -341,7 +371,7 @@ export function SmartGuardTourStaffPanel() {
         open={modalOpen}
         onClose={closeModal}
         title={editingId ? "แก้ไขพนักงาน" : "เพิ่มพนักงาน"}
-        description="เมื่อเปิดเชื่อมเช็คอิน — ชื่อ เบอร์ รูป สถานะจะซิงค์สองทาง"
+        description="เมื่อเปิดซิงค์พนักงานในตั้งค่า — ชื่อ เบอร์ รูป สถานะจะซิงค์สองทาง"
         size="md"
         footer={
           <FormModalFooterActions
@@ -376,13 +406,18 @@ export function SmartGuardTourStaffPanel() {
           <div className="space-y-2">
             <p className="text-xs font-bold text-[#4d47b6]">รูปโปรไฟล์</p>
             <div className="flex items-center gap-3">
-              <AppImageThumb
-                src={form.photoUrl}
-                alt="พรีวิว"
-                className="h-16 w-16"
-                onOpen={() => form.photoUrl && lb.open(form.photoUrl)}
-                emptyLabel="ไม่มีรูป"
-              />
+              {form.photoUrl ? (
+                <AppImageThumb
+                  src={form.photoUrl}
+                  alt="พรีวิว"
+                  className="h-16 w-16"
+                  onOpen={() => lb.open(form.photoUrl!)}
+                />
+              ) : (
+                <span className={smartGuardTourCardIconTileClass("sky", "lg")} aria-hidden>
+                  <Users className="h-6 w-6" strokeWidth={2.25} />
+                </span>
+              )}
               <input
                 ref={fileRef}
                 type="file"
