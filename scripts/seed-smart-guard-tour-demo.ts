@@ -14,14 +14,19 @@ import { TRIAL_PROD_SCOPE } from "../src/lib/trial/constants";
 const prisma = new PrismaClient();
 
 async function main() {
-  const mod = await prisma.appModule.findUnique({
+  const mod = await prisma.appModule.upsert({
     where: { slug: SMART_GUARD_TOUR_MODULE_SLUG },
+    create: {
+      slug: SMART_GUARD_TOUR_MODULE_SLUG,
+      title: "จุดตรวจ รปภ. อัจฉริยะ",
+      description: "กลุ่ม 1 — จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · /guard/[slug]",
+      groupId: 1,
+      sortOrder: 39,
+      isActive: true,
+    },
+    update: { isActive: true },
     select: { id: true },
   });
-  if (!mod) {
-    console.error("ไม่พบโมดูล smart-guard-tour ใน app_modules — รัน db:seed ก่อน");
-    process.exit(1);
-  }
 
   for (const email of DEMO_OWNER_EMAILS) {
     const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });

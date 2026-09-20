@@ -180,7 +180,12 @@ export async function runDemoRefreshForOwners(
     );
     await trySeed(lines, "used-car-showroom", () => seedUsedCarShowroomProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "attendance", () => seedAttendanceProdDemoForOwner(prisma, id), log);
-    await trySeed(lines, "smart-guard-tour", () => seedSmartGuardTourProdDemoForOwner(prisma, id), log);
+    await trySeed(
+      lines,
+      "smart-guard-tour (daily)",
+      () => seedSmartGuardTourProdDemoForOwner(prisma, id, { refreshDaily: true }),
+      log,
+    );
     await trySeed(lines, "ecommerce-store (daily)", () => seedEcommerceStoreProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "club-event (daily)", () => seedClubEventProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "lms (daily)", () => seedLmsProdDemoForOwner(prisma, id), log);

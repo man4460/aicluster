@@ -762,10 +762,11 @@ export async function seedSmartGuardTourTrialData(
 export async function seedSmartGuardTourProdDemoForOwner(
   prisma: PrismaClient,
   ownerUserId: string,
-  opts?: { refresh?: boolean },
+  opts?: { refresh?: boolean; refreshDaily?: boolean },
 ): Promise<void> {
   const trialSessionId = TRIAL_PROD_SCOPE;
-  const refresh = opts?.refresh !== false;
+  /** refreshDaily / refresh — ค่าเริ่ม true ให้แดชบอร์ดรายวันไม่ค้างวันเก่า */
+  const refresh = opts?.refreshDaily !== false && opts?.refresh !== false;
   if (!refresh) {
     const n = await prisma.smartGuardCheckpoint.count({ where: { ownerUserId, trialSessionId } });
     if (n >= 8) return;

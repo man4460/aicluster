@@ -32,6 +32,14 @@ const MISSING_MODULE_SEEDS = [
     groupId: 1,
     sortOrder: 38,
   },
+  {
+    slug: "smart-guard-tour",
+    title: "จุดตรวจ รปภ. อัจฉริยะ",
+    description:
+      "กลุ่ม 1 — จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · /guard/[slug]",
+    groupId: 1,
+    sortOrder: 39,
+  },
 ] as const;
 
 async function main() {
