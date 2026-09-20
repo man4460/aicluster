@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -21,6 +21,14 @@ import {
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
 import {
+  SmartGuardTourCheckpointsList,
+  SmartGuardTourIncidentsList,
+  SmartGuardTourMapPlaceholder,
+  SmartGuardTourShiftsList,
+  SmartGuardTourTourLogsList,
+  useSmartGuardCatalog,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
+import {
   smartGuardTourCardIconTileClass,
   type SmartGuardTourCardTone,
 } from "@/systems/smart-guard-tour/lib/card-tones";
@@ -36,15 +44,6 @@ import {
   smartGuardTourPageStackClass,
   smartGuardTourStatInlineClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
-
-type Stats = {
-  checkpointCount: number;
-  tourLogTodayCount: number;
-  incidentOpenCount: number;
-  staffOnShiftCount: number;
-  scheduleTodayCount: number;
-  assetCount: number;
-};
 
 const DASHBOARD_TAB_ITEMS = SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS.map((item) => ({
   ...item,
@@ -62,8 +61,16 @@ const TONE_BORDER: Record<SmartGuardTourCardTone, string> = {
   indigo: "border-l-indigo-500",
 };
 
+type StatKey =
+  | "checkpointCount"
+  | "tourLogTodayCount"
+  | "incidentOpenCount"
+  | "staffOnShiftCount"
+  | "scheduleTodayCount"
+  | "assetCount";
+
 const STAT_CARDS: {
-  key: keyof Stats;
+  key: StatKey;
   label: string;
   tab: SmartGuardTourDashboardTabKey;
   tone: SmartGuardTourCardTone;
@@ -99,7 +106,7 @@ const STAT_CARDS: {
   },
   {
     key: "scheduleTodayCount",
-    label: "ตารางวันนี้",
+    label: "ตารางใช้งาน",
     tab: "shifts",
     tone: "amber",
     icon: <CalendarClock className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
@@ -113,21 +120,11 @@ const STAT_CARDS: {
   },
 ];
 
-const ZERO_STATS: Stats = {
-  checkpointCount: 0,
-  tourLogTodayCount: 0,
-  incidentOpenCount: 0,
-  staffOnShiftCount: 0,
-  scheduleTodayCount: 0,
-  assetCount: 0,
-};
-
 export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: SmartGuardShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseSmartGuardTourDashboardTab(searchParams.get("tab"));
-  const [stats, setStats] = useState<Stats>(ZERO_STATS);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, notice } = useSmartGuardCatalog();
 
   const setTab = useCallback(
     (next: SmartGuardTourDashboardTabKey) => {
@@ -136,25 +133,21 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
     [router],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/smart-guard-tour/session/overview", { credentials: "include" });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.stats) {
-        setStats({ ...ZERO_STATS, ...data.stats });
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const today = data.today;
+  const stats = {
+    checkpointCount: data.checkpoints.filter((c) => c.isActive).length,
+    tourLogTodayCount: data.tourLogs.filter((t) => t.entryOn === today).length,
+    incidentOpenCount: data.incidents.filter(
+      (i) => i.status === "PENDING" || i.status === "IN_PROGRESS",
+    ).length,
+    staffOnShiftCount: data.shifts.filter((s) => s.onDuty && s.shiftOn === today).length,
+    scheduleTodayCount: data.schedules.filter((s) => s.isActive).length,
+    assetCount: data.assets.length,
+  };
 
   return (
     <div className={smartGuardTourPageStackClass}>
+      {notice.popup}
       <SmartGuardTourPageSubNav
         title="แดชบอร์ด"
         titleIcon={smartGuardTourPageTitleIcon("dashboard")}
@@ -211,16 +204,23 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
               ))}
             </div>
             <AppEmptyState>
-              พร้อมเริ่มสายตรวจ — เพิ่มจุดตรวจ พนักงาน และตารางในหน้าการจัดการ
-              <span className="mt-1 block text-xs">GPS / สแกน / LINE Notify จะเปิดในเฟสถัดไป</span>
+              ข้อมูลตัวอย่างพร้อมทดลอง — กดการ์ดด้านบนหรือแท็บเมนูเพื่อดูรายการจริง
+              <span className="mt-1 block text-xs">
+                พนักงาน · จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · เชื่อมเช็คอิน
+              </span>
             </AppEmptyState>
           </div>
-        ) : (
-          <AppEmptyState>
-            {SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS.find((t) => t.key === tab)?.label ?? "แผงนี้"}
-            <span className="mt-1 block text-xs">เฟสถัดไป — ยังไม่มีข้อมูลใน Phase A</span>
-          </AppEmptyState>
-        )}
+        ) : tab === "checkpoints" ? (
+          <SmartGuardTourCheckpointsList rows={data.checkpoints} />
+        ) : tab === "tour-logs" ? (
+          <SmartGuardTourTourLogsList rows={data.tourLogs} />
+        ) : tab === "incidents" ? (
+          <SmartGuardTourIncidentsList rows={data.incidents} />
+        ) : tab === "shifts" ? (
+          <SmartGuardTourShiftsList rows={data.shifts} />
+        ) : tab === "map-view" ? (
+          <SmartGuardTourMapPlaceholder checkpoints={data.checkpoints} />
+        ) : null}
       </SmartGuardTourPageSubNav>
     </div>
   );

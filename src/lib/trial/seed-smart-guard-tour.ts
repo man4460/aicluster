@@ -7,6 +7,7 @@ import {
   DEMO_PAYMENT_SLIP_URL,
   trialDemoDisplayName,
 } from "@/lib/trial/demo-module-settings";
+import { hashStaffDailyPin } from "@/lib/modules/staff-daily-pin";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
@@ -18,6 +19,9 @@ import {
   smartGuardCheckpointSampleImage,
   smartGuardStaffSamplePhoto,
 } from "@/systems/smart-guard-tour/lib/portal-media";
+
+/** PIN เว็บพนักงานตัวอย่าง — ใช้ทดลองลิงก์ staff */
+export const SMART_GUARD_DEMO_STAFF_PIN = "1234";
 
 type Tx = Omit<
   PrismaClient,
@@ -95,6 +99,7 @@ async function wipeSmartGuardDemoData(db: DbLike, ownerUserId: string, trialSess
 async function upsertDemoShop(db: DbLike, ownerUserId: string, trialSessionId: string, displayName: string) {
   const shop = await ensureSmartGuardShop(db, ownerUserId, trialSessionId);
   const galleryJson = JSON.stringify([...SMART_GUARD_PORTAL_SAMPLE_GALLERY]);
+  const staffDailyPinHash = await hashStaffDailyPin(SMART_GUARD_DEMO_STAFF_PIN);
   return db.smartGuardShop.update({
     where: { id: shop.id },
     data: {
@@ -115,12 +120,16 @@ async function upsertDemoShop(db: DbLike, ownerUserId: string, trialSessionId: s
       portalGalleryJson: galleryJson,
       portalEnabled: true,
       portalSosEnabled: true,
-      portalIntroHtml: "<p>ศูนย์ควบคุมจุดตรวจตัวอย่าง — สแกน QR ตามจุดตามตารางสายตรวจ</p>",
+      portalIntroHtml:
+        "<p>ศูนย์ควบคุมจุดตรวจตัวอย่าง — สแกน QR ตามจุดตามตารางสายตรวจ</p><p>ทดลอง: พนักงาน · กะ · สายตรวจ · เหตุการณ์ · การเงิน · เชื่อมเช็คอิน</p>",
+      payoutMode: "ADVANCE",
+      staffDailyPinHash,
       promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,
       bankName: DEMO_MODULE_PAYMENT.bankName,
       bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
       bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
       taxId: DEMO_MODULE_PAYMENT.taxId,
+      slipPaperSize: "SLIP_58",
     },
   });
 }
@@ -177,7 +186,7 @@ async function seedSmartGuardActivity(
     ),
   );
 
-  for (let i = 0; i < Math.min(4, checkpoints.length); i++) {
+  for (let i = 0; i < Math.min(6, checkpoints.length); i++) {
     const cp = checkpoints[i]!;
     await db.smartGuardCheckpointVideo.create({
       data: {
@@ -211,21 +220,35 @@ async function seedSmartGuardActivity(
       isActive: true,
     },
   });
+  await db.smartGuardSchedule.create({
+    data: {
+      ...scope,
+      name: "สายตรวจฉุกเฉิน (พักใช้)",
+      routeMode: "FREE",
+      intervalMinutes: 60,
+      checkpointIdsJson: JSON.stringify(checkpoints.slice(8, 12).map((c) => c.id)),
+      isActive: false,
+    },
+  });
 
   const contacts = await Promise.all(
-    [
-      { displayName: "หัวหน้าศูนย์ควบคุม", phone: phoneAt(90), lineId: "@sgt-control" },
-      { displayName: "ผู้จัดการอาคาร", phone: phoneAt(91), lineId: "@sgt-facility" },
-      { displayName: "สายด่วนฉุกเฉิน", phone: "191", lineId: null },
-      { displayName: "ช่างซ่อมบำรุง", phone: phoneAt(92), lineId: "@sgt-tech" },
-    ].map((c) =>
+    (
+      [
+        { displayName: "หัวหน้าศูนย์ควบคุม", phone: phoneAt(90), lineId: "@sgt-control", isActive: true },
+        { displayName: "ผู้จัดการอาคาร", phone: phoneAt(91), lineId: "@sgt-facility", isActive: true },
+        { displayName: "สายด่วนฉุกเฉิน", phone: "191", lineId: null, isActive: true },
+        { displayName: "ช่างซ่อมบำรุง", phone: phoneAt(92), lineId: "@sgt-tech", isActive: true },
+        { displayName: "ผู้จัดการความปลอดภัย", phone: phoneAt(93), lineId: "@sgt-safety", isActive: true },
+        { displayName: "ประสานงานลูกค้า", phone: phoneAt(94), lineId: "@sgt-client", isActive: false },
+      ] as const
+    ).map((c) =>
       db.smartGuardContact.create({
         data: {
           ...scope,
           displayName: c.displayName,
           phone: c.phone,
           lineId: c.lineId,
-          isActive: true,
+          isActive: c.isActive,
           note: DEMO_NOTE,
         },
       }),
@@ -234,47 +257,68 @@ async function seedSmartGuardActivity(
 
   const assets = await Promise.all(
     [
-      { name: "วิทยุสื่อสาร #1", kind: "RADIO", assetCode: "RAD-001" },
-      { name: "วิทยุสื่อสาร #2", kind: "RADIO", assetCode: "RAD-002" },
-      { name: "ไฟฉาย LED", kind: "FLASHLIGHT", assetCode: "FL-01" },
-      { name: "รถตรวจการณ์", kind: "VEHICLE", assetCode: "VH-01" },
-      { name: "ชุดปฐมพยาบาล", kind: "OTHER", assetCode: "FA-01" },
-      { name: "กล้องตรวจการณ์มือถือ", kind: "OTHER", assetCode: "CAM-01" },
-    ].map((a, i) =>
+      { name: "วิทยุสื่อสาร #1", kind: "RADIO", assetCode: "RAD-001", status: "AVAILABLE" },
+      { name: "วิทยุสื่อสาร #2", kind: "RADIO", assetCode: "RAD-002", status: "IN_USE" },
+      { name: "ไฟฉาย LED", kind: "FLASHLIGHT", assetCode: "FL-01", status: "AVAILABLE" },
+      { name: "ไฟฉายสำรอง", kind: "FLASHLIGHT", assetCode: "FL-02", status: "MAINTENANCE" },
+      { name: "รถตรวจการณ์", kind: "VEHICLE", assetCode: "VH-01", status: "IN_USE" },
+      { name: "ชุดปฐมพยาบาล", kind: "OTHER", assetCode: "FA-01", status: "AVAILABLE" },
+      { name: "กล้องตรวจการณ์มือถือ", kind: "OTHER", assetCode: "CAM-01", status: "IN_USE" },
+      { name: "วิทยุสื่อสาร #3 (ชำรุด)", kind: "RADIO", assetCode: "RAD-003", status: "RETIRED" },
+    ].map((a) =>
       db.smartGuardAsset.create({
         data: {
           ...scope,
           name: a.name,
           kind: a.kind,
           assetCode: a.assetCode,
-          status: i === 5 ? "IN_USE" : "AVAILABLE",
+          status: a.status,
           note: DEMO_NOTE,
         },
       }),
     ),
   );
 
-  // กะวันนี้ — พนักงานกะเช้าเช็คอินแล้ว
-  for (let i = 0; i < 4; i++) {
-    const staff = staffRows[i]!;
-    await db.smartGuardShiftLog.create({
-      data: {
-        ...scope,
-        staffId: staff.id,
-        shiftOn: today,
-        checkInAt: bangkokAt(today, 7 + i, 45),
-        checkOutAt: i === 3 ? bangkokAt(today, 16, 0) : null,
-        note: DEMO_NOTE,
-      },
-    });
+  // กะย้อนหลัง 7 วัน + กะวันนี้ (ส่วนใหญ่ยังเข้ากะ · คนหนึ่งเช็คเอาท์แล้ว)
+  for (let dayAgo = 0; dayAgo < 7; dayAgo++) {
+    const day = bangkokDateKeyMinusDays(today, dayAgo);
+    for (let i = 0; i < staffRows.length; i++) {
+      if (!staffRows[i]!.isActive) continue;
+      const isDayShift = i % 2 === 0;
+      if (dayAgo === 0) {
+        if (isDayShift && i > 6) continue;
+        if (!isDayShift && i > 5) continue;
+      } else if (i > 5) {
+        continue;
+      }
+      const checkInH = isDayShift ? 7 : 19;
+      const checkOutH = isDayShift ? 19 : 7;
+      let checkOutAt: Date | null = null;
+      if (dayAgo === 0) {
+        if (isDayShift && i === 3) checkOutAt = bangkokAt(day, 16, 0);
+      } else {
+        const outDay = isDayShift ? day : bangkokDateKeyMinusDays(day, -1);
+        checkOutAt = bangkokAt(outDay, checkOutH, 5);
+      }
+      await db.smartGuardShiftLog.create({
+        data: {
+          ...scope,
+          staffId: staffRows[i]!.id,
+          shiftOn: day,
+          checkInAt: bangkokAt(day, checkInH, 30 + (i % 15)),
+          checkOutAt,
+          note: DEMO_NOTE,
+        },
+      });
+    }
   }
 
   // สายตรวจย้อนหลัง + วันนี้
   const statuses = ["CHECKED_OK", "CHECKED_OK", "CHECKED_ISSUE", "OVERDUE", "MISSED", "PENDING"] as const;
-  for (let dayAgo = 0; dayAgo < 7; dayAgo++) {
+  for (let dayAgo = 0; dayAgo < 10; dayAgo++) {
     const day = bangkokDateKeyMinusDays(today, dayAgo);
     for (let i = 0; i < checkpoints.length; i++) {
-      if (dayAgo > 0 && i > 5) continue;
+      if (dayAgo > 0 && i > 7) continue;
       const cp = checkpoints[i]!;
       const staff = staffRows[i % staffRows.length]!;
       const status = dayAgo === 0 && i >= 8 ? "PENDING" : statuses[i % statuses.length]!;
@@ -319,6 +363,13 @@ async function seedSmartGuardActivity(
       status: "PENDING",
       checkpointId: checkpoints[5]!.id,
     },
+    {
+      title: "รั้วด้านตะวันออกหลวม",
+      kind: "ISSUE",
+      severity: "CRITICAL",
+      status: "IN_PROGRESS",
+      checkpointId: checkpoints[11]!.id,
+    },
   ] as const;
 
   for (let i = 0; i < openIncidents.length; i++) {
@@ -333,7 +384,7 @@ async function seedSmartGuardActivity(
         status: inc.status,
         severity: inc.severity,
         title: inc.title,
-        detail: `${DEMO_NOTE} รายละเอียดเหตุการณ์ตัวอย่าง`,
+        detail: `${DEMO_NOTE} รายละเอียดเหตุการณ์ตัวอย่าง — แจ้งผู้ติดต่อและบันทึกหลักฐานแล้ว`,
         reportLat: 13.7563 + i * 0.0002,
         reportLng: 100.5018 + i * 0.0002,
       },
@@ -347,6 +398,17 @@ async function seedSmartGuardActivity(
         sortOrder: 0,
       },
     });
+    if (i < 2) {
+      await db.smartGuardIncidentImage.create({
+        data: {
+          ownerUserId,
+          trialSessionId,
+          incidentId: row.id,
+          imageUrl: smartGuardCheckpointSampleImage(i + 5),
+          sortOrder: 1,
+        },
+      });
+    }
   }
 
   await db.smartGuardIncident.create({
@@ -364,6 +426,21 @@ async function seedSmartGuardActivity(
       resolvedAt: bangkokAt(bangkokDateKeyMinusDays(today, 1), 14, 0),
     },
   });
+  await db.smartGuardIncident.create({
+    data: {
+      ...scope,
+      checkpointId: checkpoints[0]!.id,
+      staffId: staffRows[1]!.id,
+      contactId: contacts[1]!.id,
+      kind: "ISSUE",
+      status: "CLOSED",
+      severity: "MEDIUM",
+      title: "รถจอดขวางประตูหลัก",
+      detail: DEMO_NOTE,
+      resolvedNote: "แจ้งเจ้าของรถย้ายแล้ว — ปิดเคส",
+      resolvedAt: bangkokAt(bangkokDateKeyMinusDays(today, 3), 11, 30),
+    },
+  });
 
   const categories = await db.smartGuardFinanceCategory.findMany({
     where: { shopId },
@@ -373,8 +450,9 @@ async function seedSmartGuardActivity(
   const wageCat = categories.find((c) => c.systemKey === "GUARD_WAGES");
   const otCat = categories.find((c) => c.systemKey === "OT_BONUS");
   const equipCat = categories.find((c) => c.systemKey === "TOUR_EQUIPMENT");
+  const otherCat = categories.find((c) => c.systemKey === "OTHER");
 
-  for (let dayAgo = 0; dayAgo < 14; dayAgo++) {
+  for (let dayAgo = 0; dayAgo < 21; dayAgo++) {
     const day = bangkokDateKeyMinusDays(today, dayAgo);
     if (incomeCat) {
       await db.smartGuardLedgerEntry.create({
@@ -382,8 +460,8 @@ async function seedSmartGuardActivity(
           ...scope,
           categoryId: incomeCat.id,
           kind: "INCOME",
-          title: "ค่าบริการรักษาความปลอดภัย",
-          amountBaht: 15000 + (dayAgo % 5) * 500,
+          title: dayAgo % 7 === 0 ? "ค่าบริการรักษาความปลอดภัย (รายเดือน)" : "ค่าบริการรักษาความปลอดภัย",
+          amountBaht: dayAgo % 7 === 0 ? 45000 : 15000 + (dayAgo % 5) * 500,
           entryOn: day,
           paymentMethod: dayAgo % 2 === 0 ? "TRANSFER" : "PROMPTPAY",
           slipImageUrl: dayAgo % 3 === 0 ? DEMO_PAYMENT_SLIP_URL : null,
@@ -413,23 +491,24 @@ async function seedSmartGuardActivity(
           categoryId: otCat.id,
           staffId: staffRows[(dayAgo + 1) % staffRows.length]!.id,
           kind: "EXPENSE",
-          title: "ค่า OT",
+          title: "ค่า OT / เบี้ยขยัน",
           amountBaht: 320 + dayAgo * 10,
           entryOn: day,
           paymentMethod: "TRANSFER",
+          slipImageUrl: dayAgo % 6 === 0 ? DEMO_PAYMENT_SLIP_URL : null,
           note: DEMO_NOTE,
         },
       });
     }
-    if (equipCat && dayAgo === 2) {
+    if (equipCat && (dayAgo === 2 || dayAgo === 9)) {
       await db.smartGuardLedgerEntry.create({
         data: {
           ...scope,
           categoryId: equipCat.id,
-          assetId: assets[0]!.id,
+          assetId: assets[dayAgo === 2 ? 0 : 2]!.id,
           kind: "EXPENSE",
-          title: "ซื้อแบตวิทยุสื่อสาร",
-          amountBaht: 1800,
+          title: dayAgo === 2 ? "ซื้อแบตวิทยุสื่อสาร" : "เปลี่ยนหลอดไฟฉาย",
+          amountBaht: dayAgo === 2 ? 1800 : 450,
           entryOn: day,
           paymentMethod: "TRANSFER",
           slipImageUrl: DEMO_PAYMENT_SLIP_URL,
@@ -437,35 +516,75 @@ async function seedSmartGuardActivity(
         },
       });
     }
+    if (otherCat && dayAgo === 5) {
+      await db.smartGuardLedgerEntry.create({
+        data: {
+          ...scope,
+          categoryId: otherCat.id,
+          kind: "EXPENSE",
+          title: "ค่าน้ำมันรถตรวจการณ์",
+          amountBaht: 950,
+          entryOn: day,
+          paymentMethod: "CASH",
+          note: DEMO_NOTE,
+        },
+      });
+    }
   }
 
-  // สะพานเช็คอิน → เข้ากะ: เปิดลิงก์ + แม็ปเบอร์ 0812345678 ถ้ามี roster
-  const demoRoster = await db.attendanceRosterEntry.findFirst({
-    where: {
-      ownerUserId,
-      trialSessionId,
-      phone: "0812345678",
-      isActive: true,
-    },
+  // สะพานเช็คอิน: สร้าง/แม็ปรายชื่อ + เปิดลิงก์ + ผูกสาขา/จุด
+  const attBranch = await db.attendanceBranch.findFirst({
+    where: { ownerUserId, trialSessionId },
     select: { id: true },
+    orderBy: { sortOrder: "asc" },
   });
-  const bridgeStaff = staffRows[0];
-  if (demoRoster && bridgeStaff) {
-    await db.smartGuardShop.update({
-      where: { id: shopId },
-      data: {
-        attendanceLinkEnabled: true,
-        attendanceStaffSyncEnabled: true,
-        attendanceRequireMatch: true,
-      },
+  const attLocation = attBranch
+    ? await db.attendanceLocation.findFirst({
+        where: { ownerUserId, trialSessionId, branchId: attBranch.id },
+        select: { id: true },
+        orderBy: { sortOrder: "asc" },
+      })
+    : null;
+
+  await db.smartGuardShop.update({
+    where: { id: shopId },
+    data: {
+      attendanceLinkEnabled: true,
+      attendanceStaffSyncEnabled: true,
+      attendanceRequireMatch: true,
+      attendanceBranchId: attBranch?.id ?? null,
+      attendanceLocationId: attLocation?.id ?? null,
+    },
+  });
+
+  for (let i = 0; i < Math.min(5, staffRows.length); i++) {
+    const staff = staffRows[i]!;
+    if (!staff.phone) continue;
+    let roster = await db.attendanceRosterEntry.findFirst({
+      where: { ownerUserId, trialSessionId, phone: staff.phone },
+      select: { id: true },
     });
+    if (!roster) {
+      roster = await db.attendanceRosterEntry.create({
+        data: {
+          ownerUserId,
+          trialSessionId,
+          displayName: staff.displayName,
+          phone: staff.phone,
+          photoUrl: staff.photoUrl,
+          isActive: staff.isActive,
+          rosterShiftIndex: i % 2,
+        },
+        select: { id: true },
+      });
+    }
     await db.smartGuardAttendanceStaffLink.create({
       data: {
         ownerUserId,
         trialSessionId,
         shopId,
-        guardStaffId: bridgeStaff.id,
-        rosterEntryId: demoRoster.id,
+        guardStaffId: staff.id,
+        rosterEntryId: roster.id,
       },
     });
   }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { AppEmptyState } from "@/components/app-templates";
 import {
   SMART_GUARD_TOUR_MANAGE_TAB_ITEMS,
   parseSmartGuardTourManageTab,
@@ -10,6 +9,14 @@ import {
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
 import { SmartGuardTourStaffPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourStaffPanel";
+import {
+  SmartGuardTourAssetsList,
+  SmartGuardTourCheckpointsList,
+  SmartGuardTourContactsList,
+  SmartGuardTourIncidentsList,
+  SmartGuardTourSchedulesList,
+  useSmartGuardCatalog,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
   smartGuardTourManageTabIcon,
@@ -22,16 +29,15 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseSmartGuardTourManageTab(searchParams.get("tab"));
+  const { data, loading, notice } = useSmartGuardCatalog();
 
   const setTab = (key: SmartGuardTourManageTabKey) => {
     router.replace(smartGuardTourManageHref(key), { scroll: false });
   };
 
-  const activeLabel =
-    SMART_GUARD_TOUR_MANAGE_TAB_ITEMS.find((t) => t.key === tab)?.label ?? "การจัดการ";
-
   return (
     <div className={smartGuardTourPageStackClass}>
+      {notice.popup}
       <SmartGuardTourPageSubNav
         title="การจัดการ"
         titleIcon={smartGuardTourPageTitleIcon("manage")}
@@ -45,17 +51,23 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
         onSelect={(k) => setTab(k as SmartGuardTourManageTabKey)}
         ariaLabel="เมนูย่อยการจัดการ"
       >
-        <p className="mb-3 text-xs font-semibold text-[#66638c]">{initialShop.displayName}</p>
+        <p className="mb-3 text-xs font-semibold text-[#66638c]">
+          {initialShop.displayName}
+          {loading && tab !== "staff" ? " · กำลังโหลด…" : null}
+        </p>
         {tab === "staff" ? (
           <SmartGuardTourStaffPanel />
-        ) : (
-          <AppEmptyState>
-            ยังไม่มี{activeLabel}
-            <span className="mt-1 block text-xs">
-              เฟสถัดไป — CRUD จุดตรวจ · ตาราง · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์
-            </span>
-          </AppEmptyState>
-        )}
+        ) : tab === "checkpoints" ? (
+          <SmartGuardTourCheckpointsList rows={data.checkpoints} />
+        ) : tab === "schedules" ? (
+          <SmartGuardTourSchedulesList rows={data.schedules} />
+        ) : tab === "incidents" ? (
+          <SmartGuardTourIncidentsList rows={data.incidents} />
+        ) : tab === "contacts" ? (
+          <SmartGuardTourContactsList rows={data.contacts} />
+        ) : tab === "assets" ? (
+          <SmartGuardTourAssetsList rows={data.assets} />
+        ) : null}
       </SmartGuardTourPageSubNav>
     </div>
   );
