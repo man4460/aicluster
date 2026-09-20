@@ -4,7 +4,8 @@ import {
   seedLaundryProdDemoForOwner,
 } from "../src/lib/trial/seed-mqtt-laundry";
 
-const DEMO_EMAILS = ["user@mawell.local.com", "user@mawell.local", "admin@mawell.local"] as const;
+/** เฉพาะบัญชี demo — ไม่ใส่แอดมิน (seed-demo-data-skip-admin) */
+const DEMO_EMAILS = ["user@mawell.local.com", "user@mawell.local"] as const;
 
 async function main() {
   const subscribed = await seedLaundryDemoForAllSubscribers(prisma);

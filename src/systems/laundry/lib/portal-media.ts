@@ -94,6 +94,9 @@ export const LAUNDRY_PACKAGE_SAMPLE_IMAGES = [
   `https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?${Q}&w=400&h=300`,
   `https://images.unsplash.com/photo-1582735689369-4fe89db7114c?${Q}&w=400&h=300`,
   `https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?${Q}&w=400&h=300`,
+  `https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?${Q}&w=400&h=300`,
+  `https://images.unsplash.com/photo-1604335398980-ededcadcc37d?${Q}&w=400&h=300`,
+  `https://images.unsplash.com/photo-1545173168-9f1947eebb7f?${Q}&w=400&h=300`,
 ] as const;
 
 export function laundryPackageSampleImage(index: number): string {

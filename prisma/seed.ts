@@ -820,13 +820,6 @@ async function main() {
       await tryDemoSeed(`laundry (${email})`, () => seedLaundryProdDemoForOwner(prisma, row.id));
     }
   }
-  const adminRow = await prisma.user.findUnique({
-    where: { email: "admin@mawell.local" },
-    select: { id: true },
-  });
-  if (adminRow) {
-    await tryDemoSeed("laundry (admin)", () => seedLaundryProdDemoForOwner(prisma, adminRow.id));
-  }
 
   /** บริหารชมรม — กิจกรรมย้อนหลัง+รูปเยอะ · สมาชิก · การเงิน · ทรัพย์สิน · ลิงก์ · YouTube */
   for (const email of demoSeedDataOwnerEmails) {
