@@ -50,7 +50,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 95: SmartGuardAttendanceStaffLink + shop attendance bridge fields */
 /** 96: attendanceStaffSyncEnabled */
 /** 97: SmartGuardPost · DutyTemplate · PostDuty · WorkSpan · wage fields */
-const PRISMA_SINGLETON_VERSION = 97;
+/** 98: DutyTemplate.shiftRateBaht — อัตรากะ work-back OT */
+const PRISMA_SINGLETON_VERSION = 98;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

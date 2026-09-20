@@ -32,9 +32,10 @@ type DutyPayload = {
     endHm: string;
     plannedMinutes: number;
     normalCapMinutes: number;
+    shiftRateBaht: number;
   }>;
   schedules: Array<{ id: string; name: string }>;
-  staff: Array<{ id: string; displayName: string; hourlyRateBaht: number }>;
+  staff: Array<{ id: string; displayName: string; hourlyRateBaht: number; wageBahtPerShift?: number }>;
   duties: Array<{
     id: string;
     status: string;
@@ -291,7 +292,12 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
                 {(data?.staff ?? []).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.displayName}
-                    {s.hourlyRateBaht > 0 ? ` · ${s.hourlyRateBaht}฿/ชม.` : ""}
+                    {s.displayName}
+                    {s.wageBahtPerShift && s.wageBahtPerShift > 0
+                      ? ` · สำรอง ${s.wageBahtPerShift}฿/กะ`
+                      : s.hourlyRateBaht > 0
+                        ? ` · ${s.hourlyRateBaht}฿/ชม.`
+                        : ""}
                   </option>
                 ))}
               </select>
@@ -305,7 +311,8 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
               >
                 {(data?.templates ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name} ({t.startHm}–{t.endHm})
+                    {t.name} ({t.startHm}–{t.endHm}
+                    {t.shiftRateBaht > 0 ? ` · ${t.shiftRateBaht}฿/กะ` : ""})
                   </option>
                 ))}
               </select>

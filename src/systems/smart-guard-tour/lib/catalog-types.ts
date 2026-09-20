@@ -80,13 +80,17 @@ export type CatalogShift = {
   clockMinutes: number | null;
   normalMinutes: number | null;
   otMinutes: number | null;
+  wageNormalBaht: number | null;
+  wageOtBaht: number | null;
   totalBaht: number | null;
   weeklyNormalExceeded: boolean;
   missingHourlyRate: boolean;
   missingDuty: boolean;
+  missingShiftRate: boolean;
   postName: string | null;
   templateName: string | null;
   templateHm: string | null;
+  shiftRateBaht: number | null;
 };
 
 export type CatalogLedger = {

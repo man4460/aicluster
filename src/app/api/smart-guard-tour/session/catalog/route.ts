@@ -72,11 +72,11 @@ export async function GET() {
           take: 80,
           include: {
             staff: { select: { displayName: true, phone: true } },
-            template: { select: { name: true, startHm: true, endHm: true } },
+            template: { select: { name: true, startHm: true, endHm: true, shiftRateBaht: true } },
             postDuty: {
               select: {
                 post: { select: { name: true } },
-                template: { select: { name: true, startHm: true, endHm: true } },
+                template: { select: { name: true, startHm: true, endHm: true, shiftRateBaht: true } },
               },
             },
             workSpans: {
@@ -85,6 +85,8 @@ export async function GET() {
                 clockMinutes: true,
                 normalMinutes: true,
                 otMinutes: true,
+                wageNormalBaht: true,
+                wageOtBaht: true,
                 totalBaht: true,
                 flagsJson: true,
               },
@@ -207,13 +209,17 @@ export async function GET() {
           clockMinutes: span?.clockMinutes ?? null,
           normalMinutes: span?.normalMinutes ?? null,
           otMinutes: span?.otMinutes ?? null,
+          wageNormalBaht: span?.wageNormalBaht ?? null,
+          wageOtBaht: span?.wageOtBaht ?? null,
           totalBaht: span?.totalBaht ?? null,
           weeklyNormalExceeded: flags.includes("WEEKLY_NORMAL_EXCEEDED"),
-          missingHourlyRate: flags.includes("MISSING_HOURLY_RATE"),
+          missingHourlyRate: flags.includes("MISSING_SHIFT_RATE"),
           missingDuty: flags.includes("MISSING_DUTY") || !tpl,
+          missingShiftRate: flags.includes("MISSING_SHIFT_RATE"),
           postName: s.postDuty?.post.name ?? null,
           templateName: tpl?.name ?? null,
           templateHm: tpl ? `${tpl.startHm}–${tpl.endHm}` : null,
+          shiftRateBaht: tpl?.shiftRateBaht ?? null,
         };
       }),
       ledger: ledger.map((e) => ({

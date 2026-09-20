@@ -99,6 +99,10 @@ export async function POST(req: Request) {
       typeof body.hourlyRateBaht === "number" && body.hourlyRateBaht >= 0
         ? Math.min(100000, Math.floor(body.hourlyRateBaht))
         : 0;
+    const wageBahtPerShift =
+      typeof body.wageBahtPerShift === "number" && body.wageBahtPerShift >= 0
+        ? Math.min(1000000, Math.floor(body.wageBahtPerShift))
+        : 600;
 
     const row = await prisma.smartGuardStaff.create({
       data: {
@@ -110,6 +114,7 @@ export async function POST(req: Request) {
         photoUrl,
         isActive,
         hourlyRateBaht,
+        wageBahtPerShift,
       },
     });
 

@@ -33,6 +33,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       photoUrl?: string | null;
       isActive?: boolean;
       hourlyRateBaht?: number;
+      wageBahtPerShift?: number;
     } = {};
 
     if (typeof body.displayName === "string") {
@@ -57,6 +58,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;
     if (typeof body.hourlyRateBaht === "number" && body.hourlyRateBaht >= 0) {
       data.hourlyRateBaht = Math.min(100000, Math.floor(body.hourlyRateBaht));
+    }
+    if (typeof body.wageBahtPerShift === "number" && body.wageBahtPerShift >= 0) {
+      data.wageBahtPerShift = Math.min(1000000, Math.floor(body.wageBahtPerShift));
     }
 
     if (Object.keys(data).length === 0) {

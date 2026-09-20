@@ -755,11 +755,18 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
             } else if (r.missingDuty) {
               wageLines.push("ยังไม่ผูกเวรจุด/แม่แบบกะ — ไม่นับค่าแรงจากเช็คอิน");
             }
-            if (r.totalBaht != null && !r.missingDuty) {
-              wageLines.push(`ค่าแรง ≈ ฿${r.totalBaht.toLocaleString("th-TH")}`);
+            if (r.shiftRateBaht != null && r.shiftRateBaht > 0) {
+              wageLines.push(`อัตรากะ ฿${r.shiftRateBaht.toLocaleString("th-TH")}`);
+            }
+            if (r.totalBaht != null && !r.missingDuty && !r.missingShiftRate) {
+              const n = r.wageNormalBaht ?? 0;
+              const o = r.wageOtBaht ?? 0;
+              wageLines.push(
+                `ปกติ ฿${n.toLocaleString("th-TH")} · OT ฿${o.toLocaleString("th-TH")} · รวม ฿${r.totalBaht.toLocaleString("th-TH")}`,
+              );
             }
             if (r.weeklyNormalExceeded) wageLines.push("⚠ เกิน 48 ชม.ปกติ/สัปดาห์");
-            if (r.missingHourlyRate) wageLines.push("ยังไม่ได้ตั้งเรทรายชั่วโมง");
+            if (r.missingShiftRate) wageLines.push("ยังไม่ได้ตั้งอัตรากะ");
             return (
               <RowCard
                 key={r.id}

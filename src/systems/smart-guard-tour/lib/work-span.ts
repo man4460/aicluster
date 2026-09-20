@@ -19,6 +19,13 @@ type Db = Pick<
   | "smartGuardPostDuty"
 >;
 
+type TemplateWageFields = {
+  plannedMinutes: number;
+  breakMinutes: number;
+  normalCapMinutes: number;
+  shiftRateBaht: number;
+};
+
 function dec(v: { toString(): string } | number | null | undefined, fallback: number): number {
   if (v == null) return fallback;
   const n = typeof v === "number" ? v : Number(v.toString());
@@ -27,6 +34,13 @@ function dec(v: { toString(): string } | number | null | undefined, fallback: nu
 
 const NON_COUNTABLE = new Set(["ABSENT", "CANCELLED", "SWAPPED"]);
 
+const TEMPLATE_WAGE_SELECT = {
+  plannedMinutes: true,
+  breakMinutes: true,
+  normalCapMinutes: true,
+  shiftRateBaht: true,
+} as const;
+
 export async function ensureSmartGuardDutyTemplates(
   db: Pick<PrismaClient, "smartGuardDutyTemplate">,
   shopId: string,
@@ -34,44 +48,59 @@ export async function ensureSmartGuardDutyTemplates(
   trialSessionId: string,
 ): Promise<void> {
   const n = await db.smartGuardDutyTemplate.count({ where: { shopId } });
-  if (n > 0) return;
-  const base = { ownerUserId, trialSessionId, shopId, isActive: true };
-  await db.smartGuardDutyTemplate.createMany({
-    data: [
-      {
-        ...base,
-        name: "กะ 12 ชม. (เช้า)",
-        startHm: "07:00",
-        endHm: "19:00",
-        plannedMinutes: 720,
-        breakMinutes: 0,
-        normalCapMinutes: 480,
-        roleMask: "BOTH",
-        sortOrder: 10,
-      },
-      {
-        ...base,
-        name: "กะ 12 ชม. (ดึก)",
-        startHm: "19:00",
-        endHm: "07:00",
-        plannedMinutes: 720,
-        breakMinutes: 0,
-        normalCapMinutes: 480,
-        roleMask: "BOTH",
-        sortOrder: 20,
-      },
-      {
-        ...base,
-        name: "กะ 8 ชม.",
-        startHm: "08:00",
-        endHm: "16:00",
-        plannedMinutes: 480,
-        breakMinutes: 0,
-        normalCapMinutes: 480,
-        roleMask: "BOTH",
-        sortOrder: 30,
-      },
-    ],
+  if (n === 0) {
+    const base = { ownerUserId, trialSessionId, shopId, isActive: true };
+    await db.smartGuardDutyTemplate.createMany({
+      data: [
+        {
+          ...base,
+          name: "กะ 12 ชม. (เช้า)",
+          startHm: "07:00",
+          endHm: "19:00",
+          plannedMinutes: 720,
+          breakMinutes: 0,
+          normalCapMinutes: 480,
+          shiftRateBaht: 600,
+          roleMask: "BOTH",
+          sortOrder: 10,
+        },
+        {
+          ...base,
+          name: "กะ 12 ชม. (ดึก)",
+          startHm: "19:00",
+          endHm: "07:00",
+          plannedMinutes: 720,
+          breakMinutes: 0,
+          normalCapMinutes: 480,
+          shiftRateBaht: 600,
+          roleMask: "BOTH",
+          sortOrder: 20,
+        },
+        {
+          ...base,
+          name: "กะ 8 ชม.",
+          startHm: "08:00",
+          endHm: "16:00",
+          plannedMinutes: 480,
+          breakMinutes: 0,
+          normalCapMinutes: 480,
+          shiftRateBaht: 400,
+          roleMask: "BOTH",
+          sortOrder: 30,
+        },
+      ],
+    });
+    return;
+  }
+
+  // เติมอัตรากะให้แม่แบบเก่าที่ยังเป็น 0
+  await db.smartGuardDutyTemplate.updateMany({
+    where: { shopId, shiftRateBaht: 0, plannedMinutes: { gte: 720 } },
+    data: { shiftRateBaht: 600 },
+  });
+  await db.smartGuardDutyTemplate.updateMany({
+    where: { shopId, shiftRateBaht: 0, plannedMinutes: { gt: 0, lt: 720 } },
+    data: { shiftRateBaht: 400 },
   });
 }
 
@@ -107,11 +136,10 @@ async function upsertWorkSpanForShift(
       staffId: string;
       shiftOn: string;
     };
-    staffHourlyRateBaht: number;
+    staff: { hourlyRateBaht: number; wageBahtPerShift: number };
     rates: WageShopRates;
     dutyMinutes: number | null;
-    templateNormalCapMinutes: number | null;
-    plannedMinutes: number | null;
+    template: TemplateWageFields | null;
     holidayKind: HolidayKind;
     countable: boolean;
   },
@@ -130,12 +158,16 @@ async function upsertWorkSpanForShift(
   const breakdown = computeDayWage(
     {
       dutyMinutes: params.dutyMinutes,
-      templateNormalCapMinutes: params.templateNormalCapMinutes,
-      plannedMinutes: params.plannedMinutes,
+      templateNormalCapMinutes: params.template?.normalCapMinutes ?? null,
+      plannedMinutes: params.template?.plannedMinutes ?? null,
+      shiftRateBaht: params.template?.shiftRateBaht ?? null,
       holidayKind: params.holidayKind,
       countable: params.countable,
     },
-    { hourlyRateBaht: params.staffHourlyRateBaht },
+    {
+      wageBahtPerShift: params.staff.wageBahtPerShift,
+      hourlyRateBaht: params.staff.hourlyRateBaht,
+    },
     params.rates,
     { weekNormalMinutesBeforeThisShift: prior._sum.normalMinutes ?? 0 },
   );
@@ -172,8 +204,7 @@ async function upsertWorkSpanForShift(
 }
 
 /**
- * สร้าง/อัปเดต ShiftLog ห่อ PostDuty แล้วคำนวณ WorkSpan จากแม่แบบกะ
- * (ไม่ใช้เวลาเช็คอิน/เอาท์)
+ * สร้าง/อัปเดต ShiftLog ห่อ PostDuty แล้วคำนวณ WorkSpan จากแม่แบบกะ + อัตรากะ
  */
 export async function recomputeSmartGuardWorkSpanForPostDuty(
   db: Db,
@@ -185,14 +216,12 @@ export async function recomputeSmartGuardWorkSpanForPostDuty(
     include: {
       template: {
         select: {
-          plannedMinutes: true,
-          breakMinutes: true,
-          normalCapMinutes: true,
+          ...TEMPLATE_WAGE_SELECT,
           startHm: true,
           endHm: true,
         },
       },
-      staff: { select: { hourlyRateBaht: true } },
+      staff: { select: { hourlyRateBaht: true, wageBahtPerShift: true } },
       shiftLogs: {
         orderBy: { createdAt: "asc" },
         take: 1,
@@ -248,19 +277,22 @@ export async function recomputeSmartGuardWorkSpanForPostDuty(
       staffId: duty.staffId,
       shiftOn: duty.dutyOn,
     },
-    staffHourlyRateBaht: duty.staff.hourlyRateBaht,
+    staff: duty.staff,
     rates,
     dutyMinutes: dutyWorkMinutes(duty.template.plannedMinutes, duty.template.breakMinutes),
-    templateNormalCapMinutes: duty.template.normalCapMinutes,
-    plannedMinutes: duty.template.plannedMinutes,
+    template: {
+      plannedMinutes: duty.template.plannedMinutes,
+      breakMinutes: duty.template.breakMinutes,
+      normalCapMinutes: duty.template.normalCapMinutes,
+      shiftRateBaht: duty.template.shiftRateBaht,
+    },
     holidayKind: holidayKind ?? resolveHolidayKind(duty.dutyOn, null),
     countable,
   });
 }
 
 /**
- * คำนวณ WorkSpan จาก ShiftLog — ถ้าผูก PostDuty/แม่แบบกะ จะนับตามกะเท่านั้น
- * (เช็คอิน/เอาท์ไม่ใช่แหล่งชั่วโมง)
+ * คำนวณ WorkSpan จาก ShiftLog — ถ้าผูก PostDuty/แม่แบบกะ จะนับตามกะ + อัตรากะ
  */
 export async function recomputeSmartGuardWorkSpan(
   db: Db,
@@ -270,26 +302,14 @@ export async function recomputeSmartGuardWorkSpan(
   const shift = await db.smartGuardShiftLog.findUnique({
     where: { id: shiftLogId },
     include: {
-      template: {
-        select: {
-          plannedMinutes: true,
-          breakMinutes: true,
-          normalCapMinutes: true,
-        },
-      },
+      template: { select: TEMPLATE_WAGE_SELECT },
       postDuty: {
         select: {
           status: true,
-          template: {
-            select: {
-              plannedMinutes: true,
-              breakMinutes: true,
-              normalCapMinutes: true,
-            },
-          },
+          template: { select: TEMPLATE_WAGE_SELECT },
         },
       },
-      staff: { select: { hourlyRateBaht: true } },
+      staff: { select: { hourlyRateBaht: true, wageBahtPerShift: true } },
     },
   });
   if (!shift) return;
@@ -299,7 +319,6 @@ export async function recomputeSmartGuardWorkSpan(
 
   const tpl = shift.postDuty?.template ?? shift.template;
   if (!tpl) {
-    // ไม่มีกะ — ไม่นับค่าแรงจากนาฬิกาเช็คอิน
     await upsertWorkSpanForShift(db, {
       shift: {
         id: shift.id,
@@ -309,11 +328,10 @@ export async function recomputeSmartGuardWorkSpan(
         staffId: shift.staffId,
         shiftOn: shift.shiftOn,
       },
-      staffHourlyRateBaht: shift.staff.hourlyRateBaht,
+      staff: shift.staff,
       rates,
       dutyMinutes: null,
-      templateNormalCapMinutes: null,
-      plannedMinutes: null,
+      template: null,
       holidayKind: holidayKind ?? resolveHolidayKind(shift.shiftOn, null),
       countable: true,
     });
@@ -330,11 +348,10 @@ export async function recomputeSmartGuardWorkSpan(
       staffId: shift.staffId,
       shiftOn: shift.shiftOn,
     },
-    staffHourlyRateBaht: shift.staff.hourlyRateBaht,
+    staff: shift.staff,
     rates,
     dutyMinutes: dutyWorkMinutes(tpl.plannedMinutes, tpl.breakMinutes),
-    templateNormalCapMinutes: tpl.normalCapMinutes,
-    plannedMinutes: tpl.plannedMinutes,
+    template: tpl,
     holidayKind: holidayKind ?? resolveHolidayKind(shift.shiftOn, null),
     countable,
   });

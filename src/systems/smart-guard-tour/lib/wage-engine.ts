@@ -5,7 +5,7 @@ import { bangkokDateKeyMinusDays } from "@/lib/barber/bangkok-day";
 export type SmartGuardWageFlag =
   | "WEEKLY_NORMAL_EXCEEDED"
   | "DAILY_OT_ABOVE_TEMPLATE"
-  | "MISSING_HOURLY_RATE"
+  | "MISSING_SHIFT_RATE"
   | "MISSING_DUTY"
   | "DUTY_CANCELLED";
 
@@ -17,8 +17,16 @@ export type WageShopRates = {
   holidayOtMultiplier: number;
 };
 
+/**
+ * อัตราค่าจ้าง — ลำดับใช้: shiftRateBaht (เหมากะ) → hourlyRateBaht (สำรอง)
+ */
 export type WageStaffRate = {
-  hourlyRateBaht: number;
+  /** ค่าจ้างเหมากะ (บาท) — แหล่งหลักเมื่อแม่แบบ/พนักงานตั้งไว้ */
+  shiftRateBaht?: number | null;
+  /** สำรองเมื่อไม่มีอัตรากะ */
+  hourlyRateBaht?: number | null;
+  /** สำรองจากพนักงานถ้า input ไม่ส่ง shiftRate */
+  wageBahtPerShift?: number | null;
 };
 
 export type HolidayKind = "NONE" | "WEEKLY_HOLIDAY" | "PUBLIC";
@@ -32,6 +40,8 @@ export type DutyWageInput = {
   /** เพดานปกติของแม่แบบกะ (เช่น 480) — ถ้าไม่ส่งใช้ของร้าน */
   templateNormalCapMinutes?: number | null;
   plannedMinutes?: number | null;
+  /** อัตราเหมากะของแม่แบบ (บาท) เช่น 600 */
+  shiftRateBaht?: number | null;
   holidayKind?: HolidayKind;
   /** ABSENT / CANCELLED ฯลฯ — ไม่นับชั่วโมง */
   countable?: boolean;
@@ -42,6 +52,8 @@ export type DayWageBreakdown = {
   normalMinutes: number;
   otMinutes: number;
   holidayKind: HolidayKind;
+  /** อัตราชั่วโมงที่ย้อนกลับจากเหมากะ (ถ้ามี) */
+  impliedHourlyBaht: number;
   wageNormalBaht: number;
   wageOtBaht: number;
   wageHolidayBaht: number;
@@ -119,13 +131,105 @@ export function dutyWorkMinutes(plannedMinutes: number, breakMinutes = 0): numbe
 }
 
 /**
- * คิดชั่วโมงปกติ/OT และเงินรายชั่วโมงตามแนวคุ้มครองแรงงาน
- * — แหล่งชั่วโมง = กะที่จัดเวร (ไม่ใช่เวลาเช็คอิน/เอาท์)
- * — เกิน 48 ชม.ปกติ/สัปดาห์: ธง WEEKLY_NORMAL_EXCEEDED (ไม่บล็อก)
+ * ย้อนอัตราชั่วโมงจากค่าจ้างเหมากะ
+ * ตัวอย่าง: กะ 600 บาท · 8 ชม.ปกติ + 4 ชม.OT×1.5
+ * → weighted = 8 + 6 = 14 → H = 600/14
+ */
+export function impliedHourlyFromShiftRate(params: {
+  shiftRateBaht: number;
+  normalMinutes: number;
+  otMinutes: number;
+  otMultiplier: number;
+  holidayKind?: HolidayKind;
+  holidayMultiplier?: number;
+  holidayOtMultiplier?: number;
+}): number {
+  const nH = minutesToHours(Math.max(0, params.normalMinutes));
+  const oH = minutesToHours(Math.max(0, params.otMinutes));
+  const holiday = (params.holidayKind ?? "NONE") !== "NONE";
+  const weighted = holiday
+    ? nH * (params.holidayMultiplier ?? 2) + oH * (params.holidayOtMultiplier ?? 3)
+    : nH + oH * params.otMultiplier;
+  if (weighted <= 0 || params.shiftRateBaht <= 0) return 0;
+  return params.shiftRateBaht / weighted;
+}
+
+/**
+ * แบ่งเงินเหมากะเป็นปกติ/OT ให้รวมเท่าอัตรากะเป๊ะ
+ * กะ 600 · 8h + 4h×1.5 → ปกติ ≈343 · OT ≈257
+ */
+export function allocateShiftRateBaht(params: {
+  shiftRateBaht: number;
+  normalMinutes: number;
+  otMinutes: number;
+  otMultiplier: number;
+  holidayKind?: HolidayKind;
+  holidayMultiplier?: number;
+  holidayOtMultiplier?: number;
+}): { wageNormalBaht: number; wageOtBaht: number; wageHolidayBaht: number; impliedHourlyBaht: number } {
+  const rate = Math.max(0, Math.floor(params.shiftRateBaht));
+  const holiday = (params.holidayKind ?? "NONE") !== "NONE";
+  const nH = minutesToHours(Math.max(0, params.normalMinutes));
+  const oH = minutesToHours(Math.max(0, params.otMinutes));
+  const hMult = params.holidayMultiplier ?? 2;
+  const hOtMult = params.holidayOtMultiplier ?? 3;
+  const wN = holiday ? nH * hMult : nH;
+  const wO = holiday ? oH * hOtMult : oH * params.otMultiplier;
+  const weighted = wN + wO;
+  const implied = weighted > 0 && rate > 0 ? rate / weighted : 0;
+
+  if (rate <= 0 || weighted <= 0) {
+    return { wageNormalBaht: 0, wageOtBaht: 0, wageHolidayBaht: 0, impliedHourlyBaht: 0 };
+  }
+
+  if (holiday) {
+    const holidayPart = roundBaht(rate * (wN / weighted));
+    const otPart = rate - holidayPart;
+    return {
+      wageNormalBaht: 0,
+      wageOtBaht: otPart,
+      wageHolidayBaht: holidayPart,
+      impliedHourlyBaht: implied,
+    };
+  }
+
+  const normalPart = roundBaht(rate * (wN / weighted));
+  const otPart = rate - normalPart;
+  return {
+    wageNormalBaht: normalPart,
+    wageOtBaht: otPart,
+    wageHolidayBaht: 0,
+    impliedHourlyBaht: implied,
+  };
+}
+
+function emptyBreakdown(
+  holidayKind: HolidayKind,
+  flags: SmartGuardWageFlag[],
+): DayWageBreakdown {
+  return {
+    clockMinutes: 0,
+    normalMinutes: 0,
+    otMinutes: 0,
+    holidayKind,
+    impliedHourlyBaht: 0,
+    wageNormalBaht: 0,
+    wageOtBaht: 0,
+    wageHolidayBaht: 0,
+    totalBaht: 0,
+    flags,
+  };
+}
+
+/**
+ * คิดชั่วโมงปกติ/OT และเงินจากอัตรากะ (work-back)
+ * — แหล่งชั่วโมง = กะที่จัดเวร
+ * — แหล่งเงิน = เหมากะ → หารเป็นปกติ + OT×1.5 (หรือตัวคูณร้าน)
+ * — เกิน 48 ชม.ปกติ/สัปดาห์: ธง WARN
  */
 export function computeDayWage(
   input: DutyWageInput,
-  staff: WageStaffRate,
+  staff: WageStaffRate = {},
   shop: Partial<WageShopRates> = {},
   opts?: { weekNormalMinutesBeforeThisShift?: number },
 ): DayWageBreakdown {
@@ -136,32 +240,12 @@ export function computeDayWage(
 
   if (!countable) {
     flags.push("DUTY_CANCELLED");
-    return {
-      clockMinutes: 0,
-      normalMinutes: 0,
-      otMinutes: 0,
-      holidayKind,
-      wageNormalBaht: 0,
-      wageOtBaht: 0,
-      wageHolidayBaht: 0,
-      totalBaht: 0,
-      flags,
-    };
+    return emptyBreakdown(holidayKind, flags);
   }
 
   if (input.dutyMinutes == null || input.dutyMinutes < 0) {
     flags.push("MISSING_DUTY");
-    return {
-      clockMinutes: 0,
-      normalMinutes: 0,
-      otMinutes: 0,
-      holidayKind,
-      wageNormalBaht: 0,
-      wageOtBaht: 0,
-      wageHolidayBaht: 0,
-      totalBaht: 0,
-      flags,
-    };
+    return emptyBreakdown(holidayKind, flags);
   }
 
   const clock = Math.max(0, Math.floor(input.dutyMinutes));
@@ -177,20 +261,51 @@ export function computeDayWage(
     flags.push("DAILY_OT_ABOVE_TEMPLATE");
   }
 
-  const hourly = Math.max(0, staff.hourlyRateBaht);
-  if (hourly <= 0) flags.push("MISSING_HOURLY_RATE");
+  const shiftRate = Math.max(
+    0,
+    Math.floor(
+      input.shiftRateBaht ??
+        staff.shiftRateBaht ??
+        staff.wageBahtPerShift ??
+        0,
+    ),
+  );
+  const hourlyFallback = Math.max(0, Math.floor(staff.hourlyRateBaht ?? 0));
 
   let wageNormalBaht = 0;
   let wageOtBaht = 0;
   let wageHolidayBaht = 0;
+  let impliedHourlyBaht = 0;
 
-  if (holidayKind === "NONE") {
-    wageNormalBaht = roundBaht(minutesToHours(normalMinutes) * hourly);
-    wageOtBaht = roundBaht(minutesToHours(otMinutes) * hourly * rates.otMultiplier);
+  if (shiftRate > 0) {
+    const alloc = allocateShiftRateBaht({
+      shiftRateBaht: shiftRate,
+      normalMinutes: holidayKind === "NONE" ? normalMinutes : normalMinutes,
+      otMinutes,
+      otMultiplier: rates.otMultiplier,
+      holidayKind,
+      holidayMultiplier: rates.holidayMultiplier,
+      holidayOtMultiplier: rates.holidayOtMultiplier,
+    });
+    wageNormalBaht = alloc.wageNormalBaht;
+    wageOtBaht = alloc.wageOtBaht;
+    wageHolidayBaht = alloc.wageHolidayBaht;
+    impliedHourlyBaht = alloc.impliedHourlyBaht;
+  } else if (hourlyFallback > 0) {
+    impliedHourlyBaht = hourlyFallback;
+    if (holidayKind === "NONE") {
+      wageNormalBaht = roundBaht(minutesToHours(normalMinutes) * hourlyFallback);
+      wageOtBaht = roundBaht(minutesToHours(otMinutes) * hourlyFallback * rates.otMultiplier);
+    } else {
+      wageHolidayBaht = roundBaht(
+        minutesToHours(normalMinutes) * hourlyFallback * rates.holidayMultiplier,
+      );
+      wageOtBaht = roundBaht(
+        minutesToHours(otMinutes) * hourlyFallback * rates.holidayOtMultiplier,
+      );
+    }
   } else {
-    wageHolidayBaht = roundBaht(minutesToHours(normalMinutes) * hourly * rates.holidayMultiplier);
-    wageOtBaht = roundBaht(minutesToHours(otMinutes) * hourly * rates.holidayOtMultiplier);
-    normalMinutes = 0;
+    flags.push("MISSING_SHIFT_RATE");
   }
 
   const weekBefore = opts?.weekNormalMinutesBeforeThisShift ?? 0;
@@ -198,11 +313,16 @@ export function computeDayWage(
     flags.push("WEEKLY_NORMAL_EXCEEDED");
   }
 
+  if (holidayKind !== "NONE") {
+    normalMinutes = 0;
+  }
+
   return {
     clockMinutes: clock,
     normalMinutes: holidayKind === "NONE" ? normalMinutes : 0,
     otMinutes,
     holidayKind,
+    impliedHourlyBaht,
     wageNormalBaht,
     wageOtBaht,
     wageHolidayBaht,

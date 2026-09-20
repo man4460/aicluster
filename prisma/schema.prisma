@@ -9006,6 +9006,11 @@ model SmartGuardDutyTemplate {
   /** เพดานปกติต่อกะ (นาที) — มัก 480 */
   normalCapMinutes Int      @default(480) @map("normal_cap_minutes")
   /**
+   * ค่าจ้างเหมากะ (บาท) เช่น กะ 07–19 = 600
+   * ระบบ work-back เป็นชั่วโมงปกติ + OT ตามตัวคูณร้าน
+   */
+  shiftRateBaht    Int      @default(0) @map("shift_rate_baht")
+  /**
    * POST | TOUR | BOTH — บทบาทที่แม่แบบนี้รองรับ
    */
   roleMask         String   @default("BOTH") @map("role_mask") @db.VarChar(16)
@@ -9219,10 +9224,10 @@ model SmartGuardStaff {
   pinHash        String?  @map("pin_hash") @db.VarChar(100)
   workStartHm    String?  @map("work_start_hm") @db.VarChar(5)
   workEndHm      String?  @map("work_end_hm") @db.VarChar(5)
-  /** ค่าแรงเหมากะ (legacy / อ้างอิง) — คิดเงินจริงใช้ hourlyRateBaht */
+  /** ค่าแรงเหมากะ (สำรอง) — ใช้เมื่อแม่แบบกะไม่ได้ตั้ง shiftRateBaht */
   wageBahtPerShift Int    @default(0) @map("wage_baht_per_shift")
   otBahtPerHour  Int      @default(0) @map("ot_baht_per_hour")
-  /** ค่าจ้างรายชั่วโมงปกติ (บาท) — คิดตามกฎหมาย */
+  /** ค่าจ้างรายชั่วโมง (สำรอง) — ใช้เมื่อไม่มีอัตรากะ */
   hourlyRateBaht Int      @default(0) @map("hourly_rate_baht")
   isActive       Boolean  @default(true) @map("is_active")
   note           String?  @db.Text
