@@ -179,6 +179,7 @@ export async function runDemoRefreshForOwners(
       log,
     );
     await trySeed(lines, "used-car-showroom", () => seedUsedCarShowroomProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "attendance", () => seedAttendanceProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "smart-guard-tour", () => seedSmartGuardTourProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "ecommerce-store (daily)", () => seedEcommerceStoreProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "club-event (daily)", () => seedClubEventProdDemoForOwner(prisma, id), log);
@@ -210,7 +211,6 @@ export async function runDemoRefreshForOwners(
     await trySeed(lines, "loyalty-stamp", () => seedLoyaltyStampProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "school-bank", () => seedSchoolBankProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "community-coop", () => seedCommunityCoopProdDemoForOwner(prisma, id), log);
-    await trySeed(lines, "attendance", () => seedAttendanceProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "dormitory", () => seedDormitoryProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "village", () => seedVillageProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "home-finance", () => seedHomeFinanceProdDemoForOwner(prisma, id), log);

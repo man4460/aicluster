@@ -31,6 +31,7 @@ import {
   smartGuardTourSettingsTabIcon,
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
+import { SmartGuardTourIntegrationsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourIntegrationsPanel";
 import {
   smartGuardTourFieldClass,
   smartGuardTourOutlineButtonClass,
@@ -179,7 +180,7 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
   }, [shop, notice, tab, pinDraft, clearPin]);
 
   const portalUrl = origin ? `${origin}/guard/${shop.slug}` : `/guard/${shop.slug}`;
-  const showSave = tab !== "link";
+  const showSave = tab !== "link" && tab !== "integrations";
 
   return (
     <div className={smartGuardTourPageStackClass}>
@@ -495,6 +496,10 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
               />
             </div>
           </ModuleQrMonthlyGate>
+        ) : null}
+
+        {tab === "integrations" ? (
+          <SmartGuardTourIntegrationsPanel shop={shop} onShopPatched={setShop} />
         ) : null}
       </SmartGuardTourPageSubNav>
     </div>

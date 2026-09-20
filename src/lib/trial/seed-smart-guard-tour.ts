@@ -75,6 +75,7 @@ function bangkokAt(ymd: string, hour: number, minute = 0): Date {
 
 async function wipeSmartGuardDemoData(db: DbLike, ownerUserId: string, trialSessionId: string) {
   const where = { ownerUserId, trialSessionId };
+  await db.smartGuardAttendanceStaffLink.deleteMany({ where });
   await db.smartGuardCheckpointVideo.deleteMany({ where });
   await db.smartGuardIncidentImage.deleteMany({ where });
   await db.smartGuardTourLog.deleteMany({ where });
@@ -139,7 +140,8 @@ async function seedSmartGuardActivity(
         data: {
           ...scope,
           displayName,
-          phone: phoneAt(i + 10),
+          /** คนแรกใช้เบอร์เดียวกับ attendance roster demo (0812345678) เพื่อแม็ปสะพาน */
+          phone: i === 0 ? "0812345678" : phoneAt(i + 10),
           photoUrl: smartGuardStaffSamplePhoto(i),
           workStartHm: i % 2 === 0 ? "08:00" : "20:00",
           workEndHm: i % 2 === 0 ? "20:00" : "08:00",
@@ -435,6 +437,36 @@ async function seedSmartGuardActivity(
         },
       });
     }
+  }
+
+  // สะพานเช็คอิน → เข้ากะ: เปิดลิงก์ + แม็ปเบอร์ 0812345678 ถ้ามี roster
+  const demoRoster = await db.attendanceRosterEntry.findFirst({
+    where: {
+      ownerUserId,
+      trialSessionId,
+      phone: "0812345678",
+      isActive: true,
+    },
+    select: { id: true },
+  });
+  const bridgeStaff = staffRows[0];
+  if (demoRoster && bridgeStaff) {
+    await db.smartGuardShop.update({
+      where: { id: shopId },
+      data: {
+        attendanceLinkEnabled: true,
+        attendanceRequireMatch: true,
+      },
+    });
+    await db.smartGuardAttendanceStaffLink.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        shopId,
+        guardStaffId: bridgeStaff.id,
+        rosterEntryId: demoRoster.id,
+      },
+    });
   }
 }
 

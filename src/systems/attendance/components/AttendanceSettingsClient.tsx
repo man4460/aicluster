@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AttendanceDeviceApiSettings } from "@/systems/attendance/components/AttendanceDeviceApiSettings";
 import {
@@ -141,6 +142,10 @@ function AttendanceSettingsClientInner() {
   const [quota, setQuota] = useState<AttendancePlanQuota | null>(null);
   const [branches, setBranches] = useState<BranchRow[]>([]);
   const [faceCheckInEnabled, setFaceCheckInEnabled] = useState(false);
+  const [smartGuardBridge, setSmartGuardBridge] = useState<{
+    linked: boolean;
+    shopDisplayName: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -156,6 +161,7 @@ function AttendanceSettingsClientInner() {
     const j = (await res.json().catch(() => ({}))) as {
       quota?: AttendancePlanQuota;
       faceCheckInEnabled?: boolean;
+      smartGuardBridge?: { linked?: boolean; shopDisplayName?: string | null };
       branches?: Parameters<typeof mapApiBranches>[0];
       locations?: {
         id: number;
@@ -171,10 +177,19 @@ function AttendanceSettingsClientInner() {
       setErr(j.error ?? "โหลดไม่สำเร็จ");
       setQuota(null);
       setBranches([]);
+      setSmartGuardBridge(null);
       return;
     }
     setQuota(j.quota ?? null);
     setFaceCheckInEnabled(Boolean(j.faceCheckInEnabled));
+    setSmartGuardBridge(
+      j.smartGuardBridge
+        ? {
+            linked: Boolean(j.smartGuardBridge.linked),
+            shopDisplayName: j.smartGuardBridge.shopDisplayName ?? null,
+          }
+        : null,
+    );
     if (j.branches?.length) {
       setBranches(mapApiBranches(j.branches));
     } else if (j.locations?.length) {
@@ -360,6 +375,18 @@ function AttendanceSettingsClientInner() {
             ) : null
           }
         />
+
+        {smartGuardBridge?.linked ? (
+          <div className="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900">
+            ถูกเชื่อมกับจุดตรวจ «{smartGuardBridge.shopDisplayName ?? "—"}» — เข้า/ออกงานจะซิงก์กะอัตโนมัติ ·{" "}
+            <Link
+              href="/dashboard/smart-guard-tour/settings?tab=integrations"
+              className="font-bold underline underline-offset-2"
+            >
+              ตั้งค่าที่จุดตรวจ
+            </Link>
+          </div>
+        ) : null}
 
         <div className="mt-3 space-y-2 sm:hidden">
           <label className="block text-xs font-bold text-[#4d47b6]" htmlFor="attendance-settings-tab">

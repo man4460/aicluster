@@ -121,6 +121,22 @@ export async function PATCH(req: Request) {
         taxId: nullable("taxId", 30),
         slipPaperSize: str("slipPaperSize", 16),
         ...(staffDailyPinHash !== undefined ? { staffDailyPinHash } : {}),
+        ...(typeof body.attendanceLinkEnabled === "boolean"
+          ? { attendanceLinkEnabled: body.attendanceLinkEnabled }
+          : {}),
+        ...(body.attendanceBranchId === null
+          ? { attendanceBranchId: null }
+          : typeof body.attendanceBranchId === "number" && Number.isInteger(body.attendanceBranchId)
+            ? { attendanceBranchId: body.attendanceBranchId }
+            : {}),
+        ...(body.attendanceLocationId === null
+          ? { attendanceLocationId: null }
+          : typeof body.attendanceLocationId === "number" && Number.isInteger(body.attendanceLocationId)
+            ? { attendanceLocationId: body.attendanceLocationId }
+            : {}),
+        ...(typeof body.attendanceRequireMatch === "boolean"
+          ? { attendanceRequireMatch: body.attendanceRequireMatch }
+          : {}),
       },
     });
     return NextResponse.json({ shop: mapSmartGuardShop(updated) });

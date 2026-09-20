@@ -5,6 +5,7 @@ import { isWithinRadiusMeters } from "@/lib/geo/haversine";
 import { finalizedAttendanceStatus } from "@/lib/attendance/finalize-status";
 import { mergeAttendanceLogChannelNote } from "@/lib/attendance/log-channel";
 import { queueAttendanceDashboardNotify } from "@/lib/attendance/notify-dashboard";
+import { syncSmartGuardShiftFromAttendance } from "@/systems/smart-guard-tour/lib/attendance-bridge";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import {
   clampShiftIndex,
@@ -24,6 +25,25 @@ export class AttendanceBusinessError extends Error {
   constructor(message: string) {
     super(message);
   }
+}
+
+function queueSmartGuardAttendanceBridge(
+  ownerUserId: string,
+  trialSessionId: string,
+  log: {
+    id: number;
+    ownerUserId: string;
+    trialSessionId: string;
+    actorUserId: string | null;
+    guestPhone: string | null;
+    checkInTime: Date | null;
+    checkOutTime: Date | null;
+    checkInLocationId: number | null;
+    checkOutLocationId: number | null;
+  },
+  action: "in" | "out",
+) {
+  void syncSmartGuardShiftFromAttendance({ ownerUserId, trialSessionId, log, action });
 }
 
 export async function getAttendanceSettings(ownerUserId: string, trialSessionId: string) {
@@ -176,6 +196,7 @@ export async function checkInAsUser(params: {
     },
   });
   queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  queueSmartGuardAttendanceBridge(params.ownerUserId, params.trialSessionId, log, "in");
   return log;
 }
 
@@ -257,6 +278,7 @@ export async function checkInAsGuest(params: {
     },
   });
   queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  queueSmartGuardAttendanceBridge(params.ownerUserId, params.trialSessionId, log, "in");
   return log;
 }
 
@@ -310,6 +332,7 @@ export async function checkOutAsUser(params: {
     },
   });
   queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  queueSmartGuardAttendanceBridge(params.ownerUserId, params.trialSessionId, log, "out");
   return log;
 }
 
@@ -365,6 +388,7 @@ export async function checkOutAsGuest(params: {
     },
   });
   queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  queueSmartGuardAttendanceBridge(params.ownerUserId, params.trialSessionId, log, "out");
   return log;
 }
 

@@ -28,7 +28,7 @@ export type SmartGuardTourManageTabKey =
   | "contacts"
   | "assets";
 
-export type SmartGuardTourSettingsTab = "basic" | "finance" | "portal" | "hours" | "link";
+export type SmartGuardTourSettingsTab = "basic" | "finance" | "portal" | "hours" | "link" | "integrations";
 
 export type SmartGuardTourNavItem = {
   key: SmartGuardTourModuleNavKey;
@@ -85,6 +85,7 @@ export const SMART_GUARD_TOUR_SETTINGS_TAB_ITEMS: {
   { key: "portal", label: "ตั้งค่าเว็บไซต์", shortLabel: "เว็บ" },
   { key: "hours", label: "ตั้งค่าเวลาเปิดร้าน", shortLabel: "เวลาเปิด" },
   { key: "link", label: "ลิงก์", shortLabel: "ลิงก์" },
+  { key: "integrations", label: "เชื่อมระบบ", shortLabel: "เชื่อมระบบ" },
 ];
 
 export function isSmartGuardTourModulePath(pathname: string): boolean {
@@ -154,7 +155,15 @@ export function smartGuardTourManageHref(tab?: SmartGuardTourManageTabKey): stri
 export function parseSmartGuardTourSettingsTab(
   raw: string | null | undefined,
 ): SmartGuardTourSettingsTab {
-  if (raw === "finance" || raw === "portal" || raw === "hours" || raw === "link") return raw;
+  if (
+    raw === "finance" ||
+    raw === "portal" ||
+    raw === "hours" ||
+    raw === "link" ||
+    raw === "integrations"
+  ) {
+    return raw;
+  }
   if (raw === "links") return "link";
   if (raw === "staff") return "link";
   return "basic";

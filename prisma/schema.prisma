@@ -314,6 +314,7 @@ model User {
   smartGuardContacts                 SmartGuardContact[]
   smartGuardFinanceCategories        SmartGuardFinanceCategory[]
   smartGuardLedgerEntries            SmartGuardLedgerEntry[]
+  smartGuardAttendanceStaffLinks     SmartGuardAttendanceStaffLink[]
   lmsProfiles                        LmsProfile[]
   lmsCourses                         LmsCourse[]
   lmsLessons                         LmsLesson[]
@@ -2004,6 +2005,8 @@ model AttendanceRosterEntry {
   fingerprintEnrolledAt DateTime?         @map("fingerprint_enrolled_at")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  smartGuardAttendanceLinks SmartGuardAttendanceStaffLink[]
 
   @@unique([ownerUserId, phone, trialSessionId])
   @@index([ownerUserId, trialSessionId, isActive])
@@ -8875,6 +8878,16 @@ model SmartGuardShop {
   taxId              String?  @map("tax_id") @db.VarChar(30)
   slipPaperSize      String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
   staffDailyPinHash  String?  @map("staff_daily_pin_hash") @db.VarChar(100)
+  /**
+   * เชื่อมเข้ากะจากเช็คอินอัจฉริยะ — สะพาน AttendanceLog → SmartGuardShiftLog
+   */
+  attendanceLinkEnabled    Boolean @default(false) @map("attendance_link_enabled")
+  /** สาขาเช็คอินที่ใช้กับไซต์นี้ (null = ทุกสาขาของ owner ใน scope เดียวกัน) */
+  attendanceBranchId       Int?    @map("attendance_branch_id")
+  /** จุดเช็คอินที่นับเป็นเข้ากะ (null = ทุกจุดในสาขาที่เลือก) */
+  attendanceLocationId     Int?    @map("attendance_location_id")
+  /** ต้องมีแม็ปพนักงานในตารางลิงก์ถึงจะซิงก์ (false = อนุญาตจับคู่เบอร์อัตโนมัติ) */
+  attendanceRequireMatch   Boolean @default(true) @map("attendance_require_match")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -8888,11 +8901,35 @@ model SmartGuardShop {
   contacts           SmartGuardContact[]
   financeCategories  SmartGuardFinanceCategory[]
   ledgerEntries      SmartGuardLedgerEntry[]
+  attendanceStaffLinks SmartGuardAttendanceStaffLink[]
 
   @@unique([ownerUserId, trialSessionId], map: "sgt_shop_owner_trial_uniq")
   @@unique([slug, trialSessionId], map: "sgt_shop_slug_trial_uniq")
   @@index([ownerUserId], map: "sgt_shop_owner_idx")
   @@map("smart_guard_shops")
+}
+
+/**
+ * จับคู่ รปภ. (จุดตรวจ) ↔ รายชื่อเช็คอินอัจฉริยะ — ใช้เมื่อเปิดสะพานเข้ากะ
+ */
+model SmartGuardAttendanceStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  guardStaffId   String   @map("guard_staff_id")
+  guardStaff     SmartGuardStaff @relation(fields: [guardStaffId], references: [id], onDelete: Cascade)
+  rosterEntryId  Int      @map("roster_entry_id")
+  rosterEntry    AttendanceRosterEntry @relation(fields: [rosterEntryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([shopId, guardStaffId], map: "sgt_att_link_shop_staff_uniq")
+  @@unique([shopId, rosterEntryId], map: "sgt_att_link_shop_roster_uniq")
+  @@index([ownerUserId, trialSessionId], map: "sgt_att_link_owner_trial_idx")
+  @@map("smart_guard_attendance_staff_links")
 }
 
 model SmartGuardCheckpoint {
@@ -8998,6 +9035,7 @@ model SmartGuardStaff {
   tourLogs      SmartGuardTourLog[]
   incidents     SmartGuardIncident[]
   ledgerEntries SmartGuardLedgerEntry[]
+  attendanceLinks SmartGuardAttendanceStaffLink[]
 
   @@index([shopId, isActive], map: "sgt_staff_shop_active_idx")
   @@index([ownerUserId, trialSessionId], map: "sgt_staff_owner_trial_idx")

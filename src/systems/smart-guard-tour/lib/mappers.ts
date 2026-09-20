@@ -29,6 +29,11 @@ export type SmartGuardShopDto = {
   slipPaperSize: string;
   /** มีรหัสเข้าเว็บพนักงานตั้งไว้แล้ว (ไม่ส่งรหัสจริง) */
   staffDailyPinSet: boolean;
+  /** สะพานเช็คอินอัจฉริยะ → เข้ากะจุดตรวจ */
+  attendanceLinkEnabled: boolean;
+  attendanceBranchId: number | null;
+  attendanceLocationId: number | null;
+  attendanceRequireMatch: boolean;
 };
 
 function parseGalleryJson(raw: string | null | undefined): string[] {
@@ -72,6 +77,10 @@ export function mapSmartGuardShop(row: {
   taxId: string | null;
   slipPaperSize: string;
   staffDailyPinHash?: string | null;
+  attendanceLinkEnabled?: boolean;
+  attendanceBranchId?: number | null;
+  attendanceLocationId?: number | null;
+  attendanceRequireMatch?: boolean;
 }): SmartGuardShopDto {
   const toNum = (v: { toString(): string } | number | null | undefined): number | null => {
     if (v == null) return null;
@@ -108,5 +117,9 @@ export function mapSmartGuardShop(row: {
     taxId: row.taxId,
     slipPaperSize: row.slipPaperSize,
     staffDailyPinSet: Boolean(row.staffDailyPinHash?.trim()),
+    attendanceLinkEnabled: Boolean(row.attendanceLinkEnabled),
+    attendanceBranchId: row.attendanceBranchId ?? null,
+    attendanceLocationId: row.attendanceLocationId ?? null,
+    attendanceRequireMatch: row.attendanceRequireMatch !== false,
   };
 }

@@ -172,9 +172,18 @@ export async function GET() {
 
     const flatLocations = branches.flatMap((b) => b.locations);
 
+    const { getSmartGuardAttendanceBridgeStatus } = await import(
+      "@/systems/smart-guard-tour/lib/attendance-bridge"
+    );
+    const smartGuardBridge = await getSmartGuardAttendanceBridgeStatus({
+      ownerUserId: ctx.billingUserId,
+      trialSessionId: scope.trialSessionId,
+    });
+
     return NextResponse.json({
       quota,
       faceCheckInEnabled: Boolean(settings?.faceCheckInEnabled),
+      smartGuardBridge,
       branches: mapBranchResponse(branches),
       locations: flatLocations.map((loc) => ({
         id: loc.id,
