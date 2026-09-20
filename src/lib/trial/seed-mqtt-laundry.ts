@@ -748,6 +748,13 @@ async function ensureLaundryDemoCustomersDb(
     const pkg = await findPackageByMarker(db, ownerUserId, trialSessionId, def.packageMarker);
     if (!pkg) continue;
 
+    const taxData = {
+      taxInvoiceEnabled: def.taxInvoice ?? false,
+      billingName: def.billingName ?? "",
+      taxId: def.taxId ?? "",
+      taxAddress: def.taxAddress ?? "",
+    };
+
     let customer = await db.laundryCustomer.findUnique({
       where: {
         ownerUserId_phone_trialSessionId: { ownerUserId, phone: def.phone, trialSessionId },
@@ -760,22 +767,13 @@ async function ensureLaundryDemoCustomersDb(
           trialSessionId,
           phone: def.phone,
           name: def.name,
-          taxInvoiceEnabled: def.taxInvoice ?? false,
-          billingName: def.billingName ?? "",
-          taxId: def.taxId ?? "",
-          taxAddress: def.taxAddress ?? "",
+          ...taxData,
         },
       });
-    } else if (def.taxInvoice && !customer.taxInvoiceEnabled) {
+    } else {
       customer = await db.laundryCustomer.update({
         where: { id: customer.id },
-        data: {
-          name: def.name,
-          taxInvoiceEnabled: true,
-          billingName: def.billingName ?? "",
-          taxId: def.taxId ?? "",
-          taxAddress: def.taxAddress ?? "",
-        },
+        data: { name: def.name, ...taxData },
       });
     }
 
@@ -787,7 +785,19 @@ async function ensureLaundryDemoCustomersDb(
         packageId: pkg.id,
       },
     });
-    if (sub) continue;
+    if (sub) {
+      // รีเซ็ตครั้ง/สถานะตัวอย่างทุกครั้งที่ seed — ให้ทดลองหักแพ็กได้เสมอ
+      await db.laundryCustomerSubscription.update({
+        where: { id: sub.id },
+        data: {
+          remainingSessions: def.remaining,
+          status: def.status,
+          paymentMethod: def.paymentMethod,
+          saleReceiptImageUrl: sub.saleReceiptImageUrl?.trim() || DEMO_LAUNDRY_SLIP_URL,
+        },
+      });
+      continue;
+    }
 
     await db.laundryCustomerSubscription.create({
       data: {

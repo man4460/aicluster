@@ -95,35 +95,52 @@ export function LaundrySellPackageModal({
   useEffect(() => {
     if (!open) return;
     if (packagesFromParent && packagesFromParent.length > 0) return;
-    void fetch("/api/laundry/session/packages", { credentials: "include" })
+    void fetch("/api/laundry/session/packages", { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then(
         (d: {
           packages?: {
             id: number;
             name: string;
-            base_price: number;
+            base_price?: number;
+            basePrice?: number;
             total_sessions?: number;
+            totalSessions?: number;
             description?: string | null;
             duration_hours?: number | string | null;
+            durationHours?: number | string | null;
             image_url?: string | null;
+            imageUrl?: string | null;
           }[];
+          error?: string;
         }) => {
           const rows = (d.packages ?? [])
-            .filter((p) => (p.total_sessions ?? 1) > 1)
-            .map((p) => ({
-              id: p.id,
-              name: p.name,
-              price: p.base_price,
-              totalSessions: p.total_sessions ?? 1,
-              description: p.description?.trim() || "",
-              durationHours: p.duration_hours != null ? Number(p.duration_hours) : undefined,
-              imageUrl: p.image_url ?? null,
-            }));
+            .map((p) => {
+              const totalSessions = Number(p.total_sessions ?? p.totalSessions ?? 1);
+              return {
+                id: p.id,
+                name: p.name,
+                price: Number(p.base_price ?? p.basePrice ?? 0),
+                totalSessions: Number.isFinite(totalSessions) ? totalSessions : 1,
+                description: p.description?.trim() || "",
+                durationHours:
+                  p.duration_hours != null || p.durationHours != null
+                    ? Number(p.duration_hours ?? p.durationHours)
+                    : undefined,
+                imageUrl: (p.image_url ?? p.imageUrl) ?? null,
+              };
+            })
+            .filter((p) => p.totalSessions > 1);
           setPackages(rows);
+          if (rows.length === 0 && typeof d.error === "string" && d.error.trim()) {
+            setSellFormErr(d.error.trim());
+          }
         },
       )
-      .catch(() => {});
+      .catch(() => {
+        setPackages([]);
+        setSellFormErr("โหลดแพ็กเหมาไม่สำเร็จ — ลองรีเฟรชหน้า");
+      });
   }, [open, packagesFromParent]);
 
   useEffect(() => {
@@ -267,9 +284,13 @@ export function LaundrySellPackageModal({
           <fieldset className="min-w-0 space-y-2">
             <legend className="text-sm font-semibold text-[#4d47b6]">เลือกแพ็กเหมา</legend>
             {pkgList.length === 0 ? (
-              <p className={cn(laundryOffersListRowCardClass, "px-3 py-6 text-center text-sm text-[#66638c]")}>
-                ยังไม่มีแพ็กหลายครั้ง — ตั้งจำนวนครั้ง &gt; 1 ที่แท็บแพ็กเกจก่อน
-              </p>
+              <div className={cn(laundryOffersListRowCardClass, "space-y-2 px-3 py-6 text-center text-sm text-[#66638c]")}>
+                <p className="font-semibold text-[#2e2a58]">ยังไม่มีแพ็กเหมา (จำนวนครั้ง &gt; 1)</p>
+                <p>
+                  ไปที่เมนู <strong>การจัดการ → แพ็กเกจ</strong> แล้วสร้างแพ็กโดยตั้งจำนวนครั้งมากกว่า 1
+                  หรือรัน seed ตัวอย่าง (`npx tsx scripts/seed-laundry-demo.ts`)
+                </p>
+              </div>
             ) : (
               <ul className="grid max-h-[min(42vh,22rem)] grid-cols-1 gap-2 overflow-y-auto">
                 {pkgList.map((p, index) => {

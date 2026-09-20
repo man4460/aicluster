@@ -53,6 +53,7 @@ import {
   laundryStatCardClass,
 } from "@/systems/laundry/lib/ui-tokens";
 import { useLaundryShopPrintProfile } from "@/systems/laundry/lib/use-laundry-shop-print-profile";
+import { LAUNDRY_DEMO_DEDUCT_HINTS } from "@/systems/laundry/lib/demo-member-phones";
 
 type RowCustomer = {
   id: number;
@@ -531,7 +532,13 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
               </button>
             </div>
           ) : null}
-          <p className={cn(laundryOffersEmptyStateClass, "py-8 text-center text-sm text-[#66638c]")}>ยังไม่มีการซื้อแพ็ก</p>
+          <div className={cn(laundryOffersEmptyStateClass, "space-y-2 py-8 text-center text-sm text-[#66638c]")}>
+            <p className="font-semibold text-[#2e2a58]">ยังไม่มีการซื้อแพ็ก</p>
+            <p>กด «ขายแพ็กเกจ» เพื่อเปิดสมาชิก — หรือใช้บัญชี demo แล้วรัน seed ตัวอย่าง</p>
+            <p className="text-[11px] text-[#8b87ad]">
+              ทดลองหักแพ็กด้วยเบอร์ {LAUNDRY_DEMO_DEDUCT_HINTS.map((h) => h.phone).join(" · ")}
+            </p>
+          </div>
         </section>
       ) : (
         <>

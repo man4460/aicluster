@@ -734,8 +734,9 @@ class SessionApiLaundryRepository implements LaundryRepository {
   }
 }
 
+/** ใช้ API session เป็นหลัก — localStorage เหลือไว้โหมดออฟไลน์/ทดสอบเท่านั้น */
 export function createLaundryRepository(): LaundryRepository {
-  return new LocalStorageLaundryRepository();
+  return new SessionApiLaundryRepository();
 }
 
 export function createLaundrySessionApiRepository(): LaundryRepository {

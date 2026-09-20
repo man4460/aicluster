@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppSignaturePad, type AppSignaturePadHandle } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { uploadLaundrySignatureBlob } from "@/systems/laundry/lib/upload-signature";
+import { LAUNDRY_DEMO_DEDUCT_HINTS } from "@/systems/laundry/lib/demo-member-phones";
 import {
   laundryCardSurfaceRadiusClass,
   laundryInlineAlertErrorClass,
@@ -236,6 +237,27 @@ export function LaundryCheckInForm({
                 {searching ? "กำลังค้นหา…" : "ค้นหา"}
               </button>
             </form>
+            <div className="mt-3 space-y-1.5">
+              <p className="text-[11px] font-semibold text-sky-900/70">เบอร์ตัวอย่างสำหรับทดลองหักแพ็ก</p>
+              <div className="flex flex-wrap gap-1.5">
+                {LAUNDRY_DEMO_DEDUCT_HINTS.map((h) => (
+                  <button
+                    key={h.phone}
+                    type="button"
+                    disabled={searching}
+                    onClick={() => {
+                      setPhone(h.phone);
+                      void searchByPhone(h.phone);
+                    }}
+                    className="inline-flex min-h-8 items-center rounded-lg border border-sky-200/90 bg-white px-2.5 py-1 text-left text-[11px] font-semibold text-sky-950 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 disabled:opacity-60"
+                    title={`ค้นหา ${h.phone}`}
+                  >
+                    <span className="tabular-nums text-[#4d47b6]">{h.phone}</span>
+                    <span className="ml-1.5 font-medium text-slate-500">{h.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -33,8 +33,11 @@ async function trialSandboxHasPackages(ownerUserId: string, slug: string, trialS
       return n > 0;
     }
     case LAUNDRY_MODULE_SLUG: {
-      const n = await prisma.laundryPackage.count({ where: { ownerUserId, trialSessionId } });
-      return n > 0;
+      // ต้องมีแพ็กเหมา (ครั้ง > 1) — มีแต่ซักรายครั้งแล้วยังหักแพ็ก/ขายสมาชิกไม่ได้ → ใช้ prod
+      const bulk = await prisma.laundryPackage.count({
+        where: { ownerUserId, trialSessionId, totalSessions: { gt: 1 } },
+      });
+      return bulk > 0;
     }
     default:
       return true;
