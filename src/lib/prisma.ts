@@ -49,7 +49,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 94: SmartGuard* (จุดตรวจ รปภ.) — client เก่าไม่มี smartGuardShop */
 /** 95: SmartGuardAttendanceStaffLink + shop attendance bridge fields */
 /** 96: attendanceStaffSyncEnabled */
-const PRISMA_SINGLETON_VERSION = 96;
+/** 97: SmartGuardPost · DutyTemplate · PostDuty · WorkSpan · wage fields */
+const PRISMA_SINGLETON_VERSION = 97;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -205,6 +206,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     smartGuardCheckpoint?: { findMany?: unknown };
     smartGuardLedgerEntry?: { findMany?: unknown };
     smartGuardAttendanceStaffLink?: { findMany?: unknown };
+    smartGuardPost?: { findMany?: unknown };
+    smartGuardWorkSpan?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -240,6 +243,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.smartGuardCheckpoint?.findMany === "function" &&
     typeof c.smartGuardLedgerEntry?.findMany === "function" &&
     typeof c.smartGuardAttendanceStaffLink?.findMany === "function" &&
+    typeof c.smartGuardPost?.findMany === "function" &&
+    typeof c.smartGuardWorkSpan?.findMany === "function" &&
     typeof c.barberPortalStaffPing?.findMany === "function" &&
     typeof c.systemActivityLog?.findMany === "function" &&
     typeof c.parkingSite?.findFirst === "function" &&

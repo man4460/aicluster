@@ -315,6 +315,11 @@ model User {
   smartGuardFinanceCategories        SmartGuardFinanceCategory[]
   smartGuardLedgerEntries            SmartGuardLedgerEntry[]
   smartGuardAttendanceStaffLinks     SmartGuardAttendanceStaffLink[]
+  smartGuardPosts                    SmartGuardPost[]
+  smartGuardDutyTemplates            SmartGuardDutyTemplate[]
+  smartGuardPostDuties               SmartGuardPostDuty[]
+  smartGuardTourAssignments          SmartGuardTourAssignment[]
+  smartGuardWorkSpans                SmartGuardWorkSpan[]
   lmsProfiles                        LmsProfile[]
   lmsCourses                         LmsCourse[]
   lmsLessons                         LmsLesson[]
@@ -8892,6 +8897,16 @@ model SmartGuardShop {
    * ซิงค์ข้อมูลพนักงานสองทางกับเช็คอิน (ชื่อ · เบอร์ · รูป · สถานะ) — แยกจากสะพานเข้ากะ
    */
   attendanceStaffSyncEnabled Boolean @default(false) @map("attendance_staff_sync_enabled")
+  /** เพดานชั่วโมงปกติต่อสัปดาห์ (นาที) — ค่าเริ่ม 2880 = 48 ชม. */
+  weeklyNormalCapMinutes Int @default(2880) @map("weekly_normal_cap_minutes")
+  /** เพดานชั่วโมงปกติต่อวัน (นาที) — ค่าเริ่ม 480 = 8 ชม. */
+  dailyNormalCapMinutes  Int @default(480) @map("daily_normal_cap_minutes")
+  /** ตัวคูณ OT วันทำงาน — ค่าเริ่ม 1.5 ตามกฎหมาย */
+  otMultiplier           Decimal @default(1.5) @map("ot_multiplier") @db.Decimal(4, 2)
+  /** ตัวคูณทำงานวันหยุด — ค่าเริ่ม 2.0 */
+  holidayMultiplier      Decimal @default(2.0) @map("holiday_multiplier") @db.Decimal(4, 2)
+  /** ตัวคูณ OT วันหยุด — ค่าเริ่ม 3.0 */
+  holidayOtMultiplier    Decimal @default(3.0) @map("holiday_ot_multiplier") @db.Decimal(4, 2)
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -8906,6 +8921,11 @@ model SmartGuardShop {
   financeCategories  SmartGuardFinanceCategory[]
   ledgerEntries      SmartGuardLedgerEntry[]
   attendanceStaffLinks SmartGuardAttendanceStaffLink[]
+  posts              SmartGuardPost[]
+  dutyTemplates      SmartGuardDutyTemplate[]
+  postDuties         SmartGuardPostDuty[]
+  tourAssignments    SmartGuardTourAssignment[]
+  workSpans          SmartGuardWorkSpan[]
 
   @@unique([ownerUserId, trialSessionId], map: "sgt_shop_owner_trial_uniq")
   @@unique([slug, trialSessionId], map: "sgt_shop_slug_trial_uniq")
@@ -8934,6 +8954,176 @@ model SmartGuardAttendanceStaffLink {
   @@unique([shopId, rosterEntryId], map: "sgt_att_link_shop_roster_uniq")
   @@index([ownerUserId, trialSessionId], map: "sgt_att_link_owner_trial_idx")
   @@map("smart_guard_attendance_staff_links")
+}
+
+/**
+ * จุดรักษาการณ์ (ป้อม/ประตู/ล็อบบี้) — คนละตารางกับจุดตรวจสายสแกน
+ */
+model SmartGuardPost {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String   @db.VarChar(200)
+  code             String?  @db.VarChar(40)
+  zoneLabel        String?  @map("zone_label") @db.VarChar(120)
+  buildingLabel    String?  @map("building_label") @db.VarChar(120)
+  /** JSON checkpointId[] ที่อยู่ในโซนนี้ — สำหรับช่วยมอบหมายสายตรวจ */
+  linkedCheckpointIdsJson String @default("[]") @map("linked_checkpoint_ids_json") @db.Text
+  requiredStaffPerShift Int @default(1) @map("required_staff_per_shift")
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  note             String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  duties SmartGuardPostDuty[]
+
+  @@unique([shopId, code], map: "sgt_post_shop_code_uniq")
+  @@index([shopId, isActive], map: "sgt_post_shop_active_idx")
+  @@index([ownerUserId, trialSessionId], map: "sgt_post_owner_trial_idx")
+  @@map("smart_guard_posts")
+}
+
+/**
+ * แม่แบบกะ — เช่น 12 ชม. (8 ปกติ + 4 OT) หรือ 8 ชม.
+ */
+model SmartGuardDutyTemplate {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String   @db.VarChar(120)
+  startHm          String   @map("start_hm") @db.VarChar(5)
+  endHm            String   @map("end_hm") @db.VarChar(5)
+  /** นาทีตามแผน เช่น 720 = 12 ชม. */
+  plannedMinutes   Int      @map("planned_minutes")
+  breakMinutes     Int      @default(0) @map("break_minutes")
+  /** เพดานปกติต่อกะ (นาที) — มัก 480 */
+  normalCapMinutes Int      @default(480) @map("normal_cap_minutes")
+  /**
+   * POST | TOUR | BOTH — บทบาทที่แม่แบบนี้รองรับ
+   */
+  roleMask         String   @default("BOTH") @map("role_mask") @db.VarChar(16)
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  postDuties      SmartGuardPostDuty[]
+  tourAssignments SmartGuardTourAssignment[]
+  shiftLogs       SmartGuardShiftLog[]
+
+  @@index([shopId, isActive], map: "sgt_duty_tpl_shop_active_idx")
+  @@map("smart_guard_duty_templates")
+}
+
+/**
+ * จัดเวรรายวัน — ประจำจุดรักษาการณ์
+ */
+model SmartGuardPostDuty {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /** YYYY-MM-DD Bangkok */
+  dutyOn         String   @map("duty_on") @db.VarChar(10)
+  postId         String   @map("post_id")
+  post           SmartGuardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffId        String   @map("staff_id")
+  staff          SmartGuardStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  templateId     String   @map("template_id")
+  template       SmartGuardDutyTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  /**
+   * PLANNED | CHECKED_IN | DONE | ABSENT | SWAPPED
+   */
+  status         String   @default("PLANNED") @db.VarChar(24)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  shiftLogs       SmartGuardShiftLog[]
+  tourAssignments SmartGuardTourAssignment[]
+
+  @@unique([shopId, dutyOn, postId, staffId], map: "sgt_post_duty_uniq")
+  @@index([shopId, dutyOn], map: "sgt_post_duty_shop_on_idx")
+  @@index([staffId, dutyOn], map: "sgt_post_duty_staff_on_idx")
+  @@map("smart_guard_post_duties")
+}
+
+/**
+ * มอบหมายสายตรวจรายวัน — คนประจำจุดอาจได้รับมอบหมายสายตรวจด้วย
+ */
+model SmartGuardTourAssignment {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  dutyOn         String   @map("duty_on") @db.VarChar(10)
+  scheduleId     String   @map("schedule_id")
+  schedule       SmartGuardSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  staffId        String   @map("staff_id")
+  staff          SmartGuardStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  templateId     String?  @map("template_id")
+  template       SmartGuardDutyTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  /** ถ้ามอบหมายสายขณะประจำจุด — ผูก PostDuty */
+  postDutyId     String?  @map("post_duty_id")
+  postDuty       SmartGuardPostDuty? @relation(fields: [postDutyId], references: [id], onDelete: SetNull)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([shopId, dutyOn, scheduleId, staffId], map: "sgt_tour_assign_uniq")
+  @@index([shopId, dutyOn], map: "sgt_tour_assign_shop_on_idx")
+  @@index([postDutyId], map: "sgt_tour_assign_post_duty_idx")
+  @@map("smart_guard_tour_assignments")
+}
+
+/**
+ * สรุปชั่วโมง/ค่าจ้างรายคนรายวัน (จาก ShiftLog จริง)
+ */
+model SmartGuardWorkSpan {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  staffId          String   @map("staff_id")
+  staff            SmartGuardStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  shiftLogId       String   @map("shift_log_id")
+  shiftLog         SmartGuardShiftLog @relation(fields: [shiftLogId], references: [id], onDelete: Cascade)
+  /** YYYY-MM-DD Bangkok — วันเริ่มกะ */
+  workOn           String   @map("work_on") @db.VarChar(10)
+  clockMinutes     Int      @default(0) @map("clock_minutes")
+  normalMinutes    Int      @default(0) @map("normal_minutes")
+  otMinutes        Int      @default(0) @map("ot_minutes")
+  /**
+   * NONE | WEEKLY_HOLIDAY | PUBLIC
+   */
+  holidayKind      String   @default("NONE") @map("holiday_kind") @db.VarChar(24)
+  wageNormalBaht   Int      @default(0) @map("wage_normal_baht")
+  wageOtBaht       Int      @default(0) @map("wage_ot_baht")
+  wageHolidayBaht  Int      @default(0) @map("wage_holiday_baht")
+  totalBaht        Int      @default(0) @map("total_baht")
+  /** JSON flags เช่น WEEKLY_NORMAL_EXCEEDED */
+  flagsJson        String   @default("[]") @map("flags_json") @db.Text
+  locked           Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([shiftLogId], map: "sgt_work_span_shift_uniq")
+  @@index([shopId, workOn], map: "sgt_work_span_shop_on_idx")
+  @@index([staffId, workOn], map: "sgt_work_span_staff_on_idx")
+  @@map("smart_guard_work_spans")
 }
 
 model SmartGuardCheckpoint {
@@ -9010,6 +9200,7 @@ model SmartGuardSchedule {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   tourLogs SmartGuardTourLog[]
+  tourAssignments SmartGuardTourAssignment[]
 
   @@index([shopId, isActive], map: "sgt_sched_shop_active_idx")
   @@map("smart_guard_schedules")
@@ -9028,8 +9219,11 @@ model SmartGuardStaff {
   pinHash        String?  @map("pin_hash") @db.VarChar(100)
   workStartHm    String?  @map("work_start_hm") @db.VarChar(5)
   workEndHm      String?  @map("work_end_hm") @db.VarChar(5)
+  /** ค่าแรงเหมากะ (legacy / อ้างอิง) — คิดเงินจริงใช้ hourlyRateBaht */
   wageBahtPerShift Int    @default(0) @map("wage_baht_per_shift")
   otBahtPerHour  Int      @default(0) @map("ot_baht_per_hour")
+  /** ค่าจ้างรายชั่วโมงปกติ (บาท) — คิดตามกฎหมาย */
+  hourlyRateBaht Int      @default(0) @map("hourly_rate_baht")
   isActive       Boolean  @default(true) @map("is_active")
   note           String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
@@ -9040,6 +9234,9 @@ model SmartGuardStaff {
   incidents     SmartGuardIncident[]
   ledgerEntries SmartGuardLedgerEntry[]
   attendanceLinks SmartGuardAttendanceStaffLink[]
+  postDuties    SmartGuardPostDuty[]
+  tourAssignments SmartGuardTourAssignment[]
+  workSpans     SmartGuardWorkSpan[]
 
   @@index([shopId, isActive], map: "sgt_staff_shop_active_idx")
   @@index([ownerUserId, trialSessionId], map: "sgt_staff_owner_trial_idx")
@@ -9055,16 +9252,25 @@ model SmartGuardShiftLog {
   shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   staffId        String   @map("staff_id")
   staff          SmartGuardStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  /** YYYY-MM-DD Bangkok */
+  /** YYYY-MM-DD Bangkok — วันเริ่มกะ */
   shiftOn        String   @map("shift_on") @db.VarChar(10)
   checkInAt      DateTime? @map("check_in_at")
   checkOutAt     DateTime? @map("check_out_at")
+  /** นาทีพักที่หักจากชั่วโมงทำงาน */
+  breakMinutes   Int      @default(0) @map("break_minutes")
+  templateId     String?  @map("template_id")
+  template       SmartGuardDutyTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  postDutyId     String?  @map("post_duty_id")
+  postDuty       SmartGuardPostDuty? @relation(fields: [postDutyId], references: [id], onDelete: SetNull)
   note           String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  workSpans SmartGuardWorkSpan[]
+
   @@index([shopId, shiftOn], map: "sgt_shift_shop_on_idx")
   @@index([staffId], map: "sgt_shift_staff_idx")
+  @@index([postDutyId], map: "sgt_shift_post_duty_idx")
   @@map("smart_guard_shift_logs")
 }
 

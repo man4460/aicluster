@@ -19,6 +19,7 @@ export type SmartGuardStaffDto = {
   workEndHm: string | null;
   wageBahtPerShift: number;
   otBahtPerHour: number;
+  hourlyRateBaht: number;
 };
 
 function mapStaff(row: {
@@ -31,6 +32,7 @@ function mapStaff(row: {
   workEndHm: string | null;
   wageBahtPerShift: number;
   otBahtPerHour: number;
+  hourlyRateBaht: number;
 }): SmartGuardStaffDto {
   return {
     id: row.id,
@@ -42,6 +44,7 @@ function mapStaff(row: {
     workEndHm: row.workEndHm,
     wageBahtPerShift: row.wageBahtPerShift,
     otBahtPerHour: row.otBahtPerHour,
+    hourlyRateBaht: row.hourlyRateBaht,
   };
 }
 
@@ -92,6 +95,10 @@ export async function POST(req: Request) {
           ? body.photoUrl.trim().slice(0, 512) || null
           : null;
     const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
+    const hourlyRateBaht =
+      typeof body.hourlyRateBaht === "number" && body.hourlyRateBaht >= 0
+        ? Math.min(100000, Math.floor(body.hourlyRateBaht))
+        : 0;
 
     const row = await prisma.smartGuardStaff.create({
       data: {
@@ -102,6 +109,7 @@ export async function POST(req: Request) {
         phone: phoneVal,
         photoUrl,
         isActive,
+        hourlyRateBaht,
       },
     });
 

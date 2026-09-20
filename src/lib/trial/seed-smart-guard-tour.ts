@@ -11,6 +11,7 @@ import { hashStaffDailyPin } from "@/lib/modules/staff-daily-pin";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
+import { recomputeSmartGuardWorkSpan } from "@/systems/smart-guard-tour/lib/work-span";
 import {
   SMART_GUARD_PORTAL_SAMPLE_BANNER,
   SMART_GUARD_PORTAL_SAMPLE_GALLERY,
@@ -79,19 +80,23 @@ function bangkokAt(ymd: string, hour: number, minute = 0): Date {
 
 async function wipeSmartGuardDemoData(db: DbLike, ownerUserId: string, trialSessionId: string) {
   const where = { ownerUserId, trialSessionId };
+  await db.smartGuardWorkSpan.deleteMany({ where });
+  await db.smartGuardTourAssignment.deleteMany({ where });
   await db.smartGuardAttendanceStaffLink.deleteMany({ where });
   await db.smartGuardCheckpointVideo.deleteMany({ where });
   await db.smartGuardIncidentImage.deleteMany({ where });
   await db.smartGuardTourLog.deleteMany({ where });
   await db.smartGuardIncident.deleteMany({ where });
   await db.smartGuardShiftLog.deleteMany({ where });
+  await db.smartGuardPostDuty.deleteMany({ where });
+  await db.smartGuardDutyTemplate.deleteMany({ where });
+  await db.smartGuardPost.deleteMany({ where });
   await db.smartGuardCheckpoint.deleteMany({ where });
   await db.smartGuardSchedule.deleteMany({ where });
   await db.smartGuardLedgerEntry.deleteMany({ where });
   await db.smartGuardAsset.deleteMany({ where });
   await db.smartGuardContact.deleteMany({ where });
   await db.smartGuardStaff.deleteMany({ where });
-  // หมวดการเงิน + ร้าน — ensure จะสร้างใหม่/เติมหมวด
   await db.smartGuardFinanceCategory.deleteMany({ where });
   await db.smartGuardShop.deleteMany({ where });
 }
@@ -155,6 +160,7 @@ async function seedSmartGuardActivity(
           workEndHm: i % 2 === 0 ? "20:00" : "08:00",
           wageBahtPerShift: 600 + (i % 3) * 50,
           otBahtPerHour: 80,
+          hourlyRateBaht: 50 + (i % 4) * 5,
           isActive: i < 7,
           note: DEMO_NOTE,
         },
@@ -230,6 +236,118 @@ async function seedSmartGuardActivity(
     },
   });
 
+  const templates = await db.smartGuardDutyTemplate.findMany({
+    where: { shopId },
+    orderBy: { sortOrder: "asc" },
+  });
+  const tplDay = templates.find((t) => t.startHm === "07:00") ?? templates[0];
+  const tplNight = templates.find((t) => t.startHm === "19:00") ?? templates[1] ?? tplDay;
+
+  const posts = await Promise.all(
+    [
+      { name: "ป้อมประตูหลัก A", code: "POST-A", zoneLabel: "ทางเข้า", buildingLabel: "อาคาร A", req: 1 },
+      { name: "ป้อมลานจอด B1", code: "POST-B1", zoneLabel: "จอดรถ", buildingLabel: "อาคาร B", req: 1 },
+      { name: "ล็อบบี้ A", code: "POST-LOB", zoneLabel: "ล็อบบี้", buildingLabel: "อาคาร A", req: 1 },
+      { name: "คลัง C", code: "POST-C", zoneLabel: "คลัง", buildingLabel: "อาคาร C", req: 2 },
+    ].map((p, i) =>
+      db.smartGuardPost.create({
+        data: {
+          ...scope,
+          name: p.name,
+          code: p.code,
+          zoneLabel: p.zoneLabel,
+          buildingLabel: p.buildingLabel,
+          linkedCheckpointIdsJson: JSON.stringify(
+            checkpoints.slice(i * 2, i * 2 + 2).map((c) => c.id),
+          ),
+          requiredStaffPerShift: p.req,
+          sortOrder: (i + 1) * 10,
+          isActive: true,
+          note: DEMO_NOTE,
+        },
+      }),
+    ),
+  );
+
+  if (tplDay && posts[0] && staffRows[0]) {
+    const d0 = await db.smartGuardPostDuty.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        postId: posts[0].id,
+        staffId: staffRows[0].id,
+        templateId: tplDay.id,
+        status: "CHECKED_IN",
+      },
+    });
+    await db.smartGuardTourAssignment.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        scheduleId: scheduleDay.id,
+        staffId: staffRows[0].id,
+        templateId: tplDay.id,
+        postDutyId: d0.id,
+      },
+    });
+  }
+  if (tplDay && posts[1] && staffRows[2]) {
+    await db.smartGuardPostDuty.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        postId: posts[1].id,
+        staffId: staffRows[2].id,
+        templateId: tplDay.id,
+        status: "PLANNED",
+      },
+    });
+  }
+  if (tplNight && posts[2] && staffRows[1]) {
+    const dN = await db.smartGuardPostDuty.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        postId: posts[2].id,
+        staffId: staffRows[1].id,
+        templateId: tplNight.id,
+        status: "PLANNED",
+      },
+    });
+    await db.smartGuardTourAssignment.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        scheduleId: scheduleNight.id,
+        staffId: staffRows[1].id,
+        templateId: tplNight.id,
+        postDutyId: dN.id,
+      },
+    });
+  }
+  if (tplDay && posts[3] && staffRows[4] && staffRows[6]) {
+    await db.smartGuardPostDuty.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        postId: posts[3].id,
+        staffId: staffRows[4].id,
+        templateId: tplDay.id,
+        status: "PLANNED",
+      },
+    });
+    await db.smartGuardPostDuty.create({
+      data: {
+        ...scope,
+        dutyOn: today,
+        postId: posts[3].id,
+        staffId: staffRows[6].id,
+        templateId: tplDay.id,
+        status: "PLANNED",
+      },
+    });
+  }
+
   const contacts = await Promise.all(
     (
       [
@@ -278,7 +396,8 @@ async function seedSmartGuardActivity(
     ),
   );
 
-  // กะย้อนหลัง 7 วัน + กะวันนี้ (ส่วนใหญ่ยังเข้ากะ · คนหนึ่งเช็คเอาท์แล้ว)
+  // กะย้อนหลัง 7 วัน + กะวันนี้ (ส่วนใหญ่ยังเข้ากะ · คนหนึ่งเช็คเอาท์แล้ว · คนแรกครบ 7 วันเพื่อเตือน 48 ชม.)
+  const completedShiftIds: string[] = [];
   for (let dayAgo = 0; dayAgo < 7; dayAgo++) {
     const day = bangkokDateKeyMinusDays(today, dayAgo);
     for (let i = 0; i < staffRows.length; i++) {
@@ -294,12 +413,18 @@ async function seedSmartGuardActivity(
       const checkOutH = isDayShift ? 19 : 7;
       let checkOutAt: Date | null = null;
       if (dayAgo === 0) {
-        if (isDayShift && i === 3) checkOutAt = bangkokAt(day, 16, 0);
+        // คนแรก + คนที่ 3 เลิกกะวันนี้ — คนแรกครบสัปดาห์ (เตือนเกิน 48 ชม.ปกติ)
+        if (isDayShift && (i === 0 || i === 3)) checkOutAt = bangkokAt(day, i === 0 ? 19 : 16, 0);
       } else {
         const outDay = isDayShift ? day : bangkokDateKeyMinusDays(day, -1);
         checkOutAt = bangkokAt(outDay, checkOutH, 5);
       }
-      await db.smartGuardShiftLog.create({
+      const tpl = isDayShift ? tplDay : tplNight;
+      const dutyForDay = await db.smartGuardPostDuty.findFirst({
+        where: { shopId, staffId: staffRows[i]!.id, dutyOn: day },
+        select: { id: true, templateId: true },
+      });
+      const created = await db.smartGuardShiftLog.create({
         data: {
           ...scope,
           staffId: staffRows[i]!.id,
@@ -307,9 +432,22 @@ async function seedSmartGuardActivity(
           checkInAt: bangkokAt(day, checkInH, 30 + (i % 15)),
           checkOutAt,
           note: DEMO_NOTE,
+          templateId: dutyForDay?.templateId ?? tpl?.id ?? null,
+          postDutyId: dutyForDay?.id ?? null,
         },
       });
+      if (checkOutAt) completedShiftIds.push(created.id);
     }
+  }
+
+  // คำนวณ WorkSpan ตามลำดับวัน (เก่า→ใหม่) เพื่อสะสมสัปดาห์ถูกต้อง
+  const completedOrdered = await db.smartGuardShiftLog.findMany({
+    where: { id: { in: completedShiftIds } },
+    orderBy: [{ shiftOn: "asc" }, { checkInAt: "asc" }],
+    select: { id: true },
+  });
+  for (const row of completedOrdered) {
+    await recomputeSmartGuardWorkSpan(db, row.id);
   }
 
   // สายตรวจย้อนหลัง + วันนี้

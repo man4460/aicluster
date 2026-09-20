@@ -76,6 +76,13 @@ export type CatalogShift = {
   staffName: string;
   staffPhone: string | null;
   onDuty: boolean;
+  /** สรุปค่าแรงจาก WorkSpan (null ถ้ายังไม่เลิกกะ / ยังไม่คำนวณ) */
+  clockMinutes: number | null;
+  normalMinutes: number | null;
+  otMinutes: number | null;
+  totalBaht: number | null;
+  weeklyNormalExceeded: boolean;
+  missingHourlyRate: boolean;
 };
 
 export type CatalogLedger = {

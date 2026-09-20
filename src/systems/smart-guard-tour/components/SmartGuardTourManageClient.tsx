@@ -9,6 +9,8 @@ import {
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
 import { SmartGuardTourStaffPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourStaffPanel";
+import { SmartGuardTourPostsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourPostsPanel";
+import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
 import {
   SmartGuardTourAssetsList,
   SmartGuardTourCheckpointsList,
@@ -57,6 +59,10 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
         </p>
         {tab === "staff" ? (
           <SmartGuardTourStaffPanel />
+        ) : tab === "posts" ? (
+          <SmartGuardTourPostsPanel />
+        ) : tab === "duties" ? (
+          <SmartGuardTourDutiesPanel />
         ) : tab === "checkpoints" ? (
           <SmartGuardTourCheckpointsList rows={data.checkpoints} />
         ) : tab === "schedules" ? (

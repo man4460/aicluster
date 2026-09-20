@@ -36,6 +36,7 @@ type StaffRow = {
   phone: string | null;
   photoUrl: string | null;
   isActive: boolean;
+  hourlyRateBaht?: number;
 };
 
 type FormState = {
@@ -43,6 +44,7 @@ type FormState = {
   phone: string;
   photoUrl: string | null;
   isActive: boolean;
+  hourlyRateBaht: number;
 };
 
 const emptyForm = (): FormState => ({
@@ -50,6 +52,7 @@ const emptyForm = (): FormState => ({
   phone: "",
   photoUrl: null,
   isActive: true,
+  hourlyRateBaht: 50,
 });
 
 function IconFilterFunnel({ className }: { className?: string }) {
@@ -119,6 +122,7 @@ export function SmartGuardTourStaffPanel() {
       phone: row.phone ?? "",
       photoUrl: row.photoUrl,
       isActive: row.isActive,
+      hourlyRateBaht: row.hourlyRateBaht ?? 0,
     });
     setModalOpen(true);
   }
@@ -163,6 +167,7 @@ export function SmartGuardTourStaffPanel() {
         phone: form.phone.trim() || null,
         photoUrl: form.photoUrl,
         isActive: form.isActive,
+        hourlyRateBaht: form.hourlyRateBaht,
       };
       const res = await fetch(
         editingId
@@ -331,6 +336,7 @@ export function SmartGuardTourStaffPanel() {
                       title={row.phone ?? undefined}
                     >
                       {row.phone || "ไม่มีเบอร์"}
+                      {row.hourlyRateBaht ? ` · ${row.hourlyRateBaht}฿/ชม.` : ""}
                     </p>
                     <p className={cn("mt-0.5 text-[10px] font-bold", row.isActive ? "text-emerald-800/80" : "text-slate-600")}>
                       {row.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
@@ -445,6 +451,19 @@ export function SmartGuardTourStaffPanel() {
               ) : null}
             </div>
           </div>
+          <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+            ค่าจ้างรายชั่วโมง (บาท)
+            <input
+              type="number"
+              min={0}
+              className={smartGuardTourFieldClass}
+              value={form.hourlyRateBaht}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, hourlyRateBaht: Math.max(0, Number(e.target.value) || 0) }))
+              }
+              disabled={busy}
+            />
+          </label>
           <label className="flex items-center gap-2 text-xs font-bold text-[#1e1b4b]">
             <input
               type="checkbox"

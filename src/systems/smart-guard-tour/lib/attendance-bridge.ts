@@ -6,6 +6,26 @@ import {
 } from "@/lib/modules/config";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
+import { recomputeSmartGuardWorkSpan } from "@/systems/smart-guard-tour/lib/work-span";
+
+async function resolveDutyLink(params: {
+  shopId: string;
+  staffId: string;
+  shiftOn: string;
+}): Promise<{ postDutyId: string; templateId: string } | null> {
+  const duty = await prisma.smartGuardPostDuty.findFirst({
+    where: {
+      shopId: params.shopId,
+      staffId: params.staffId,
+      dutyOn: params.shiftOn,
+      status: { not: "CANCELLED" },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, templateId: true },
+  });
+  if (!duty) return null;
+  return { postDutyId: duty.id, templateId: duty.templateId };
+}
 
 export type AttendanceBridgeLog = {
   id: number;
@@ -206,6 +226,7 @@ async function syncSmartGuardShiftFromAttendanceInner(params: {
       // มีกะปิดแล้ววันนี้ — ไม่สร้างซ้ำจากเช็คอินซ้ำ
       return;
     }
+    const dutyLink = await resolveDutyLink({ shopId: shop.id, staffId, shiftOn });
     await prisma.smartGuardShiftLog.create({
       data: {
         ownerUserId,
@@ -215,6 +236,9 @@ async function syncSmartGuardShiftFromAttendanceInner(params: {
         shiftOn,
         checkInAt: at,
         note: `attendance:${log.id}`,
+        ...(dutyLink
+          ? { postDutyId: dutyLink.postDutyId, templateId: dutyLink.templateId }
+          : {}),
       },
     });
     return;
@@ -231,15 +255,34 @@ async function syncSmartGuardShiftFromAttendanceInner(params: {
     orderBy: { id: "desc" },
   });
   if (!open) return;
+
+  let patch: {
+    checkOutAt: Date;
+    note: string;
+    postDutyId?: string;
+    templateId?: string;
+  } = {
+    checkOutAt: at,
+    note: open.note?.includes(`attendance:${log.id}`)
+      ? open.note
+      : [open.note, `attendance-out:${log.id}`].filter(Boolean).join(" · ").slice(0, 500),
+  };
+  if (!open.postDutyId || !open.templateId) {
+    const dutyLink = await resolveDutyLink({ shopId: shop.id, staffId, shiftOn });
+    if (dutyLink) {
+      patch = {
+        ...patch,
+        postDutyId: open.postDutyId ?? dutyLink.postDutyId,
+        templateId: open.templateId ?? dutyLink.templateId,
+      };
+    }
+  }
+
   await prisma.smartGuardShiftLog.update({
     where: { id: open.id },
-    data: {
-      checkOutAt: at,
-      note: open.note?.includes(`attendance:${log.id}`)
-        ? open.note
-        : [open.note, `attendance-out:${log.id}`].filter(Boolean).join(" · ").slice(0, 500),
-    },
+    data: patch,
   });
+  await recomputeSmartGuardWorkSpan(prisma, open.id);
 }
 
 /** ใช้ใน UI ตั้งค่า — มีสิทธิ์โมดูลเช็คอินหรือไม่ */

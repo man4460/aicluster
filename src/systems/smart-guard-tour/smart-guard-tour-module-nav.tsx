@@ -14,6 +14,7 @@ export type SmartGuardTourModuleNavKey = "dashboard" | "manage" | "finance" | "s
 
 export type SmartGuardTourDashboardTabKey =
   | "overview"
+  | "posts"
   | "checkpoints"
   | "tour-logs"
   | "incidents"
@@ -22,6 +23,8 @@ export type SmartGuardTourDashboardTabKey =
 
 export type SmartGuardTourManageTabKey =
   | "checkpoints"
+  | "posts"
+  | "duties"
   | "schedules"
   | "staff"
   | "incidents"
@@ -55,10 +58,11 @@ export const SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS: {
   shortLabel?: string;
 }[] = [
   { key: "overview", label: "ภาพรวม" },
+  { key: "posts", label: "ประจำจุดวันนี้", shortLabel: "ประจำจุด" },
   { key: "checkpoints", label: "จุดตรวจ", shortLabel: "จุดตรวจ" },
   { key: "tour-logs", label: "บันทึกสายตรวจ", shortLabel: "สายตรวจ" },
   { key: "incidents", label: "เหตุการณ์", shortLabel: "เหตุการณ์" },
-  { key: "shifts", label: "กะ / ผลัด", shortLabel: "กะ" },
+  { key: "shifts", label: "กะ / ค่าแรง", shortLabel: "กะ" },
   { key: "map-view", label: "แผนที่", shortLabel: "แผนที่" },
 ];
 
@@ -68,6 +72,8 @@ export const SMART_GUARD_TOUR_MANAGE_TAB_ITEMS: {
   shortLabel?: string;
 }[] = [
   { key: "checkpoints", label: "จุดตรวจ" },
+  { key: "posts", label: "จุดรักษาการณ์", shortLabel: "ประจำจุด" },
+  { key: "duties", label: "จัดเวร", shortLabel: "จัดเวร" },
   { key: "schedules", label: "ตารางตรวจ", shortLabel: "ตาราง" },
   { key: "staff", label: "พนักงาน รปภ.", shortLabel: "พนักงาน" },
   { key: "incidents", label: "เหตุการณ์" },
@@ -117,6 +123,7 @@ export function parseSmartGuardTourDashboardTab(
 ): SmartGuardTourDashboardTabKey {
   if (
     raw === "checkpoints" ||
+    raw === "posts" ||
     raw === "tour-logs" ||
     raw === "incidents" ||
     raw === "shifts" ||
@@ -136,6 +143,8 @@ export function parseSmartGuardTourManageTab(
   raw: string | null | undefined,
 ): SmartGuardTourManageTabKey {
   if (
+    raw === "posts" ||
+    raw === "duties" ||
     raw === "schedules" ||
     raw === "staff" ||
     raw === "incidents" ||

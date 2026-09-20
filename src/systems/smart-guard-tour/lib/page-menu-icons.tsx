@@ -13,6 +13,7 @@ import {
   Route,
   Settings,
   Shield,
+  ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -60,6 +61,8 @@ export function smartGuardTourDashboardTabIcon(key: SmartGuardTourDashboardTabKe
   switch (key) {
     case "overview":
       return <LayoutDashboard className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "posts":
+      return <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "checkpoints":
       return <MapPin className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "tour-logs":
@@ -79,8 +82,12 @@ export function smartGuardTourManageTabIcon(key: SmartGuardTourManageTabKey): Re
   switch (key) {
     case "checkpoints":
       return <MapPin className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "schedules":
+    case "posts":
+      return <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "duties":
       return <CalendarClock className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "schedules":
+      return <Route className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "staff":
       return <Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "incidents":

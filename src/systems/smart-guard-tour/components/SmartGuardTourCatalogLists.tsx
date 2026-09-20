@@ -36,6 +36,7 @@ import {
   type CatalogTourLog,
   type SmartGuardCatalog,
 } from "@/systems/smart-guard-tour/lib/catalog-types";
+import { formatMinutesHm } from "@/systems/smart-guard-tour/lib/wage-engine";
 import {
   smartGuardTourFieldClass,
   smartGuardTourFilterChipClass,
@@ -690,11 +691,13 @@ export function SmartGuardTourTourLogsList({ rows }: { rows: CatalogTourLog[] })
 export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
   const [filterOpen, setFilterOpen] = useState(true);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"all" | "on" | "done">("all");
+  const [status, setStatus] = useState<"all" | "on" | "done" | "warn48">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const warn48Count = rows.filter((r) => r.weeklyNormalExceeded).length;
   const filtered = rows.filter((r) => {
     if (status === "on" && !r.onDuty) return false;
     if (status === "done" && r.onDuty) return false;
+    if (status === "warn48" && !r.weeklyNormalExceeded) return false;
     const needle = q.trim().toLowerCase();
     if (!needle) return true;
     return (
@@ -706,7 +709,7 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
 
   return (
     <ListShell
-      title="กะ / ผลัด"
+      title="กะ / ค่าแรง"
       filterOpen={filterOpen}
       setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
@@ -715,6 +718,7 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "on", label: "เข้ากะ", count: rows.filter((r) => r.onDuty).length },
         { key: "done", label: "เลิกกะ", count: rows.filter((r) => !r.onDuty).length },
+        { key: "warn48", label: "เกิน 48 ชม.", count: warn48Count },
       ]}
       activeChip={status}
       onChip={(k) => setStatus(k as typeof status)}
@@ -727,22 +731,43 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
       }}
       summary={filtersActive ? `${filtered.length}/${rows.length} รายการ` : `${rows.length} รายการ`}
     >
+      {warn48Count > 0 ? (
+        <div
+          className="mb-2 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-semibold text-amber-900"
+          role="status"
+        >
+          มี {warn48Count} กะที่ชั่วโมงปกติสะสมสัปดาห์เกิน 48 ชม. (แจ้งเตือนอย่างเดียว — ไม่บล็อก)
+        </div>
+      ) : null}
       <div className="space-y-2">
         {filtered.length === 0 ? (
           <AppEmptyState>{rows.length === 0 ? "ยังไม่มีกะ" : "ไม่พบตามตัวกรอง"}</AppEmptyState>
         ) : (
-          filtered.map((r) => (
-            <RowCard
-              key={r.id}
-              tone={r.onDuty ? "orange" : "slate"}
-              icon={<Shield className="h-5 w-5" strokeWidth={2.25} />}
-              title={r.staffName}
-              lines={[
-                `${r.shiftOn} · ${r.onDuty ? "เข้ากะอยู่" : "เลิกกะแล้ว"}`,
-                `เข้า ${formatHm(r.checkInAt)} · ออก ${formatHm(r.checkOutAt)}`,
-              ]}
-            />
-          ))
+          filtered.map((r) => {
+            const wageLines: string[] = [
+              `${r.shiftOn} · ${r.onDuty ? "เข้ากะอยู่" : "เลิกกะแล้ว"}`,
+              `เข้า ${formatHm(r.checkInAt)} · ออก ${formatHm(r.checkOutAt)}`,
+            ];
+            if (r.clockMinutes != null) {
+              wageLines.push(
+                `นาฬิกา ${formatMinutesHm(r.clockMinutes)} · ปกติ ${formatMinutesHm(r.normalMinutes ?? 0)} · OT ${formatMinutesHm(r.otMinutes ?? 0)}`,
+              );
+            }
+            if (r.totalBaht != null) {
+              wageLines.push(`ค่าแรง ≈ ฿${r.totalBaht.toLocaleString("th-TH")}`);
+            }
+            if (r.weeklyNormalExceeded) wageLines.push("⚠ เกิน 48 ชม.ปกติ/สัปดาห์");
+            if (r.missingHourlyRate) wageLines.push("ยังไม่ได้ตั้งเรทรายชั่วโมง");
+            return (
+              <RowCard
+                key={r.id}
+                tone={r.weeklyNormalExceeded ? "rose" : r.onDuty ? "orange" : "slate"}
+                icon={<Shield className="h-5 w-5" strokeWidth={2.25} />}
+                title={r.staffName}
+                lines={wageLines}
+              />
+            );
+          })
         )}
       </div>
     </ListShell>

@@ -27,6 +27,7 @@ import {
   SmartGuardTourTourLogsList,
   useSmartGuardCatalog,
 } from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
+import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
 import {
   smartGuardTourCardIconTileClass,
   type SmartGuardTourCardTone,
@@ -203,6 +204,8 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
               ))}
             </div>
           </div>
+        ) : tab === "posts" ? (
+          <SmartGuardTourDutiesPanel readOnly />
         ) : tab === "checkpoints" ? (
           <SmartGuardTourCheckpointsList rows={data.checkpoints} />
         ) : tab === "tour-logs" ? (

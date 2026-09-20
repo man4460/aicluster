@@ -1,8 +1,12 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { isPrismaUniqueViolation } from "@/lib/prisma-errors";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { ensureSmartGuardDutyTemplates } from "@/systems/smart-guard-tour/lib/work-span";
 
-type Db = Pick<PrismaClient, "smartGuardShop" | "smartGuardFinanceCategory" | "user">;
+type Db = Pick<
+  PrismaClient,
+  "smartGuardShop" | "smartGuardFinanceCategory" | "smartGuardDutyTemplate" | "user"
+>;
 
 function defaultSlugFromUser(username: string, ownerUserId: string): string {
   const base = username
@@ -65,6 +69,7 @@ export async function ensureSmartGuardShop(
   });
   if (existing) {
     await ensureDefaultFinanceCategories(db, existing.id, ownerUserId, trialSessionId);
+    await ensureSmartGuardDutyTemplates(db, existing.id, ownerUserId, trialSessionId);
     return existing;
   }
 
@@ -97,6 +102,7 @@ export async function ensureSmartGuardShop(
       },
     });
     await ensureDefaultFinanceCategories(db, shop.id, ownerUserId, trialSessionId);
+    await ensureSmartGuardDutyTemplates(db, shop.id, ownerUserId, trialSessionId);
     return shop;
   } catch (e) {
     if (isPrismaUniqueViolation(e)) {
@@ -105,6 +111,7 @@ export async function ensureSmartGuardShop(
       });
       if (raced) {
         await ensureDefaultFinanceCategories(db, raced.id, ownerUserId, trialSessionId);
+        await ensureSmartGuardDutyTemplates(db, raced.id, ownerUserId, trialSessionId);
         return raced;
       }
     }

@@ -70,7 +70,19 @@ export async function GET() {
           where: base,
           orderBy: [{ shiftOn: "desc" }, { checkInAt: "desc" }],
           take: 80,
-          include: { staff: { select: { displayName: true, phone: true } } },
+          include: {
+            staff: { select: { displayName: true, phone: true } },
+            workSpans: {
+              take: 1,
+              select: {
+                clockMinutes: true,
+                normalMinutes: true,
+                otMinutes: true,
+                totalBaht: true,
+                flagsJson: true,
+              },
+            },
+          },
         }),
         prisma.smartGuardLedgerEntry.findMany({
           where: base,
@@ -167,15 +179,31 @@ export async function GET() {
         scanLat: dec(t.scanLat),
         scanLng: dec(t.scanLng),
       })),
-      shifts: shifts.map((s) => ({
-        id: s.id,
-        shiftOn: s.shiftOn,
-        checkInAt: s.checkInAt?.toISOString() ?? null,
-        checkOutAt: s.checkOutAt?.toISOString() ?? null,
-        staffName: s.staff.displayName,
-        staffPhone: s.staff.phone,
-        onDuty: Boolean(s.checkInAt && !s.checkOutAt),
-      })),
+      shifts: shifts.map((s) => {
+        const span = s.workSpans[0] ?? null;
+        let flags: string[] = [];
+        try {
+          const parsed = JSON.parse(span?.flagsJson ?? "[]") as unknown;
+          if (Array.isArray(parsed)) flags = parsed.map(String);
+        } catch {
+          /* ignore */
+        }
+        return {
+          id: s.id,
+          shiftOn: s.shiftOn,
+          checkInAt: s.checkInAt?.toISOString() ?? null,
+          checkOutAt: s.checkOutAt?.toISOString() ?? null,
+          staffName: s.staff.displayName,
+          staffPhone: s.staff.phone,
+          onDuty: Boolean(s.checkInAt && !s.checkOutAt),
+          clockMinutes: span?.clockMinutes ?? null,
+          normalMinutes: span?.normalMinutes ?? null,
+          otMinutes: span?.otMinutes ?? null,
+          totalBaht: span?.totalBaht ?? null,
+          weeklyNormalExceeded: flags.includes("WEEKLY_NORMAL_EXCEEDED"),
+          missingHourlyRate: flags.includes("MISSING_HOURLY_RATE"),
+        };
+      }),
       ledger: ledger.map((e) => ({
         id: e.id,
         kind: e.kind,

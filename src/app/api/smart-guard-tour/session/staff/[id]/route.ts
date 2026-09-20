@@ -32,6 +32,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       phone?: string | null;
       photoUrl?: string | null;
       isActive?: boolean;
+      hourlyRateBaht?: number;
     } = {};
 
     if (typeof body.displayName === "string") {
@@ -54,6 +55,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
       }
     }
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;
+    if (typeof body.hourlyRateBaht === "number" && body.hourlyRateBaht >= 0) {
+      data.hourlyRateBaht = Math.min(100000, Math.floor(body.hourlyRateBaht));
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "ไม่มีฟิลด์ที่อัปเดต" }, { status: 400 });
@@ -77,6 +81,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         workEndHm: row.workEndHm,
         wageBahtPerShift: row.wageBahtPerShift,
         otBahtPerHour: row.otBahtPerHour,
+        hourlyRateBaht: row.hourlyRateBaht,
       },
     });
   } catch (e) {
