@@ -1,4 +1,4 @@
-"use client";
+Ôªø"use client";
 
 import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -20,14 +20,14 @@ import {
 export type SmartGuardTourPageSubNavItem = {
   key: string;
   label: string;
-  /** ªÈ“¬ —Èπ∫π¡◊Õ∂◊Õ (‡¡◊ËÕ‰¡Ë„™È dropdown) */
+  /** ‡∏õ‡πâ‡∏≤‡∏¢‡∏™‡∏±‡πâ‡∏ô‡∏ö‡∏ô‡∏°‡∏∑‡∏≠‡∏ñ‡∏∑‡∏≠ (‡πÄ‡∏°‡∏∑‡πà‡∏≠‡πÑ‡∏°‡πà‡πÉ‡∏ä‡πâ dropdown) */
   shortLabel?: string;
   icon?: ReactNode;
 };
 
 /**
- * À—«°“√Ï¥·∫∫´—°ºÈ“ ? ‰Õ§ÕπÀ—«¢ÈÕ + ™◊ËÕ‡¡πŸÀ≈—° + À—«¢ÈÕ¬ËÕ¬ ? ·∑Á∫/ªÿË¡¢«“ ? ‡ Èπ∫“ß ? ‡π◊ÈÕÀ“
- * ·∑Á∫ ?2: ¡◊Õ∂◊Õ„™È select Õ—µ‚π¡—µ‘ (À√◊Õ Ëß mobileSelect) ? sm+ · ¥ß pill
+ * ‡∏´‡∏±‡∏ß‡∏Å‡∏≤‡∏£‡πå‡∏î‡πÅ‡∏ö‡∏ö‡∏ã‡∏±‡∏Å‡∏ú‡πâ‡∏≤ ‚Äî ‡πÑ‡∏≠‡∏Ñ‡∏≠‡∏ô‡∏´‡∏±‡∏ß‡∏Ç‡πâ‡∏≠ + ‡∏ä‡∏∑‡πà‡∏≠‡πÄ‡∏°‡∏ô‡∏π‡∏´‡∏•‡∏±‡∏Å + ‡∏´‡∏±‡∏ß‡∏Ç‡πâ‡∏≠‡∏¢‡πà‡∏≠‡∏¢ ¬∑ ‡πÅ‡∏ó‡πá‡∏ö/‡∏õ‡∏∏‡πà‡∏°‡∏Ç‡∏ß‡∏≤ ¬∑ ‡πÄ‡∏™‡πâ‡∏ô‡∏ö‡∏≤‡∏á ¬∑ ‡πÄ‡∏ô‡∏∑‡πâ‡∏≠‡∏´‡∏≤
+ * ‡πÅ‡∏ó‡πá‡∏ö ‚â•2: ‡∏°‡∏∑‡∏≠‡∏ñ‡∏∑‡∏≠‡πÉ‡∏ä‡πâ select ‡∏≠‡∏±‡∏ï‡πÇ‡∏ô‡∏°‡∏±‡∏ï‡∏¥ (‡∏´‡∏£‡∏∑‡∏≠‡∏™‡πà‡∏á mobileSelect) ¬∑ sm+ ‡πÅ‡∏™‡∏î‡∏á pill
  */
 export function SmartGuardTourPageSubNav({
   title,
@@ -53,14 +53,14 @@ export function SmartGuardTourPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** override ªÈ“¬/id ?  Ëß false ‡æ◊ËÕ∫—ß§—∫ pill ∫π¡◊Õ∂◊Õ */
+  /** override ‡∏õ‡πâ‡∏≤‡∏¢/id ‚Äî ‡∏™‡πà‡∏á false ‡πÄ‡∏û‡∏∑‡πà‡∏≠‡∏ö‡∏±‡∏á‡∏Ñ‡∏±‡∏ö pill ‡∏ö‡∏ô‡∏°‡∏∑‡∏≠‡∏ñ‡∏∑‡∏≠ */
   mobileSelect?: {
     id: string;
     label: string;
   } | false;
   children?: ReactNode;
   className?: string;
-  /** §≈“ ÀËÕ‡π◊ÈÕÀ“„µÈÀ—«‡¡πŸ (‡™Ëπ flex-1  ”À√—∫‡µÁ¡§«“¡ Ÿß) */
+  /** ‡∏Ñ‡∏•‡∏≤‡∏™‡∏´‡πà‡∏≠‡πÄ‡∏ô‡∏∑‡πâ‡∏≠‡∏´‡∏≤‡πÉ‡∏ï‡πâ‡∏´‡∏±‡∏ß‡πÄ‡∏°‡∏ô‡∏π (‡πÄ‡∏ä‡πà‡∏ô flex-1 ‡∏™‡∏≥‡∏´‡∏£‡∏±‡∏ö‡πÄ‡∏ï‡πá‡∏°‡∏Ñ‡∏ß‡∏≤‡∏°‡∏™‡∏π‡∏á) */
   contentClassName?: string;
 }) {
   const autoId = useId();
@@ -72,7 +72,7 @@ export function SmartGuardTourPageSubNav({
       ? null
       : mobileSelect ??
         (hasTabs && (items?.length ?? 0) >= 2
-          ? { id: `smart-guard-tour-subnav-${autoId}`, label: ariaLabel ?? "‡≈◊Õ°‡¡πŸ" }
+          ? { id: `smart-guard-tour-subnav-${autoId}`, label: ariaLabel ?? "‡πÄ‡∏•‡∏∑‡∏≠‡∏Å‡πÄ‡∏°‡∏ô‡∏π" }
           : null);
   const useMobileSelect = Boolean(hasTabs && autoMobileSelect);
 
@@ -108,7 +108,7 @@ export function SmartGuardTourPageSubNav({
           <div
             className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
             role="group"
-            aria-label={ariaLabel ?? "‡§√◊ËÕß¡◊ÕÀπÈ“"}
+            aria-label={ariaLabel ?? "‡πÄ‡∏Ñ‡∏£‡∏∑‡πà‡∏≠‡∏á‡∏°‡∏∑‡∏≠‡∏´‡∏ô‡πâ‡∏≤"}
           >
             {hasTabs ? (
               useMobileSelect ? (
@@ -116,7 +116,7 @@ export function SmartGuardTourPageSubNav({
                   <nav
                     className={smartGuardTourInlineSubNavShellClass}
                     role="tablist"
-                    aria-label={ariaLabel ?? "‡¡πŸ¬ËÕ¬"}
+                    aria-label={ariaLabel ?? "‡πÄ‡∏°‡∏ô‡∏π‡∏¢‡πà‡∏≠‡∏¢"}
                   >
                     {items!.map((item) => {
                       const active = activeKey === item.key;
@@ -144,7 +144,7 @@ export function SmartGuardTourPageSubNav({
                   </nav>
                 </div>
               ) : (
-                <nav className={smartGuardTourInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "‡¡πŸ¬ËÕ¬"}>
+                <nav className={smartGuardTourInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "‡πÄ‡∏°‡∏ô‡∏π‡∏¢‡πà‡∏≠‡∏¢"}>
                   {items!.map((item) => {
                     const active = activeKey === item.key;
                     const short = item.shortLabel ?? item.label;
@@ -219,7 +219,7 @@ export function SmartGuardTourPageSubNav({
   );
 }
 
-/** ∫≈ÁÕ°¬ËÕ¬„π‡π◊ÈÕÀ“ ? §—Ëπ‡ Èπ∫“ß (∫≈ÁÕ°·√° Ëß first) ? ‰¡Ë„ ËÀ—«´È”∂È“À—«Õ¬ŸË·∂«‡¡πŸ·≈È« */
+/** ‡∏ö‡∏•‡πá‡∏≠‡∏Å‡∏¢‡πà‡∏≠‡∏¢‡πÉ‡∏ô‡πÄ‡∏ô‡∏∑‡πâ‡∏≠‡∏´‡∏≤ ‚Äî ‡∏Ñ‡∏±‡πà‡∏ô‡πÄ‡∏™‡πâ‡∏ô‡∏ö‡∏≤‡∏á (‡∏ö‡∏•‡πá‡∏≠‡∏Å‡πÅ‡∏£‡∏Å‡∏™‡πà‡∏á first) ¬∑ ‡πÑ‡∏°‡πà‡πÉ‡∏™‡πà‡∏´‡∏±‡∏ß‡∏ã‡πâ‡∏≥‡∏ñ‡πâ‡∏≤‡∏´‡∏±‡∏ß‡∏≠‡∏¢‡∏π‡πà‡πÅ‡∏ñ‡∏ß‡πÄ‡∏°‡∏ô‡∏π‡πÅ‡∏•‡πâ‡∏ß */
 export function SmartGuardTourPageBlock({
   title,
   titleIcon,
