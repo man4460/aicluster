@@ -72,6 +72,13 @@ export async function GET() {
           take: 80,
           include: {
             staff: { select: { displayName: true, phone: true } },
+            template: { select: { name: true, startHm: true, endHm: true } },
+            postDuty: {
+              select: {
+                post: { select: { name: true } },
+                template: { select: { name: true, startHm: true, endHm: true } },
+              },
+            },
             workSpans: {
               take: 1,
               select: {
@@ -188,6 +195,7 @@ export async function GET() {
         } catch {
           /* ignore */
         }
+        const tpl = s.postDuty?.template ?? s.template;
         return {
           id: s.id,
           shiftOn: s.shiftOn,
@@ -202,6 +210,10 @@ export async function GET() {
           totalBaht: span?.totalBaht ?? null,
           weeklyNormalExceeded: flags.includes("WEEKLY_NORMAL_EXCEEDED"),
           missingHourlyRate: flags.includes("MISSING_HOURLY_RATE"),
+          missingDuty: flags.includes("MISSING_DUTY") || !tpl,
+          postName: s.postDuty?.post.name ?? null,
+          templateName: tpl?.name ?? null,
+          templateHm: tpl ? `${tpl.startHm}–${tpl.endHm}` : null,
         };
       }),
       ledger: ledger.map((e) => ({

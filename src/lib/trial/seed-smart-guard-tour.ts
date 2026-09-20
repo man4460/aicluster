@@ -11,7 +11,7 @@ import { hashStaffDailyPin } from "@/lib/modules/staff-daily-pin";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
-import { recomputeSmartGuardWorkSpan } from "@/systems/smart-guard-tour/lib/work-span";
+import { recomputeSmartGuardWorkSpanForPostDuty } from "@/systems/smart-guard-tour/lib/work-span";
 import {
   SMART_GUARD_PORTAL_SAMPLE_BANNER,
   SMART_GUARD_PORTAL_SAMPLE_GALLERY,
@@ -348,6 +348,33 @@ async function seedSmartGuardActivity(
     });
   }
 
+  // จัดเวรย้อนหลัง 6 วันให้คนแรก (กะ 12 ชม.) — ค่าแรงนับตามกะ → เกิน 48 ชม.ปกติ/สัปดาห์
+  if (tplDay && posts[0] && staffRows[0]) {
+    for (let dayAgo = 1; dayAgo < 7; dayAgo++) {
+      const day = bangkokDateKeyMinusDays(today, dayAgo);
+      await db.smartGuardPostDuty.create({
+        data: {
+          ...scope,
+          dutyOn: day,
+          postId: posts[0].id,
+          staffId: staffRows[0].id,
+          templateId: tplDay.id,
+          status: "DONE",
+        },
+      });
+    }
+  }
+
+  // คำนวณ WorkSpan จากทุก PostDuty (แหล่งชั่วโมง = แม่แบบกะ ไม่ใช่เช็คอิน)
+  const allDuties = await db.smartGuardPostDuty.findMany({
+    where: { shopId },
+    orderBy: [{ dutyOn: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  for (const d of allDuties) {
+    await recomputeSmartGuardWorkSpanForPostDuty(db, d.id);
+  }
+
   const contacts = await Promise.all(
     (
       [
@@ -396,8 +423,7 @@ async function seedSmartGuardActivity(
     ),
   );
 
-  // กะย้อนหลัง 7 วัน + กะวันนี้ (ส่วนใหญ่ยังเข้ากะ · คนหนึ่งเช็คเอาท์แล้ว · คนแรกครบ 7 วันเพื่อเตือน 48 ชม.)
-  const completedShiftIds: string[] = [];
+  // กะจากเช็คอิน demo — สถานะเข้างานเท่านั้น (ค่าแรงมาจาก PostDuty แล้ว)
   for (let dayAgo = 0; dayAgo < 7; dayAgo++) {
     const day = bangkokDateKeyMinusDays(today, dayAgo);
     for (let i = 0; i < staffRows.length; i++) {
@@ -409,12 +435,13 @@ async function seedSmartGuardActivity(
       } else if (i > 5) {
         continue;
       }
+      // คนแรกมีเวรป้อม + WorkSpan แล้ว — ไม่สร้าง ShiftLog ซ้ำ
+      if (i === 0) continue;
       const checkInH = isDayShift ? 7 : 19;
       const checkOutH = isDayShift ? 19 : 7;
       let checkOutAt: Date | null = null;
       if (dayAgo === 0) {
-        // คนแรก + คนที่ 3 เลิกกะวันนี้ — คนแรกครบสัปดาห์ (เตือนเกิน 48 ชม.ปกติ)
-        if (isDayShift && (i === 0 || i === 3)) checkOutAt = bangkokAt(day, i === 0 ? 19 : 16, 0);
+        if (isDayShift && i === 3) checkOutAt = bangkokAt(day, 16, 0);
       } else {
         const outDay = isDayShift ? day : bangkokDateKeyMinusDays(day, -1);
         checkOutAt = bangkokAt(outDay, checkOutH, 5);
@@ -424,7 +451,7 @@ async function seedSmartGuardActivity(
         where: { shopId, staffId: staffRows[i]!.id, dutyOn: day },
         select: { id: true, templateId: true },
       });
-      const created = await db.smartGuardShiftLog.create({
+      await db.smartGuardShiftLog.create({
         data: {
           ...scope,
           staffId: staffRows[i]!.id,
@@ -436,18 +463,7 @@ async function seedSmartGuardActivity(
           postDutyId: dutyForDay?.id ?? null,
         },
       });
-      if (checkOutAt) completedShiftIds.push(created.id);
     }
-  }
-
-  // คำนวณ WorkSpan ตามลำดับวัน (เก่า→ใหม่) เพื่อสะสมสัปดาห์ถูกต้อง
-  const completedOrdered = await db.smartGuardShiftLog.findMany({
-    where: { id: { in: completedShiftIds } },
-    orderBy: [{ shiftOn: "asc" }, { checkInAt: "asc" }],
-    select: { id: true },
-  });
-  for (const row of completedOrdered) {
-    await recomputeSmartGuardWorkSpan(db, row.id);
   }
 
   // สายตรวจย้อนหลัง + วันนี้

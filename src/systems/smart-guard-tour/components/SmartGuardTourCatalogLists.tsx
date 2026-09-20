@@ -745,15 +745,17 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
         ) : (
           filtered.map((r) => {
             const wageLines: string[] = [
-              `${r.shiftOn} · ${r.onDuty ? "เข้ากะอยู่" : "เลิกกะแล้ว"}`,
-              `เข้า ${formatHm(r.checkInAt)} · ออก ${formatHm(r.checkOutAt)}`,
+              `${r.shiftOn}${r.postName ? ` · ${r.postName}` : ""}${r.templateName ? ` · ${r.templateName}` : ""}`,
             ];
-            if (r.clockMinutes != null) {
+            if (r.templateHm) wageLines.push(`เวลาตามกะ ${r.templateHm}`);
+            if (r.clockMinutes != null && !r.missingDuty) {
               wageLines.push(
-                `นาฬิกา ${formatMinutesHm(r.clockMinutes)} · ปกติ ${formatMinutesHm(r.normalMinutes ?? 0)} · OT ${formatMinutesHm(r.otMinutes ?? 0)}`,
+                `ตามกะ ${formatMinutesHm(r.clockMinutes)} · ปกติ ${formatMinutesHm(r.normalMinutes ?? 0)} · OT ${formatMinutesHm(r.otMinutes ?? 0)}`,
               );
+            } else if (r.missingDuty) {
+              wageLines.push("ยังไม่ผูกเวรจุด/แม่แบบกะ — ไม่นับค่าแรงจากเช็คอิน");
             }
-            if (r.totalBaht != null) {
+            if (r.totalBaht != null && !r.missingDuty) {
               wageLines.push(`ค่าแรง ≈ ฿${r.totalBaht.toLocaleString("th-TH")}`);
             }
             if (r.weeklyNormalExceeded) wageLines.push("⚠ เกิน 48 ชม.ปกติ/สัปดาห์");

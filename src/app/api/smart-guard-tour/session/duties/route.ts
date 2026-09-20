@@ -9,7 +9,7 @@ import {
   bangkokWeekSunday,
   rollupWeekWages,
 } from "@/systems/smart-guard-tour/lib/wage-engine";
-import { ensureSmartGuardDutyTemplates } from "@/systems/smart-guard-tour/lib/work-span";
+import { ensureSmartGuardDutyTemplates, recomputeSmartGuardWorkSpanForPostDuty } from "@/systems/smart-guard-tour/lib/work-span";
 
 export async function GET(req: Request) {
   try {
@@ -233,6 +233,8 @@ export async function POST(req: Request) {
         },
       });
 
+      await recomputeSmartGuardWorkSpanForPostDuty(prisma, duty.id);
+
       // มอบหมายสายตรวจควบ (ถ้าส่ง scheduleId)
       let tourAssignment = null;
       const scheduleId = typeof body.scheduleId === "string" ? body.scheduleId : "";
@@ -316,6 +318,8 @@ export async function DELETE(req: Request) {
       });
       if (!row) return NextResponse.json({ error: "ไม่พบเวร" }, { status: 404 });
       await prisma.smartGuardTourAssignment.deleteMany({ where: { postDutyId: dutyId } });
+      // ลบกะห่อเวร → WorkSpan cascade ตาม shiftLog
+      await prisma.smartGuardShiftLog.deleteMany({ where: { postDutyId: dutyId } });
       await prisma.smartGuardPostDuty.delete({ where: { id: dutyId } });
       return NextResponse.json({ ok: true });
     }

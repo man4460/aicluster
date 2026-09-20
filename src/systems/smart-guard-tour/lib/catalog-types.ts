@@ -76,13 +76,17 @@ export type CatalogShift = {
   staffName: string;
   staffPhone: string | null;
   onDuty: boolean;
-  /** สรุปค่าแรงจาก WorkSpan (null ถ้ายังไม่เลิกกะ / ยังไม่คำนวณ) */
+  /** สรุปค่าแรงจากกะที่จัดเวร (null ถ้ายังไม่ผูกเวร/ยังไม่คำนวณ) */
   clockMinutes: number | null;
   normalMinutes: number | null;
   otMinutes: number | null;
   totalBaht: number | null;
   weeklyNormalExceeded: boolean;
   missingHourlyRate: boolean;
+  missingDuty: boolean;
+  postName: string | null;
+  templateName: string | null;
+  templateHm: string | null;
 };
 
 export type CatalogLedger = {

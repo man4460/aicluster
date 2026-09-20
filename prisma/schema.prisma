@@ -9088,7 +9088,7 @@ model SmartGuardTourAssignment {
 }
 
 /**
- * สรุปชั่วโมง/ค่าจ้างรายคนรายวัน (จาก ShiftLog จริง)
+ * สรุปชั่วโมง/ค่าจ้างรายคนรายวัน — นับจากกะ/จุดเวรที่จัด (DutyTemplate) ไม่ใช่เช็คอิน/เอาท์
  */
 model SmartGuardWorkSpan {
   id               String   @id @default(cuid())

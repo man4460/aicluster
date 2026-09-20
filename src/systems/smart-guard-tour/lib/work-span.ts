@@ -2,6 +2,8 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import {
   computeDayWage,
   bangkokWeekMonday,
+  dutyWorkMinutes,
+  bangkokDutyBounds,
   resolveHolidayKind,
   type HolidayKind,
   type WageShopRates,
@@ -9,7 +11,12 @@ import {
 
 type Db = Pick<
   PrismaClient,
-  "smartGuardShop" | "smartGuardStaff" | "smartGuardShiftLog" | "smartGuardWorkSpan" | "smartGuardDutyTemplate"
+  | "smartGuardShop"
+  | "smartGuardStaff"
+  | "smartGuardShiftLog"
+  | "smartGuardWorkSpan"
+  | "smartGuardDutyTemplate"
+  | "smartGuardPostDuty"
 >;
 
 function dec(v: { toString(): string } | number | null | undefined, fallback: number): number {
@@ -17,6 +24,8 @@ function dec(v: { toString(): string } | number | null | undefined, fallback: nu
   const n = typeof v === "number" ? v : Number(v.toString());
   return Number.isFinite(n) ? n : fallback;
 }
+
+const NON_COUNTABLE = new Set(["ABSENT", "CANCELLED", "SWAPPED"]);
 
 export async function ensureSmartGuardDutyTemplates(
   db: Pick<PrismaClient, "smartGuardDutyTemplate">,
@@ -66,23 +75,9 @@ export async function ensureSmartGuardDutyTemplates(
   });
 }
 
-/** คำนวณ/อัปเซิร์ต WorkSpan จาก ShiftLog หนึ่งแถว */
-export async function recomputeSmartGuardWorkSpan(
-  db: Db,
-  shiftLogId: string,
-  holidayKind?: HolidayKind,
-): Promise<void> {
-  const shift = await db.smartGuardShiftLog.findUnique({
-    where: { id: shiftLogId },
-    include: {
-      template: { select: { normalCapMinutes: true, plannedMinutes: true } },
-      staff: { select: { hourlyRateBaht: true } },
-    },
-  });
-  if (!shift) return;
-
+async function shopRates(db: Db, shopId: string): Promise<WageShopRates | null> {
   const shop = await db.smartGuardShop.findUnique({
-    where: { id: shift.shopId },
+    where: { id: shopId },
     select: {
       dailyNormalCapMinutes: true,
       weeklyNormalCapMinutes: true,
@@ -91,68 +86,73 @@ export async function recomputeSmartGuardWorkSpan(
       holidayOtMultiplier: true,
     },
   });
-  if (!shop) return;
-
-  const rates: WageShopRates = {
+  if (!shop) return null;
+  return {
     dailyNormalCapMinutes: shop.dailyNormalCapMinutes,
     weeklyNormalCapMinutes: shop.weeklyNormalCapMinutes,
     otMultiplier: dec(shop.otMultiplier, 1.5),
     holidayMultiplier: dec(shop.holidayMultiplier, 2),
     holidayOtMultiplier: dec(shop.holidayOtMultiplier, 3),
   };
+}
 
-  const resolvedHoliday = holidayKind ?? resolveHolidayKind(shift.shiftOn, null);
-
-  const weekStart = bangkokWeekMonday(shift.shiftOn);
+async function upsertWorkSpanForShift(
+  db: Db,
+  params: {
+    shift: {
+      id: string;
+      ownerUserId: string;
+      trialSessionId: string;
+      shopId: string;
+      staffId: string;
+      shiftOn: string;
+    };
+    staffHourlyRateBaht: number;
+    rates: WageShopRates;
+    dutyMinutes: number | null;
+    templateNormalCapMinutes: number | null;
+    plannedMinutes: number | null;
+    holidayKind: HolidayKind;
+    countable: boolean;
+  },
+): Promise<void> {
+  const weekStart = bangkokWeekMonday(params.shift.shiftOn);
   const prior = await db.smartGuardWorkSpan.aggregate({
     where: {
-      shopId: shift.shopId,
-      staffId: shift.staffId,
-      workOn: { gte: weekStart, lte: shift.shiftOn },
-      NOT: { shiftLogId },
+      shopId: params.shift.shopId,
+      staffId: params.shift.staffId,
+      workOn: { gte: weekStart, lte: params.shift.shiftOn },
+      NOT: { shiftLogId: params.shift.id },
     },
     _sum: { normalMinutes: true },
   });
-  const weekBefore = prior._sum.normalMinutes ?? 0;
 
-  const planned = shift.template?.plannedMinutes ?? null;
-  const templateCap = shift.template?.normalCapMinutes ?? null;
   const breakdown = computeDayWage(
     {
-      checkInAt: shift.checkInAt,
-      checkOutAt: shift.checkOutAt,
-      breakMinutes: shift.breakMinutes,
-      templateNormalCapMinutes: templateCap,
-      holidayKind: resolvedHoliday,
+      dutyMinutes: params.dutyMinutes,
+      templateNormalCapMinutes: params.templateNormalCapMinutes,
+      plannedMinutes: params.plannedMinutes,
+      holidayKind: params.holidayKind,
+      countable: params.countable,
     },
-    { hourlyRateBaht: shift.staff.hourlyRateBaht },
-    rates,
-    { weekNormalMinutesBeforeThisShift: weekBefore },
+    { hourlyRateBaht: params.staffHourlyRateBaht },
+    params.rates,
+    { weekNormalMinutesBeforeThisShift: prior._sum.normalMinutes ?? 0 },
   );
 
-  if (
-    planned != null &&
-    templateCap != null &&
-    breakdown.otMinutes > Math.max(0, planned - templateCap)
-  ) {
-    if (!breakdown.flags.includes("DAILY_OT_ABOVE_TEMPLATE")) {
-      breakdown.flags.push("DAILY_OT_ABOVE_TEMPLATE");
-    }
-  }
-
   const existing = await db.smartGuardWorkSpan.findUnique({
-    where: { shiftLogId },
+    where: { shiftLogId: params.shift.id },
     select: { id: true, locked: true },
   });
   if (existing?.locked) return;
 
   const data = {
-    ownerUserId: shift.ownerUserId,
-    trialSessionId: shift.trialSessionId,
-    shopId: shift.shopId,
-    staffId: shift.staffId,
-    shiftLogId: shift.id,
-    workOn: shift.shiftOn,
+    ownerUserId: params.shift.ownerUserId,
+    trialSessionId: params.shift.trialSessionId,
+    shopId: params.shift.shopId,
+    staffId: params.shift.staffId,
+    shiftLogId: params.shift.id,
+    workOn: params.shift.shiftOn,
     clockMinutes: breakdown.clockMinutes,
     normalMinutes: breakdown.normalMinutes,
     otMinutes: breakdown.otMinutes,
@@ -169,4 +169,173 @@ export async function recomputeSmartGuardWorkSpan(
   } else {
     await db.smartGuardWorkSpan.create({ data });
   }
+}
+
+/**
+ * สร้าง/อัปเดต ShiftLog ห่อ PostDuty แล้วคำนวณ WorkSpan จากแม่แบบกะ
+ * (ไม่ใช้เวลาเช็คอิน/เอาท์)
+ */
+export async function recomputeSmartGuardWorkSpanForPostDuty(
+  db: Db,
+  postDutyId: string,
+  holidayKind?: HolidayKind,
+): Promise<void> {
+  const duty = await db.smartGuardPostDuty.findUnique({
+    where: { id: postDutyId },
+    include: {
+      template: {
+        select: {
+          plannedMinutes: true,
+          breakMinutes: true,
+          normalCapMinutes: true,
+          startHm: true,
+          endHm: true,
+        },
+      },
+      staff: { select: { hourlyRateBaht: true } },
+      shiftLogs: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { id: true },
+      },
+    },
+  });
+  if (!duty) return;
+
+  const rates = await shopRates(db, duty.shopId);
+  if (!rates) return;
+
+  const bounds = bangkokDutyBounds(duty.dutyOn, duty.template.startHm, duty.template.endHm);
+  let shiftId = duty.shiftLogs[0]?.id ?? null;
+
+  if (!shiftId) {
+    const created = await db.smartGuardShiftLog.create({
+      data: {
+        ownerUserId: duty.ownerUserId,
+        trialSessionId: duty.trialSessionId,
+        shopId: duty.shopId,
+        staffId: duty.staffId,
+        shiftOn: duty.dutyOn,
+        checkInAt: bounds.start,
+        checkOutAt: bounds.end,
+        breakMinutes: duty.template.breakMinutes,
+        templateId: duty.templateId,
+        postDutyId: duty.id,
+        note: "duty-roster",
+      },
+    });
+    shiftId = created.id;
+  } else {
+    await db.smartGuardShiftLog.update({
+      where: { id: shiftId },
+      data: {
+        checkInAt: bounds.start,
+        checkOutAt: bounds.end,
+        breakMinutes: duty.template.breakMinutes,
+        templateId: duty.templateId,
+        postDutyId: duty.id,
+      },
+    });
+  }
+
+  const countable = !NON_COUNTABLE.has(duty.status);
+  await upsertWorkSpanForShift(db, {
+    shift: {
+      id: shiftId,
+      ownerUserId: duty.ownerUserId,
+      trialSessionId: duty.trialSessionId,
+      shopId: duty.shopId,
+      staffId: duty.staffId,
+      shiftOn: duty.dutyOn,
+    },
+    staffHourlyRateBaht: duty.staff.hourlyRateBaht,
+    rates,
+    dutyMinutes: dutyWorkMinutes(duty.template.plannedMinutes, duty.template.breakMinutes),
+    templateNormalCapMinutes: duty.template.normalCapMinutes,
+    plannedMinutes: duty.template.plannedMinutes,
+    holidayKind: holidayKind ?? resolveHolidayKind(duty.dutyOn, null),
+    countable,
+  });
+}
+
+/**
+ * คำนวณ WorkSpan จาก ShiftLog — ถ้าผูก PostDuty/แม่แบบกะ จะนับตามกะเท่านั้น
+ * (เช็คอิน/เอาท์ไม่ใช่แหล่งชั่วโมง)
+ */
+export async function recomputeSmartGuardWorkSpan(
+  db: Db,
+  shiftLogId: string,
+  holidayKind?: HolidayKind,
+): Promise<void> {
+  const shift = await db.smartGuardShiftLog.findUnique({
+    where: { id: shiftLogId },
+    include: {
+      template: {
+        select: {
+          plannedMinutes: true,
+          breakMinutes: true,
+          normalCapMinutes: true,
+        },
+      },
+      postDuty: {
+        select: {
+          status: true,
+          template: {
+            select: {
+              plannedMinutes: true,
+              breakMinutes: true,
+              normalCapMinutes: true,
+            },
+          },
+        },
+      },
+      staff: { select: { hourlyRateBaht: true } },
+    },
+  });
+  if (!shift) return;
+
+  const rates = await shopRates(db, shift.shopId);
+  if (!rates) return;
+
+  const tpl = shift.postDuty?.template ?? shift.template;
+  if (!tpl) {
+    // ไม่มีกะ — ไม่นับค่าแรงจากนาฬิกาเช็คอิน
+    await upsertWorkSpanForShift(db, {
+      shift: {
+        id: shift.id,
+        ownerUserId: shift.ownerUserId,
+        trialSessionId: shift.trialSessionId,
+        shopId: shift.shopId,
+        staffId: shift.staffId,
+        shiftOn: shift.shiftOn,
+      },
+      staffHourlyRateBaht: shift.staff.hourlyRateBaht,
+      rates,
+      dutyMinutes: null,
+      templateNormalCapMinutes: null,
+      plannedMinutes: null,
+      holidayKind: holidayKind ?? resolveHolidayKind(shift.shiftOn, null),
+      countable: true,
+    });
+    return;
+  }
+
+  const countable = shift.postDuty ? !NON_COUNTABLE.has(shift.postDuty.status) : true;
+  await upsertWorkSpanForShift(db, {
+    shift: {
+      id: shift.id,
+      ownerUserId: shift.ownerUserId,
+      trialSessionId: shift.trialSessionId,
+      shopId: shift.shopId,
+      staffId: shift.staffId,
+      shiftOn: shift.shiftOn,
+    },
+    staffHourlyRateBaht: shift.staff.hourlyRateBaht,
+    rates,
+    dutyMinutes: dutyWorkMinutes(tpl.plannedMinutes, tpl.breakMinutes),
+    templateNormalCapMinutes: tpl.normalCapMinutes,
+    plannedMinutes: tpl.plannedMinutes,
+    holidayKind: holidayKind ?? resolveHolidayKind(shift.shiftOn, null),
+    countable,
+  });
 }

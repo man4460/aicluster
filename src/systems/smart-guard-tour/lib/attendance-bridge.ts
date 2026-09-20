@@ -6,7 +6,6 @@ import {
 } from "@/lib/modules/config";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
-import { recomputeSmartGuardWorkSpan } from "@/systems/smart-guard-tour/lib/work-span";
 
 async function resolveDutyLink(params: {
   shopId: string;
@@ -18,7 +17,7 @@ async function resolveDutyLink(params: {
       shopId: params.shopId,
       staffId: params.staffId,
       dutyOn: params.shiftOn,
-      status: { not: "CANCELLED" },
+      status: { notIn: ["CANCELLED", "ABSENT"] },
     },
     orderBy: { createdAt: "asc" },
     select: { id: true, templateId: true },
@@ -282,7 +281,7 @@ async function syncSmartGuardShiftFromAttendanceInner(params: {
     where: { id: open.id },
     data: patch,
   });
-  await recomputeSmartGuardWorkSpan(prisma, open.id);
+  // ค่าแรงนับจากกะที่จัดเวร — ไม่คำนวณจากเวลาเช็คเอาท์
 }
 
 /** ใช้ใน UI ตั้งค่า — มีสิทธิ์โมดูลเช็คอินหรือไม่ */
