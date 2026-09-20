@@ -34,6 +34,8 @@ export type SmartGuardShopDto = {
   attendanceBranchId: number | null;
   attendanceLocationId: number | null;
   attendanceRequireMatch: boolean;
+  /** ซิงค์ชื่อ·เบอร์·รูป·สถานะ กับรายชื่อเช็คอิน */
+  attendanceStaffSyncEnabled: boolean;
 };
 
 function parseGalleryJson(raw: string | null | undefined): string[] {
@@ -81,6 +83,7 @@ export function mapSmartGuardShop(row: {
   attendanceBranchId?: number | null;
   attendanceLocationId?: number | null;
   attendanceRequireMatch?: boolean;
+  attendanceStaffSyncEnabled?: boolean;
 }): SmartGuardShopDto {
   const toNum = (v: { toString(): string } | number | null | undefined): number | null => {
     if (v == null) return null;
@@ -121,5 +124,6 @@ export function mapSmartGuardShop(row: {
     attendanceBranchId: row.attendanceBranchId ?? null,
     attendanceLocationId: row.attendanceLocationId ?? null,
     attendanceRequireMatch: row.attendanceRequireMatch !== false,
+    attendanceStaffSyncEnabled: Boolean(row.attendanceStaffSyncEnabled),
   };
 }

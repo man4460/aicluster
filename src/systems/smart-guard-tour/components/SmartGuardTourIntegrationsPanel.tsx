@@ -82,7 +82,7 @@ export function SmartGuardTourIntegrationsPanel({
   async function saveIntegrationSettings() {
     setBusy(true);
     try {
-      const wasEnabled = shop.attendanceLinkEnabled;
+      const wasStaffSync = shop.attendanceStaffSyncEnabled;
       const res = await fetch("/api/smart-guard-tour/session/shop", {
         method: "PATCH",
         credentials: "include",
@@ -92,6 +92,7 @@ export function SmartGuardTourIntegrationsPanel({
           attendanceBranchId: shop.attendanceBranchId,
           attendanceLocationId: shop.attendanceLocationId,
           attendanceRequireMatch: shop.attendanceRequireMatch,
+          attendanceStaffSyncEnabled: shop.attendanceStaffSyncEnabled,
         }),
       });
       const data = await res.json();
@@ -114,8 +115,9 @@ export function SmartGuardTourIntegrationsPanel({
       const linkData = await linkRes.json();
       if (!linkRes.ok) throw new Error(linkData.error || "บันทึกแม็ปไม่สำเร็จ");
 
-      const enabledNow = nextShop?.attendanceLinkEnabled ?? shop.attendanceLinkEnabled;
-      if (enabledNow) {
+      const staffSyncNow =
+        nextShop?.attendanceStaffSyncEnabled ?? shop.attendanceStaffSyncEnabled;
+      if (staffSyncNow) {
         const syncRes = await fetch("/api/smart-guard-tour/session/attendance-links", {
           method: "PUT",
           credentials: "include",
@@ -125,9 +127,9 @@ export function SmartGuardTourIntegrationsPanel({
         const syncData = await syncRes.json();
         if (!syncRes.ok) throw new Error(syncData.error || "ซิงค์พนักงานไม่สำเร็จ");
         notice.success(
-          wasEnabled
+          wasStaffSync
             ? "บันทึกแล้ว และซิงค์พนักงานแล้ว"
-            : `เปิดเชื่อมแล้ว — จับคู่ ${syncData.matched ?? 0} · สร้าง รปภ. ${syncData.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${syncData.createdRoster ?? 0}`,
+            : `เปิดซิงค์พนักงานแล้ว — จับคู่ ${syncData.matched ?? 0} · สร้าง รปภ. ${syncData.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${syncData.createdRoster ?? 0}`,
         );
       } else {
         notice.success("บันทึกการเชื่อมระบบแล้ว");
@@ -220,12 +222,30 @@ export function SmartGuardTourIntegrationsPanel({
         <span>
           <span className="block text-sm font-black text-[#1e1b4b]">เชื่อมเข้ากะจากเช็คอิน</span>
           <span className="mt-0.5 block text-xs text-[#66638c]">
-            เมื่อพนักงานเช็คอิน/เอาต์ในเช็คอินอัจฉริยะ ระบบจะเปิด/ปิดกะในจุดตรวจอัตโนมัติ — และซิงค์ชื่อ · เบอร์ · รูป · สถานะใช้งาน สองทาง
+            เมื่อพนักงานเช็คอิน/เอาต์ในเช็คอินอัจฉริยะ ระบบจะเปิด/ปิดกะในจุดตรวจอัตโนมัติ
           </span>
         </span>
       </label>
 
-      {shop.attendanceLinkEnabled ? (
+      <label className="flex items-start gap-3 rounded-[1.25rem] border border-white/50 bg-white/70 p-3">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4"
+          checked={shop.attendanceStaffSyncEnabled}
+          disabled={busy}
+          onChange={(e) =>
+            onShopPatched({ ...shop, attendanceStaffSyncEnabled: e.target.checked })
+          }
+        />
+        <span>
+          <span className="block text-sm font-black text-[#1e1b4b]">ซิงค์ข้อมูลพนักงาน</span>
+          <span className="mt-0.5 block text-xs text-[#66638c]">
+            เปิดแล้ว ชื่อ · เบอร์ · รูป · สถานะใช้งาน จะซิงค์สองทางระหว่างจุดตรวจกับรายชื่อเช็คอิน
+          </span>
+        </span>
+      </label>
+
+      {shop.attendanceStaffSyncEnabled ? (
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"

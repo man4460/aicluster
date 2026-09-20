@@ -116,8 +116,11 @@ export async function PUT(req: Request) {
     };
 
     if (body.syncStaff === true) {
-      if (!shop.attendanceLinkEnabled) {
-        return NextResponse.json({ error: "เปิดเชื่อมเข้ากะก่อนจึงซิงค์พนักงานได้" }, { status: 400 });
+      if (!shop.attendanceStaffSyncEnabled) {
+        return NextResponse.json(
+          { error: "เปิดซิงค์ข้อมูลพนักงานในตั้งค่าก่อน" },
+          { status: 400 },
+        );
       }
       const result = await runFullStaffSyncForShop(shop.id);
       return NextResponse.json({ ok: true, ...result });

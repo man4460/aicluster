@@ -48,7 +48,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 90: HomeFinanceAiPromptCategory */
 /** 94: SmartGuard* (จุดตรวจ รปภ.) — client เก่าไม่มี smartGuardShop */
 /** 95: SmartGuardAttendanceStaffLink + shop attendance bridge fields */
-const PRISMA_SINGLETON_VERSION = 95;
+/** 96: attendanceStaffSyncEnabled */
+const PRISMA_SINGLETON_VERSION = 96;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

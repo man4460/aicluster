@@ -8886,8 +8886,12 @@ model SmartGuardShop {
   attendanceBranchId       Int?    @map("attendance_branch_id")
   /** จุดเช็คอินที่นับเป็นเข้ากะ (null = ทุกจุดในสาขาที่เลือก) */
   attendanceLocationId     Int?    @map("attendance_location_id")
-  /** ต้องมีแม็ปพนักงานในตารางลิงก์ถึงจะซิงก์ (false = อนุญาตจับคู่เบอร์อัตโนมัติ) */
+  /** ต้องมีแม็ปพนักงานในตารางลิงก์ถึงจะซิงก์กะ (false = อนุญาตจับคู่เบอร์อัตโนมัติ) */
   attendanceRequireMatch   Boolean @default(true) @map("attendance_require_match")
+  /**
+   * ซิงค์ข้อมูลพนักงานสองทางกับเช็คอิน (ชื่อ · เบอร์ · รูป · สถานะ) — แยกจากสะพานเข้ากะ
+   */
+  attendanceStaffSyncEnabled Boolean @default(false) @map("attendance_staff_sync_enabled")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

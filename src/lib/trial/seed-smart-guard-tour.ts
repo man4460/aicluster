@@ -455,6 +455,7 @@ async function seedSmartGuardActivity(
       where: { id: shopId },
       data: {
         attendanceLinkEnabled: true,
+        attendanceStaffSyncEnabled: true,
         attendanceRequireMatch: true,
       },
     });

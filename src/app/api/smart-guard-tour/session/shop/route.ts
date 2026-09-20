@@ -137,6 +137,9 @@ export async function PATCH(req: Request) {
         ...(typeof body.attendanceRequireMatch === "boolean"
           ? { attendanceRequireMatch: body.attendanceRequireMatch }
           : {}),
+        ...(typeof body.attendanceStaffSyncEnabled === "boolean"
+          ? { attendanceStaffSyncEnabled: body.attendanceStaffSyncEnabled }
+          : {}),
       },
     });
     return NextResponse.json({ shop: mapSmartGuardShop(updated) });

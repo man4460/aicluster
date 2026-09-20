@@ -195,7 +195,11 @@ async function syncStaffAfterRosterChangeInner(params: {
   if (!roster) return;
 
   const shops = await prisma.smartGuardShop.findMany({
-    where: { ownerUserId, trialSessionId, attendanceLinkEnabled: true },
+    where: {
+      ownerUserId,
+      trialSessionId,
+      attendanceStaffSyncEnabled: true,
+    },
     select: { id: true },
   });
   if (shops.length === 0) return;
@@ -283,10 +287,10 @@ async function syncStaffAfterGuardChangeInner(params: {
       id: true,
       ownerUserId: true,
       trialSessionId: true,
-      attendanceLinkEnabled: true,
+      attendanceStaffSyncEnabled: true,
     },
   });
-  if (!shop?.attendanceLinkEnabled) return;
+  if (!shop?.attendanceStaffSyncEnabled) return;
   if (!(await ownerHasBothModules(shop.ownerUserId))) return;
 
   const guard = await prisma.smartGuardStaff.findFirst({
@@ -414,10 +418,10 @@ async function runFullStaffSyncForShopInner(shopId: string): Promise<FullStaffSy
       id: true,
       ownerUserId: true,
       trialSessionId: true,
-      attendanceLinkEnabled: true,
+      attendanceStaffSyncEnabled: true,
     },
   });
-  if (!shop?.attendanceLinkEnabled) return result;
+  if (!shop?.attendanceStaffSyncEnabled) return result;
   if (!(await ownerHasBothModules(shop.ownerUserId))) return result;
 
   const [guards, roster] = await Promise.all([
