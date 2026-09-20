@@ -243,6 +243,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data,
     });
 
+    const { syncStaffAfterRosterChange } = await import(
+      "@/systems/smart-guard-tour/lib/staff-sync"
+    );
+    void syncStaffAfterRosterChange({
+      ownerUserId: mod.billingUserId,
+      trialSessionId: scope.trialSessionId,
+      rosterEntryId: row.id,
+    });
+
     return NextResponse.json({
       entry: {
         id: row.id,
@@ -291,6 +300,25 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     where: { id, ownerUserId: mod.billingUserId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
+
+  const linkedCount = await prisma.smartGuardAttendanceStaffLink.count({
+    where: { rosterEntryId: id },
+  });
+  if (linkedCount > 0) {
+    await prisma.attendanceRosterEntry.update({
+      where: { id },
+      data: { isActive: false },
+    });
+    const { syncStaffAfterRosterChange } = await import(
+      "@/systems/smart-guard-tour/lib/staff-sync"
+    );
+    await syncStaffAfterRosterChange({
+      ownerUserId: mod.billingUserId,
+      trialSessionId: scope.trialSessionId,
+      rosterEntryId: id,
+    });
+    return NextResponse.json({ ok: true, softDeactivated: true });
+  }
 
   await prisma.attendanceRosterEntry.delete({ where: { id } });
   return NextResponse.json({ ok: true });

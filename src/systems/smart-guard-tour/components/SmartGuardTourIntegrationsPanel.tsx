@@ -82,6 +82,7 @@ export function SmartGuardTourIntegrationsPanel({
   async function saveIntegrationSettings() {
     setBusy(true);
     try {
+      const wasEnabled = shop.attendanceLinkEnabled;
       const res = await fetch("/api/smart-guard-tour/session/shop", {
         method: "PATCH",
         credentials: "include",
@@ -95,7 +96,8 @@ export function SmartGuardTourIntegrationsPanel({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "บันทึกไม่สำเร็จ");
-      if (data.shop) onShopPatched(data.shop as SmartGuardShopDto);
+      const nextShop = data.shop as SmartGuardShopDto | undefined;
+      if (nextShop) onShopPatched(nextShop);
 
       const links = Object.entries(pairMap)
         .filter(([, rid]) => rid && Number.isFinite(Number(rid)))
@@ -111,10 +113,50 @@ export function SmartGuardTourIntegrationsPanel({
       });
       const linkData = await linkRes.json();
       if (!linkRes.ok) throw new Error(linkData.error || "บันทึกแม็ปไม่สำเร็จ");
-      notice.success("บันทึกการเชื่อมระบบแล้ว");
+
+      const enabledNow = nextShop?.attendanceLinkEnabled ?? shop.attendanceLinkEnabled;
+      if (enabledNow) {
+        const syncRes = await fetch("/api/smart-guard-tour/session/attendance-links", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ syncStaff: true }),
+        });
+        const syncData = await syncRes.json();
+        if (!syncRes.ok) throw new Error(syncData.error || "ซิงค์พนักงานไม่สำเร็จ");
+        notice.success(
+          wasEnabled
+            ? "บันทึกแล้ว และซิงค์พนักงานแล้ว"
+            : `เปิดเชื่อมแล้ว — จับคู่ ${syncData.matched ?? 0} · สร้าง รปภ. ${syncData.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${syncData.createdRoster ?? 0}`,
+        );
+      } else {
+        notice.success("บันทึกการเชื่อมระบบแล้ว");
+      }
       await load();
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncStaffNow() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/smart-guard-tour/session/attendance-links", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ syncStaff: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ซิงค์ไม่สำเร็จ");
+      notice.success(
+        `ซิงค์แล้ว — จับคู่ ${data.matched ?? 0} · สร้าง รปภ. ${data.createdGuards ?? 0} · สร้างรายชื่อเช็คอิน ${data.createdRoster ?? 0} · อัปเดต ${data.updated ?? 0}`,
+      );
+      await load();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "ซิงค์ไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -178,10 +220,26 @@ export function SmartGuardTourIntegrationsPanel({
         <span>
           <span className="block text-sm font-black text-[#1e1b4b]">เชื่อมเข้ากะจากเช็คอิน</span>
           <span className="mt-0.5 block text-xs text-[#66638c]">
-            เมื่อพนักงานเช็คอิน/เอาต์ในเช็คอินอัจฉริยะ ระบบจะเปิด/ปิดกะในจุดตรวจอัตโนมัติ (ไม่ต้องเข้ากะซ้ำ)
+            เมื่อพนักงานเช็คอิน/เอาต์ในเช็คอินอัจฉริยะ ระบบจะเปิด/ปิดกะในจุดตรวจอัตโนมัติ — และซิงค์ชื่อ · เบอร์ · รูป · สถานะใช้งาน สองทาง
           </span>
         </span>
       </label>
+
+      {shop.attendanceLinkEnabled ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={smartGuardTourOutlineButtonClass}
+            disabled={busy}
+            onClick={() => void syncStaffNow()}
+          >
+            ซิงค์พนักงานตอนนี้
+          </button>
+          <p className="text-[11px] text-[#66638c]">
+            สร้างคู่ที่ขาด · จับคู่เบอร์ · อัปเดตชื่อ/รูป/สถานะให้ตรงกัน
+          </p>
+        </div>
+      ) : null}
 
       <div className={cn("grid gap-3 sm:grid-cols-2", !shop.attendanceLinkEnabled && "opacity-60")}>
         <label className="space-y-1 text-xs font-bold text-[#4d47b6]">

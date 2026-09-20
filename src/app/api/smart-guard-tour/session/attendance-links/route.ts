@@ -4,6 +4,7 @@ import { smartGuardTourOwnerFromAuth } from "@/lib/smart-guard-tour/api-owner";
 import { smartGuardTourSessionContext } from "@/lib/smart-guard-tour/session-context";
 import { prisma } from "@/lib/prisma";
 import { ownerHasAttendanceModule } from "@/systems/smart-guard-tour/lib/attendance-bridge";
+import { runFullStaffSyncForShop } from "@/systems/smart-guard-tour/lib/staff-sync";
 
 function digitsPhone(raw: string | null | undefined): string {
   return (raw ?? "").replace(/\D/g, "").slice(0, 20);
@@ -111,7 +112,16 @@ export async function PUT(req: Request) {
     const body = (await req.json()) as {
       links?: LinkRow[];
       autoMatch?: boolean;
+      syncStaff?: boolean;
     };
+
+    if (body.syncStaff === true) {
+      if (!shop.attendanceLinkEnabled) {
+        return NextResponse.json({ error: "เปิดเชื่อมเข้ากะก่อนจึงซิงค์พนักงานได้" }, { status: 400 });
+      }
+      const result = await runFullStaffSyncForShop(shop.id);
+      return NextResponse.json({ ok: true, ...result });
+    }
 
     if (body.autoMatch === true) {
       const [staff, roster] = await Promise.all([

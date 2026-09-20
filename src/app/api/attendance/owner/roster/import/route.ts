@@ -56,6 +56,7 @@ export async function POST(req: Request) {
 
   let created = 0;
   let updated = 0;
+  const syncedIds: number[] = [];
   const rowErrors: string[] = [...parsed.errors];
 
   const branchRows = await prisma.attendanceBranch.findMany({
@@ -97,8 +98,9 @@ export async function POST(req: Request) {
           },
         });
         updated++;
+        syncedIds.push(existing.id);
       } else {
-        await prisma.attendanceRosterEntry.create({
+        const createdRow = await prisma.attendanceRosterEntry.create({
           data: {
             ownerUserId: ctx.billingUserId,
             trialSessionId: scope.trialSessionId,
@@ -110,6 +112,7 @@ export async function POST(req: Request) {
           },
         });
         created++;
+        syncedIds.push(createdRow.id);
       }
     }
   } catch (e) {
@@ -117,6 +120,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 503 });
     }
     throw e;
+  }
+
+  if (syncedIds.length > 0) {
+    const { syncStaffAfterRosterChange } = await import(
+      "@/systems/smart-guard-tour/lib/staff-sync"
+    );
+    for (const rosterEntryId of syncedIds) {
+      void syncStaffAfterRosterChange({
+        ownerUserId: ctx.billingUserId,
+        trialSessionId: scope.trialSessionId,
+        rosterEntryId,
+      });
+    }
   }
 
   return NextResponse.json({

@@ -174,6 +174,14 @@ export async function POST(req: Request) {
         ...(photoUrl !== undefined ? { photoUrl } : {}),
       },
     });
+    const { syncStaffAfterRosterChange } = await import(
+      "@/systems/smart-guard-tour/lib/staff-sync"
+    );
+    void syncStaffAfterRosterChange({
+      ownerUserId: ctx.billingUserId,
+      trialSessionId: scope.trialSessionId,
+      rosterEntryId: row.id,
+    });
     return NextResponse.json({
       entry: {
         id: row.id,

@@ -9,6 +9,7 @@ import {
   type SmartGuardTourManageTabKey,
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
+import { SmartGuardTourStaffPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourStaffPanel";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
   smartGuardTourManageTabIcon,
@@ -45,12 +46,16 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
         ariaLabel="เมนูย่อยการจัดการ"
       >
         <p className="mb-3 text-xs font-semibold text-[#66638c]">{initialShop.displayName}</p>
-        <AppEmptyState>
-          ยังไม่มี{activeLabel}
-          <span className="mt-1 block text-xs">
-            เฟสถัดไป — CRUD จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์
-          </span>
-        </AppEmptyState>
+        {tab === "staff" ? (
+          <SmartGuardTourStaffPanel />
+        ) : (
+          <AppEmptyState>
+            ยังไม่มี{activeLabel}
+            <span className="mt-1 block text-xs">
+              เฟสถัดไป — CRUD จุดตรวจ · ตาราง · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์
+            </span>
+          </AppEmptyState>
+        )}
       </SmartGuardTourPageSubNav>
     </div>
   );
