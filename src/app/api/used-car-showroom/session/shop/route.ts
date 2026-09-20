@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/api-auth";
 import { usedCarShowroomOwnerFromAuth } from "@/lib/used-car-showroom/api-owner";
 import { usedCarShowroomSessionContext } from "@/lib/used-car-showroom/session-context";
@@ -10,6 +11,17 @@ import {
 } from "@/lib/modules/staff-daily-pin";
 import { mapUsedCarShop } from "@/systems/used-car-showroom/lib/mappers";
 import { parseUsedCarPortalPaymentMode } from "@/systems/used-car-showroom/lib/status";
+
+function parseShopCoord(raw: unknown): Prisma.Decimal | null | undefined {
+  if (raw === null) return null;
+  if (raw === undefined) return undefined;
+  if (typeof raw === "number" && Number.isFinite(raw)) return new Prisma.Decimal(raw);
+  if (typeof raw === "string" && raw.trim()) {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return new Prisma.Decimal(n);
+  }
+  return undefined;
+}
 
 export async function GET() {
   try {
@@ -93,6 +105,8 @@ export async function PATCH(req: Request) {
         contactLine: nullable("contactLine", 120),
         facebookUrl: nullable("facebookUrl", 512),
         mapUrl: nullable("mapUrl", 512),
+        shopLat: parseShopCoord(body.shopLat),
+        shopLng: parseShopCoord(body.shopLng),
         openTimeHm: nullable("openTimeHm", 5),
         closeTimeHm: nullable("closeTimeHm", 5),
         portalBannerUrl: nullable("portalBannerUrl", 512),

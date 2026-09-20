@@ -8,12 +8,14 @@ import {
   AppSlipPaperSizeSettingsField,
   AppStaffDailyPinSettingsField,
   AppTime24Input,
+  prepareImageFileForUpload,
   staffDailyPinPatchBody,
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
 import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
+import { cn } from "@/lib/cn";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { USED_CAR_SHOWROOM_MODULE_SLUG } from "@/lib/modules/config";
 import { UsedCarPortalMediaSettings } from "@/systems/used-car-showroom/components/UsedCarPortalMediaSettings";
@@ -52,6 +54,7 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
   const tab = parseUsedCarShowroomSettingsTab(searchParams.get("tab"));
   const [shop, setShop] = useState(initialShop);
   const [busy, setBusy] = useState(false);
+  const [geoBusy, setGeoBusy] = useState(false);
   const [origin, setOrigin] = useState("");
   const [pinSet, setPinSet] = useState(Boolean(initialShop.staffDailyPinSet));
   const [pinDraft, setPinDraft] = useState("");
@@ -78,6 +81,49 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
     taxId: shop.taxId,
   };
 
+  const fetchDeviceCoords = () => {
+    if (!navigator.geolocation) {
+      notice.error("เบราว์เซอร์นี้ไม่รองรับการดึงพิกัด");
+      return;
+    }
+    setGeoBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setShop((s) => ({
+          ...s,
+          shopLat: pos.coords.latitude,
+          shopLng: pos.coords.longitude,
+        }));
+        setGeoBusy(false);
+        notice.success("ดึงพิกัดจากเครื่องแล้ว — กดบันทึกเพื่อเก็บ");
+      },
+      () => {
+        setGeoBusy(false);
+        notice.error("ดึงพิกัดไม่ได้ — อนุญาตการเข้าถึงตำแหน่ง หรือกรอกเอง");
+      },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  };
+
+  async function uploadPromptPayQr(file: File) {
+    setBusy(true);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const fd = new FormData();
+      fd.set("file", prepared);
+      fd.set("kind", "promptpay-qr");
+      const res = await fetch(LOGO_UPLOAD_URL, { method: "POST", credentials: "include", body: fd });
+      const json = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+      if (!res.ok || !json.imageUrl) throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+      setShop((s) => ({ ...s, promptPayQrImageUrl: json.imageUrl! }));
+      notice.success("อัปโหลด QR พร้อมเพย์แล้ว");
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const save = useCallback(async () => {
     setBusy(true);
     try {
@@ -90,6 +136,8 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
         address: shop.address,
         facebookUrl: shop.facebookUrl,
         mapUrl: shop.mapUrl,
+        shopLat: shop.shopLat,
+        shopLng: shop.shopLng,
         openTimeHm: shop.openTimeHm,
         closeTimeHm: shop.closeTimeHm,
         portalBannerUrl: shop.portalBannerUrl,
@@ -198,14 +246,6 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
                 onChange={(e) => setShop((s) => ({ ...s, contactPhone: e.target.value }))}
               />
             </label>
-            <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
-              LINE
-              <input
-                className={usedCarShowroomFieldClass}
-                value={shop.contactLine ?? ""}
-                onChange={(e) => setShop((s) => ({ ...s, contactLine: e.target.value }))}
-              />
-            </label>
             <label className="space-y-1 text-xs font-bold text-[#4d47b6] sm:col-span-2">
               ที่อยู่
               <textarea
@@ -214,6 +254,51 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
                 onChange={(e) => setShop((s) => ({ ...s, address: e.target.value }))}
               />
             </label>
+            <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+              ละติจูด
+              <input
+                type="number"
+                step="any"
+                className={usedCarShowroomFieldClass}
+                value={shop.shopLat ?? ""}
+                onChange={(e) =>
+                  setShop((s) => ({
+                    ...s,
+                    shopLat: e.target.value === "" ? null : Number(e.target.value),
+                  }))
+                }
+                placeholder="13.7563"
+              />
+            </label>
+            <label className="space-y-1 text-xs font-bold text-[#4d47b6]">
+              ลองจิจูด
+              <input
+                type="number"
+                step="any"
+                className={usedCarShowroomFieldClass}
+                value={shop.shopLng ?? ""}
+                onChange={(e) =>
+                  setShop((s) => ({
+                    ...s,
+                    shopLng: e.target.value === "" ? null : Number(e.target.value),
+                  }))
+                }
+                placeholder="100.5018"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <button
+                type="button"
+                className={usedCarShowroomOutlineButtonClass}
+                disabled={busy || geoBusy}
+                onClick={fetchDeviceCoords}
+              >
+                {geoBusy ? "กำลังดึงพิกัด…" : "ดึงพิกัดจากเครื่อง"}
+              </button>
+              <p className="mt-1 text-[11px] font-medium text-[#66638c]">
+                ใช้แสดงตำแหน่งเต็นท์ / แผนที่ — กดบันทึกหลังดึงพิกัด
+              </p>
+            </div>
           </div>
         ) : null}
 
@@ -234,6 +319,44 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
                 }))
               }
             />
+            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+              <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+              <p className="text-[11px] font-semibold text-[#8b87b8]">
+                ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคาร ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+              </p>
+              {shop.promptPayQrImageUrl ? (
+                <div className="flex flex-wrap items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shop.promptPayQrImageUrl}
+                    alt="QR พร้อมเพย์ที่อัปโหลด"
+                    className="h-28 w-28 rounded-xl border border-white bg-white object-contain p-1 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={cn(usedCarShowroomOutlineButtonClass, "text-rose-700")}
+                    onClick={() => setShop((s) => ({ ...s, promptPayQrImageUrl: null }))}
+                  >
+                    ลบรูป QR
+                  </button>
+                </div>
+              ) : null}
+              <label className={cn(usedCarShowroomOutlineButtonClass, "inline-flex cursor-pointer")}>
+                {shop.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void uploadPromptPayQr(f);
+                  }}
+                />
+              </label>
+            </div>
             <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
               ยอดมัดจำจอง (บาท)
               <input
@@ -318,10 +441,12 @@ export function UsedCarShowroomSettingsClient({ initialShop }: { initialShop: Us
             <UsedCarPortalMediaSettings
               bannerUrl={shop.portalBannerUrl ?? ""}
               gallery={shop.portalGallery ?? []}
+              contactLine={shop.contactLine ?? ""}
               facebookUrl={shop.facebookUrl ?? ""}
               mapUrl={shop.mapUrl ?? ""}
               onBannerUrlChange={(url) => setShop((s) => ({ ...s, portalBannerUrl: url || null }))}
               onGalleryChange={(urls) => setShop((s) => ({ ...s, portalGallery: urls }))}
+              onContactLineChange={(value) => setShop((s) => ({ ...s, contactLine: value || null }))}
               onFacebookUrlChange={(url) => setShop((s) => ({ ...s, facebookUrl: url || null }))}
               onMapUrlChange={(url) => setShop((s) => ({ ...s, mapUrl: url || null }))}
               disabled={busy}

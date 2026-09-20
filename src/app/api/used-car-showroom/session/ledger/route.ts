@@ -86,6 +86,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ category: cat }, { status: 201 });
     }
 
+    if (body.action === "updateCategory") {
+      const id = typeof body.id === "string" ? body.id : "";
+      if (!id) return NextResponse.json({ error: "ระบุ id" }, { status: 400 });
+      const existing = await prisma.usedCarFinanceCategory.findFirst({
+        where: { id, shopId: shop.id },
+      });
+      if (!existing) return NextResponse.json({ error: "ไม่พบหมวด" }, { status: 404 });
+      const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
+      if (!name) return NextResponse.json({ error: "กรอกชื่อหมวด" }, { status: 400 });
+      const cat = await prisma.usedCarFinanceCategory.update({
+        where: { id },
+        data: {
+          name,
+          ...(typeof body.sortOrder === "number" ? { sortOrder: body.sortOrder } : {}),
+          ...(typeof body.isActive === "boolean" ? { isActive: body.isActive } : {}),
+        },
+      });
+      return NextResponse.json({ category: cat });
+    }
+
+    if (body.action === "deleteCategory") {
+      const id = typeof body.id === "string" ? body.id : "";
+      if (!id) return NextResponse.json({ error: "ระบุ id" }, { status: 400 });
+      const existing = await prisma.usedCarFinanceCategory.findFirst({
+        where: { id, shopId: shop.id },
+      });
+      if (!existing) return NextResponse.json({ error: "ไม่พบหมวด" }, { status: 404 });
+      if (existing.systemKey) {
+        return NextResponse.json(
+          { error: "หมวดระบบลบไม่ได้ — แก้ชื่อได้เท่านั้น" },
+          { status: 409 },
+        );
+      }
+      const used = await prisma.usedCarLedgerEntry.count({ where: { categoryId: id } });
+      if (used > 0) {
+        return NextResponse.json(
+          { error: "ยังมีรายการในหมวดนี้ — ย้ายหรือลบรายการก่อน" },
+          { status: 409 },
+        );
+      }
+      await prisma.usedCarFinanceCategory.delete({ where: { id } });
+      return NextResponse.json({ ok: true });
+    }
+
     const kind = body.kind === "INCOME" || body.kind === "EXPENSE" ? body.kind : null;
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 200) : "";
     const amountBaht = Math.max(0, Math.round(Number(body.amountBaht) || 0));

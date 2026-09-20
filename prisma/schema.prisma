@@ -8285,6 +8285,9 @@ model UsedCarShowroomShop {
   contactLine           String?  @map("contact_line") @db.VarChar(120)
   facebookUrl           String?  @map("facebook_url") @db.VarChar(512)
   mapUrl                String?  @map("map_url") @db.VarChar(512)
+  /** พิกัดเต็นท์ — ใช้แผนที่ / ดึงตำแหน่ง */
+  shopLat               Decimal? @map("shop_lat") @db.Decimal(10, 7)
+  shopLng               Decimal? @map("shop_lng") @db.Decimal(10, 7)
   openTimeHm            String?  @map("open_time_hm") @db.VarChar(5)
   closeTimeHm           String?  @map("close_time_hm") @db.VarChar(5)
   portalBannerUrl       String?  @map("portal_banner_url") @db.VarChar(512)

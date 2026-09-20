@@ -49,11 +49,12 @@ type Entry = {
   amountBaht: number;
   entryOn: string;
   slipImageUrl: string | null;
+  categoryId: string | null;
   categoryName: string | null;
   vehicleId: string | null;
 };
 
-type Category = { id: string; kind: string; name: string; systemKey: string | null };
+type Category = { id: string; kind: string; name: string; systemKey: string | null; isActive?: boolean };
 
 type VehicleOption = { id: string; title: string; brand: string; model: string; year: number | null };
 
@@ -81,10 +82,15 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(bangkokDateKey());
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catFormOpen, setCatFormOpen] = useState(false);
+  const [catEdit, setCatEdit] = useState<Category | null>(null);
+  const [catName, setCatName] = useState("");
   const [form, setForm] = useState({
     title: "",
     amountBaht: "",
@@ -92,6 +98,7 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
     vehicleId: "",
     entryOn: bangkokDateKey(),
     slipImageUrl: "" as string | null,
+    note: "",
   });
   const [busy, setBusy] = useState(false);
 
@@ -128,6 +135,15 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setCategoryFilter("all");
+  }, [tab]);
+
+  const tabCategories = useMemo(
+    () => categories.filter((c) => c.kind === (tab === "income" ? "INCOME" : "EXPENSE") && c.isActive !== false),
+    [categories, tab],
+  );
+
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === form.categoryId) ?? null,
     [categories, form.categoryId],
@@ -144,10 +160,11 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
     const kind = tab === "income" ? "INCOME" : "EXPENSE";
     return entries.filter((e) => {
       if (e.kind !== kind) return false;
+      if (categoryFilter !== "all" && e.categoryId !== categoryFilter) return false;
       if (!q.trim()) return true;
       return e.title.toLowerCase().includes(q.trim().toLowerCase());
     });
-  }, [entries, tab, q]);
+  }, [entries, tab, q, categoryFilter]);
 
   const incomeTotal = entries.filter((e) => e.kind === "INCOME").reduce((s, e) => s + e.amountBaht, 0);
   const expenseTotal = entries.filter((e) => e.kind === "EXPENSE").reduce((s, e) => s + e.amountBaht, 0);
@@ -189,6 +206,10 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
       notice.error("กรอกหัวข้อและยอด");
       return;
     }
+    if (!form.categoryId) {
+      notice.error("เลือกหมวดหมู่ หรือกด «หมวดหมู่» เพื่อเพิ่มก่อน");
+      return;
+    }
     if (requiresCommissionVehicle && !form.vehicleId) {
       notice.error("ค่าคอมต้องเลือกผูกรถก่อนบันทึก");
       return;
@@ -207,6 +228,7 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
           vehicleId: form.vehicleId || null,
           entryOn: form.entryOn,
           slipImageUrl: form.slipImageUrl || null,
+          note: form.note.trim() || null,
           ...(requiresCommissionVehicle ? { systemKey: "COMMISSION" } : {}),
         }),
       });
@@ -216,11 +238,77 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
         return;
       }
       setAddOpen(false);
-      setForm({ title: "", amountBaht: "", categoryId: "", vehicleId: "", entryOn: bangkokDateKey(), slipImageUrl: null });
+      setForm({
+        title: "",
+        amountBaht: "",
+        categoryId: "",
+        vehicleId: "",
+        entryOn: bangkokDateKey(),
+        slipImageUrl: null,
+        note: "",
+      });
       await load();
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveCategory() {
+    const name = catName.trim();
+    if (!name) {
+      notice.error("กรอกชื่อหมวดหมู่");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/used-car-showroom/session/ledger", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          catEdit
+            ? { action: "updateCategory", id: catEdit.id, name }
+            : {
+                action: "createCategory",
+                kind: tab === "income" ? "INCOME" : "EXPENSE",
+                name,
+              },
+        ),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        notice.error(data.error || "บันทึกหมวดไม่สำเร็จ");
+        return;
+      }
+      setCatFormOpen(false);
+      setCatEdit(null);
+      setCatName("");
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeCategory(cat: Category) {
+    if (cat.systemKey) {
+      notice.error("หมวดระบบลบไม่ได้ — แก้ชื่อได้เท่านั้น");
+      return;
+    }
+    const ok = await notice.confirm(`ลบหมวดหมู่ «${cat.name}» ใช่หรือไม่?\n(ถ้ามีรายการในหมวดนี้ต้องย้ายหรือลบก่อน)`);
+    if (!ok) return;
+    const res = await fetch("/api/used-car-showroom/session/ledger", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "deleteCategory", id: cat.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      notice.error((data as { error?: string }).error || "ลบหมวดไม่สำเร็จ");
+      return;
+    }
+    if (categoryFilter === cat.id) setCategoryFilter("all");
+    await load();
   }
 
   async function removeEntry(id: string, title: string) {
@@ -266,7 +354,21 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
         onSelect={(k) => setTab(k as "income" | "expense")}
         ariaLabel="แท็บการเงิน"
         action={
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              className={usedCarShowroomOutlineButtonClass}
+              aria-label={tab === "income" ? "จัดการหมวดหมู่รายรับ" : "จัดการหมวดหมู่รายจ่าย"}
+              title="หมวดหมู่"
+              onClick={() => {
+                setCatFormOpen(false);
+                setCatEdit(null);
+                setCatName("");
+                setCatModalOpen(true);
+              }}
+            >
+              หมวดหมู่
+            </button>
             <button
               type="button"
               className={cn(usedCarShowroomOutlineButtonClass, filterOpen && "ring-2 ring-[#5b61ff]/20")}
@@ -281,7 +383,18 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
             <button type="button" className={usedCarShowroomOutlineButtonClass} onClick={() => setChartsOpen((o) => !o)}>
               {chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
             </button>
-            <button type="button" className={usedCarShowroomPrimaryButtonClass} onClick={() => setAddOpen(true)}>
+            <button
+              type="button"
+              className={usedCarShowroomPrimaryButtonClass}
+              onClick={() => {
+                if (tabCategories.length === 0) {
+                  setCatModalOpen(true);
+                  notice.error("สร้างหมวดก่อนจึงจะบันทึกรายการได้");
+                  return;
+                }
+                setAddOpen(true);
+              }}
+            >
               + {tab === "income" ? "รายรับ" : "รายจ่าย"}
             </button>
             <button type="button" className={usedCarShowroomIconButtonClass} aria-label="รีเฟรช" onClick={() => void load()}>
@@ -369,6 +482,33 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
         ) : null}
 
         <div className="mt-4 space-y-2 border-t border-slate-200/80 pt-4">
+          <div
+            className="min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]"
+            role="group"
+            aria-label={tab === "income" ? "กรองตามหมวดหมู่รายรับ" : "กรองตามหมวดหมู่รายจ่าย"}
+          >
+            <div className={cn(usedCarShowroomFilterChipShellClass, "w-max touch-pan-x pr-1 sm:flex-wrap sm:pr-0")}>
+              <button
+                type="button"
+                className={usedCarShowroomFilterChipClass(categoryFilter === "all")}
+                aria-pressed={categoryFilter === "all"}
+                onClick={() => setCategoryFilter("all")}
+              >
+                ทั้งหมด
+              </button>
+              {tabCategories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={usedCarShowroomFilterChipClass(categoryFilter === c.id)}
+                  aria-pressed={categoryFilter === c.id}
+                  onClick={() => setCategoryFilter(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
           {filtered.length === 0 ? (
             <AppEmptyState>{tab === "income" ? "ยังไม่มีรายรับ" : "ยังไม่มีรายจ่าย"}</AppEmptyState>
           ) : (
@@ -390,7 +530,7 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${e.title}`} title="แก้ไข" onClick={() => notice.show("แก้รายการ: ลบแล้วสร้างใหม่ใน MVP", "warning")}>
+                  <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${e.title}`} title="แก้ไข" onClick={() => notice.warning("แก้รายการ: ลบแล้วสร้างใหม่ในเวอร์ชันนี้")}>
                     <IconRowEdit className="h-4 w-4" />
                   </button>
                   <button type="button" className={assetRowRemoveIconButtonClass} aria-label={`ลบ ${e.title}`} title="ลบ" onClick={() => void removeEntry(e.id, e.title)}>
@@ -401,17 +541,109 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
             ))
           )}
         </div>
-
-        <div className={cn(usedCarShowroomFilterChipShellClass, "mt-3")}>
-          {categories
-            .filter((c) => c.kind === (tab === "income" ? "INCOME" : "EXPENSE"))
-            .map((c) => (
-              <span key={c.id} className={usedCarShowroomFilterChipClass(false)}>
-                {c.name}
-              </span>
-            ))}
-        </div>
       </UsedCarShowroomPageSubNav>
+
+      <FormModal
+        open={catModalOpen}
+        onClose={() => {
+          setCatModalOpen(false);
+          setCatFormOpen(false);
+          setCatEdit(null);
+          setCatName("");
+        }}
+        title={
+          catFormOpen
+            ? catEdit
+              ? `แก้ไขหมวดหมู่${tab === "income" ? "รายรับ" : "รายจ่าย"}`
+              : `เพิ่มหมวดหมู่${tab === "income" ? "รายรับ" : "รายจ่าย"}`
+            : tab === "income"
+              ? "หมวดหมู่รายรับ"
+              : "หมวดหมู่รายจ่าย"
+        }
+        size="md"
+        mobileCentered
+        footer={
+          catFormOpen ? (
+            <FormModalFooterActions
+              onCancel={() => {
+                setCatFormOpen(false);
+                setCatEdit(null);
+                setCatName("");
+              }}
+              onSubmit={() => void saveCategory()}
+              submitLabel="บันทึก"
+              loading={busy}
+            />
+          ) : (
+            <FormModalFooterActions
+              onCancel={() => setCatModalOpen(false)}
+              onSubmit={() => {
+                setCatEdit(null);
+                setCatName("");
+                setCatFormOpen(true);
+              }}
+              submitLabel="+ เพิ่มหมวดหมู่"
+              loading={false}
+            />
+          )
+        }
+      >
+        {catFormOpen ? (
+          <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+            ชื่อหมวดหมู่
+            <input
+              className={usedCarShowroomFieldClass}
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              placeholder="เช่น ค่าโฆษณา · มัดจำรับ"
+              autoFocus
+            />
+          </label>
+        ) : tabCategories.length === 0 ? (
+          <AppEmptyState>ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»</AppEmptyState>
+        ) : (
+          <ul className="space-y-2">
+            {tabCategories.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-white px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-[#1e1b4b]">{c.name}</p>
+                  {c.systemKey ? (
+                    <p className="text-[10px] font-semibold text-[#8b87b8]">หมวดระบบ · ลบไม่ได้</p>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไข ${c.name}`}
+                    title="แก้ไข"
+                    onClick={() => {
+                      setCatEdit(c);
+                      setCatName(c.name);
+                      setCatFormOpen(true);
+                    }}
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบ ${c.name}`}
+                    title="ลบ"
+                    disabled={Boolean(c.systemKey)}
+                    onClick={() => void removeCategory(c)}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormModal>
 
       <FormModal
         open={addOpen}
@@ -427,23 +659,25 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
           <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
             หมวด
             <select className={usedCarShowroomFieldClass} value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
-              <option value="">—</option>
-              {categories
-                .filter((c) => c.kind === (tab === "income" ? "INCOME" : "EXPENSE"))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+              <option value="">— เลือกหมวด —</option>
+              {tabCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
-            หัวข้อ
+            รายละเอียดรายการ
             <input className={usedCarShowroomFieldClass} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
           </label>
           <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
-            จำนวนเงิน
+            จำนวนเงิน (บาท)
             <input className={usedCarShowroomFieldClass} value={form.amountBaht} onChange={(e) => setForm((f) => ({ ...f, amountBaht: e.target.value }))} />
+          </label>
+          <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+            หมายเหตุ (ไม่บังคับ)
+            <input className={usedCarShowroomFieldClass} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
           </label>
           {tab === "expense" ? (
             <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
@@ -468,7 +702,7 @@ export function UsedCarShowroomFinanceClient({ initialShop }: { initialShop: Use
             <input type="date" className={usedCarShowroomFieldClass} value={form.entryOn} onChange={(e) => setForm((f) => ({ ...f, entryOn: e.target.value }))} />
           </label>
           <div>
-            <p className="mb-1 text-xs font-bold text-[#4d47b6]">สลิป (ไม่บังคับ)</p>
+            <p className="mb-1 text-xs font-bold text-[#4d47b6]">รูปสลิป (ไม่บังคับ)</p>
             <input
               type="file"
               accept="image/*"

@@ -365,6 +365,29 @@ export function UsedCarPortalPublicClient({
                 >
                   แผนที่
                 </a>
+              ) : shop.shopLat != null && shop.shopLng != null ? (
+                <a
+                  href={`https://www.google.com/maps?q=${shop.shopLat},${shop.shopLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={usedCarShowroomOutlineButtonClass}
+                >
+                  แผนที่
+                </a>
+              ) : null}
+              {shop.contactLine ? (
+                <a
+                  href={
+                    shop.contactLine.startsWith("http")
+                      ? shop.contactLine
+                      : `https://line.me/ti/p/${shop.contactLine.replace(/^@/, "")}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className={usedCarShowroomOutlineButtonClass}
+                >
+                  LINE
+                </a>
               ) : null}
               {shop.facebookUrl ? (
                 <a

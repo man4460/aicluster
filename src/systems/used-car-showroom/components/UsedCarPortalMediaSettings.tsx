@@ -30,10 +30,12 @@ const UPLOAD = "/api/used-car-showroom/session/upload";
 type Props = {
   bannerUrl: string;
   gallery: string[];
+  contactLine: string;
   facebookUrl: string;
   mapUrl: string;
   onBannerUrlChange: (url: string) => void;
   onGalleryChange: (urls: string[]) => void;
+  onContactLineChange: (value: string) => void;
   onFacebookUrlChange: (url: string) => void;
   onMapUrlChange: (url: string) => void;
   disabled?: boolean;
@@ -45,10 +47,12 @@ const labelClass = "block space-y-1 text-xs font-bold text-[#4d47b6]";
 export function UsedCarPortalMediaSettings({
   bannerUrl,
   gallery,
+  contactLine,
   facebookUrl,
   mapUrl,
   onBannerUrlChange,
   onGalleryChange,
+  onContactLineChange,
   onFacebookUrlChange,
   onMapUrlChange,
   disabled = false,
@@ -327,6 +331,16 @@ export function UsedCarPortalMediaSettings({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={labelClass}>
+          LINE ID
+          <input
+            className={fieldClass}
+            value={contactLine}
+            onChange={(e) => onContactLineChange(e.target.value)}
+            placeholder="@lineid"
+            disabled={busy}
+          />
+        </label>
+        <label className={labelClass}>
           Facebook URL
           <input
             className={fieldClass}
@@ -336,7 +350,7 @@ export function UsedCarPortalMediaSettings({
             disabled={busy}
           />
         </label>
-        <label className={labelClass}>
+        <label className={cn(labelClass, "sm:col-span-2")}>
           ลิงก์แผนที่
           <input
             className={fieldClass}

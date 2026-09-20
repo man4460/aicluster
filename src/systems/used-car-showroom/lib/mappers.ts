@@ -19,6 +19,8 @@ export type UsedCarShopDto = {
   contactLine: string | null;
   facebookUrl: string | null;
   mapUrl: string | null;
+  shopLat: number | null;
+  shopLng: number | null;
   openTimeHm: string | null;
   closeTimeHm: string | null;
   portalBannerUrl: string | null;
@@ -61,6 +63,8 @@ export function mapUsedCarShop(row: {
   contactLine: string | null;
   facebookUrl: string | null;
   mapUrl: string | null;
+  shopLat?: { toString(): string } | number | null;
+  shopLng?: { toString(): string } | number | null;
   openTimeHm: string | null;
   closeTimeHm: string | null;
   portalBannerUrl: string | null;
@@ -77,6 +81,11 @@ export function mapUsedCarShop(row: {
   slipPaperSize: string;
   staffDailyPinHash?: string | null;
 }): UsedCarShopDto {
+  const toNum = (v: { toString(): string } | number | null | undefined): number | null => {
+    if (v == null) return null;
+    const n = typeof v === "number" ? v : Number(v.toString());
+    return Number.isFinite(n) ? n : null;
+  };
   return {
     id: row.id,
     ownerUserId: row.ownerUserId,
@@ -90,6 +99,8 @@ export function mapUsedCarShop(row: {
     contactLine: row.contactLine,
     facebookUrl: row.facebookUrl,
     mapUrl: row.mapUrl,
+    shopLat: toNum(row.shopLat),
+    shopLng: toNum(row.shopLng),
     openTimeHm: row.openTimeHm,
     closeTimeHm: row.closeTimeHm,
     portalBannerUrl: row.portalBannerUrl,

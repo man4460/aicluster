@@ -67,13 +67,22 @@ Sub-nav: `UsedCarShowroomPageSubNav` (panel เต็มขอบการ์ด
 
 | tab | เนื้อหา |
 |-----|---------|
-| basic | ชื่อ · โลโก้ · คำโปรย · เบอร์ · ที่อยู่ · LINE |
-| finance | `AppModuleShopPaymentFields` (taxId · พร้อมเพย์ · ธนาคาร) · มัดจำ/โหมดจอง · `AppStaffDailyPinSettingsField` · `AppSlipPaperSizeSettingsField` |
-| portal | slug · เปิดเว็บ · FB/แผนที่ · **`UsedCarPortalMediaSettings`** (แบนเนอร์+แกลเลอรี) |
+| basic | ชื่อ · โลโก้ · คำโปรย · เบอร์ · ที่อยู่ · **ละติจูด/ลองจิจูด + ดึงพิกัดจากเครื่อง** |
+| finance | `AppModuleShopPaymentFields` · **อัปโหลดรูป QR พร้อมเพย์** · มัดจำ/โหมดจอง · `AppStaffDailyPinSettingsField` · `AppSlipPaperSizeSettingsField` |
+| portal | slug · เปิดเว็บ · **LINE · FB · แผนที่** · **`UsedCarPortalMediaSettings`** (แบนเนอร์+แกลเลอรี+โซเชียล) |
 | hours | `AppTime24Input` เปิด–ปิด (เวลาไทย) |
 | link | `ModuleQrMonthlyGate` **ครั้งเดียว** + การ์ดลิงก์ลูกค้า/พนักงาน |
 
-Prisma ร้าน: `taxId` · `slipPaperSize` · `portalBannerUrl` · `portalGalleryJson` · `staffDailyPinHash` · `portalBookingPaymentMode` · `depositAmountBaht`
+Prisma ร้าน: `taxId` · `slipPaperSize` · `portalBannerUrl` · `portalGalleryJson` · `staffDailyPinHash` · `portalBookingPaymentMode` · `depositAmountBaht` · `promptPayQrImageUrl` · **`shopLat` · `shopLng`**
+
+### การเงิน — หมวดหมู่รายรับ/รายจ่าย
+
+ตาม `dashboard-expense-cost-categories.mdc` · `dashboard-finance-detail-tabs.mdc`
+
+- ปุ่ม **หมวดหมู่** บนทั้งแท็บรายรับและรายจ่าย → `FormModal` CRUD
+- ชิปกรองหมวดใต้รายการ · บังคับเลือกหมวดตอนบันทึก
+- API: `POST …/ledger` `action=createCategory|updateCategory|deleteCategory` · หมวด `systemKey` ลบไม่ได้
+- ฟอร์มรายการ: หมวด · รายละเอียด · ยอด · หมายเหตุ · สลิป (+ ผูกรถเมื่อค่าคอม)
 
 ---
 
@@ -105,7 +114,8 @@ Prisma ร้าน: `taxId` · `slipPaperSize` · `portalBannerUrl` · `portalG
 ## 6) เช็กลิสต์ก่อนถือว่างานจบ
 
 - [ ] Manage ทุกแท็บมีกรอง + FormModal เพิ่ม (ยกเว้น P&L เพิ่ม)  
-- [ ] Settings ครบ 5 แท็บ · PIN · ภาษี · แบนเนอร์/แกลเลอรี · เวลา  
+- [ ] Settings ครบ 5 แท็บ · PIN · ภาษี · **QR พร้อมเพย์อัปโหลด** · แบนเนอร์/แกลเลอรี · **LINE/FB/แผนที่** · **พิกัดร้าน** · เวลา  
+- [ ] Finance: ปุ่มหมวดหมู่รายรับ+รายจ่าย · ชิปกรอง · CRUD หมวด  
 - [ ] ไม่มี `px`/`max-w` ซ้ำรอบหน้า · panel เต็มความกว้าง  
 - [ ] จอง = มัดจำ+สลิป · นัด = ฟอร์ม · ค่างวด = flat  
 - [ ] sidebar icon · landing cover · **seed ~20/ฟีเจอร์** · รูป Unsplash ตรวจ HEAD · `prisma generate` หลัง schema  
