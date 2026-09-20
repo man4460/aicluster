@@ -46,7 +46,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 87: SiteSetting.adminTokenTopUpPinHash — รหัสเติมโทเคนแอดมิน */
 /** 89: HomeFinanceDocumentCategory + HomeFinanceAiPrompt */
 /** 90: HomeFinanceAiPromptCategory */
-const PRISMA_SINGLETON_VERSION = 93;
+/** 94: SmartGuard* (จุดตรวจ รปภ.) — client เก่าไม่มี smartGuardShop */
+const PRISMA_SINGLETON_VERSION = 94;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -198,6 +199,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     usedCarShowroomShop?: { findUnique?: unknown };
     usedCarVehicle?: { findMany?: unknown };
     usedCarLedgerEntry?: { findMany?: unknown };
+    smartGuardShop?: { findUnique?: unknown };
+    smartGuardCheckpoint?: { findMany?: unknown };
+    smartGuardLedgerEntry?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -229,6 +233,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.usedCarShowroomShop?.findUnique === "function" &&
     typeof c.usedCarVehicle?.findMany === "function" &&
     typeof c.usedCarLedgerEntry?.findMany === "function" &&
+    typeof c.smartGuardShop?.findUnique === "function" &&
+    typeof c.smartGuardCheckpoint?.findMany === "function" &&
+    typeof c.smartGuardLedgerEntry?.findMany === "function" &&
     typeof c.barberPortalStaffPing?.findMany === "function" &&
     typeof c.systemActivityLog?.findMany === "function" &&
     typeof c.parkingSite?.findFirst === "function" &&

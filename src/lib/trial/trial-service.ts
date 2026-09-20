@@ -17,6 +17,7 @@ import {
   FOOTBALL_TURF_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
   USED_CAR_SHOWROOM_MODULE_SLUG,
+  SMART_GUARD_TOUR_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -35,6 +36,7 @@ import { seedFootballTurfTrialData } from "./seed-football-turf";
 import { seedHotelResortTrialData } from "./seed-hotel-resort";
 import { seedUsedCarShowroomTrialData } from "./seed-used-car-showroom";
 import { seedTrialModuleSettings } from "./seed-trial-module-settings";
+import { ensureSmartGuardShop } from "@/systems/smart-guard-tour/lib/ensure-shop";
 
 type Tx = Omit<
   PrismaClient,
@@ -159,6 +161,20 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.usedCarFinanceCompany.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.usedCarFinanceCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.usedCarShowroomShop.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.smartGuardCheckpointVideo.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardIncidentImage.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardTourLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardIncident.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardShiftLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardCheckpoint.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardSchedule.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardLedgerEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardFinanceCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardAsset.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardContact.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardStaff.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.smartGuardShop.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /**
@@ -296,6 +312,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedHotelResortTrialData(tx, userId, session.id);
     } else if (mod.slug === USED_CAR_SHOWROOM_MODULE_SLUG) {
       await seedUsedCarShowroomTrialData(tx, userId, session.id);
+    } else if (mod.slug === SMART_GUARD_TOUR_MODULE_SLUG) {
+      await ensureSmartGuardShop(tx, userId, session.id);
     }
 
     await seedTrialModuleSettings(tx, userId, session.id, mod.slug);

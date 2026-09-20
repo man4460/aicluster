@@ -13,7 +13,8 @@ export type StaffDailyPinModule =
   | "car-wash"
   | "parking"
   | "dormitory"
-  | "used-car-showroom";
+  | "used-car-showroom"
+  | "smart-guard-tour";
 
 export const STAFF_DAILY_UNLOCK_HEADER = "x-staff-daily-unlock";
 
