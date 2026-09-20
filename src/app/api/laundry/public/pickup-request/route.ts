@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/car-wash/http";
 import { isLaundryPickupPortalOpenForOwner } from "@/lib/laundry/portal-access";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
+import { upsertLaundryCustomerByPhone } from "@/lib/laundry/upsert-customer";
 import { LAUNDRY_MODULE_SLUG } from "@/lib/modules/config";
 import { resolveDataScopeForModule } from "@/lib/trial/scope";
 import { LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR } from "@/systems/laundry/laundry-customer-pickup-request";
@@ -146,6 +147,12 @@ export async function POST(req: Request) {
     }
 
     const pickupPublicToken = randomUUID();
+    const linkedCustomer = await upsertLaundryCustomerByPhone({
+      ownerUserId: ownerId,
+      trialSessionId: scope.trialSessionId,
+      phoneRaw: phone,
+      name: parsed.data.customer_name.trim(),
+    });
     const row = await prisma.laundryOrder.create({
       data: {
         ownerUserId: ownerId,
@@ -164,6 +171,7 @@ export async function POST(req: Request) {
         recordedByName: LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR,
         status: "PENDING_PICKUP",
         pickupPublicToken,
+        ...(linkedCustomer ? { laundryCustomerId: linkedCustomer.id } : {}),
         pickupLat: pickupLat != null ? new Prisma.Decimal(pickupLat) : null,
         pickupLng: pickupLng != null ? new Prisma.Decimal(pickupLng) : null,
         distanceKm: distanceKm != null ? new Prisma.Decimal(distanceKm) : null,

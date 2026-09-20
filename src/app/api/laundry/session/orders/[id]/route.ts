@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/car-wash/http";
 import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { laundryOrderStatusZod, normalizeLaundryOrderStatus } from "@/lib/laundry/order-status";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
+import { upsertLaundryCustomerByPhone } from "@/lib/laundry/upsert-customer";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
@@ -127,11 +128,23 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!pkg) return NextResponse.json({ error: "ไม่พบแพ็กเกจ" }, { status: 400 });
     }
 
+    const nextPhone =
+      d.customer_phone !== undefined ? normalizePhone(d.customer_phone) : row.customerPhone;
+    const nextName =
+      d.customer_name !== undefined ? d.customer_name.trim() : row.customerName;
+    const linkedCustomer = await upsertLaundryCustomerByPhone({
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      phoneRaw: nextPhone,
+      name: nextName && nextName !== "ลูกค้า" ? nextName : null,
+    });
+
     const updated = await prisma.laundryOrder.update({
       where: { id: row.id },
       data: {
         ...(d.customer_name !== undefined ? { customerName: d.customer_name.trim() } : {}),
         ...(d.customer_phone !== undefined ? { customerPhone: normalizePhone(d.customer_phone) } : {}),
+        ...(linkedCustomer ? { laundryCustomerId: linkedCustomer.id } : {}),
         ...(d.pickup_address !== undefined ? { pickupAddress: d.pickup_address.trim() } : {}),
         ...(d.dropoff_address !== undefined ?
           { dropoffAddress: (d.dropoff_address?.trim() || row.pickupAddress).slice(0, 500) }

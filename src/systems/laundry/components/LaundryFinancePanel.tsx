@@ -148,6 +148,17 @@ function IconChart({ className }: { className?: string }) {
   );
 }
 
+function IconFolder({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path
+        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function matchesSearchOrder(o: LaundryOrder, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
@@ -465,46 +476,74 @@ export function LaundryFinancePanel({
               </nav>
             </div>
             {activeListTab === "sales" ?
-              <div className={laundryInlineSubNavShellClass}>
-                <button
-                  type="button"
-                  className={laundryInlineSubNavBtnClass(false)}
-                  title="บันทึกรายรับเพิ่ม"
-                  aria-label="บันทึกรายรับเพิ่ม"
-                  onClick={() => {
-                    if (revenueCategories.length === 0) {
-                      revenuePanelRef.current?.openManageCategories();
-                      return;
-                    }
-                    revenuePanelRef.current?.openAddEntry();
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  <span className="hidden sm:inline">รายรับเพิ่ม</span>
-                </button>
-              </div>
-            : <div className={laundryInlineSubNavShellClass}>
-                <button
-                  type="button"
-                  className={laundryInlineSubNavBtnClass(false)}
-                  title="บันทึกรายจ่าย"
-                  aria-label="บันทึกรายจ่าย"
-                  onClick={() => {
-                    if (costCategories.length === 0) {
-                      costPanelRef.current?.openManageCategories();
-                      return;
-                    }
-                    costPanelRef.current?.openAddEntry();
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  <span className="hidden sm:inline">รายจ่ายเพิ่ม</span>
-                </button>
-              </div>
+              <>
+                <div className={laundryInlineSubNavShellClass}>
+                  <button
+                    type="button"
+                    className={laundryInlineSubNavBtnClass(false)}
+                    title="จัดการหมวดหมู่รายรับ"
+                    aria-label="จัดการหมวดหมู่รายรับ"
+                    onClick={() => revenuePanelRef.current?.openManageCategories()}
+                  >
+                    <IconFolder className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">หมวดหมู่</span>
+                  </button>
+                </div>
+                <div className={laundryInlineSubNavShellClass}>
+                  <button
+                    type="button"
+                    className={laundryInlineSubNavBtnClass(false)}
+                    title="บันทึกรายรับเพิ่ม"
+                    aria-label="บันทึกรายรับเพิ่ม"
+                    onClick={() => {
+                      if (revenueCategories.length === 0) {
+                        revenuePanelRef.current?.openManageCategories();
+                        return;
+                      }
+                      revenuePanelRef.current?.openAddEntry();
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="hidden sm:inline">รายรับเพิ่ม</span>
+                  </button>
+                </div>
+              </>
+            : <>
+                <div className={laundryInlineSubNavShellClass}>
+                  <button
+                    type="button"
+                    className={laundryInlineSubNavBtnClass(false)}
+                    title="จัดการหมวดหมู่รายจ่าย"
+                    aria-label="จัดการหมวดหมู่รายจ่าย"
+                    onClick={() => costPanelRef.current?.openManageCategories()}
+                  >
+                    <IconFolder className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">หมวดหมู่</span>
+                  </button>
+                </div>
+                <div className={laundryInlineSubNavShellClass}>
+                  <button
+                    type="button"
+                    className={laundryInlineSubNavBtnClass(false)}
+                    title="บันทึกรายจ่าย"
+                    aria-label="บันทึกรายจ่าย"
+                    onClick={() => {
+                      if (costCategories.length === 0) {
+                        costPanelRef.current?.openManageCategories();
+                        return;
+                      }
+                      costPanelRef.current?.openAddEntry();
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="hidden sm:inline">รายจ่ายเพิ่ม</span>
+                  </button>
+                </div>
+              </>
             }
             <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
             <div className={laundryInlineSubNavShellClass}>

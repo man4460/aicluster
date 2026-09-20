@@ -8,6 +8,7 @@ import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { laundryOrderStatusZod, normalizeLaundryOrderStatus } from "@/lib/laundry/order-status";
 import { isLaundryPaymentMethod } from "@/systems/laundry/lib/payment-method";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
+import { upsertLaundryCustomerByPhone } from "@/lib/laundry/upsert-customer";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
@@ -133,6 +134,13 @@ export async function POST(req: Request) {
       : null;
     const receiptUrl = parsed.data.receipt_image_url?.trim() || null;
 
+    const linkedCustomer = await upsertLaundryCustomerByPhone({
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      phoneRaw: phone,
+      name: customerName !== "ลูกค้า" ? customerName : null,
+    });
+
     const row = await prisma.laundryOrder.create({
       data: {
         ownerUserId: own.ownerId,
@@ -151,6 +159,7 @@ export async function POST(req: Request) {
         note: parsed.data.note?.trim() ?? "",
         recordedByName: parsed.data.recorded_by_name?.trim() ?? "",
         status,
+        ...(linkedCustomer ? { laundryCustomerId: linkedCustomer.id } : {}),
         ...(paymentMethod != null ? { paymentMethod } : {}),
         ...(receiptUrl ? { receiptImageUrl: receiptUrl } : {}),
       },

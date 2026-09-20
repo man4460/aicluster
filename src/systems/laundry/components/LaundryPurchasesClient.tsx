@@ -77,12 +77,22 @@ type Row = {
   customer: RowCustomer;
 };
 
-type StatusFilterKey = "ALL" | "ACTIVE" | "EXHAUSTED" | "CANCELLED";
+type StatusFilterKey = "ALL" | "ACTIVE" | "EXHAUSTED" | "CANCELLED" | "WALK_IN";
+
+type WalkInCustomer = {
+  id: number;
+  phone: string;
+  name: string | null;
+  createdAt: string;
+  orderCount: number;
+  serviceLogCount: number;
+};
 
 function statusLabel(s: string) {
   if (s === "ACTIVE") return "ใช้งาน";
   if (s === "EXHAUSTED") return "หมดแล้ว";
   if (s === "CANCELLED") return "ยกเลิก";
+  if (s === "WALK_IN") return "รายครั้ง";
   return s;
 }
 
@@ -90,6 +100,7 @@ function statusBadgeClass(s: string) {
   if (s === "ACTIVE") return "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/90";
   if (s === "EXHAUSTED") return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";
   if (s === "CANCELLED") return "bg-rose-100 text-rose-900 ring-1 ring-rose-200/90";
+  if (s === "WALK_IN") return "bg-sky-100 text-sky-900 ring-1 ring-sky-200/90";
   return "bg-[#ecebff] text-[#2e2a58] ring-1 ring-[#dcd8f0]";
 }
 
@@ -97,6 +108,7 @@ function statusAccentGradient(s: string) {
   if (s === "ACTIVE") return "from-emerald-500 via-teal-500 to-[#0d9488]";
   if (s === "EXHAUSTED") return "from-slate-400 via-slate-500 to-slate-600";
   if (s === "CANCELLED") return "from-rose-500 via-pink-500 to-fuchsia-500";
+  if (s === "WALK_IN") return "from-sky-500 via-cyan-500 to-teal-500";
   return "from-[#4338ca] via-[#5b61ff] to-[#0d9488]";
 }
 
@@ -152,6 +164,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
   const { profile: shopPrint } = useLaundryShopPrintProfile();
   const [printRow, setPrintRow] = useState<LaundryMemberPrintRow | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [walkInCustomers, setWalkInCustomers] = useState<WalkInCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [filterPhone, setFilterPhone] = useState("");
@@ -175,6 +188,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     const countActive = rows.filter((r) => r.status === "ACTIVE").length;
     const countExhausted = rows.filter((r) => r.status === "EXHAUSTED").length;
     const countCancelled = rows.filter((r) => r.status === "CANCELLED").length;
+    const countWalkIn = walkInCustomers.length;
     let revenue = 0;
     for (const r of rows) {
       if (r.status !== "CANCELLED") {
@@ -182,10 +196,18 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
         if (Number.isFinite(n)) revenue += n;
       }
     }
-    return { countActive, countExhausted, countCancelled, revenue, countTotal: rows.length };
-  }, [rows]);
+    return {
+      countActive,
+      countExhausted,
+      countCancelled,
+      countWalkIn,
+      revenue,
+      countTotal: rows.length + countWalkIn,
+    };
+  }, [rows, walkInCustomers]);
 
   const filteredRows = useMemo(() => {
+    if (statusFilter === "WALK_IN") return [] as Row[];
     const phoneQ = filterPhone.replace(/\D/g, "");
     const nameQ = filterName.trim().toLowerCase();
     return rows.filter((r) => {
@@ -202,6 +224,22 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     });
   }, [rows, filterPhone, filterName, statusFilter]);
 
+  const filteredWalkIns = useMemo(() => {
+    if (statusFilter !== "ALL" && statusFilter !== "WALK_IN") return [] as WalkInCustomer[];
+    const phoneQ = filterPhone.replace(/\D/g, "");
+    const nameQ = filterName.trim().toLowerCase();
+    return walkInCustomers.filter((c) => {
+      if (phoneQ.length > 0) {
+        if (!c.phone.replace(/\D/g, "").includes(phoneQ)) return false;
+      }
+      if (nameQ.length > 0) {
+        const n = (c.name ?? "").toLowerCase();
+        if (!n.includes(nameQ)) return false;
+      }
+      return true;
+    });
+  }, [walkInCustomers, filterPhone, filterName, statusFilter]);
+
   const hasActiveFilters =
     statusFilter !== "ALL" ||
     filterPhone.replace(/\D/g, "").length > 0 ||
@@ -212,18 +250,26 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     { key: "ACTIVE", label: "ใช้งาน", count: stats.countActive },
     { key: "EXHAUSTED", label: "หมดแล้ว", count: stats.countExhausted },
     { key: "CANCELLED", label: "ยกเลิก", count: stats.countCancelled },
+    { key: "WALK_IN", label: "รายครั้ง", count: stats.countWalkIn },
   ];
 
   const load = useCallback(async () => {
     setErr(null);
-    const res = await fetch("/api/laundry/subscriptions?limit=150", {
-      cache: "no-store",
-      credentials: "include",
-    });
-    const data = (await res.json().catch(() => ({}))) as { subscriptions?: Row[]; error?: string };
-    if (!res.ok) {
+    const [subRes, custRes] = await Promise.all([
+      fetch("/api/laundry/subscriptions?limit=150", {
+        cache: "no-store",
+        credentials: "include",
+      }),
+      fetch("/api/laundry/customers?walk_in=1&limit=200", {
+        cache: "no-store",
+        credentials: "include",
+      }),
+    ]);
+    const data = (await subRes.json().catch(() => ({}))) as { subscriptions?: Row[]; error?: string };
+    if (!subRes.ok) {
       setErr(data.error ?? "โหลดไม่สำเร็จ");
       setRows([]);
+      setWalkInCustomers([]);
       return;
     }
     setRows(
@@ -236,6 +282,15 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
         };
       }),
     );
+    const custData = (await custRes.json().catch(() => ({}))) as {
+      customers?: WalkInCustomer[];
+      error?: string;
+    };
+    if (custRes.ok) {
+      setWalkInCustomers(custData.customers ?? []);
+    } else {
+      setWalkInCustomers([]);
+    }
   }, []);
 
   function openEditModal(r: Row) {
@@ -508,6 +563,57 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     );
   }
 
+  function renderWalkInRow(c: WalkInCustomer, compact: boolean) {
+    const seenAt = new Date(c.createdAt).toLocaleString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const visitHint =
+      c.orderCount > 0 || c.serviceLogCount > 0
+        ? `ออเดอร์ ${c.orderCount} · บันทึกบริการ ${c.serviceLogCount}`
+        : "ลูกค้ารายครั้ง (ยังไม่มีแพ็กเหมา)";
+
+    return (
+      <li
+        key={`walk-in-${c.id}`}
+        className={cn(
+          laundryOffersListRowCardClass,
+          "group/item relative overflow-hidden border-sky-200/70 bg-gradient-to-br from-white via-sky-50/35 to-cyan-50/25",
+          compact ? "!px-3 py-2.5" : "py-3 pr-3 sm:py-2.5 sm:pr-4",
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b opacity-90",
+            statusAccentGradient("WALK_IN"),
+          )}
+        />
+        <div className={cn("flex min-w-0 gap-2.5", compact ? "pl-2" : "gap-3 pl-3 sm:gap-4 sm:pl-4")}>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <span className="text-sm font-black tabular-nums text-[#1e1b4b]">{c.phone}</span>
+              <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold", statusBadgeClass("WALK_IN"))}>
+                {statusLabel("WALK_IN")}
+              </span>
+            </div>
+            {c.name ? <p className="truncate text-[11px] font-semibold text-[#5f5a8a]">{c.name}</p> : null}
+            <p className="truncate text-[10px] leading-snug text-[#8b87ad]">
+              {seenAt} · {visitHint}
+            </p>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  const listEmpty = rows.length === 0 && walkInCustomers.length === 0;
+  const filteredEmpty = filteredRows.length === 0 && filteredWalkIns.length === 0;
+  const listCount = filteredRows.length + filteredWalkIns.length;
+  const totalListed = rows.length + walkInCustomers.length;
+
   return (
     <div className={embedded ? "min-w-0 space-y-3" : laundryPageStackClass}>
       {sellNotice ? (
@@ -519,7 +625,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
 
       {loading ? (
         <p className={laundryMutedLoadingNoticeClass}>กำลังโหลด…</p>
-      ) : rows.length === 0 ? (
+      ) : listEmpty ? (
         <section className={laundrySectionFirstClass} aria-label="ว่าง">
           {!embedded ? (
             <div className="flex justify-end">
@@ -533,8 +639,8 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
             </div>
           ) : null}
           <div className={cn(laundryOffersEmptyStateClass, "space-y-2 py-8 text-center text-sm text-[#66638c]")}>
-            <p className="font-semibold text-[#2e2a58]">ยังไม่มีการซื้อแพ็ก</p>
-            <p>กด «ขายแพ็กเกจ» เพื่อเปิดสมาชิก — หรือใช้บัญชี demo แล้วรัน seed ตัวอย่าง</p>
+            <p className="font-semibold text-[#2e2a58]">ยังไม่มีสมาชิก</p>
+            <p>ขายแพ็ก · บันทึกเบอร์ตอนซักรายครั้ง — หรือใช้บัญชี demo แล้วรัน seed ตัวอย่าง</p>
             <p className="text-[11px] text-[#8b87ad]">
               ทดลองหักแพ็กด้วยเบอร์ {LAUNDRY_DEMO_DEDUCT_HINTS.map((h) => h.phone).join(" · ")}
             </p>
@@ -603,7 +709,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                   </div>
                 : null}
                 <p className="min-w-0 text-sm font-black tabular-nums text-[#2e2a58]">
-                  {hasActiveFilters ? `${filteredRows.length}/${rows.length}` : rows.length} รายการ
+                  {hasActiveFilters ? `${listCount}/${totalListed}` : totalListed} รายการ
                 </p>
               </div>
               {!embedded ? (
@@ -667,11 +773,12 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
             </div>
           </section>
 
-          {filteredRows.length === 0 ? (
+          {filteredEmpty ? (
             <p className={cn(laundryOffersEmptyStateClass, "py-8 text-center text-sm text-amber-950")}>ไม่พบรายการ — ปรับตัวกรอง</p>
           ) : (
             <ul className={embedded ? "grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3" : "space-y-2.5"}>
               {filteredRows.map((r) => renderRow(r, embedded))}
+              {filteredWalkIns.map((c) => renderWalkInRow(c, embedded))}
             </ul>
           )}
         </>
