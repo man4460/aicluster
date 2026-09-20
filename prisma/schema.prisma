@@ -301,6 +301,19 @@ model User {
   usedCarStaffMembers                UsedCarStaff[]
   usedCarFinanceCategories           UsedCarFinanceCategory[]
   usedCarLedgerEntries               UsedCarLedgerEntry[]
+  smartGuardShops                    SmartGuardShop[]
+  smartGuardCheckpoints              SmartGuardCheckpoint[]
+  smartGuardCheckpointVideos         SmartGuardCheckpointVideo[]
+  smartGuardSchedules                SmartGuardSchedule[]
+  smartGuardStaffMembers             SmartGuardStaff[]
+  smartGuardShiftLogs                SmartGuardShiftLog[]
+  smartGuardTourLogs                 SmartGuardTourLog[]
+  smartGuardIncidents                SmartGuardIncident[]
+  smartGuardIncidentImages           SmartGuardIncidentImage[]
+  smartGuardAssets                   SmartGuardAsset[]
+  smartGuardContacts                 SmartGuardContact[]
+  smartGuardFinanceCategories        SmartGuardFinanceCategory[]
+  smartGuardLedgerEntries            SmartGuardLedgerEntry[]
   lmsProfiles                        LmsProfile[]
   lmsCourses                         LmsCourse[]
   lmsLessons                         LmsLesson[]
@@ -8819,6 +8832,394 @@ model UsedCarLedgerEntry {
   @@index([shopId, entryOn], map: "ucs_ledger_shop_on_idx")
   @@index([vehicleId], map: "ucs_ledger_vehicle_idx")
   @@map("used_car_ledger_entries")
+}
+
+/**
+ * จุดตรวจ รปภ. อัจฉริยะ (smart-guard-tour) — โปรไฟล์โครงการ/บริษัท
+ */
+model SmartGuardShop {
+  id                 String   @id @default(cuid())
+  ownerUserId        String   @map("owner_id") @db.VarChar(191)
+  owner              User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId     String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  slug               String   @db.VarChar(80)
+  displayName        String   @map("display_name") @db.VarChar(200)
+  logoUrl            String?  @map("logo_url") @db.VarChar(512)
+  tagline            String?  @db.VarChar(300)
+  address            String?  @db.Text
+  contactPhone       String?  @map("contact_phone") @db.VarChar(32)
+  emergencyPhone     String?  @map("emergency_phone") @db.VarChar(32)
+  contactLine        String?  @map("contact_line") @db.VarChar(120)
+  /** LINE Notify token กลุ่มศูนย์ควบคุม */
+  lineNotifyToken    String?  @map("line_notify_token") @db.VarChar(255)
+  facebookUrl        String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl             String?  @map("map_url") @db.VarChar(512)
+  shopLat            Decimal? @map("shop_lat") @db.Decimal(10, 7)
+  shopLng            Decimal? @map("shop_lng") @db.Decimal(10, 7)
+  openTimeHm         String?  @map("open_time_hm") @db.VarChar(5)
+  closeTimeHm        String?  @map("close_time_hm") @db.VarChar(5)
+  portalBannerUrl    String?  @map("portal_banner_url") @db.VarChar(512)
+  portalGalleryJson  String   @default("[]") @map("portal_gallery_json") @db.Text
+  portalEnabled      Boolean  @default(true) @map("portal_enabled")
+  portalSosEnabled   Boolean  @default(true) @map("portal_sos_enabled")
+  portalIntroHtml    String?  @map("portal_intro_html") @db.Text
+  /**
+   * NONE | ADVANCE | FULL — โหมดเบิกเงิน/จ่ายค่าแรง
+   */
+  payoutMode         String   @default("NONE") @map("payout_mode") @db.VarChar(16)
+  promptPayPhone     String?  @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName           String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber  String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName    String?  @map("bank_account_name") @db.VarChar(200)
+  taxId              String?  @map("tax_id") @db.VarChar(30)
+  slipPaperSize      String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  staffDailyPinHash  String?  @map("staff_daily_pin_hash") @db.VarChar(100)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  checkpoints        SmartGuardCheckpoint[]
+  schedules          SmartGuardSchedule[]
+  staffMembers       SmartGuardStaff[]
+  shiftLogs          SmartGuardShiftLog[]
+  tourLogs           SmartGuardTourLog[]
+  incidents          SmartGuardIncident[]
+  assets             SmartGuardAsset[]
+  contacts           SmartGuardContact[]
+  financeCategories  SmartGuardFinanceCategory[]
+  ledgerEntries      SmartGuardLedgerEntry[]
+
+  @@unique([ownerUserId, trialSessionId], map: "sgt_shop_owner_trial_uniq")
+  @@unique([slug, trialSessionId], map: "sgt_shop_slug_trial_uniq")
+  @@index([ownerUserId], map: "sgt_shop_owner_idx")
+  @@map("smart_guard_shops")
+}
+
+model SmartGuardCheckpoint {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId           String   @map("shop_id")
+  shop             SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String   @db.VarChar(200)
+  slug             String   @db.VarChar(80)
+  zoneLabel        String?  @map("zone_label") @db.VarChar(120)
+  buildingLabel    String?  @map("building_label") @db.VarChar(120)
+  floorLabel       String?  @map("floor_label") @db.VarChar(60)
+  /** พิกัดจุดตรวจ */
+  lat              Decimal? @db.Decimal(10, 7)
+  lng              Decimal? @db.Decimal(10, 7)
+  /** รัศมี geofence เมตร — สแกนนอกรัศมีไม่ได้ */
+  geofenceRadiusM  Int      @default(80) @map("geofence_radius_m")
+  coverImageUrl    String?  @map("cover_image_url") @db.VarChar(512)
+  qrToken          String   @map("qr_token") @db.VarChar(64)
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  note             String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  videos   SmartGuardCheckpointVideo[]
+  tourLogs SmartGuardTourLog[]
+  incidents SmartGuardIncident[]
+
+  @@unique([shopId, slug], map: "sgt_cp_shop_slug_uniq")
+  @@unique([shopId, qrToken], map: "sgt_cp_shop_qr_uniq")
+  @@index([shopId, isActive], map: "sgt_cp_shop_active_idx")
+  @@index([ownerUserId, trialSessionId], map: "sgt_cp_owner_trial_idx")
+  @@map("smart_guard_checkpoints")
+}
+
+model SmartGuardCheckpointVideo {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  checkpointId   String   @map("checkpoint_id")
+  checkpoint     SmartGuardCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  youtubeUrl     String   @map("youtube_url") @db.VarChar(512)
+  title          String?  @db.VarChar(200)
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([checkpointId], map: "sgt_cp_video_cp_idx")
+  @@map("smart_guard_checkpoint_videos")
+}
+
+model SmartGuardSchedule {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name           String   @db.VarChar(200)
+  /**
+   * FREE | SEQUENTIAL
+   */
+  routeMode      String   @default("FREE") @map("route_mode") @db.VarChar(24)
+  /** ช่วงนาทีระหว่างรอบ เช่น 120 = ทุก 2 ชม. */
+  intervalMinutes Int     @default(120) @map("interval_minutes")
+  /** JSON รายการ checkpointId ตามลำดับ */
+  checkpointIdsJson String @default("[]") @map("checkpoint_ids_json") @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tourLogs SmartGuardTourLog[]
+
+  @@index([shopId, isActive], map: "sgt_sched_shop_active_idx")
+  @@map("smart_guard_schedules")
+}
+
+model SmartGuardStaff {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  displayName    String   @map("display_name") @db.VarChar(200)
+  phone          String?  @db.VarChar(32)
+  photoUrl       String?  @map("photo_url") @db.VarChar(512)
+  pinHash        String?  @map("pin_hash") @db.VarChar(100)
+  workStartHm    String?  @map("work_start_hm") @db.VarChar(5)
+  workEndHm      String?  @map("work_end_hm") @db.VarChar(5)
+  wageBahtPerShift Int    @default(0) @map("wage_baht_per_shift")
+  otBahtPerHour  Int      @default(0) @map("ot_baht_per_hour")
+  isActive       Boolean  @default(true) @map("is_active")
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  shiftLogs     SmartGuardShiftLog[]
+  tourLogs      SmartGuardTourLog[]
+  incidents     SmartGuardIncident[]
+  ledgerEntries SmartGuardLedgerEntry[]
+
+  @@index([shopId, isActive], map: "sgt_staff_shop_active_idx")
+  @@index([ownerUserId, trialSessionId], map: "sgt_staff_owner_trial_idx")
+  @@map("smart_guard_staff")
+}
+
+model SmartGuardShiftLog {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  staffId        String   @map("staff_id")
+  staff          SmartGuardStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  /** YYYY-MM-DD Bangkok */
+  shiftOn        String   @map("shift_on") @db.VarChar(10)
+  checkInAt      DateTime? @map("check_in_at")
+  checkOutAt     DateTime? @map("check_out_at")
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, shiftOn], map: "sgt_shift_shop_on_idx")
+  @@index([staffId], map: "sgt_shift_staff_idx")
+  @@map("smart_guard_shift_logs")
+}
+
+model SmartGuardTourLog {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  checkpointId   String   @map("checkpoint_id")
+  checkpoint     SmartGuardCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  staffId        String?  @map("staff_id")
+  staff          SmartGuardStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  scheduleId     String?  @map("schedule_id")
+  schedule       SmartGuardSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  /**
+   * PENDING | CHECKED_OK | CHECKED_ISSUE | OVERDUE | MISSED
+   */
+  status         String   @default("PENDING") @db.VarChar(24)
+  scannedAt      DateTime? @map("scanned_at")
+  scanLat        Decimal? @map("scan_lat") @db.Decimal(10, 7)
+  scanLng        Decimal? @map("scan_lng") @db.Decimal(10, 7)
+  photoUrl       String?  @map("photo_url") @db.VarChar(512)
+  note           String?  @db.Text
+  /** token ตอนสแกน — กันภาพ QR เก่า */
+  scanToken      String?  @map("scan_token") @db.VarChar(64)
+  /** YYYY-MM-DD Bangkok */
+  entryOn        String   @map("entry_on") @db.VarChar(10)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, entryOn], map: "sgt_tour_shop_on_idx")
+  @@index([checkpointId], map: "sgt_tour_cp_idx")
+  @@index([status], map: "sgt_tour_status_idx")
+  @@map("smart_guard_tour_logs")
+}
+
+model SmartGuardIncident {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  checkpointId   String?  @map("checkpoint_id")
+  checkpoint     SmartGuardCheckpoint? @relation(fields: [checkpointId], references: [id], onDelete: SetNull)
+  staffId        String?  @map("staff_id")
+  staff          SmartGuardStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  contactId      String?  @map("contact_id")
+  contact        SmartGuardContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  /**
+   * ISSUE | SOS_URGENT | OTHER
+   */
+  kind           String   @default("ISSUE") @db.VarChar(24)
+  /**
+   * PENDING | IN_PROGRESS | RESOLVED | CLOSED
+   */
+  status         String   @default("PENDING") @db.VarChar(24)
+  /**
+   * LOW | MEDIUM | HIGH | CRITICAL
+   */
+  severity       String   @default("MEDIUM") @db.VarChar(16)
+  title          String   @db.VarChar(200)
+  detail         String?  @db.Text
+  reportLat      Decimal? @map("report_lat") @db.Decimal(10, 7)
+  reportLng      Decimal? @map("report_lng") @db.Decimal(10, 7)
+  resolvedNote   String?  @map("resolved_note") @db.Text
+  resolvedAt     DateTime? @map("resolved_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  images SmartGuardIncidentImage[]
+
+  @@index([shopId, status], map: "sgt_inc_shop_status_idx")
+  @@index([shopId, kind], map: "sgt_inc_shop_kind_idx")
+  @@map("smart_guard_incidents")
+}
+
+model SmartGuardIncidentImage {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  incidentId     String   @map("incident_id")
+  incident       SmartGuardIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  imageUrl       String   @map("image_url") @db.VarChar(512)
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([incidentId], map: "sgt_inc_img_idx")
+  @@map("smart_guard_incident_images")
+}
+
+model SmartGuardContact {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  displayName    String   @map("display_name") @db.VarChar(200)
+  phone          String?  @db.VarChar(32)
+  lineId         String?  @map("line_id") @db.VarChar(120)
+  notifyWebhook  String?  @map("notify_webhook") @db.VarChar(512)
+  isActive       Boolean  @default(true) @map("is_active")
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  incidents SmartGuardIncident[]
+
+  @@index([shopId, isActive], map: "sgt_contact_shop_active_idx")
+  @@map("smart_guard_contacts")
+}
+
+model SmartGuardAsset {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name           String   @db.VarChar(200)
+  /**
+   * RADIO | FLASHLIGHT | VEHICLE | OTHER
+   */
+  kind           String   @default("OTHER") @db.VarChar(24)
+  assetCode      String?  @map("asset_code") @db.VarChar(64)
+  status         String   @default("AVAILABLE") @db.VarChar(24)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  ledgerEntries SmartGuardLedgerEntry[]
+
+  @@index([shopId], map: "sgt_asset_shop_idx")
+  @@map("smart_guard_assets")
+}
+
+model SmartGuardFinanceCategory {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /**
+   * INCOME | EXPENSE
+   */
+  kind           String   @db.VarChar(16)
+  name           String   @db.VarChar(120)
+  /**
+   * SERVICE_FEE | WAGE | OT | EQUIPMENT | OTHER
+   */
+  systemKey      String?  @map("system_key") @db.VarChar(32)
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  entries SmartGuardLedgerEntry[]
+
+  @@index([shopId, kind], map: "sgt_fcat_shop_kind_idx")
+  @@map("smart_guard_finance_categories")
+}
+
+model SmartGuardLedgerEntry {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  shopId         String   @map("shop_id")
+  shop           SmartGuardShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId     String?  @map("category_id")
+  category       SmartGuardFinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  staffId        String?  @map("staff_id")
+  staff          SmartGuardStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  assetId        String?  @map("asset_id")
+  asset          SmartGuardAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  /**
+   * INCOME | EXPENSE
+   */
+  kind           String   @db.VarChar(16)
+  title          String   @db.VarChar(200)
+  amountBaht     Int      @map("amount_baht")
+  /** YYYY-MM-DD Bangkok */
+  entryOn        String   @map("entry_on") @db.VarChar(10)
+  paymentMethod  String?  @map("payment_method") @db.VarChar(24)
+  slipImageUrl   String?  @map("slip_image_url") @db.VarChar(512)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId, entryOn], map: "sgt_ledger_shop_on_idx")
+  @@index([staffId], map: "sgt_ledger_staff_idx")
+  @@map("smart_guard_ledger_entries")
 }
 
 /**

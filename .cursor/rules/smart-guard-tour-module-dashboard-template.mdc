@@ -1,0 +1,90 @@
+---
+description: จุดตรวจ รปภ. อัจฉริยะ (smart-guard-tour) — แม่แบบโมดูลแดชบอร์ด
+globs:
+  - src/systems/smart-guard-tour/**
+  - src/app/(dashboard)/dashboard/smart-guard-tour/**
+  - src/app/api/smart-guard-tour/**
+  - src/lib/smart-guard-tour/**
+alwaysApply: false
+---
+
+# จุดตรวจ รปภ. อัจฉริยะ — Smart Guard Tour
+
+**Slug:** `smart-guard-tour` · **groupId:** 1 · **daily:** 1 token  
+**แดชบอร์ด:** `/dashboard/smart-guard-tour` · **พอร์ทัล (ภายหลัง):** `/guard/[slug]`
+
+**ยึดแม่แบบ:** `dashboard-module-design-check-laundry-first.mdc` · `used-car-showroom-module-dashboard-template.mdc` · `dashboard-module-shop-settings-tabs.mdc`
+
+---
+
+## Phase A — ทำแล้ว (scaffold)
+
+| ชิ้น | สถานะ |
+|-----|----|
+| systems chrome / shell / header bar / page subnav / tokens / card-tones / icons | ✅ |
+| dock 4: dashboard · manage · finance · settings | ✅ |
+| แดชบอร์ด sub-nav: overview · checkpoints · tour-logs · incidents · shifts · map-view | ✅ |
+| สถิติ 6 การ์ดคลิกได้ + «กลับภาพรวม» | ✅ (ค่าศูนย์) |
+| Manage stubs · Finance «เฟส E» · Settings 5 แท็บ (basic\|finance\|portal\|hours\|link) | ✅ |
+| link: `ModuleQrMonthlyGate` + `ModulePublicLinkQrPanel` → `/guard/{slug}` | ✅ |
+| **ห้าม** ใส่ใน `QR_LINK_DAILY_ALLOWED_MODULE_SLUGS` | ✅ |
+| API session shop / upload / overview | ✅ |
+| ensure-shop + หมวดการเงินเริ่มต้น | ✅ |
+
+---
+
+## เมนูหลัก (dock 4)
+
+| key | หน้า |
+|-----|---|
+| dashboard | ภาพรวม · จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ · แผนที่ |
+| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ |
+| finance | รายรับ/รายจ่าย (เฟส E) |
+| settings | basic · finance · portal · hours · link |
+
+Chrome: `SmartGuardTourModuleChrome` · ยุบหัว → `SmartGuardTourHeaderBarNav` ใน `DashboardShell`  
+Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)
+
+---
+
+## หมวดการเงินเริ่มต้น (ensure-shop)
+
+| kind | ชื่อ | systemKey |
+|------|-----|-----------|
+| INCOME | ค่าบริการรักษาความปลอดภัย | SECURITY_SERVICE |
+| EXPENSE | ค่าแรง รปภ. | GUARD_WAGES |
+| EXPENSE | ค่า OT / เบี้ยขยัน | OT_BONUS |
+| EXPENSE | อุปกรณ์สายตรวจ | TOUR_EQUIPMENT |
+| EXPENSE | อื่นๆ | OTHER |
+
+**OT:** บันทึกเป็นรายจ่าย + ผูก `staffId` (เฟส E) — ไม่ใส่ในต้นทุนจุดตรวจ
+
+---
+
+## Backlog เฟสถัดไป
+
+| เฟส | เนื้อหา |
+|-----|---|
+| **B** | จุดตรวจ CRUD · QR/NFC stub · แผนที่พิกัด · วิดีโอจุดตรวจ |
+| **C** | สายตรวจจริง · **GPS เข้มงวด** · สแกนกล้อง · บันทึก tour-log |
+| **D** | เหตุการณ์ · รูป · LINE Notify · SOS พอร์ทัล · กะ/เข้า–ออก |
+| **E** | การเงินเต็ม (กรอง · กราฟ · สลิป · หมวด CRUD) · OT+staffId |
+| **Portal** | `/guard/[slug]` พนักงาน · SOS · สถานะสายตรวจ |
+
+---
+
+## Prisma (parent)
+
+`SmartGuardShop` · `SmartGuardCheckpoint` · `SmartGuardTourLog` · `SmartGuardIncident` · `SmartGuardStaff` · `SmartGuardShiftLog` · `SmartGuardFinanceCategory` · `SmartGuardLedgerEntry` · …  
+Delegates: `prisma.smartGuardShop` ฯลฯ
+
+---
+
+## เช็กลิสต์ Phase A
+
+- [x] ไม่มี MawellLogo ใน chrome  
+- [x] WIDE + DOCKED ใน `DashboardPagesShell`  
+- [x] sidebar icon · landing cover · card description · seed upsert  
+- [x] QR monthly เท่านั้น — ไม่ใส่ daily QR allowlist  
+- [ ] Parent: schema models + migrate + `prisma generate`  
+- [ ] `npx tsc --noEmit` หลัง client มี models

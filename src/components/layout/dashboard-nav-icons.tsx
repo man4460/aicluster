@@ -344,6 +344,19 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/smart-guard-tour")) {
+    return (
+      <Svg>
+        <path
+          d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path d="M9.5 12l1.8 1.8L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/pro-resume")) {
     return (
       <Svg>

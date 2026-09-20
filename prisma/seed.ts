@@ -56,6 +56,7 @@ import {
   DRINK_POS_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
   USED_CAR_SHOWROOM_MODULE_SLUG,
+  SMART_GUARD_TOUR_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
@@ -402,6 +403,14 @@ async function main() {
       sortOrder: 38,
     },
     {
+      slug: "smart-guard-tour",
+      title: "จุดตรวจ รปภ. อัจฉริยะ",
+      description:
+        "กลุ่ม 1 (Basic) — จุดตรวจ สายตรวจ กะ เหตุการณ์ และการเงินไซต์ /guard/[slug]",
+      groupId: 1,
+      sortOrder: 39,
+    },
+    {
       slug: "pro-resume",
       title: "Pro Resume & Portfolio Builder",
       description:
@@ -546,6 +555,7 @@ async function main() {
     DRINK_POS_MODULE_SLUG,
     HOTEL_RESORT_MODULE_SLUG,
     USED_CAR_SHOWROOM_MODULE_SLUG,
+    SMART_GUARD_TOUR_MODULE_SLUG,
     ECOMMERCE_STORE_MODULE_SLUG,
     SMART_POLICE_MODULE_SLUG,
   ] as const;

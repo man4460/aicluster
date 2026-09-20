@@ -73,6 +73,10 @@ export const CLUB_EVENT_MODULE_GROUP_ID = 1 as const;
 /** โชว์รูมรถมือสอง / เต็นท์รถ — สต็อก จอง ไฟแนนซ์ เว็บ /car/[slug] */
 export const USED_CAR_SHOWROOM_MODULE_SLUG = "used-car-showroom" as const;
 export const USED_CAR_SHOWROOM_MODULE_GROUP_ID = 1 as const;
+
+/** จุดตรวจ รปภ. อัจฉริยะ — สายตรวจ GPS · เหตุการณ์ · เว็บ /guard/[slug] */
+export const SMART_GUARD_TOUR_MODULE_SLUG = "smart-guard-tour" as const;
+export const SMART_GUARD_TOUR_MODULE_GROUP_ID = 1 as const;
 /** LMS — สถาบัน / คอร์ส / ผู้เรียน / ใบรับรอง */
 export const LMS_MODULE_SLUG = "lms" as const;
 export const LMS_MODULE_GROUP_ID = 1 as const;
@@ -195,7 +199,7 @@ export function isDailyTokenExemptModuleSlug(slug: string): boolean {
 /**
  * โมดูลที่เปิดลิงก์ / QR สาธารณะได้แม้เป็นสายรายวัน
  * (ยังหักโทเคนรายวันตามปกติ — ไม่ใช่โมดูลฟรี)
- * **ห้าม** ใส่ used-car-showroom / laundry / hotel ฯลฯ ที่นี่ — กันคัดลอกลิงก์แล้วดาวน์เกรด
+ * **ห้าม** ใส่ used-car-showroom / laundry / hotel / smart-guard-tour ฯลฯ ที่นี่ — กันคัดลอกลิงก์แล้วดาวน์เกรด
  */
 export const QR_LINK_DAILY_ALLOWED_MODULE_SLUGS: ReadonlySet<string> = new Set([
   LMS_MODULE_SLUG,
@@ -221,6 +225,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === CLUB_EVENT_MODULE_SLUG) return "บริหารชมรม";
   if (slug === USED_CAR_SHOWROOM_MODULE_SLUG) return "โชว์รูมรถมือสอง";
+  if (slug === SMART_GUARD_TOUR_MODULE_SLUG) return "จุดตรวจ รปภ. อัจฉริยะ";
   if (slug === LMS_MODULE_SLUG) return "LMS คอร์สออนไลน์";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";

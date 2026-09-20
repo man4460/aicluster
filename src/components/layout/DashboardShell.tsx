@@ -313,6 +313,16 @@ import {
   writeUsedCarShowroomHeaderCollapsed,
 } from "@/systems/used-car-showroom/used-car-showroom-module-nav";
 import {
+  SmartGuardTourHeaderBarNav,
+  SmartGuardTourHeaderExpandButton,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourHeaderBarNav";
+import {
+  SMART_GUARD_TOUR_HEADER_COLLAPSE_EVENT,
+  isSmartGuardTourModulePath,
+  readSmartGuardTourHeaderCollapsed,
+  writeSmartGuardTourHeaderCollapsed,
+} from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
+import {
   ProResumeHeaderBarNav,
   ProResumeHeaderExpandButton,
 } from "@/systems/pro-resume/components/ProResumeHeaderBarNav";
@@ -719,6 +729,7 @@ export function DashboardShell({
   const [laundryHeaderCollapsed, setLaundryHeaderCollapsed] = useState(false);
   const [clubEventHeaderCollapsed, setClubEventHeaderCollapsed] = useState(false);
   const [usedCarShowroomHeaderCollapsed, setUsedCarShowroomHeaderCollapsed] = useState(false);
+  const [smartGuardTourHeaderCollapsed, setSmartGuardTourHeaderCollapsed] = useState(false);
   const [proResumeHeaderCollapsed, setProResumeHeaderCollapsed] = useState(false);
   const [lmsHeaderCollapsed, setLmsHeaderCollapsed] = useState(false);
   const [parkingHeaderCollapsed, setParkingHeaderCollapsed] = useState(false);
@@ -763,6 +774,7 @@ export function DashboardShell({
   const onLaundryModule = isLaundryModulePath(pathname);
   const onClubEventModule = isClubEventModulePath(pathname);
   const onUsedCarShowroomModule = isUsedCarShowroomModulePath(pathname);
+  const onSmartGuardTourModule = isSmartGuardTourModulePath(pathname);
   const onProResumeModule = isProResumeModulePath(pathname);
   const onLmsModule = isLmsModulePath(pathname);
   const onParkingModule = isParkingModulePath(pathname);
@@ -796,6 +808,7 @@ export function DashboardShell({
   const showLaundryHeaderBar = onLaundryModule && laundryHeaderCollapsed;
   const showClubEventHeaderBar = onClubEventModule && clubEventHeaderCollapsed;
   const showUsedCarShowroomHeaderBar = onUsedCarShowroomModule && usedCarShowroomHeaderCollapsed;
+  const showSmartGuardTourHeaderBar = onSmartGuardTourModule && smartGuardTourHeaderCollapsed;
   const showProResumeHeaderBar = onProResumeModule && proResumeHeaderCollapsed;
   const showLmsHeaderBar = onLmsModule && lmsHeaderCollapsed;
   const showParkingHeaderBar = onParkingModule && parkingHeaderCollapsed;
@@ -1300,6 +1313,21 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onUsedCarShowroomModule]);
+
+  useEffect(() => {
+    if (!onSmartGuardTourModule) {
+      setSmartGuardTourHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setSmartGuardTourHeaderCollapsed(readSmartGuardTourHeaderCollapsed());
+    sync();
+    window.addEventListener(SMART_GUARD_TOUR_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SMART_GUARD_TOUR_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onSmartGuardTourModule]);
 
   useEffect(() => {
     if (!onProResumeModule) {
@@ -1974,6 +2002,21 @@ export function DashboardShell({
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <UsedCarShowroomHeaderExpandButton onExpand={() => writeUsedCarShowroomHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showSmartGuardTourHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <SmartGuardTourHeaderBarNav onExpand={() => writeSmartGuardTourHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
+                    className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
+                  />
+                  <SmartGuardTourHeaderExpandButton onExpand={() => writeSmartGuardTourHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showProResumeHeaderBar ? (

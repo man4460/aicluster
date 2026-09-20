@@ -25,6 +25,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
   USED_CAR_SHOWROOM_MODULE_SLUG,
+  SMART_GUARD_TOUR_MODULE_SLUG,
   LMS_MODULE_SLUG,
   VAULT_MODULE_SLUG,
   PRO_RESUME_MODULE_SLUG,
@@ -70,6 +71,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === CLUB_EVENT_MODULE_SLUG) return "/dashboard/club-event";
   if (slug === USED_CAR_SHOWROOM_MODULE_SLUG) return "/dashboard/used-car-showroom";
+  if (slug === SMART_GUARD_TOUR_MODULE_SLUG) return "/dashboard/smart-guard-tour";
   if (slug === LMS_MODULE_SLUG) return "/dashboard/lms";
   if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
   if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";
@@ -183,6 +185,7 @@ export function buildDashboardNavGroups(
       LAUNDRY_MODULE_SLUG,
       CLUB_EVENT_MODULE_SLUG,
       USED_CAR_SHOWROOM_MODULE_SLUG,
+      SMART_GUARD_TOUR_MODULE_SLUG,
       LMS_MODULE_SLUG,
       BUILDING_POS_MODULE_SLUG,
       GENERAL_STORE_POS_MODULE_SLUG,
