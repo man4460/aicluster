@@ -7,9 +7,15 @@ import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { prismaErrorToApiMessage, prismaKnownRequestCode } from "@/lib/prisma-api-error";
 import { isLaundryPaymentMethod } from "@/systems/laundry/lib/payment-method";
+import {
+  laundryQuotaUnitLabel,
+  normalizeLaundryQuotaUnit,
+} from "@/systems/laundry/lib/quota-unit";
 
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
+  /** จำนวนชิ้น/ครั้งที่หักในรอบนี้ — แพ็ก SESSION บังคับ 1 · PIECE เลือกได้ */
+  unitsToDeduct: z.number().int().min(1).max(99_999).optional(),
   signatureImageUrl: z
     .string()
     .max(512)
@@ -80,18 +86,34 @@ export async function POST(req: Request) {
       parsed.data.signatureImageUrl != null && parsed.data.signatureImageUrl.length > 0
         ? parsed.data.signatureImageUrl.trim()
         : null;
+    const requestedUnits = parsed.data.unitsToDeduct;
     try {
       const out = await prisma.$transaction(async (tx) => {
         const sub = await tx.laundryCustomerSubscription.findFirst({
           where: { id: subscriptionId, ownerUserId: ownerId, trialSessionId },
-          include: { customer: true, package: { select: { name: true } } },
+          include: {
+            customer: true,
+            package: { select: { name: true, quotaUnit: true } },
+          },
         });
         if (!sub) throw new Error("NOT_FOUND");
         if (sub.status !== "ACTIVE" || sub.remainingSessions <= 0) {
           throw new Error("NO_SESSIONS");
         }
 
-        const next = sub.remainingSessions - 1;
+        const quotaUnit = normalizeLaundryQuotaUnit(sub.package.quotaUnit);
+        const unitsToDeduct =
+          quotaUnit === "PIECE"
+            ? Math.trunc(requestedUnits ?? 1)
+            : 1;
+        if (!Number.isInteger(unitsToDeduct) || unitsToDeduct < 1) {
+          throw new Error("BAD_UNITS");
+        }
+        if (unitsToDeduct > sub.remainingSessions) {
+          throw new Error("INSUFFICIENT");
+        }
+
+        const next = sub.remainingSessions - unitsToDeduct;
         const updated = await tx.laundryCustomerSubscription.update({
           where: { id: sub.id },
           data: {
@@ -107,6 +129,7 @@ export async function POST(req: Request) {
           subscriptionId: sub.id,
           laundryCustomerId: sub.laundryCustomerId,
           visitType: "PACKAGE_USE" as const,
+          unitsDeducted: unitsToDeduct,
           ...(packageNote ? { note: packageNote } : {}),
           ...(signatureImageUrl != null ? { signatureImageUrl } : {}),
         };
@@ -119,11 +142,24 @@ export async function POST(req: Request) {
             signatureImageUrl != null &&
             isPrismaClientValidationError(e) &&
             /signatureImageUrl|signature_image|Unknown argument/i.test(msg);
-          if (staleSig) {
-            console.warn("[laundry/check-in] Prisma ไม่รู้จัก signatureImageUrl — บันทึกแบบลดฟิลด์");
-            const { signatureImageUrl: _s, ...withoutSig } = logCore;
+          const staleUnits =
+            isPrismaClientValidationError(e) &&
+            /unitsDeducted|units_deducted|Unknown argument/i.test(msg);
+          if (staleSig || staleUnits) {
+            console.warn("[laundry/check-in] Prisma ไม่รู้จักฟิลด์ใหม่ — บันทึกแบบลดฟิลด์", {
+              staleSig,
+              staleUnits,
+            });
+            const { signatureImageUrl: _s, unitsDeducted: _u, ...withoutNew } = logCore;
             void _s;
-            await tx.laundryServiceLog.create({ data: withoutSig });
+            void _u;
+            await tx.laundryServiceLog.create({
+              data: {
+                ...withoutNew,
+                ...(signatureImageUrl != null && !staleSig ? { signatureImageUrl } : {}),
+                ...(!staleUnits ? { unitsDeducted: unitsToDeduct } : {}),
+              },
+            });
           } else {
             throw e;
           }
@@ -133,6 +169,8 @@ export async function POST(req: Request) {
           remainingSessions: updated.remainingSessions,
           status: updated.status,
           customerPhone: sub.customer.phone,
+          unitsDeducted: unitsToDeduct,
+          quotaUnit,
         };
       });
 
@@ -141,6 +179,9 @@ export async function POST(req: Request) {
         remainingSessions: out.remainingSessions,
         status: out.status,
         customerPhone: out.customerPhone,
+        unitsDeducted: out.unitsDeducted,
+        quotaUnit: out.quotaUnit,
+        unitLabel: laundryQuotaUnitLabel(out.quotaUnit),
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
@@ -148,7 +189,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "ไม่พบสมาชิกแพ็กเกจ" }, { status: 404 });
       }
       if (msg === "NO_SESSIONS") {
-        return NextResponse.json({ error: "ไม่มียอดครั้งคงเหลือ" }, { status: 400 });
+        return NextResponse.json({ error: "ไม่มียอดคงเหลือ" }, { status: 400 });
+      }
+      if (msg === "BAD_UNITS") {
+        return NextResponse.json({ error: "จำนวนที่หักไม่ถูกต้อง" }, { status: 400 });
+      }
+      if (msg === "INSUFFICIENT") {
+        return NextResponse.json({ error: "ยอดคงเหลือไม่พอสำหรับจำนวนที่หัก" }, { status: 400 });
       }
       return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 400 });
     }

@@ -30,6 +30,7 @@ import {
 } from "@/systems/laundry/lib/ui-tokens";
 import type { LaundryOrder, LaundryOrderStatus, LaundryPackage, LaundryRepository } from "@/systems/laundry/laundry-service";
 import { printLaundryOrderDocs } from "@/systems/laundry/lib/laundry-print-docs";
+import { laundryQuotaUnitLabel } from "@/systems/laundry/lib/quota-unit";
 import { useLaundryShopPrintProfile } from "@/systems/laundry/lib/use-laundry-shop-print-profile";
 
 type LaneTab = "pos" | "pickup";
@@ -37,7 +38,8 @@ type PackageFilter = "all" | "per_use" | "bulk";
 
 function priceHint(pkg: LaundryPackage): string {
   if ((pkg.total_sessions ?? 1) > 1) {
-    return `฿${pkg.base_price.toLocaleString("th-TH")} · ${pkg.total_sessions} ครั้ง`;
+    const unit = laundryQuotaUnitLabel(pkg.quota_unit);
+    return `฿${pkg.base_price.toLocaleString("th-TH")} · ${pkg.total_sessions} ${unit}`;
   }
   const tiers = pkg.basket_tiers?.filter((t) => t.label.trim()) ?? [];
   if (tiers.length) {
@@ -245,7 +247,7 @@ export function LaundryOrdersPosClient({
             <p className="text-sm font-black text-[#1e1b4b]">{selectedPkg.name}</p>
             {isBulkSelected ?
               <p className="text-xs font-semibold text-amber-800">
-                แพ็กเหมา {selectedPkg.total_sessions} ครั้ง — ขายที่แท็บ «สมาชิกแพ็ก»
+                แพ็กเหมา {selectedPkg.total_sessions} {laundryQuotaUnitLabel(selectedPkg.quota_unit)} — ขายที่แท็บ «สมาชิกแพ็ก»
               </p>
             : <>
                 {tiers.length > 0 && tierIndex != null && tiers[tierIndex] ?

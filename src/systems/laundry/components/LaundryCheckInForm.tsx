@@ -7,7 +7,14 @@ import { cn } from "@/lib/cn";
 import { uploadLaundrySignatureBlob } from "@/systems/laundry/lib/upload-signature";
 import { LAUNDRY_DEMO_DEDUCT_HINTS } from "@/systems/laundry/lib/demo-member-phones";
 import {
+  laundryQuotaRemainingLabel,
+  laundryQuotaUnitLabel,
+  normalizeLaundryQuotaUnit,
+  type LaundryQuotaUnit,
+} from "@/systems/laundry/lib/quota-unit";
+import {
   laundryCardSurfaceRadiusClass,
+  laundryFieldClass,
   laundryInlineAlertErrorClass,
   laundrySectionFirstClass,
   laundrySectionNextClass,
@@ -22,6 +29,7 @@ type SubRow = {
   packageDescription?: string;
   packageId: number;
   totalSessions?: number;
+  quotaUnit?: LaundryQuotaUnit | string;
   durationMinutes?: number;
   basePrice?: number;
   imageUrl?: string | null;
@@ -67,9 +75,14 @@ export function LaundryCheckInForm({
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null);
+  const [unitsToDeduct, setUnitsToDeduct] = useState("1");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [deducting, setDeducting] = useState(false);
+
+  const selectedSub = subs.find((s) => s.id === selectedSubId) ?? null;
+  const selectedQuotaUnit = normalizeLaundryQuotaUnit(selectedSub?.quotaUnit);
+  const selectedUnitLabel = laundryQuotaUnitLabel(selectedQuotaUnit);
 
   useEffect(() => {
     if (active) return;
@@ -78,11 +91,16 @@ export function LaundryCheckInForm({
     setCustomerName(null);
     setSubs([]);
     setSelectedSubId(null);
+    setUnitsToDeduct("1");
     setMsg(null);
     setErr(null);
     setDeducting(false);
     signaturePadRef.current?.clear();
   }, [active]);
+
+  useEffect(() => {
+    setUnitsToDeduct("1");
+  }, [selectedSubId]);
 
   const searchByPhone = useCallback(async (raw: string) => {
     const digits = raw.replace(/\D/g, "");
@@ -119,12 +137,22 @@ export function LaundryCheckInForm({
   }, []);
 
   async function onDeduct() {
-    if (!selectedSubId) {
-      setErr("เลือกแพ็กที่จะหักครั้ง");
+    if (!selectedSubId || !selectedSub) {
+      setErr("เลือกแพ็กที่จะหัก");
       return;
     }
     if (signaturePadRef.current?.isEmpty()) {
       setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+      return;
+    }
+    const units =
+      selectedQuotaUnit === "PIECE" ? Math.trunc(Number(unitsToDeduct)) : 1;
+    if (!Number.isInteger(units) || units < 1) {
+      setErr(`กรอกจำนวน${selectedUnitLabel}ที่หักให้ถูกต้อง`);
+      return;
+    }
+    if (units > selectedSub.remainingSessions) {
+      setErr(`ยอดคงเหลือไม่พอ (เหลือ ${selectedSub.remainingSessions.toLocaleString("th-TH")} ${selectedUnitLabel})`);
       return;
     }
     setErr(null);
@@ -141,24 +169,32 @@ export function LaundryCheckInForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ subscriptionId: selectedSubId, signatureImageUrl }),
+        body: JSON.stringify({
+          subscriptionId: selectedSubId,
+          signatureImageUrl,
+          ...(selectedQuotaUnit === "PIECE" ? { unitsToDeduct: units } : {}),
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
         remainingSessions?: number;
         status?: string;
+        unitsDeducted?: number;
+        unitLabel?: string;
       };
       if (!res.ok) {
         setErr(data.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
       const remaining = data.remainingSessions ?? 0;
-      const pkgName = subs.find((s) => s.id === selectedSubId)?.packageName ?? "แพ็ก";
+      const deducted = data.unitsDeducted ?? units;
+      const unitLabel = data.unitLabel ?? selectedUnitLabel;
+      const pkgName = selectedSub.packageName ?? "แพ็ก";
       if (onDeductSuccess) {
         onDeductSuccess({ remainingSessions: remaining, packageName: pkgName });
         return;
       }
-      setMsg(`หัก 1 ครั้งแล้ว — เหลือ ${remaining} ครั้ง`);
+      setMsg(`หัก ${deducted.toLocaleString("th-TH")} ${unitLabel}แล้ว — เหลือ ${remaining.toLocaleString("th-TH")} ${unitLabel}`);
       setSubs((prev) =>
         prev.map((s) =>
           s.id === selectedSubId
@@ -166,6 +202,7 @@ export function LaundryCheckInForm({
             : s,
         ),
       );
+      setUnitsToDeduct("1");
       signaturePadRef.current?.clear();
       router.refresh();
     } catch (e) {
@@ -293,9 +330,10 @@ export function LaundryCheckInForm({
 
             {subs.length > 0 ? (
               <div className="mt-4 space-y-3">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#8b87ad]">เลือกแพ็กเพื่อหักครั้ง</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#8b87ad]">เลือกแพ็กเพื่อหัก</p>
                 {subs.map((s) => {
                   const img = s.imageUrl?.trim() || null;
+                  const unit = normalizeLaundryQuotaUnit(s.quotaUnit);
                   return (
                   <label
                     key={s.id}
@@ -327,7 +365,9 @@ export function LaundryCheckInForm({
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">แพ็กเกจ</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        แพ็กเกจ · หักตาม{laundryQuotaUnitLabel(unit)}
+                      </p>
                       <p className="text-sm font-bold text-[#2e2a58] sm:text-base">{s.packageName}</p>
                       {packageDescMeaningful(s.packageDescription) ?
                         <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[#66638c]">
@@ -335,12 +375,7 @@ export function LaundryCheckInForm({
                         </p>
                       : null}
                       <p className="mt-1 text-lg font-black tabular-nums text-[#4d47b6]">
-                        เหลือ {s.remainingSessions.toLocaleString("th-TH")} ครั้ง
-                        {s.totalSessions != null && s.totalSessions > 0 ?
-                          <span className="ml-1 text-sm font-bold text-[#8b87ad]">
-                            / {s.totalSessions.toLocaleString("th-TH")}
-                          </span>
-                        : null}
+                        {laundryQuotaRemainingLabel(s.remainingSessions, s.totalSessions, unit)}
                       </p>
                       {s.durationMinutes != null && s.durationMinutes > 0 ?
                         <p className="mt-0.5 text-[11px] font-medium text-[#66638c]">
@@ -353,6 +388,28 @@ export function LaundryCheckInForm({
                   </label>
                   );
                 })}
+              </div>
+            ) : null}
+
+            {subs.length > 0 && selectedSub && selectedQuotaUnit === "PIECE" ? (
+              <div className="mt-4">
+                <label className="block text-xs font-bold text-[#4d47b6]" htmlFor="laundry-deduct-pieces">
+                  จำนวนชิ้นที่มาซักรอบนี้
+                  <input
+                    id="laundry-deduct-pieces"
+                    className={cn(laundryFieldClass, "mt-1.5 w-full max-w-[12rem] tabular-nums")}
+                    type="number"
+                    min={1}
+                    max={selectedSub.remainingSessions}
+                    inputMode="numeric"
+                    value={unitsToDeduct}
+                    disabled={deducting}
+                    onChange={(e) => setUnitsToDeduct(e.target.value.replace(/[^\d]/g, "").slice(0, 5))}
+                  />
+                </label>
+                <p className="mt-1 text-[11px] font-medium text-[#66638c]">
+                  เหลือ {selectedSub.remainingSessions.toLocaleString("th-TH")} ชิ้น — หักได้ไม่เกินยอดคงเหลือ
+                </p>
               </div>
             ) : null}
 
@@ -370,9 +427,11 @@ export function LaundryCheckInForm({
             >
               {deducting
                 ? "กำลังบันทึก…"
-                : selectedSubId
-                  ? `หัก 1 ครั้ง — ${subs.find((s) => s.id === selectedSubId)?.packageName ?? "แพ็ก"}`
-                  : "หัก 1 ครั้งจากแพ็ก (รับผ้า)"}
+                : selectedSub
+                  ? selectedQuotaUnit === "PIECE"
+                    ? `หัก ${Math.max(1, Math.trunc(Number(unitsToDeduct)) || 1).toLocaleString("th-TH")} ชิ้น — ${selectedSub.packageName}`
+                    : `หัก 1 ครั้ง — ${selectedSub.packageName}`
+                  : "หักจากแพ็ก (รับผ้า)"}
             </button>
           </div>
         </section>

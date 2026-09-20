@@ -4452,9 +4452,13 @@ model LaundryPackage {
    */
   basketTiers    Json?          @map("basket_tiers")
   /**
-   * 1 = รายครั้ง · >1 = เหมาซัก (จำนวนครั้ง)
+   * 1 = รายครั้ง · >1 = เหมา (จำนวนหน่วยตาม quotaUnit)
    */
   totalSessions  Int            @default(1) @map("total_sessions")
+  /**
+   * หน่วยโควต้าสมาชิก: SESSION = หักครั้งละ 1 · PIECE = หักตามจำนวนชิ้นต่อรอบ
+   */
+  quotaUnit      String         @default("SESSION") @map("quota_unit") @db.VarChar(16)
   isActive       Boolean        @default(true) @map("is_active")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
@@ -4586,6 +4590,10 @@ model LaundryServiceLog {
    * ลายเซ็นลูกค้าตอนหักแพ็ก (PACKAGE_USE) — บังคับบน UI เหมือนร้านตัดผม
    */
   signatureImageUrl String?                      @map("signature_image_url") @db.VarChar(512)
+  /**
+   * จำนวนหน่วยที่หักในรอบนี้ (ครั้งหรือชิ้น ตาม quotaUnit ของแพ็ก) — ค่าเริ่ม 1
+   */
+  unitsDeducted     Int                          @default(1) @map("units_deducted")
   paymentMethod     String?                      @map("payment_method") @db.VarChar(20)
   revenueCategoryId Int?                         @map("revenue_category_id")
   revenueCategory   LaundryRevenueCategory?      @relation(fields: [revenueCategoryId], references: [id], onDelete: SetNull)

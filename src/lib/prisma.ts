@@ -46,7 +46,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 87: SiteSetting.adminTokenTopUpPinHash — รหัสเติมโทเคนแอดมิน */
 /** 89: HomeFinanceDocumentCategory + HomeFinanceAiPrompt */
 /** 90: HomeFinanceAiPromptCategory */
-const PRISMA_SINGLETON_VERSION = 92;
+const PRISMA_SINGLETON_VERSION = 93;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

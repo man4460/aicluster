@@ -145,7 +145,7 @@ export function LaundryPackagesClient({
             </button>
           </div>
           <p className="mt-2 hidden text-xs text-[#66638c] sm:block">
-            1 ครั้ง = รายครั้ง · มากกว่า 1 = แพ็กเหมาขายเป็นสมาชิก
+            1 = รายครั้ง · มากกว่า 1 = แพ็กเหมา (หักตามครั้งหรือชิ้น ตามที่ตั้งในแพ็ก)
           </p>
         </div>
       ) : null}

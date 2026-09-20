@@ -15,6 +15,7 @@ import { laundryRepairSampleImageUrl } from "@/systems/laundry/lib/portal-media"
 import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const pricingModelZod = z.enum(["PER_KG", "PER_ITEM", "FLAT"]);
+const quotaUnitZod = z.enum(["SESSION", "PIECE"]);
 
 const durationHoursZod = z.number().refine(
   (x) =>
@@ -41,12 +42,41 @@ const postSchema = z.object({
   pricing_model: pricingModelZod,
   base_price: z.number().int().min(0).max(9_999_999),
   duration_hours: durationHoursZod,
-  total_sessions: z.number().int().min(1).max(9999).optional(),
+  total_sessions: z.number().int().min(1).max(99_999).optional(),
+  quota_unit: quotaUnitZod.optional(),
   description: z.string().max(800).optional().nullable(),
   is_active: z.boolean(),
   image_url: z.string().max(500).optional().nullable(),
   basket_tiers: z.array(basketTierZod).max(24).optional().nullable(),
 });
+
+function packageJson(r: {
+  id: number;
+  name: string;
+  pricingModel: string;
+  basePrice: number;
+  durationHours: { toString(): string } | number;
+  totalSessions: number;
+  quotaUnit: string;
+  description: string;
+  isActive: boolean;
+  imageUrl: string | null;
+  basketTiers: unknown;
+}) {
+  return {
+    id: r.id,
+    name: r.name,
+    pricing_model: r.pricingModel,
+    base_price: r.basePrice,
+    duration_hours: Number(r.durationHours),
+    total_sessions: r.totalSessions,
+    quota_unit: r.quotaUnit === "PIECE" ? "PIECE" : "SESSION",
+    description: r.description,
+    is_active: r.isActive,
+    image_url: laundryRepairSampleImageUrl(r.imageUrl),
+    basket_tiers: normalizeBasketTiers(r.basketTiers),
+  };
+}
 
 export async function GET() {
   try {
@@ -61,18 +91,7 @@ export async function GET() {
       orderBy: { id: "asc" },
     });
     return NextResponse.json({
-      packages: rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        pricing_model: r.pricingModel,
-        base_price: r.basePrice,
-        duration_hours: Number(r.durationHours),
-        total_sessions: r.totalSessions,
-        description: r.description,
-        is_active: r.isActive,
-        image_url: laundryRepairSampleImageUrl(r.imageUrl),
-        basket_tiers: normalizeBasketTiers(r.basketTiers),
-      })),
+      packages: rows.map((r) => packageJson(r)),
     });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/packages GET");
@@ -118,6 +137,7 @@ export async function POST(req: Request) {
         basePrice: parsed.data.base_price,
         durationHours: new Prisma.Decimal(String(dh)),
         totalSessions: parsed.data.total_sessions ?? 1,
+        quotaUnit: parsed.data.quota_unit ?? "SESSION",
         description: parsed.data.description?.trim() ?? "",
         isActive: parsed.data.is_active,
         imageUrl: img && img.length > 0 ? img.slice(0, 500) : null,
@@ -126,18 +146,7 @@ export async function POST(req: Request) {
     });
     notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({
-      package: {
-        id: row.id,
-        name: row.name,
-        pricing_model: row.pricingModel,
-        base_price: row.basePrice,
-        duration_hours: Number(row.durationHours),
-        total_sessions: row.totalSessions,
-        description: row.description,
-        is_active: row.isActive,
-        image_url: row.imageUrl ?? null,
-        basket_tiers: normalizeBasketTiers(row.basketTiers),
-      },
+      package: packageJson(row),
     });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/packages POST");

@@ -53,6 +53,7 @@ import {
   laundryStatCardClass,
 } from "@/systems/laundry/lib/ui-tokens";
 import { useLaundryShopPrintProfile } from "@/systems/laundry/lib/use-laundry-shop-print-profile";
+import { laundryQuotaUnitLabel } from "@/systems/laundry/lib/quota-unit";
 import { LAUNDRY_DEMO_DEDUCT_HINTS } from "@/systems/laundry/lib/demo-member-phones";
 
 type RowCustomer = {
@@ -73,7 +74,7 @@ type Row = {
   remainingSessions: number;
   saleReceiptImageUrl: string | null;
   paymentMethod: string | null;
-  package: { id: number; name: string; price: string; totalSessions: number; imageUrl?: string | null };
+  package: { id: number; name: string; price: string; totalSessions: number; quotaUnit?: string; imageUrl?: string | null };
   customer: RowCustomer;
 };
 
@@ -337,7 +338,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     setEditErr(null);
     const remain = Number(editRemain);
     if (!Number.isInteger(remain) || remain < 0) {
-      setEditErr("จำนวนครั้งคงเหลือต้องเป็นเลขจำนวนเต็ม ≥ 0");
+      setEditErr(`จำนวน${laundryQuotaUnitLabel(editTarget.package.quotaUnit)}คงเหลือต้องเป็นเลขจำนวนเต็ม ≥ 0`);
       return;
     }
     setEditSaving(true);
@@ -430,6 +431,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
     const remain = Math.max(0, Math.min(total, r.remainingSessions));
     const pct = Math.max(0, Math.min(100, Math.round((remain / total) * 100)));
     const isUsedUp = remain === 0 || r.status === "EXHAUSTED";
+    const unitLabel = laundryQuotaUnitLabel(r.package.quotaUnit);
     const boughtAt = new Date(r.createdAt).toLocaleString("th-TH", {
       timeZone: "Asia/Bangkok",
       day: "numeric",
@@ -533,7 +535,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                   isUsedUp ? "text-slate-500" : r.status === "CANCELLED" ? "text-rose-600" : "text-[#4d47b6]",
                 )}
               >
-                {r.remainingSessions}/{r.package.totalSessions}
+                {r.remainingSessions}/{r.package.totalSessions} {unitLabel}
               </span>
               <div className="min-w-0 flex-1" aria-hidden>
                 <div className="relative h-1.5 overflow-hidden rounded-full bg-[#ecebff] ring-1 ring-inset ring-[#e8e6f4]/80">
@@ -834,11 +836,11 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                 />
               </label>
               <label className="block text-xs font-semibold text-[#4d47b6]">
-                จำนวนครั้งคงเหลือ
+                จำนวน{laundryQuotaUnitLabel(editTarget.package.quotaUnit)}คงเหลือ
                 <input
                   type="number"
                   min={0}
-                  max={9999}
+                  max={99999}
                   className={cn(laundryFieldClass, "mt-1 tabular-nums")}
                   value={editRemain}
                   onChange={(e) => setEditRemain(e.target.value)}
@@ -858,7 +860,8 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                 </select>
               </label>
               <p className="rounded-[1.25rem] bg-[#f8f7ff] px-3 py-2 text-[11px] leading-relaxed text-[#5f5a8a]">
-                แพ็ก {editTarget.package.totalSessions} ครั้ง · ราคา ฿{formatPriceBaht(editTarget.package.price)} (อ่านอย่างเดียว)
+                แพ็ก {editTarget.package.totalSessions} {laundryQuotaUnitLabel(editTarget.package.quotaUnit)} · ราคา ฿
+                {formatPriceBaht(editTarget.package.price)} (อ่านอย่างเดียว)
               </p>
               <LaundryTaxInvoiceFields value={editTaxForm} onChange={setEditTaxForm} fallbackName={editCustomerName} disabled={editSaving} />
               <LaundryPaymentPanel

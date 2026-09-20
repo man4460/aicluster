@@ -121,6 +121,7 @@ export async function GET(req: Request) {
         name: string;
         basePrice: number;
         totalSessions: number;
+        quotaUnit?: string;
         imageUrl?: string | null;
       };
       customer: {
@@ -148,6 +149,7 @@ export async function GET(req: Request) {
       name: s.package.name,
       price: String(s.package.basePrice),
       totalSessions: s.package.totalSessions,
+      quotaUnit: s.package.quotaUnit === "PIECE" ? "PIECE" : "SESSION",
       imageUrl: s.package.imageUrl ?? null,
     },
     customer: mapCustomerTax(s.customer),

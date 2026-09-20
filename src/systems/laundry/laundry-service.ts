@@ -26,8 +26,10 @@ export type LaundryPackage = {
   base_price: number;
   /** เวลาประมาณเป็นชั่วโมง (ทศนิยมได้ — เก็บปัดมิลลิชั่วโมง) */
   duration_hours: number;
-  /** 1 = รายครั้ง · >1 = แพ็กเหมาซัก N ครั้ง */
+  /** 1 = รายครั้ง · >1 = แพ็กเหมา N หน่วย (ครั้งหรือชิ้นตาม quota_unit) */
   total_sessions: number;
+  /** SESSION = หักครั้งละ 1 · PIECE = หักตามจำนวนชิ้นต่อรอบ */
+  quota_unit: "SESSION" | "PIECE";
   description: string;
   /** URL รูปการ์ด — อัปโหลดผ่าน `uploadLaundrySessionImage` */
   image_url?: string | null;
@@ -206,6 +208,7 @@ const seedDB: LaundryDB = {
       base_price: 45,
       duration_hours: 24,
       total_sessions: 1,
+      quota_unit: "SESSION",
       description: "คิดราคาต่อกิโล เหมาะกับผ้าทั่วไป",
       image_url: LAUNDRY_PACKAGE_SAMPLE_IMAGES[0],
       basket_tiers: [
@@ -222,6 +225,7 @@ const seedDB: LaundryDB = {
       base_price: 150,
       duration_hours: 36,
       total_sessions: 1,
+      quota_unit: "PIECE",
       description: "คิดราคาต่อชิ้นสำหรับผ้าห่ม/ผ้านวม",
       image_url: LAUNDRY_PACKAGE_SAMPLE_IMAGES[1],
       basket_tiers: [{ label: "ต่อชิ้น", price: 150 }],
@@ -290,6 +294,8 @@ function loadDB(): LaundryDB {
       const ts = rawPkg.total_sessions;
       (p as LaundryPackage).total_sessions =
         typeof ts === "number" && Number.isInteger(ts) && ts >= 1 ? ts : 1;
+      const qu = String(rawPkg.quota_unit ?? "").toUpperCase();
+      (p as LaundryPackage).quota_unit = qu === "PIECE" ? "PIECE" : "SESSION";
     }
     return parsed;
   } catch {
@@ -516,6 +522,7 @@ class SessionApiLaundryRepository implements LaundryRepository {
         base_price: input.base_price,
         duration_hours: input.duration_hours,
         total_sessions: input.total_sessions ?? 1,
+        quota_unit: input.quota_unit ?? "SESSION",
         description: input.description,
         is_active: input.is_active,
         ...(input.image_url != null && input.image_url !== "" ? { image_url: input.image_url } : {}),

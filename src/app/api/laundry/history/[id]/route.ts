@@ -139,7 +139,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
 
   const row = await prisma.laundryServiceLog.findFirst({
     where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
-    select: { id: true, visitType: true, subscriptionId: true },
+    select: { id: true, visitType: true, subscriptionId: true, unitsDeducted: true },
   });
   if (!row) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
@@ -153,7 +153,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
         },
       });
       if (sub) {
-        const next = sub.remainingSessions + 1;
+        const restore = Math.max(1, Math.trunc(row.unitsDeducted ?? 1));
+        const next = sub.remainingSessions + restore;
         await tx.laundryCustomerSubscription.update({
           where: { id: sub.id },
           data: {

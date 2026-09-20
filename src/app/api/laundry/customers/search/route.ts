@@ -57,6 +57,7 @@ export async function GET(req: Request) {
       packageDescription: s.package.description?.trim() || "",
       packageId: s.packageId,
       totalSessions: s.package.totalSessions,
+      quotaUnit: s.package.quotaUnit === "PIECE" ? "PIECE" : "SESSION",
       durationHours: Number(s.package.durationHours),
       durationMinutes: Math.round(Number(s.package.durationHours) * 60),
       imageUrl: s.package.imageUrl ?? null,

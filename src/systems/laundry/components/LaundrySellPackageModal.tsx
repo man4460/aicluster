@@ -24,12 +24,18 @@ import {
 import { printLaundryMemberDocs } from "@/systems/laundry/lib/laundry-print-docs";
 import { useLaundryShopPrintProfile } from "@/systems/laundry/lib/use-laundry-shop-print-profile";
 import type { LaundryPaymentMethod } from "@/systems/laundry/lib/payment-method";
+import {
+  laundryQuotaUnitLabel,
+  normalizeLaundryQuotaUnit,
+  type LaundryQuotaUnit,
+} from "@/systems/laundry/lib/quota-unit";
 
 export type LaundrySellPackagePkg = {
   id: number;
   name: string;
   price: number;
   totalSessions: number;
+  quotaUnit?: LaundryQuotaUnit;
   description?: string;
   durationHours?: number;
   imageUrl?: string | null;
@@ -106,6 +112,8 @@ export function LaundrySellPackageModal({
             basePrice?: number;
             total_sessions?: number;
             totalSessions?: number;
+            quota_unit?: string;
+            quotaUnit?: string;
             description?: string | null;
             duration_hours?: number | string | null;
             durationHours?: number | string | null;
@@ -122,6 +130,7 @@ export function LaundrySellPackageModal({
                 name: p.name,
                 price: Number(p.base_price ?? p.basePrice ?? 0),
                 totalSessions: Number.isFinite(totalSessions) ? totalSessions : 1,
+                quotaUnit: normalizeLaundryQuotaUnit(p.quota_unit ?? p.quotaUnit),
                 description: p.description?.trim() || "",
                 durationHours:
                   p.duration_hours != null || p.durationHours != null
@@ -285,10 +294,10 @@ export function LaundrySellPackageModal({
             <legend className="text-sm font-semibold text-[#4d47b6]">เลือกแพ็กเหมา</legend>
             {pkgList.length === 0 ? (
               <div className={cn(laundryOffersListRowCardClass, "space-y-2 px-3 py-6 text-center text-sm text-[#66638c]")}>
-                <p className="font-semibold text-[#2e2a58]">ยังไม่มีแพ็กเหมา (จำนวนครั้ง &gt; 1)</p>
+                <p className="font-semibold text-[#2e2a58]">ยังไม่มีแพ็กเหมา (จำนวนครั้ง/ชิ้น &gt; 1)</p>
                 <p>
-                  ไปที่เมนู <strong>การจัดการ → แพ็กเกจ</strong> แล้วสร้างแพ็กโดยตั้งจำนวนครั้งมากกว่า 1
-                  หรือรัน seed ตัวอย่าง (`npx tsx scripts/seed-laundry-demo.ts`)
+                  ไปที่เมนู <strong>การจัดการ → แพ็กเกจ</strong> แล้วสร้างแพ็กโดยตั้งจำนวนมากกว่า 1
+                  (เลือกหักตามครั้งหรือชิ้น) หรือรัน seed ตัวอย่าง (`npx tsx scripts/seed-laundry-demo.ts`)
                 </p>
               </div>
             ) : (
@@ -336,7 +345,8 @@ export function LaundrySellPackageModal({
                               <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#66638c]">{desc}</p>
                             : null}
                             <p className="mt-1 text-sm font-black tabular-nums text-[#4d47b6]">
-                              ฿{p.price.toLocaleString("th-TH")} · {p.totalSessions.toLocaleString("th-TH")} ครั้ง
+                              ฿{p.price.toLocaleString("th-TH")} · {p.totalSessions.toLocaleString("th-TH")}{" "}
+                              {laundryQuotaUnitLabel(p.quotaUnit)}
                               {hours != null && hours > 0 ?
                                 <span className="font-bold text-[#8b87ad]">
                                   {" "}
@@ -364,7 +374,8 @@ export function LaundrySellPackageModal({
                 <p className="mt-0.5 text-xs leading-relaxed text-[#66638c]">{selectedPkg.description!.trim()}</p>
               : null}
               <p className="mt-1 text-xs font-bold tabular-nums text-[#4d47b6]">
-                ฿{selectedPkg.price.toLocaleString("th-TH")} · {selectedPkg.totalSessions.toLocaleString("th-TH")} ครั้ง
+                ฿{selectedPkg.price.toLocaleString("th-TH")} · {selectedPkg.totalSessions.toLocaleString("th-TH")}{" "}
+                {laundryQuotaUnitLabel(selectedPkg.quotaUnit)}
               </p>
             </div>
           : null}
