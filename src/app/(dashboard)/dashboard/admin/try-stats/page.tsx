@@ -1,0 +1,16 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
+import { ModuleTryStatsAdmin } from "@/systems/admin/components/ModuleTryStatsAdmin";
+
+export const metadata: Metadata = {
+  title: "สถิติทดลองใช้ | MAWELL PLATFORM",
+};
+
+export default async function AdminTryStatsPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.role !== "ADMIN") redirect("/dashboard");
+
+  return <ModuleTryStatsAdmin />;
+}

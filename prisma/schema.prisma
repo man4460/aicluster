@@ -506,6 +506,35 @@ model TrialSession {
 }
 
 /**
+ * สถิติหน้า /try/{slug} + กดทดลอง — วิเคราะห์โฆษณา (UTM)
+ */
+enum ModuleTryEventType {
+  VIEW
+  TRY_CLICK
+}
+
+model ModuleTryEvent {
+  id           BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  moduleSlug   String             @map("module_slug") @db.VarChar(191)
+  eventType    ModuleTryEventType @map("event_type")
+  utmSource    String?            @map("utm_source") @db.VarChar(120)
+  utmMedium    String?            @map("utm_medium") @db.VarChar(120)
+  utmCampaign  String?            @map("utm_campaign") @db.VarChar(120)
+  utmContent   String?            @map("utm_content") @db.VarChar(120)
+  utmTerm      String?            @map("utm_term") @db.VarChar(120)
+  referrerHost String?            @map("referrer_host") @db.VarChar(255)
+  visitorKey   String             @map("visitor_key") @db.VarChar(64)
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@index([moduleSlug, createdAt])
+  @@index([eventType, createdAt])
+  @@index([utmCampaign, createdAt])
+  @@index([createdAt])
+  @@index([visitorKey, moduleSlug, eventType, createdAt], map: "module_try_events_visitor_slug_type_at_idx")
+  @@map("module_try_events")
+}
+
+/**
  * แจ้งเตือนจาก Customer QR Portal (ลูกค้ากดแจ้งพนักงาน)
  */
 model BarberPortalStaffPing {

@@ -4,6 +4,7 @@ export type AdminHubIconKey =
   | "overview"
   | "users"
   | "tryLinks"
+  | "tryStats"
   | "cards"
   | "cooldowns"
   | "planFeatures"
@@ -72,6 +73,13 @@ export const ADMIN_HUB_NAV_ITEMS: AdminHubNavItem[] = [
     dockLabel: "ลิงก์",
     description: "คัดลอกลิงก์หรือ QR ให้ลูกค้าทดลองโมดูล",
     icon: "tryLinks",
+  },
+  {
+    href: "/dashboard/admin/try-stats",
+    label: "สถิติทดลอง",
+    dockLabel: "สถิติ",
+    description: "ดูหน้า / กดทดลอง แยกโมดูล · วันนี้ เดือน ปี · UTM",
+    icon: "tryStats",
   },
   {
     href: "/dashboard/admin/module-cards",

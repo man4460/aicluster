@@ -59,10 +59,18 @@ function TryEnterCta({
   tryHref,
   className,
   children,
+  utm,
 }: {
   tryHref: string;
   className?: string;
   children: ReactNode;
+  utm: {
+    utmSource: string | null;
+    utmMedium: string | null;
+    utmCampaign: string | null;
+    utmContent: string | null;
+    utmTerm: string | null;
+  };
 }) {
   const isDemoEnter = tryHref.startsWith("/api/auth/demo/enter");
   if (isDemoEnter) {
@@ -76,6 +84,11 @@ function TryEnterCta({
     return (
       <form action="/api/auth/demo/enter" method="POST" className="contents">
         <input type="hidden" name="next" value={next} />
+        {utm.utmSource ? <input type="hidden" name="utm_source" value={utm.utmSource} /> : null}
+        {utm.utmMedium ? <input type="hidden" name="utm_medium" value={utm.utmMedium} /> : null}
+        {utm.utmCampaign ? <input type="hidden" name="utm_campaign" value={utm.utmCampaign} /> : null}
+        {utm.utmContent ? <input type="hidden" name="utm_content" value={utm.utmContent} /> : null}
+        {utm.utmTerm ? <input type="hidden" name="utm_term" value={utm.utmTerm} /> : null}
         <button type="submit" className={className}>
           {children}
         </button>
@@ -217,6 +230,40 @@ export function ModuleTryPromoClient({
     };
   }, [moduleSlug, fallbackVideos]);
 
+  const [utm, setUtm] = useState({
+    utmSource: null as string | null,
+    utmMedium: null as string | null,
+    utmCampaign: null as string | null,
+    utmContent: null as string | null,
+    utmTerm: null as string | null,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const next = {
+      utmSource: sp.get("utm_source"),
+      utmMedium: sp.get("utm_medium"),
+      utmCampaign: sp.get("utm_campaign"),
+      utmContent: sp.get("utm_content"),
+      utmTerm: sp.get("utm_term"),
+    };
+    setUtm(next);
+    const key = `mw_try_view:${moduleSlug}`;
+    if (sessionStorage.getItem(key) === "1") return;
+    sessionStorage.setItem(key, "1");
+    void fetch("/api/public/module-try-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        moduleSlug,
+        eventType: "VIEW",
+        ...next,
+      }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }, [moduleSlug]);
+
   function onOpenVideo(v: DisplayVideo) {
     const id = v.videoId ?? extractYoutubeVideoId(v.href);
     if (id) {
@@ -298,6 +345,7 @@ export function ModuleTryPromoClient({
           <div id="cta" className="mt-5 flex flex-col gap-2.5 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <TryEnterCta
               tryHref={tryHref}
+              utm={utm}
               className={cn(tryPromoCtaClass, "min-h-11 px-7 text-sm shadow-lg shadow-[#0000BF]/25 sm:min-h-12 sm:px-8")}
             >
               ทดลองใช้งาน
@@ -422,7 +470,11 @@ export function ModuleTryPromoClient({
             เข้าแดชบอร์ดจริง หรือสมัครเปิดใช้ {moduleTitle}
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:justify-center sm:gap-3">
-            <TryEnterCta tryHref={tryHref} className={cn(tryPromoCtaClass, "min-h-10 px-5 text-xs sm:min-h-11 sm:text-sm")}>
+            <TryEnterCta
+              tryHref={tryHref}
+              utm={utm}
+              className={cn(tryPromoCtaClass, "min-h-10 px-5 text-xs sm:min-h-11 sm:text-sm")}
+            >
               ทดลองใช้งาน
             </TryEnterCta>
             <Link

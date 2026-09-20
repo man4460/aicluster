@@ -72,6 +72,12 @@ export function AdminHubMenuIcon({ name, className }: Props) {
           <path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" strokeLinecap="round" />
         </svg>
       );
+    case "tryStats":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} className={common} aria-hidden>
+          <path d="M4 19V9M10 19V5M16 19v-8M22 19V7" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return null;
   }

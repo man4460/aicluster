@@ -15,7 +15,7 @@ import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
 import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
-import { moduleTryAbsoluteUrl } from "@/lib/modules/try-link";
+import { moduleTryAbsoluteUrl, moduleTryUrlWithUtm } from "@/lib/modules/try-link";
 import { getModuleTryPromoPack } from "@/lib/modules/try-promo-features";
 import { ModuleTryPromoVideosAdmin } from "@/systems/admin/components/ModuleTryPromoVideosAdmin";
 
@@ -44,6 +44,15 @@ function QrIcon({ className }: { className?: string }) {
       <rect x="13" y="4" width="7" height="7" rx="1" />
       <rect x="4" y="13" width="7" height="7" rx="1" />
       <path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CampaignIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" strokeLinejoin="round" />
+      <path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" strokeLinecap="round" />
     </svg>
   );
 }
@@ -185,6 +194,11 @@ export function ModuleTryLinksAdmin({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [campaignRow, setCampaignRow] = useState<Row | null>(null);
+  const [campSource, setCampSource] = useState("facebook");
+  const [campMedium, setCampMedium] = useState("cpc");
+  const [campCampaign, setCampCampaign] = useState("");
+  const [campContent, setCampContent] = useState("");
 
   const base = appBaseUrl.replace(/\/$/, "");
   /** URL หน้าแรกสำหรับ QR / คัดลอก (เช่น https://app.ma-well.com) */
@@ -268,6 +282,29 @@ export function ModuleTryLinksAdmin({
     const url = moduleTryAbsoluteUrl(base, row.slug);
     const ok = await copyText(url);
     flashCopy(ok ? `คัดลอกแล้ว · ${row.title}` : "คัดลอกไม่สำเร็จ");
+  };
+
+  const campaignPreviewUrl = useMemo(() => {
+    if (!campaignRow || !base) return "";
+    return moduleTryUrlWithUtm(base, campaignRow.slug, {
+      utmSource: campSource.trim() || null,
+      utmMedium: campMedium.trim() || null,
+      utmCampaign: campCampaign.trim() || null,
+      utmContent: campContent.trim() || null,
+    });
+  }, [campaignRow, base, campSource, campMedium, campCampaign, campContent]);
+
+  const onCopyCampaign = async () => {
+    if (!campaignPreviewUrl) {
+      flashCopy("ยังไม่มี APP_URL หรือยังไม่เลือกโมดูล");
+      return;
+    }
+    if (!campCampaign.trim()) {
+      flashCopy("ใส่ชื่อแคมเปญ (utm_campaign) ก่อน");
+      return;
+    }
+    const ok = await copyText(campaignPreviewUrl);
+    flashCopy(ok ? `คัดลอกลิงก์แคมเปญแล้ว · ${campaignRow?.title ?? ""}` : "คัดลอกไม่สำเร็จ");
   };
 
   const onCopySiteHome = async () => {
@@ -454,6 +491,22 @@ export function ModuleTryLinksAdmin({
                                 <button
                                   type="button"
                                   className={iconBtn}
+                                  aria-label={`สร้างลิงก์แคมเปญ ${row.title}`}
+                                  title="ลิงก์แคมเปญ (UTM)"
+                                  disabled={!base}
+                                  onClick={() => {
+                                    setCampaignRow(row);
+                                    setCampCampaign(`${row.slug}_${new Date().toISOString().slice(0, 7).replace("-", "")}`);
+                                    setCampSource("facebook");
+                                    setCampMedium("cpc");
+                                    setCampContent("");
+                                  }}
+                                >
+                                  <CampaignIcon className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={iconBtn}
                                   aria-label={`แสดง QR ${row.title}`}
                                   title="สร้าง QR"
                                   disabled={!base}
@@ -481,6 +534,81 @@ export function ModuleTryLinksAdmin({
           </div>
         )}
       </div>
+
+      <FormModal
+        open={Boolean(campaignRow)}
+        onClose={() => setCampaignRow(null)}
+        title={campaignRow ? `ลิงก์แคมเปญ · ${campaignRow.title}` : "ลิงก์แคมเปญ"}
+        size="md"
+        appearance="glass"
+        glassTint="violet"
+        mobileCentered
+        footer={
+          <div className="flex w-full flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              className={cn(appTemplateOutlineButtonClass, "min-h-[40px]")}
+              onClick={() => void onCopyCampaign()}
+            >
+              คัดลอกลิงก์
+            </button>
+            <button
+              type="button"
+              className="app-btn-primary min-h-[40px] rounded-xl px-4"
+              onClick={() => setCampaignRow(null)}
+            >
+              ปิด
+            </button>
+          </div>
+        }
+      >
+        {campaignRow ? (
+          <div className="space-y-3 py-1">
+            <p className="text-xs font-medium text-[#5f5a8a]">
+              ใส่พารามิเตอร์ UTM แล้วคัดลอกไปวางในโฆษณา — ดูผลที่เมนู «สถิติทดลอง»
+            </p>
+            <label className="block text-[10px] font-bold text-[#66638c]">
+              utm_source
+              <input
+                value={campSource}
+                onChange={(e) => setCampSource(e.target.value)}
+                className="mt-1 w-full rounded-xl border-0 bg-[#f3f2fa]/90 px-3 py-2.5 text-sm text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                placeholder="facebook / line / tiktok"
+              />
+            </label>
+            <label className="block text-[10px] font-bold text-[#66638c]">
+              utm_medium
+              <input
+                value={campMedium}
+                onChange={(e) => setCampMedium(e.target.value)}
+                className="mt-1 w-full rounded-xl border-0 bg-[#f3f2fa]/90 px-3 py-2.5 text-sm text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                placeholder="cpc / social / qr"
+              />
+            </label>
+            <label className="block text-[10px] font-bold text-[#66638c]">
+              utm_campaign *
+              <input
+                value={campCampaign}
+                onChange={(e) => setCampCampaign(e.target.value)}
+                className="mt-1 w-full rounded-xl border-0 bg-[#f3f2fa]/90 px-3 py-2.5 text-sm text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                placeholder="laundry_apr"
+              />
+            </label>
+            <label className="block text-[10px] font-bold text-[#66638c]">
+              utm_content (ถ้ามี)
+              <input
+                value={campContent}
+                onChange={(e) => setCampContent(e.target.value)}
+                className="mt-1 w-full rounded-xl border-0 bg-[#f3f2fa]/90 px-3 py-2.5 text-sm text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                placeholder="ad_a"
+              />
+            </label>
+            <p className="break-all rounded-xl border border-white/60 bg-white/70 px-3 py-2 font-mono text-[11px] text-[#4d47b6]">
+              {campaignPreviewUrl || "—"}
+            </p>
+          </div>
+        ) : null}
+      </FormModal>
 
       <FormModal
         open={siteQrOpen || Boolean(qrRow)}
