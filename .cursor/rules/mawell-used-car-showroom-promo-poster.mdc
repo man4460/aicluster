@@ -1,0 +1,122 @@
+---
+description: พรอมต์โปสเตอร์ A5 โมดูลโชว์รูมรถมือสอง (คัดลอกได้ทันที · face lock · เต็นท์รถ)
+alwaysApply: false
+---
+
+# โปสเตอร์โปรโมท — โชว์รูมรถมือสอง (ล็อกแล้ว)
+
+เมื่อผู้ขอ **พรอมต์ภาพ / โปสเตอร์ / โพสโปรโมท** ของโมดูล `used-car-showroom` · โชว์รูมรถมือสอง · เต็นท์รถ · ระบบบริหารจัดการธุรกิจรถมือสอง — **ส่งบล็อกด้านล่างคัดลอกได้ทันที** อย่าเขียนใหม่ทั้งก้อนถ้าผู้ใช้ไม่ได้ขอแก้จุดใดจุดหนึ่ง
+
+คู่กับ: `mawell-module-promo-post-prompt.mdc` · `mawell-module-promo-caption.mdc` · ฟีเจอร์จริงใน `try-promo-features.ts` (`used-car-showroom`)
+
+## ค่าคงที่ (ห้ามเดา)
+
+| รายการ | ค่า |
+|--------|-----|
+| ชื่อในภาพ | `ระบบบริหารจัดการธุรกิจรถมือสอง` |
+| slug | `used-car-showroom` |
+| ลิงก์ทดลอง / QR | `https://app.ma-well.com/try/used-car-showroom` |
+| ราคา | `เริ่มต้นวันละ 1 บาท!` |
+| โทร | `096-664-6914` |
+| LINE | `@mawell` |
+| แบรนด์ | `MAWELL` |
+| อัตราส่วน | **A5 แนวตั้ง 3:4** (เช่น 1080×1440) |
+| พื้นหลัง | **รูปเต็นท์รถมือสองมีรถขายจริง** — ห้ามพื้น UI/ไอคอนไอโซเมตริกแทน |
+| พรีเซนเตอร์ | หน้าตาม **[Image 1]** รักษา likeness จริง |
+| โลโก้ | มุมขวาบนจาก **[Image 2]** |
+
+## สิ่งที่ต้องส่งทุกครั้ง (3 บล็อก code fence)
+
+1. พรอมต์หลัก  
+2. พรอมต์สั้น  
+3. แคปชันโพส  
+
+ถ้าผู้ใช้แนบรูป — เตือนสั้น ๆ ให้แนบ Image 1 (หน้า) + Image 2 (โลโก้) ตอนเจน
+
+## เมื่อขอแก้ทีละจุด
+
+เก็บโครงด้านล่าง แก้เฉพาะที่ขอ — **ห้าม** ตัด QR / โทร / LINE / ราคา / ชื่อระบบ
+
+---
+
+### พรอมต์หลัก (คัดลอก)
+
+```
+[Commercial marketing poster · Vertical A5 · aspect ratio 3:4 · 1080×1440 · ultra sharp 8k]
+
+STYLE
+Professional, clean, friendly, modern automotive commercial poster. Soft daylight, warm trustworthy tone, ample white space, crisp Thai typography, high contrast, printable quality. No clutter, no collage grid, no floating emoji stickers.
+
+REFERENCE LOCK (CRITICAL)
+- Presenter face: use EXACT face identity, skin tone, facial structure, eyes, nose, mouth, and expression from attached [Image 1]. Photorealistic face match. Do NOT beautify into a different person. Do NOT change ethnicity, age range, or facial proportions. Keep likeness as close to the real photo as possible.
+- Company logo: place a small clean logo in the TOP-RIGHT corner based on attached [Image 2]. Keep logo proportions readable; do not distort.
+
+PRESENTER
+Friendly professional used-car consultant / dealer, smart-casual outfit (polo or light blazer + neat pants), confident warm smile, standing in the foreground slightly left or center-left, mid-shot to three-quarter body, looking toward camera. Hands natural (one open gesture toward headline/features is OK). Face must remain identical to [Image 1].
+
+BACKGROUND (PHOTO-BASED)
+Photorealistic Thai used-car dealership tent / outdoor car lot as the main background: white or light canopy tent, rows of used cars for sale parked neatly, banners and price tags faintly visible but not readable competing text, sunny soft daylight, shallow depth of field so cars are clear but not overpowering the text. Subtle soft glow / light tech accent only at edges — DO NOT cover the lot with isometric UI overlays or floating abstract icons. Slight dark-to-light gradient vignette behind text for legibility.
+
+MAIN HEADLINE (TOP / CENTER)
+Large prominent Thai headline with soft-bold rounded Thai typography and clean white outer outline stroke for contrast:
+「ระบบบริหารจัดการธุรกิจรถมือสอง」
+
+PRICE BADGE (HIGH VISIBILITY)
+Cute bold promotional bubble/badge near headline:
+「เริ่มต้นวันละ 1 บาท!」
+Vibrant, clear, high contrast — secondary to the headline, not larger than it.
+
+FEATURE HIGHLIGHTS (CENTER BODY)
+3–4 neat rounded infographic cards with short Thai lines (icons OK as simple line icons, not emoji clutter):
+1) สต็อก & ต้นทุนรถ · P&L รายคัน
+2) จองรถ / นัดชม · มัดจำ + สลิป
+3) ไฟแนนซ์ · คิดค่างวดแบบ flat
+4) โชว์รูมออนไลน์ส่วนตัว · QR ลูกค้า
+
+(Product capability context for accurate visual mood — do NOT print this full list as a wall of text:
+ภาพรวมสต็อก, จัดการรถ+รูป/วิดีโอ+ต้นทุน, จองและนัดชม, เคสไฟแนนซ์/บริษัทไฟแนนซ์, คิดค่างวด flat, ลูกค้า·พนักงาน·โปรโมชัน, รายรับ–รายจ่าย+สลิป, เว็บโชว์รูม /car, ลิงก์/QR แชร์)
+
+FOOTER / CTA
+Clean contact strip at bottom with quiet space:
+- โทร 096-664-6914
+- LINE @mawell
+- Sharp scannable QR code (black on white, quiet zone) linking to:
+  https://app.ma-well.com/try/used-car-showroom
+- Short label beside/under QR: 「สแกนเข้าทดลองโมดูลโชว์รูมรถมือสอง」
+- Small brand wordmark 「MAWELL」 near footer
+
+COMPOSITION
+Dynamic but clean; text highly legible on mobile; leave breathing room around headline, badge, cards, QR, and phone/LINE. No overcrowding. No fake unreadable UI screens covering the cars.
+```
+
+### พรอมต์สั้น (คัดลอก)
+
+```
+A5 vertical 3:4 poster. Photorealistic Thai used-car tent lot background with used cars for sale. Friendly presenter with EXACT face from [Image 1], smart-casual dealer look. Small logo top-right from [Image 2]. Big Thai headline: ระบบบริหารจัดการธุรกิจรถมือสอง. Badge: เริ่มต้นวันละ 1 บาท! Four feature cards: สต็อก/ต้นทุน·P&L, จอง/นัดชม, ไฟแนนซ์·ค่างวด flat, โชว์รูมออนไลน์. Footer: 096-664-6914, LINE @mawell, scannable QR to https://app.ma-well.com/try/used-car-showroom. Clean commercial, high contrast Thai type, ample space.
+```
+
+### แคปชันโพส (คัดลอก)
+
+```
+🚗 ระบบบริหารจัดการธุรกิจรถมือสอง — ครบจบในระบบเดียว
+
+สำหรับเต็นท์รถ / โชว์รูม ที่อยากคุมสต็อก จอง ไฟแนนซ์ และการเงิน ให้จบในที่เดียว พร้อมเว็บโชว์รูมให้ลูกค้าดูรถออนไลน์ได้
+
+1. ภาพรวมสต็อก — ว่าง · จอง · ขาย · กำไร เห็นชัด
+2. จัดการรถ — รูป วิดีโอ ต้นทุนต่อคัน
+3. P&L รายคัน — รู้ต้นทุน–กำไรทีละคัน
+4. จองรถออนไลน์ — มัดจำ + อัปโหลดสลิป
+5. นัดชมรถ — ลูกค้านัดเข้ามาดูได้
+6. ไฟแนนซ์ — บริษัทไฟแนนซ์ + เคสรออนุมัติ
+7. คิดค่างวดแบบ flat — คำนวณง่าย เทียบราคาหน้าเต็นท์
+8. ลูกค้า · พนักงาน · โปรโมชัน — จัดการครบ
+9. การเงินโชว์รูม — รายรับ–รายจ่าย พร้อมสลิป
+10. เว็บโชว์รูมออนไลน์ — แคตตาล็อกรถสาธารณะ + ลิงก์/QR แชร์ได้ทันที
+
+วันละ 1 บาท
+ทดลองใช้: https://app.ma-well.com/try/used-car-showroom
+สนใจโทร 096-664-6914
+LINE @mawell
+
+#โชว์รูมรถมือสอง #เต็นท์รถ #ระบบรถมือสอง #MAWELL #วันละ1บาท
+```
