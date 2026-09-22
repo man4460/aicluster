@@ -11,10 +11,11 @@ import {
   smartGuardTourInlineSubNavShellClass,
   smartGuardTourListHeaderRowClass,
   smartGuardTourMobileSelectClass,
-  smartGuardTourNavDividerClass,
   smartGuardTourPanelClass,
   smartGuardTourPanelDividerClass,
   smartGuardTourPanelSectionClass,
+  smartGuardTourPrimaryTabPillClass,
+  smartGuardTourPrimaryTabShellClass,
   smartGuardTourSectionHeadingClass,
   smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
@@ -28,8 +29,8 @@ export type SmartGuardTourPageSubNavItem = {
 };
 
 /**
- * หัวหน้า + เมนูย่อย — ชื่อซ้าย · แท็บ/แอ็กชันขวา
- * มือถือ: เมนูย่อยเป็น select · sm+ แสดง pill
+ * หัวหน้า + เมนูย่อย — ชื่อซ้าย · ปุ่มแอ็กชันขวา · แท็บแถวถัดไปเต็มความกว้าง
+ * มือถือ: select สลับแท็บ · ปุ่มเพิ่ม/กรองยังอยู่แถวหัว
  */
 export function SmartGuardTourPageSubNav({
   title,
@@ -55,14 +56,13 @@ export function SmartGuardTourPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** override ป้าย/id · ส่ง false เพื่อบังคับใช้ pill บนมือถือ */
+  /** override ป้าย/id · ส่ง false เพื่อบังคับใช้ pill บนมือถือ (ไม่ใช้ select) */
   mobileSelect?: {
     id: string;
     label: string;
   } | false;
   children?: ReactNode;
   className?: string;
-  /** คลาสห่อเนื้อหาใต้หัวเมนู */
   contentClassName?: string;
 }) {
   const autoId = useId();
@@ -80,9 +80,10 @@ export function SmartGuardTourPageSubNav({
 
   return (
     <div className={cn(smartGuardTourPanelClass, className)}>
-      <div className={cn(smartGuardTourPanelSectionClass, "shrink-0 print:hidden")}>
-        <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+      <div className={cn(smartGuardTourPanelSectionClass, "shrink-0 space-y-3 print:hidden")}>
+        {/* แถว 1: หัวข้อ + ปุ่มกรอง/เพิ่ม — ปุ่มไม่ถูกบีบ */}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             {titleIcon ? (
               <span className={smartGuardTourCardIconTileClass(titleTone)} aria-hidden>
                 {titleIcon}
@@ -91,69 +92,35 @@ export function SmartGuardTourPageSubNav({
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
-                <span
-                  className={cn("h-4 w-px shrink-0 bg-slate-200/90", useMobileSelect && "hidden sm:block")}
-                  aria-hidden
-                />
-                <p
-                  className={cn(
-                    "min-w-0 truncate text-sm font-semibold text-[#66638c]",
-                    useMobileSelect && "hidden sm:block",
-                  )}
-                >
-                  {sub}
-                </p>
+                <span className="hidden h-4 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
+                <p className="hidden min-w-0 truncate text-sm font-semibold text-[#66638c] sm:block">{sub}</p>
               </>
             ) : null}
           </div>
 
-          <div
-            className={cn(smartGuardTourToolbarRowClass, "min-w-0")}
-            role="group"
-            aria-label={ariaLabel ?? "เครื่องมือหน้า"}
-          >
-            {hasTabs ? (
-              useMobileSelect ? (
-                <div className="hidden sm:block">
-                  <nav
-                    className={smartGuardTourInlineSubNavShellClass}
-                    role="tablist"
-                    aria-label={ariaLabel ?? "เมนูย่อย"}
-                  >
-                    {items!.map((item) => {
-                      const active = activeKey === item.key;
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          aria-current={active ? "page" : undefined}
-                          title={item.label}
-                          aria-label={item.label}
-                          onClick={() => onSelect?.(item.key)}
-                          className={smartGuardTourInlineSubNavBtnClass(active)}
-                        >
-                          {item.icon ? (
-                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-                              {item.icon}
-                            </span>
-                          ) : null}
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </nav>
-                </div>
-              ) : (
+          {action ? (
+            <div
+              className={cn(smartGuardTourToolbarRowClass, "shrink-0")}
+              role="group"
+              aria-label="เครื่องมือหน้า"
+            >
+              {action}
+            </div>
+          ) : null}
+        </div>
+
+        {/* แถว 2: เมนูหลักเต็มความกว้าง */}
+        {hasTabs ? (
+          useMobileSelect ? (
+            <>
+              <div className="hidden w-full sm:block">
                 <nav
-                  className={smartGuardTourInlineSubNavShellClass}
+                  className={cn(smartGuardTourInlineSubNavShellClass, "flex-wrap")}
                   role="tablist"
                   aria-label={ariaLabel ?? "เมนูย่อย"}
                 >
                   {items!.map((item) => {
                     const active = activeKey === item.key;
-                    const short = item.shortLabel ?? item.label;
                     return (
                       <button
                         key={item.key}
@@ -171,42 +138,69 @@ export function SmartGuardTourPageSubNav({
                             {item.icon}
                           </span>
                         ) : null}
-                        <span className="hidden sm:inline">{item.label}</span>
-                        <span className="sm:hidden" aria-hidden>
-                          {short}
-                        </span>
+                        <span>{item.label}</span>
                       </button>
                     );
                   })}
                 </nav>
-              )
-            ) : null}
-            {hasTabs && action ? (
-              <span className={cn(smartGuardTourNavDividerClass, useMobileSelect && "hidden sm:block")} aria-hidden />
-            ) : null}
-            {action}
-          </div>
-        </div>
-
-        {useMobileSelect && autoMobileSelect ? (
-          <div className="mt-3 w-full sm:hidden">
-            <label htmlFor={autoMobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
-              {autoMobileSelect.label}
-            </label>
-            <select
-              id={autoMobileSelect.id}
-              value={activeKey}
-              onChange={(e) => onSelect?.(e.target.value)}
-              className={smartGuardTourMobileSelectClass}
-              aria-label={autoMobileSelect.label}
+              </div>
+              <div className="w-full sm:hidden">
+                <label htmlFor={autoMobileSelect!.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+                  {autoMobileSelect!.label}
+                </label>
+                <select
+                  id={autoMobileSelect!.id}
+                  value={activeKey}
+                  onChange={(e) => onSelect?.(e.target.value)}
+                  className={smartGuardTourMobileSelectClass}
+                  aria-label={autoMobileSelect!.label}
+                >
+                  {items!.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : (
+            <nav
+              className={cn(smartGuardTourPrimaryTabShellClass, "w-full")}
+              role="tablist"
+              aria-label={ariaLabel ?? "เมนูย่อย"}
             >
-              {items!.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              {items!.map((item) => {
+                const active = activeKey === item.key;
+                const short = item.shortLabel ?? item.label;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-current={active ? "page" : undefined}
+                    title={item.label}
+                    aria-label={item.label}
+                    onClick={() => onSelect?.(item.key)}
+                    className={cn(
+                      smartGuardTourPrimaryTabPillClass(active),
+                      "inline-flex items-center justify-center gap-1.5",
+                    )}
+                  >
+                    {item.icon ? (
+                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                        {item.icon}
+                      </span>
+                    ) : null}
+                    <span className="hidden sm:inline">{item.label}</span>
+                    <span className="sm:hidden" aria-hidden>
+                      {short}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          )
         ) : null}
       </div>
 
@@ -260,7 +254,7 @@ export function SmartGuardTourPageBlock({
           ) : (
             <span />
           )}
-          {action ? <div className={smartGuardTourToolbarRowClass}>{action}</div> : null}
+          {action ? <div className={cn(smartGuardTourToolbarRowClass, "shrink-0")}>{action}</div> : null}
         </div>
       ) : null}
       {children}

@@ -34,9 +34,9 @@ import {
   smartGuardTourPageTitleTone,
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
 import {
-  smartGuardTourFilterChipClass,
-  smartGuardTourFilterChipShellClass,
   smartGuardTourPageStackClass,
+  smartGuardTourPrimaryTabPillClass,
+  smartGuardTourPrimaryTabShellClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
@@ -61,12 +61,10 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
   const activeSub = group.subs.find((s) => s.key === leaf);
 
   const setGroup = (key: SmartGuardTourManageGroupKey) => {
-    setToolbar(null);
     router.replace(smartGuardTourManageHref(key), { scroll: false });
   };
 
   const setLeaf = (next: SmartGuardTourManageLeafKey) => {
-    setToolbar(null);
     router.replace(smartGuardTourManageHref(next), { scroll: false });
   };
 
@@ -95,13 +93,14 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
         activeKey={groupKey}
         onSelect={(k) => setGroup(k as SmartGuardTourManageGroupKey)}
         ariaLabel="เมนูหลักการจัดการ"
+        mobileSelect={false}
         action={<SmartGuardTourPageFilterAction toolbar={toolbar} />}
       >
         {group.subs.length > 0 ? (
-          <div
-            className={`${smartGuardTourFilterChipShellClass} mb-3`}
+          <nav
+            className={`${smartGuardTourPrimaryTabShellClass} mb-3`}
             role="tablist"
-            aria-label={`หมวดย่อย${group.label}`}
+            aria-label={`หมวดย่อย ${group.label}`}
           >
             {group.subs.map((s) => (
               <button
@@ -109,29 +108,45 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
                 type="button"
                 role="tab"
                 aria-selected={leaf === s.key}
-                className={smartGuardTourFilterChipClass(leaf === s.key)}
+                className={smartGuardTourPrimaryTabPillClass(leaf === s.key)}
                 onClick={() => setLeaf(s.key)}
               >
                 {s.shortLabel ?? s.label}
               </button>
             ))}
-          </div>
+          </nav>
         ) : null}
 
         {leaf === "staff" ? (
-          <SmartGuardTourStaffPanel onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourStaffPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "posts" ? (
-          <SmartGuardTourPostsPanel onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourPostsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "duties" ? (
-          <SmartGuardTourDutiesPanel onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourDutiesPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "checkpoints" ? (
-          <SmartGuardTourCheckpointsList rows={data.checkpoints} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourCheckpointsList
+            key={leaf}
+            rows={data.checkpoints}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : leaf === "schedules" ? (
-          <SmartGuardTourSchedulesList rows={data.schedules} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourSchedulesList
+            key={leaf}
+            rows={data.schedules}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : leaf === "contacts" ? (
-          <SmartGuardTourContactsList rows={data.contacts} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourContactsList
+            key={leaf}
+            rows={data.contacts}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : leaf === "assets" ? (
-          <SmartGuardTourAssetsList rows={data.assets} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourAssetsList
+            key={leaf}
+            rows={data.assets}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : null}
       </SmartGuardTourPageSubNav>
     </div>

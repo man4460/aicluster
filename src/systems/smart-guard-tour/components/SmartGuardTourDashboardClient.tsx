@@ -133,7 +133,6 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
 
   const setTab = useCallback(
     (next: SmartGuardTourDashboardTabKey) => {
-      setToolbar(null);
       router.replace(smartGuardTourDashboardTabHref(next), { scroll: false });
     },
     [router],
@@ -215,13 +214,29 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
         ) : tab === "posts" ? (
           <SmartGuardTourDutiesPanel readOnly />
         ) : tab === "checkpoints" ? (
-          <SmartGuardTourCheckpointsList rows={data.checkpoints} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourCheckpointsList
+            key={tab}
+            rows={data.checkpoints}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : tab === "tour-logs" ? (
-          <SmartGuardTourTourLogsList rows={data.tourLogs} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourTourLogsList
+            key={tab}
+            rows={data.tourLogs}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : tab === "incidents" ? (
-          <SmartGuardTourIncidentsList rows={data.incidents} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourIncidentsList
+            key={tab}
+            rows={data.incidents}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : tab === "shifts" ? (
-          <SmartGuardTourShiftsList rows={data.shifts} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourShiftsList
+            key={tab}
+            rows={data.shifts}
+            onEmbeddedToolbar={onEmbeddedToolbar}
+          />
         ) : tab === "map-view" ? (
           <SmartGuardTourMapPlaceholder checkpoints={data.checkpoints} />
         ) : null}
