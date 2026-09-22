@@ -28,9 +28,9 @@ import {
   smartGuardTourFilterChipShellClass,
   smartGuardTourOutlineButtonClass,
   smartGuardTourPrimaryButtonClass,
-  smartGuardTourListHeaderRowClass,
-  smartGuardTourToolbarRowClass,
+  smartGuardTourInlineSubNavBtnClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
+import type { SmartGuardTourListToolbarApi } from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
 
 type StaffRow = {
   id: string;
@@ -58,15 +58,19 @@ const emptyForm = (): FormState => ({
   wageBahtPerShift: 600,
 });
 
-function IconFilterFunnel({ className }: { className?: string }) {
+function IconPlus({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
 
-export function SmartGuardTourStaffPanel() {
+export function SmartGuardTourStaffPanel({
+  onEmbeddedToolbar,
+}: {
+  onEmbeddedToolbar?: (api: SmartGuardTourListToolbarApi | null) => void;
+}) {
   const notice = useAppNoticePopup();
   const lb = useAppImageLightbox();
   const [rows, setRows] = useState<StaffRow[]>([]);
@@ -117,6 +121,33 @@ export function SmartGuardTourStaffPanel() {
     setForm(emptyForm());
     setModalOpen(true);
   }
+
+  const toggleFilter = useCallback(() => setFilterOpen((o) => !o), []);
+
+  useEffect(() => {
+    if (!onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      filterOpen,
+      hasActiveFilters: filtersActive,
+      filterId: "sgt-staff-filter",
+      toggleFilter,
+      extra: (
+        <button
+          type="button"
+          className={smartGuardTourInlineSubNavBtnClass(false)}
+          title="เพิ่มพนักงาน"
+          aria-label="เพิ่มพนักงาน"
+          onClick={openAdd}
+        >
+          <IconPlus className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline">เพิ่ม</span>
+        </button>
+      ),
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [onEmbeddedToolbar, filterOpen, filtersActive, toggleFilter]);
+
+  const embedded = Boolean(onEmbeddedToolbar);
 
   function openEdit(row: StaffRow) {
     setEditingId(row.id);
@@ -218,34 +249,9 @@ export function SmartGuardTourStaffPanel() {
       {notice.popup}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปพนักงาน" />
 
-      <div className={smartGuardTourListHeaderRowClass}>
-        <div className="min-w-0">
+      {!embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
-        </div>
-        <div className={smartGuardTourToolbarRowClass}>
-          <button
-            type="button"
-            aria-expanded={filterOpen}
-            aria-controls="sgt-staff-filter"
-            aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-            title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-            className={cn(
-              smartGuardTourOutlineButtonClass,
-              "relative min-w-[40px] sm:min-w-0",
-              filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-              filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-            )}
-            onClick={() => setFilterOpen((o) => !o)}
-          >
-            <IconFilterFunnel className="h-4 w-4" />
-            <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-            {filtersActive ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
-                aria-hidden
-              />
-            ) : null}
-          </button>
           <button
             type="button"
             aria-label="เพิ่มพนักงาน"
@@ -258,7 +264,7 @@ export function SmartGuardTourStaffPanel() {
             <span className="hidden sm:inline">+ เพิ่มพนักงาน</span>
           </button>
         </div>
-      </div>
+      ) : null}
 
       <div id="sgt-staff-filter" className={cn("space-y-2.5", filterOpen ? "block" : "hidden")}>
         <div className={smartGuardTourFilterChipShellClass} role="tablist" aria-label="กรองสถานะพนักงาน">
@@ -291,7 +297,7 @@ export function SmartGuardTourStaffPanel() {
         {filtersActive ? (
           <button
             type="button"
-            className={cn(smartGuardTourOutlineButtonClass, "text-xs")}
+            className="text-xs font-semibold text-[#4d47b6] underline-offset-2 hover:underline"
             onClick={() => {
               setQ("");
               setStatusFilter("all");

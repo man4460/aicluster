@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   SMART_GUARD_TOUR_MANAGE_TAB_ITEMS,
@@ -8,6 +9,10 @@ import {
   type SmartGuardTourManageTabKey,
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
+import {
+  SmartGuardTourPageFilterAction,
+  type SmartGuardTourListToolbarApi,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
 import { SmartGuardTourStaffPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourStaffPanel";
 import { SmartGuardTourPostsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourPostsPanel";
 import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
@@ -32,10 +37,16 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
   const searchParams = useSearchParams();
   const tab = parseSmartGuardTourManageTab(searchParams.get("tab"));
   const { data, loading, notice } = useSmartGuardCatalog();
+  const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   const setTab = (key: SmartGuardTourManageTabKey) => {
+    setToolbar(null);
     router.replace(smartGuardTourManageHref(key), { scroll: false });
   };
+
+  const onEmbeddedToolbar = useCallback((api: SmartGuardTourListToolbarApi | null) => {
+    setToolbar(api);
+  }, []);
 
   return (
     <div className={smartGuardTourPageStackClass}>
@@ -52,27 +63,28 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
         activeKey={tab}
         onSelect={(k) => setTab(k as SmartGuardTourManageTabKey)}
         ariaLabel="เมนูย่อยการจัดการ"
+        action={<SmartGuardTourPageFilterAction toolbar={toolbar} />}
       >
         <p className="mb-3 text-xs font-semibold text-[#66638c]">
           {initialShop.displayName}
           {loading && tab !== "staff" ? " · กำลังโหลด…" : null}
         </p>
         {tab === "staff" ? (
-          <SmartGuardTourStaffPanel />
+          <SmartGuardTourStaffPanel onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "posts" ? (
           <SmartGuardTourPostsPanel />
         ) : tab === "duties" ? (
           <SmartGuardTourDutiesPanel />
         ) : tab === "checkpoints" ? (
-          <SmartGuardTourCheckpointsList rows={data.checkpoints} />
+          <SmartGuardTourCheckpointsList rows={data.checkpoints} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "schedules" ? (
-          <SmartGuardTourSchedulesList rows={data.schedules} />
+          <SmartGuardTourSchedulesList rows={data.schedules} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "incidents" ? (
-          <SmartGuardTourIncidentsList rows={data.incidents} />
+          <SmartGuardTourIncidentsList rows={data.incidents} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "contacts" ? (
-          <SmartGuardTourContactsList rows={data.contacts} />
+          <SmartGuardTourContactsList rows={data.contacts} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "assets" ? (
-          <SmartGuardTourAssetsList rows={data.assets} />
+          <SmartGuardTourAssetsList rows={data.assets} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : null}
       </SmartGuardTourPageSubNav>
     </div>

@@ -28,8 +28,8 @@ export type SmartGuardTourPageSubNavItem = {
 };
 
 /**
- * หัวการ์ดหน้า + แท็บเมนูย่อย · เนื้อหา · เว็บ/คู่มือ ตามแม่แบบซักผ้า
- * แท็บ ≥2: มือถือใช้ select · sm+ แสดง pill
+ * หัวหน้า + เมนูย่อย — ชื่อซ้าย · แท็บ/แอ็กชันขวา
+ * มือถือ: เมนูย่อยเป็น select · sm+ แสดง pill
  */
 export function SmartGuardTourPageSubNav({
   title,
@@ -55,7 +55,7 @@ export function SmartGuardTourPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
-  /** override ป้าย/id · ส่ง false เพื่อบังคับ pill บนมือถือ */
+  /** override ป้าย/id · ส่ง false เพื่อบังคับใช้ pill บนมือถือ */
   mobileSelect?: {
     id: string;
     label: string;
@@ -225,7 +225,7 @@ export function SmartGuardTourPageSubNav({
   );
 }
 
-/** บล็อกย่อยในเนื้อหา — เส้นคั่นจากบล็อกก่อน (ยกเว้น first) */
+/** บล็อกย่อยในเนื้อหา — ใช้เมื่อแยกหัวข้อรอง (ยกเว้น first) */
 export function SmartGuardTourPageBlock({
   title,
   titleIcon,

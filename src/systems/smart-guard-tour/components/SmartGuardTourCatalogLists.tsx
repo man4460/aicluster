@@ -38,23 +38,18 @@ import {
 } from "@/systems/smart-guard-tour/lib/catalog-types";
 import { formatMinutesHm } from "@/systems/smart-guard-tour/lib/wage-engine";
 import {
+  type SmartGuardTourListToolbarApi,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
+import {
   smartGuardTourFieldClass,
   smartGuardTourFilterChipClass,
   smartGuardTourFilterChipShellClass,
   smartGuardTourFinanceStatsGridClass,
   smartGuardTourListHeaderRowClass,
-  smartGuardTourOutlineButtonClass,
   smartGuardTourStatInlineClass,
-  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
-function IconFilterFunnel({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
+export type { SmartGuardTourListToolbarApi };
 
 function baht(n: number): string {
   return n.toLocaleString("th-TH");
@@ -125,11 +120,38 @@ export function useSmartGuardCatalog() {
 
 type FilterChip = { key: string; label: string; count: number };
 
+type ListToolbarProps = {
+  onEmbeddedToolbar?: (api: SmartGuardTourListToolbarApi | null) => void;
+};
+
+function useListFilterToolbar(
+  filterId: string,
+  filtersActive: boolean,
+  onEmbeddedToolbar: ListToolbarProps["onEmbeddedToolbar"],
+  extra?: ReactNode,
+) {
+  const [filterOpen, setFilterOpen] = useState(true);
+  const toggleFilter = useCallback(() => setFilterOpen((o) => !o), []);
+
+  useEffect(() => {
+    if (!onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      filterOpen,
+      hasActiveFilters: filtersActive,
+      filterId,
+      toggleFilter,
+      extra,
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [onEmbeddedToolbar, filterOpen, filtersActive, filterId, toggleFilter, extra]);
+
+  return { filterOpen, toggleFilter };
+}
+
 function ListShell({
   title,
   description,
   filterOpen,
-  setFilterOpen,
   filtersActive,
   filterId,
   chips,
@@ -141,11 +163,12 @@ function ListShell({
   onClear,
   summary,
   children,
+  /** เมื่อส่ง toolbar ขึ้นแถบเมนูหลัก — ซ่อนหัวรายการซ้ำ */
+  embedded,
 }: {
   title: string;
   description?: string;
   filterOpen: boolean;
-  setFilterOpen: (v: boolean | ((o: boolean) => boolean)) => void;
   filtersActive: boolean;
   filterId: string;
   chips: FilterChip[];
@@ -157,42 +180,20 @@ function ListShell({
   onClear: () => void;
   summary: string;
   children: ReactNode;
+  embedded?: boolean;
 }) {
   return (
     <div className="min-w-0 space-y-3">
-      <div className={smartGuardTourListHeaderRowClass}>
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">{title}</h3>
-          {description ? (
-            <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">{description}</p>
-          ) : null}
-        </div>
-        <div className={smartGuardTourToolbarRowClass}>
-          <button
-            type="button"
-            aria-expanded={filterOpen}
-            aria-controls={filterId}
-            aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-            title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-            className={cn(
-              smartGuardTourOutlineButtonClass,
-              "relative min-w-[40px] sm:min-w-0",
-              filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-              filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-            )}
-            onClick={() => setFilterOpen((o) => !o)}
-          >
-            <IconFilterFunnel className="h-4 w-4" />
-            <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-            {filtersActive ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
-                aria-hidden
-              />
+      {!embedded ? (
+        <div className={smartGuardTourListHeaderRowClass}>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">{title}</h3>
+            {description ? (
+              <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">{description}</p>
             ) : null}
-          </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div id={filterId} className={cn("space-y-2.5", filterOpen ? "block" : "hidden")}>
         <div className={smartGuardTourFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
@@ -217,7 +218,11 @@ function ListShell({
           aria-label={searchPlaceholder}
         />
         {filtersActive ? (
-          <button type="button" className={cn(smartGuardTourOutlineButtonClass, "text-xs")} onClick={onClear}>
+          <button
+            type="button"
+            className="text-xs font-semibold text-[#4d47b6] underline-offset-2 hover:underline"
+            onClick={onClear}
+          >
             ล้างกรอง
           </button>
         ) : null}
@@ -259,12 +264,20 @@ function RowCard({
   );
 }
 
-export function SmartGuardTourCheckpointsList({ rows }: { rows: CatalogCheckpoint[] }) {
+export function SmartGuardTourCheckpointsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogCheckpoint[] } & ListToolbarProps) {
   const lb = useAppImageLightbox();
-  const [filterOpen, setFilterOpen] = useState(true);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-cp-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (status === "active" && !r.isActive) return false;
@@ -285,9 +298,9 @@ export function SmartGuardTourCheckpointsList({ rows }: { rows: CatalogCheckpoin
       <ListShell
         title="จุดตรวจ"
         filterOpen={filterOpen}
-        setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
         filterId="sgt-cp-filter"
+        embedded={embedded}
         chips={[
           { key: "all", label: "ทั้งหมด", count: rows.length },
           { key: "active", label: "ใช้งาน", count: rows.filter((r) => r.isActive).length },
@@ -339,11 +352,19 @@ export function SmartGuardTourCheckpointsList({ rows }: { rows: CatalogCheckpoin
   );
 }
 
-export function SmartGuardTourSchedulesList({ rows }: { rows: CatalogSchedule[] }) {
-  const [filterOpen, setFilterOpen] = useState(true);
+export function SmartGuardTourSchedulesList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogSchedule[] } & ListToolbarProps) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-sched-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = rows.filter((r) => {
     if (status === "active" && !r.isActive) return false;
     if (status === "inactive" && r.isActive) return false;
@@ -356,9 +377,9 @@ export function SmartGuardTourSchedulesList({ rows }: { rows: CatalogSchedule[] 
     <ListShell
       title="ตารางสายตรวจ"
       filterOpen={filterOpen}
-      setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
       filterId="sgt-sched-filter"
+      embedded={embedded}
       chips={[
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "active", label: "ใช้งาน", count: rows.filter((r) => r.isActive).length },
@@ -397,11 +418,19 @@ export function SmartGuardTourSchedulesList({ rows }: { rows: CatalogSchedule[] 
   );
 }
 
-export function SmartGuardTourIncidentsList({ rows }: { rows: CatalogIncident[] }) {
-  const [filterOpen, setFilterOpen] = useState(true);
+export function SmartGuardTourIncidentsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogIncident[] } & ListToolbarProps) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "open" | "done">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-inc-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const isOpen = (s: string) => s === "PENDING" || s === "IN_PROGRESS";
   const filtered = rows.filter((r) => {
     if (status === "open" && !isOpen(r.status)) return false;
@@ -419,9 +448,9 @@ export function SmartGuardTourIncidentsList({ rows }: { rows: CatalogIncident[] 
     <ListShell
       title="เหตุการณ์"
       filterOpen={filterOpen}
-      setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
       filterId="sgt-inc-filter"
+      embedded={embedded}
       chips={[
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "open", label: "เปิดอยู่", count: rows.filter((r) => isOpen(r.status)).length },
@@ -468,11 +497,19 @@ export function SmartGuardTourIncidentsList({ rows }: { rows: CatalogIncident[] 
   );
 }
 
-export function SmartGuardTourContactsList({ rows }: { rows: CatalogContact[] }) {
-  const [filterOpen, setFilterOpen] = useState(true);
+export function SmartGuardTourContactsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogContact[] } & ListToolbarProps) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-contact-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = rows.filter((r) => {
     if (status === "active" && !r.isActive) return false;
     if (status === "inactive" && r.isActive) return false;
@@ -489,9 +526,9 @@ export function SmartGuardTourContactsList({ rows }: { rows: CatalogContact[] })
     <ListShell
       title="ผู้ติดต่อฉุกเฉิน"
       filterOpen={filterOpen}
-      setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
       filterId="sgt-contact-filter"
+      embedded={embedded}
       chips={[
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "active", label: "ใช้งาน", count: rows.filter((r) => r.isActive).length },
@@ -527,11 +564,19 @@ export function SmartGuardTourContactsList({ rows }: { rows: CatalogContact[] })
   );
 }
 
-export function SmartGuardTourAssetsList({ rows }: { rows: CatalogAsset[] }) {
-  const [filterOpen, setFilterOpen] = useState(true);
+export function SmartGuardTourAssetsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogAsset[] } & ListToolbarProps) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "AVAILABLE" | "IN_USE" | "other">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-asset-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = rows.filter((r) => {
     if (status === "AVAILABLE" && r.status !== "AVAILABLE") return false;
     if (status === "IN_USE" && r.status !== "IN_USE") return false;
@@ -549,9 +594,9 @@ export function SmartGuardTourAssetsList({ rows }: { rows: CatalogAsset[] }) {
     <ListShell
       title="อุปกรณ์"
       filterOpen={filterOpen}
-      setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
       filterId="sgt-asset-filter"
+      embedded={embedded}
       chips={[
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "AVAILABLE", label: "ว่าง", count: rows.filter((r) => r.status === "AVAILABLE").length },
@@ -599,12 +644,20 @@ export function SmartGuardTourAssetsList({ rows }: { rows: CatalogAsset[] }) {
   );
 }
 
-export function SmartGuardTourTourLogsList({ rows }: { rows: CatalogTourLog[] }) {
+export function SmartGuardTourTourLogsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogTourLog[] } & ListToolbarProps) {
   const lb = useAppImageLightbox();
-  const [filterOpen, setFilterOpen] = useState(true);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "ok" | "issue" | "pending">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-tour-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = rows.filter((r) => {
     if (status === "ok" && r.status !== "CHECKED_OK") return false;
     if (status === "issue" && r.status !== "CHECKED_ISSUE" && r.status !== "OVERDUE" && r.status !== "MISSED")
@@ -625,9 +678,9 @@ export function SmartGuardTourTourLogsList({ rows }: { rows: CatalogTourLog[] })
       <ListShell
         title="บันทึกสายตรวจ"
         filterOpen={filterOpen}
-        setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
         filterId="sgt-tour-filter"
+        embedded={embedded}
         chips={[
           { key: "all", label: "ทั้งหมด", count: rows.length },
           { key: "ok", label: "ครบ", count: rows.filter((r) => r.status === "CHECKED_OK").length },
@@ -692,11 +745,19 @@ export function SmartGuardTourTourLogsList({ rows }: { rows: CatalogTourLog[] })
   );
 }
 
-export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
-  const [filterOpen, setFilterOpen] = useState(true);
+export function SmartGuardTourShiftsList({
+  rows,
+  onEmbeddedToolbar,
+}: { rows: CatalogShift[] } & ListToolbarProps) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "on" | "done" | "warn48">("all");
   const filtersActive = Boolean(q.trim()) || status !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-shift-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const warn48Count = rows.filter((r) => r.weeklyNormalExceeded).length;
   const filtered = rows.filter((r) => {
     if (status === "on" && !r.onDuty) return false;
@@ -715,9 +776,9 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
     <ListShell
       title="กะ / ค่าแรง"
       filterOpen={filterOpen}
-      setFilterOpen={setFilterOpen}
       filtersActive={filtersActive}
       filterId="sgt-shift-filter"
+      embedded={embedded}
       chips={[
         { key: "all", label: "ทั้งหมด", count: rows.length },
         { key: "on", label: "เข้ากะ", count: rows.filter((r) => r.onDuty).length },
@@ -790,15 +851,21 @@ export function SmartGuardTourShiftsList({ rows }: { rows: CatalogShift[] }) {
 export function SmartGuardTourFinancePanel({
   ledger,
   summary,
+  onEmbeddedToolbar,
 }: {
   ledger: CatalogLedger[];
   summary: SmartGuardCatalog["financeSummary"];
-}) {
+} & ListToolbarProps) {
   const lb = useAppImageLightbox();
-  const [filterOpen, setFilterOpen] = useState(true);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<"all" | "INCOME" | "EXPENSE">("all");
   const filtersActive = Boolean(q.trim()) || kind !== "all";
+  const { filterOpen } = useListFilterToolbar(
+    "sgt-fin-filter",
+    filtersActive,
+    onEmbeddedToolbar,
+  );
+  const embedded = Boolean(onEmbeddedToolbar);
   const filtered = ledger.filter((r) => {
     if (kind !== "all" && r.kind !== kind) return false;
     const needle = q.trim().toLowerCase();
@@ -843,9 +910,9 @@ export function SmartGuardTourFinancePanel({
       <ListShell
         title="รายการการเงิน"
         filterOpen={filterOpen}
-        setFilterOpen={setFilterOpen}
         filtersActive={filtersActive}
         filterId="sgt-fin-filter"
+        embedded={embedded}
         chips={[
           { key: "all", label: "ทั้งหมด", count: ledger.length },
           { key: "INCOME", label: "รายรับ", count: ledger.filter((r) => r.kind === "INCOME").length },

@@ -126,14 +126,13 @@ export function smartGuardTourDashboardSegmentBtnClass(active = false): string {
 }
 
 export const smartGuardTourFilterChipShellClass =
-  "flex w-full flex-wrap content-start items-center gap-1 sm:gap-1.5";
+  "flex w-full flex-wrap content-start items-center gap-x-3 gap-y-1 sm:gap-x-4";
 
+/** กลุ่มกรองสถานะ — ข้อความล้วน ไม่มีกรอบ/พื้นปุ่ม */
 export function smartGuardTourFilterChipClass(active = false): string {
   return cn(
-    "inline-flex min-h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-none transition sm:min-h-8 sm:px-2.5 sm:text-xs",
-    active
-      ? "border-[#5b61ff]/45 bg-[#5b61ff]/10 text-[#4d47b6] ring-1 ring-[#5b61ff]/20"
-      : "border-slate-200 bg-slate-50 text-[#4d47b6] hover:border-slate-300 hover:bg-white",
+    "inline-flex min-h-7 shrink-0 items-center gap-1 whitespace-nowrap border-0 bg-transparent p-0 text-[11px] font-semibold leading-none shadow-none ring-0 transition sm:min-h-8 sm:text-xs",
+    active ? "font-black text-[#4d47b6]" : "text-[#66638c] hover:text-[#4d47b6]",
   );
 }
 
