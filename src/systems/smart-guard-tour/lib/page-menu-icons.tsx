@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type {
   SmartGuardTourDashboardTabKey,
+  SmartGuardTourManageGroupKey,
   SmartGuardTourManageTabKey,
   SmartGuardTourModuleNavKey,
   SmartGuardTourSettingsTab,
@@ -78,6 +79,21 @@ export function smartGuardTourDashboardTabIcon(key: SmartGuardTourDashboardTabKe
   }
 }
 
+export function smartGuardTourManageGroupIcon(key: SmartGuardTourManageGroupKey): ReactNode {
+  switch (key) {
+    case "sites":
+      return <MapPin className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "roster":
+      return <CalendarClock className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "staff":
+      return <Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "misc":
+      return <Package className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    default:
+      return null;
+  }
+}
+
 export function smartGuardTourManageTabIcon(key: SmartGuardTourManageTabKey): ReactNode {
   switch (key) {
     case "checkpoints":
@@ -90,8 +106,6 @@ export function smartGuardTourManageTabIcon(key: SmartGuardTourManageTabKey): Re
       return <Route className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "staff":
       return <Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "incidents":
-      return <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "contacts":
       return <Contact className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "assets":

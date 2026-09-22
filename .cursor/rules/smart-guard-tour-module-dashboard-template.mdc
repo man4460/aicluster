@@ -36,10 +36,23 @@ alwaysApply: false
 
 | key | หน้า |
 |-----|------|
-| dashboard | ภาพรวม · จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ · แผนที่ · (เวรอ่านอย่างเดียว) |
-| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ · จุดประจำ · เวร |
+| dashboard | ภาพรวม · จุดตรวจ · สายตรวจ · **เหตุการณ์** · กะ · แผนที่ · เวรอ่านอย่างเดียว |
+| manage | แท็บหลัก 4 + แท็บรอง (ดู §2b) — **ไม่มีเหตุการณ์** |
 | finance | รายรับ/รายจ่าย · กรองรายการ |
-| settings | basic · finance · portal · hours · link |
+| settings | basic · finance · portal · hours · link · integrations |
+
+### 2b) การจัดการ — แท็บหลัก + แท็บรอง (แนว B)
+
+| แท็บหลัก | แท็บรอง (ข้อความล้วน) | URL ตัวอย่าง |
+|----------|------------------------|--------------|
+| **จุด** (`sites`) | จุดตรวจ · ประจำจุด | `?tab=sites` · `?tab=sites&sub=posts` |
+| **เวร / ตาราง** (`roster`) | จัดเวร · ตารางตรวจ | `?tab=roster` · `?tab=roster&sub=schedules` |
+| **พนักงาน** (`staff`) | — | `?tab=staff` |
+| **อื่นๆ** (`misc`) | ผู้ติดต่อ · อุปกรณ์ | `?tab=misc` · `?tab=misc&sub=assets` |
+
+- ลิงก์เก่า `?tab=checkpoints|posts|…` ยัง parse ได้  
+- `?tab=incidents` → เด้งไปแดชบอร์ด `?tab=incidents`  
+- แถบหลัก = `PageSubNav` · แถบรอง = `smartGuardTourFilterChipClass` (ข้อความล้วน)  
 
 Chrome: `SmartGuardTourModuleChrome` · ยุบหัว → `SmartGuardTourHeaderBarNav` ใน `DashboardShell`  
 Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)  
@@ -88,7 +101,7 @@ export function smartGuardTourFilterChipClass(active = false): string {
 
 | หน้า | รายการ |
 |------|--------|
-| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ · **ประจำจุด** (+เพิ่ม) · **จัดเวร** (+จัดเวร) |
+| manage | **จุด** (จุดตรวจ·ประจำจุด) · **เวร** (จัดเวร·ตาราง) · พนักงาน · **อื่นๆ** (ติดต่อ·อุปกรณ์) |
 | dashboard | จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ |
 | finance | รายการ ledger ใน `SmartGuardTourFinancePanel` |
 

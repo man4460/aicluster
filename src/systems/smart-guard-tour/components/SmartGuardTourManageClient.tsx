@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  SMART_GUARD_TOUR_MANAGE_TAB_ITEMS,
-  parseSmartGuardTourManageTab,
+  SMART_GUARD_TOUR_MANAGE_GROUPS,
+  isSmartGuardTourManageIncidentsLegacyTab,
+  parseSmartGuardTourManageLeaf,
+  smartGuardTourDashboardTabHref,
+  smartGuardTourManageGroupForLeaf,
   smartGuardTourManageHref,
-  type SmartGuardTourManageTabKey,
+  type SmartGuardTourManageGroupKey,
+  type SmartGuardTourManageLeafKey,
 } from "@/systems/smart-guard-tour/smart-guard-tour-module-nav";
 import { SmartGuardTourPageSubNav } from "@/systems/smart-guard-tour/components/SmartGuardTourPageSubNav";
 import {
@@ -20,33 +24,60 @@ import {
   SmartGuardTourAssetsList,
   SmartGuardTourCheckpointsList,
   SmartGuardTourContactsList,
-  SmartGuardTourIncidentsList,
   SmartGuardTourSchedulesList,
   useSmartGuardCatalog,
 } from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
-  smartGuardTourManageTabIcon,
+  smartGuardTourManageGroupIcon,
   smartGuardTourPageTitleIcon,
   smartGuardTourPageTitleTone,
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
-import { smartGuardTourPageStackClass } from "@/systems/smart-guard-tour/lib/ui-tokens";
+import {
+  smartGuardTourFilterChipClass,
+  smartGuardTourFilterChipShellClass,
+  smartGuardTourPageStackClass,
+} from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = parseSmartGuardTourManageTab(searchParams.get("tab"));
+  const tabParam = searchParams.get("tab");
+  const subParam = searchParams.get("sub");
   const { data, notice } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
-  const setTab = (key: SmartGuardTourManageTabKey) => {
+  useEffect(() => {
+    if (!isSmartGuardTourManageIncidentsLegacyTab(tabParam)) return;
+    router.replace(smartGuardTourDashboardTabHref("incidents"), { scroll: false });
+  }, [tabParam, router]);
+
+  const leaf = useMemo(
+    () => parseSmartGuardTourManageLeaf(tabParam, subParam),
+    [tabParam, subParam],
+  );
+  const groupKey = smartGuardTourManageGroupForLeaf(leaf);
+  const group = SMART_GUARD_TOUR_MANAGE_GROUPS.find((g) => g.key === groupKey)!;
+  const activeSub = group.subs.find((s) => s.key === leaf);
+
+  const setGroup = (key: SmartGuardTourManageGroupKey) => {
     setToolbar(null);
     router.replace(smartGuardTourManageHref(key), { scroll: false });
+  };
+
+  const setLeaf = (next: SmartGuardTourManageLeafKey) => {
+    setToolbar(null);
+    router.replace(smartGuardTourManageHref(next), { scroll: false });
   };
 
   const onEmbeddedToolbar = useCallback((api: SmartGuardTourListToolbarApi | null) => {
     setToolbar(api);
   }, []);
+
+  const subtitle =
+    group.subs.length > 0 && activeSub
+      ? `${group.label} · ${activeSub.shortLabel ?? activeSub.label}`
+      : group.label;
 
   return (
     <div className={smartGuardTourPageStackClass}>
@@ -55,31 +86,51 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
         title="การจัดการ"
         titleIcon={smartGuardTourPageTitleIcon("manage")}
         titleTone={smartGuardTourPageTitleTone("manage")}
-        items={SMART_GUARD_TOUR_MANAGE_TAB_ITEMS.map((t) => ({
-          key: t.key,
-          label: t.shortLabel ?? t.label,
-          icon: smartGuardTourManageTabIcon(t.key),
+        subtitle={subtitle}
+        items={SMART_GUARD_TOUR_MANAGE_GROUPS.map((g) => ({
+          key: g.key,
+          label: g.shortLabel,
+          icon: smartGuardTourManageGroupIcon(g.key),
         }))}
-        activeKey={tab}
-        onSelect={(k) => setTab(k as SmartGuardTourManageTabKey)}
-        ariaLabel="เมนูย่อยการจัดการ"
+        activeKey={groupKey}
+        onSelect={(k) => setGroup(k as SmartGuardTourManageGroupKey)}
+        ariaLabel="เมนูหลักการจัดการ"
         action={<SmartGuardTourPageFilterAction toolbar={toolbar} />}
       >
-        {tab === "staff" ? (
+        {group.subs.length > 0 ? (
+          <div
+            className={`${smartGuardTourFilterChipShellClass} mb-3`}
+            role="tablist"
+            aria-label={`หมวดย่อย${group.label}`}
+          >
+            {group.subs.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                role="tab"
+                aria-selected={leaf === s.key}
+                className={smartGuardTourFilterChipClass(leaf === s.key)}
+                onClick={() => setLeaf(s.key)}
+              >
+                {s.shortLabel ?? s.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {leaf === "staff" ? (
           <SmartGuardTourStaffPanel onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "posts" ? (
+        ) : leaf === "posts" ? (
           <SmartGuardTourPostsPanel onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "duties" ? (
+        ) : leaf === "duties" ? (
           <SmartGuardTourDutiesPanel onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "checkpoints" ? (
+        ) : leaf === "checkpoints" ? (
           <SmartGuardTourCheckpointsList rows={data.checkpoints} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "schedules" ? (
+        ) : leaf === "schedules" ? (
           <SmartGuardTourSchedulesList rows={data.schedules} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "incidents" ? (
-          <SmartGuardTourIncidentsList rows={data.incidents} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "contacts" ? (
+        ) : leaf === "contacts" ? (
           <SmartGuardTourContactsList rows={data.contacts} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "assets" ? (
+        ) : leaf === "assets" ? (
           <SmartGuardTourAssetsList rows={data.assets} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : null}
       </SmartGuardTourPageSubNav>
