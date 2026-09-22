@@ -1,5 +1,5 @@
 ---
-description: ธุรกิจ รปภ. (smart-guard-tour) — แม่แบบโมดูลแดชบอร์ด
+description: ธุรกิจ รปภ. (smart-guard-tour) — แม่แบบโมดูลแดชบอร์ด · กรองแถวเมนู · ชิปข้อความล้วน
 globs:
   - src/systems/smart-guard-tour/**
   - src/app/(dashboard)/dashboard/smart-guard-tour/**
@@ -10,81 +10,143 @@ alwaysApply: false
 
 # ธุรกิจ รปภ. — Smart Guard Tour
 
-**Slug:** `smart-guard-tour` · **groupId:** 1 · **daily:** 1 token  
+**Slug:** `smart-guard-tour` · **ชื่อแสดง:** ธุรกิจ รปภ. · **groupId:** 1 · **daily:** 1 token  
 **แดชบอร์ด:** `/dashboard/smart-guard-tour` · **พอร์ทัล (ภายหลัง):** `/guard/[slug]`
 
-**ยึดแม่แบบ:** `dashboard-module-design-check-laundry-first.mdc` · `used-car-showroom-module-dashboard-template.mdc` · `dashboard-module-shop-settings-tabs.mdc`
+**ยึดแม่แบบ:** `dashboard-module-design-check-laundry-first.mdc` · `laundry-module-dashboard-template.mdc` · `dashboard-module-shop-settings-tabs.mdc` · `dashboard-module-list-filter.mdc` · `dashboard-module-page-menu-icons.mdc`
 
 ---
 
-## Phase A — ทำแล้ว (scaffold)
+## 1) แผนที่ไฟล์หลัก
 
-| ชิ้น | สถานะ |
-|-----|----|
-| systems chrome / shell / header bar / page subnav / tokens / card-tones / icons | ✅ |
-| dock 4: dashboard · manage · finance · settings | ✅ |
-| แดชบอร์ด sub-nav: overview · checkpoints · tour-logs · incidents · shifts · map-view | ✅ |
-| สถิติ 6 การ์ดคลิกได้ + «กลับภาพรวม» | ✅ (ค่าศูนย์) |
-| Manage stubs · Finance «เฟส E» · Settings 5 แท็บ (basic\|finance\|portal\|hours\|link) | ✅ |
-| link: `ModuleQrMonthlyGate` + `ModulePublicLinkQrPanel` → `/guard/{slug}` | ✅ |
-| **ห้าม** ใส่ใน `QR_LINK_DAILY_ALLOWED_MODULE_SLUGS` | ✅ |
-| API session shop / upload / overview | ✅ |
-| ensure-shop + หมวดการเงินเริ่มต้น | ✅ |
+| บทบาท | ไฟล์ |
+|--------|------|
+| Chrome / dock / ยุบหัว | `SmartGuardTourModuleChrome` · `SmartGuardTourModuleShell` · `SmartGuardTourHeaderBarNav` |
+| เมนูย่อยหน้า | `SmartGuardTourPageSubNav` — `action` = เครื่องมือแถวเมนู |
+| กรองแถวเมนู | `SmartGuardTourFilterToolbar` · `SmartGuardTourPageFilterAction` · `SmartGuardTourFilterToggleButton` |
+| รายการ + แผงกรอง | `SmartGuardTourCatalogLists` (`ListShell` · `onEmbeddedToolbar`) |
+| พนักงาน | `SmartGuardTourStaffPanel` (`onEmbeddedToolbar` + ปุ่มเพิ่มใน `extra`) |
+| จัดการ / แดชบอร์ด / การเงิน | `SmartGuardTourManageClient` · `DashboardClient` · `FinanceClient` |
+| Tokens | `lib/ui-tokens.ts` — `smartGuardTourFilterChipClass` · `smartGuardTourInlineSubNav*` |
+| Upsert module_list | `scripts/upsert-missing-app-modules.ts` · `prisma/seed.ts` |
 
 ---
 
-## เมนูหลัก (dock 4)
+## 2) เมนูหลัก (dock 4)
 
 | key | หน้า |
-|-----|---|
-| dashboard | ภาพรวม · จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ · แผนที่ |
-| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ |
-| finance | รายรับ/รายจ่าย (เฟส E) |
+|-----|------|
+| dashboard | ภาพรวม · จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ · แผนที่ · (เวรอ่านอย่างเดียว) |
+| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ · จุดประจำ · เวร |
+| finance | รายรับ/รายจ่าย · กรองรายการ |
 | settings | basic · finance · portal · hours · link |
 
 Chrome: `SmartGuardTourModuleChrome` · ยุบหัว → `SmartGuardTourHeaderBarNav` ใน `DashboardShell`  
-Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)
+Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)  
+**ห้าม** MawellLogo ใน chrome โมดูล
 
 ---
 
-## หมวดการเงินเริ่มต้น (ensure-shop)
+## 3) กรองรายการ — บังคับ (ต่างจากชิปปุ่มทั่วไป)
+
+คู่กับ `dashboard-module-list-filter.mdc` · ต้นแบบซักผ้า (ปุ่มกรองในแถบหัว hub) แต่ **ชิปสถานะของโมดูลนี้เป็นข้อความล้วน**
+
+### 3.1 ปุ่มแสดง / ซ่อนกรอง — แถวเดียวกับเมนู
+
+1. ปุ่ม **แสดงกรอง / ซ่อนกรอง** อยู่ใน **`SmartGuardTourPageSubNav` → `action`** — **แถวเดียวกับแท็บเมนูย่อย** (เดสก์ท็อป) หรือแถวหัวชื่อหน้า (มือถือ)  
+2. **ห้าม** วางปุ่มกรองในหัวรายการแยกใต้เมนูย่อย  
+3. ใช้ `SmartGuardTourFilterToggleButton` / `SmartGuardTourPageFilterAction` — สไตล์เดียวกับ `smartGuardTourInlineSubNavBtnClass`  
+4. รายการลงทะเบียนด้วย `onEmbeddedToolbar` → parent เก็บ `SmartGuardTourListToolbarApi`  
+5. มือถือ: ไอคอน funnel · `sm+`: มีข้อความ · badge จุดเมื่อ `hasActiveFilters && !filterOpen`  
+6. `filterOpen` ค่าเริ่ม `true` · แผง: `filterOpen ? "block" : "hidden"` · ไม่มี placeholder ตอนซ่อน  
+7. พนักงาน: ปุ่ม **เพิ่ม** อยู่ใน `toolbar.extra` หลังปุ่มกรอง (ลำดับ **กรอง → เพิ่ม**)  
+8. แดชบอร์ด: ปุ่ม **กลับภาพรวม** เป็น `leading` ของ `SmartGuardTourPageFilterAction` คู่กับกรองเมื่อมีรายการ
+
+### 3.2 กลุ่มสถานะกรอง — ข้อความล้วน (ไม่ใช่ปุ่มมีกรอบ)
+
+| ถูก | ผิด |
+|-----|-----|
+| `smartGuardTourFilterChipClass` — ไม่มี `border` / `bg` / `rounded` / `ring` ของชิป | ชิปแบบ pill มีกรอบ (`border` + `bg-slate-50`) |
+| Active = `font-black text-[#4d47b6]` | Active = พื้นม่วงอ่อน + ring |
+| Inactive = `text-[#66638c]` hover ม่วง | Inactive = ปุ่ม outline |
+| ยังใช้ `<button role="tab">` เพื่อ a11y แต่สไตล์เป็นตัวอักษร | `<div>` คลิกไม่ได้ / ชิปในกล่อง dashed |
+
+แผงกรองเมื่อเปิด: **ชิปข้อความ** → ค้นหา → ล้างกรอง (ลิงก์ข้อความ) → สรุปจำนวน  
+**ล้างกรอง:** ข้อความลิงก์ ไม่บังคับปุ่มมีกรอบ
+
+```ts
+// ✅ lib/ui-tokens.ts
+export function smartGuardTourFilterChipClass(active = false): string {
+  return cn(
+    "… border-0 bg-transparent p-0 shadow-none ring-0 …",
+    active ? "font-black text-[#4d47b6]" : "text-[#66638c] hover:text-[#4d47b6]",
+  );
+}
+```
+
+### 3.3 หน้าที่มีกรอง (ตรวจครบ)
+
+| หน้า | รายการ |
+|------|--------|
+| manage | จุดตรวจ · ตาราง · พนักงาน · เหตุการณ์ · ผู้ติดต่อ · อุปกรณ์ |
+| dashboard | จุดตรวจ · สายตรวจ · เหตุการณ์ · กะ |
+| finance | รายการ ledger ใน `SmartGuardTourFinancePanel` |
+
+---
+
+## 4) ตั้งค่า · QR
+
+- แท็บ: basic · finance · portal · hours · link ตาม `dashboard-module-shop-settings-tabs.mdc`  
+- link: `ModuleQrMonthlyGate` + `ModulePublicLinkQrPanel` → `/guard/{slug}`  
+- **ห้าม** ใส่ใน `QR_LINK_DAILY_ALLOWED_MODULE_SLUGS`
+
+---
+
+## 5) หมวดการเงินเริ่มต้น (ensure-shop)
 
 | kind | ชื่อ | systemKey |
-|------|-----|-----------|
+|------|------|-----------|
 | INCOME | ค่าบริการรักษาความปลอดภัย | SECURITY_SERVICE |
 | EXPENSE | ค่าแรง รปภ. | GUARD_WAGES |
 | EXPENSE | ค่า OT / เบี้ยขยัน | OT_BONUS |
 | EXPENSE | อุปกรณ์สายตรวจ | TOUR_EQUIPMENT |
 | EXPENSE | อื่นๆ | OTHER |
 
-**OT:** บันทึกเป็นรายจ่าย + ผูก `staffId` (เฟส E) — ไม่ใส่ในต้นทุนจุดตรวจ
+**OT / ค่าแรง:** บันทึกเป็นรายจ่าย + ผูก `staffId` เมื่อเกี่ยวกับพนักงาน — ไม่ใส่ในต้นทุนจุดตรวจ
 
 ---
 
-## Backlog เฟสถัดไป
+## 6) module_list ใน DB
+
+หลัง pull / เครื่องใหม่ ถ้าการ์ดโมดูลหายจาก «ระบบทั้งหมด»:
+
+```bash
+npx tsx scripts/upsert-missing-app-modules.ts
+```
+
+หรือ `npm run seed` (upsert จาก `prisma/seed.ts` รวม subscribe demo)
+
+---
+
+## 7) Backlog
 
 | เฟส | เนื้อหา |
-|-----|---|
-| **B** | จุดตรวจ CRUD · QR/NFC stub · แผนที่พิกัด · วิดีโอจุดตรวจ |
-| **C** | สายตรวจจริง · **GPS เข้มงวด** · สแกนกล้อง · บันทึก tour-log |
-| **D** | เหตุการณ์ · รูป · LINE Notify · SOS พอร์ทัล · กะ/เข้า–ออก |
-| **E** | การเงินเต็ม (กรอง · กราฟ · สลิป · หมวด CRUD) · OT+staffId |
-| **Portal** | `/guard/[slug]` พนักงาน · SOS · สถานะสายตรวจ |
+|-----|---------|
+| GPS / สแกน | geofence เข้ม · กล้อง · tour-log จริง |
+| เหตุการณ์เต็ม | รูป · LINE Notify · SOS พอร์ทัล |
+| การเงินเต็ม | กราฟ · สลิป · หมวด CRUD UI |
+| Portal | `/guard/[slug]` พนักงาน · SOS · สถานะสายตรวจ |
 
 ---
 
-## Prisma (parent)
+## 8) เช็กลิสต์
 
-`SmartGuardShop` · `SmartGuardCheckpoint` · `SmartGuardTourLog` · `SmartGuardIncident` · `SmartGuardStaff` · `SmartGuardShiftLog` · `SmartGuardFinanceCategory` · `SmartGuardLedgerEntry` · …  
-Delegates: `prisma.smartGuardShop` ฯลฯ
-
----
-
-## เช็กลิสต์ Phase A
-
-- [x] ไม่มี MawellLogo ใน chrome  
-- [x] WIDE + DOCKED ใน `DashboardPagesShell`  
-- [x] sidebar icon · landing cover · card description · seed upsert  
-- [x] QR monthly เท่านั้น — ไม่ใส่ daily QR allowlist  
-- [ ] Parent: schema models + migrate + `prisma generate`  
-- [ ] `npx tsc --noEmit` หลัง client มี models
+- [ ] ไม่มี MawellLogo ใน chrome  
+- [ ] WIDE + DOCKED ใน `DashboardPagesShell`  
+- [ ] sidebar icon · landing · card description · seed / upsert `module_list`  
+- [ ] QR monthly เท่านั้น  
+- [ ] ปุ่มกรองใน `PageSubNav` `action` — **ไม่** ในหัวรายการแยก  
+- [ ] ชิปสถานะกรอง = **ข้อความล้วน** (`smartGuardTourFilterChipClass`)  
+- [ ] `onEmbeddedToolbar` ครบทุกหน้ารายการที่มีกรอง  
+- [ ] พนักงาน: กรอง + เพิ่ม ในแถวเมนู  
+- [ ] `npx tsc --noEmit` ผ่านหลังแก้ UI
