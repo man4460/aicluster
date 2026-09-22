@@ -101,6 +101,14 @@ export const smartGuardTourInlineSubNavShellClass =
 export const smartGuardTourNavDividerClass =
   "mx-0.5 h-5 w-px shrink-0 self-center bg-slate-200/90";
 
+/** เส้นบางกั้นเมนูย่อยภายใน (แท็บรอง) — ข้อความล้วน */
+export const smartGuardTourSecondaryNavDividerClass =
+  "mx-0.5 h-3.5 w-px shrink-0 self-center bg-slate-200/90";
+
+/** แถวเมนูย่อยภายใน — ข้อความ + เส้นแบ่ง */
+export const smartGuardTourSecondaryNavShellClass =
+  "flex w-full min-w-0 flex-wrap items-center gap-y-1";
+
 export function smartGuardTourInlineSubNavBtnClass(active = false): string {
   return active ? smartGuardTourPrimaryButtonClass : smartGuardTourOutlineButtonClass;
 }

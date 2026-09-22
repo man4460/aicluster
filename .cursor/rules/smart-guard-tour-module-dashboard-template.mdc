@@ -43,8 +43,8 @@ alwaysApply: false
 
 ### 2b) การจัดการ — แท็บหลัก + แท็บรอง (แนว B)
 
-| แท็บหลัก | แท็บรอง (ข้อความล้วน) | URL ตัวอย่าง |
-|----------|------------------------|--------------|
+| แท็บหลัก | แท็บรอง (ข้อความล้วน + เส้นบางคั่น) | URL ตัวอย่าง |
+|----------|-------------------------------------|--------------|
 | **จุด** (`sites`) | จุดตรวจ · ประจำจุด | `?tab=sites` · `?tab=sites&sub=posts` |
 | **เวร / ตาราง** (`roster`) | จัดเวร · ตารางตรวจ | `?tab=roster` · `?tab=roster&sub=schedules` |
 | **พนักงาน** (`staff`) | — | `?tab=staff` |
@@ -52,7 +52,9 @@ alwaysApply: false
 
 - ลิงก์เก่า `?tab=checkpoints|posts|…` ยัง parse ได้  
 - `?tab=incidents` → เด้งไปแดชบอร์ด `?tab=incidents`  
-- แถบหลัก = `PageSubNav` · แถบรอง = `smartGuardTourFilterChipClass` (ข้อความล้วน)  
+- **แถบหลัก** = `PageSubNav` — เดสก์ท็อป: แท็บ + ปุ่มกรอง/เพิ่ม **แถวเดียว** · มือถือ: **dropdown** + ปุ่มแอ็กชันแถวหัว  
+- **แถบรอง** = `smartGuardTourFilterChipClass` + `smartGuardTourSecondaryNavDividerClass` คั่นระหว่างรายการ · มือถือ: **dropdown** (`ManageSecondaryNav`)  
+- **ห้าม** `mobileSelect={false}` บน PageSubNav ของหน้าจัดการ  
 
 Chrome: `SmartGuardTourModuleChrome` · ยุบหัว → `SmartGuardTourHeaderBarNav` ใน `DashboardShell`  
 Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)  
@@ -66,8 +68,8 @@ Tokens: `smartGuardTour*` · โทนฟ้า–ส้ม (sky/amber/orange)
 
 ### 3.1 ปุ่มแสดง / ซ่อนกรอง — แถวเดียวกับเมนู
 
-1. ปุ่ม **แสดงกรอง / ซ่อนกรอง** อยู่ใน **`SmartGuardTourPageSubNav` → `action`** — **แถวเดียวกับแท็บเมนูย่อย** (เดสก์ท็อป) หรือแถวหัวชื่อหน้า (มือถือ)  
-2. **ห้าม** วางปุ่มกรองในหัวรายการแยกใต้เมนูย่อย  
+1. ปุ่ม **แสดงกรอง / ซ่อนกรอง** อยู่ใน **`SmartGuardTourPageSubNav` → `action`** — **แถวเดียวกับแท็บเมนูย่อย** (เดสก์ท็อป: ชื่อ | แท็บ + กรอง + เพิ่ม) · มือถือ: ชื่อ | กรอง/เพิ่ม แล้ว dropdown แท็บแถวถัดไป  
+2. **ห้าม** วางปุ่มกรองในหัวรายการแยกใต้เมนูย่อย · **ห้าม** แยกแท็บกับปุ่มคนละแถวบนเดสก์ท็อป  
 3. ใช้ `SmartGuardTourFilterToggleButton` / `SmartGuardTourPageFilterAction` — สไตล์เดียวกับ `smartGuardTourInlineSubNavBtnClass`  
 4. รายการลงทะเบียนด้วย `onEmbeddedToolbar` → parent เก็บ `SmartGuardTourListToolbarApi`  
 5. มือถือ: ไอคอน funnel · `sm+`: มีข้อความ · badge จุดเมื่อ `hasActiveFilters && !filterOpen`  
@@ -164,9 +166,11 @@ npx tsx scripts/upsert-missing-app-modules.ts
 - [ ] WIDE + DOCKED ใน `DashboardPagesShell`  
 - [ ] sidebar icon · landing · card description · seed / upsert `module_list`  
 - [ ] QR monthly เท่านั้น  
-- [ ] ปุ่มกรองใน `PageSubNav` `action` — **ไม่** ในหัวรายการแยก  
+- [ ] ปุ่มกรองใน `PageSubNav` `action` — **แถวเดียวกับแท็บ** (เดสก์ท็อป) · มือถือ dropdown แท็บหลัก  
+- [ ] แท็บรอง: ข้อความล้วน + เส้นบางคั่น · มือถือ dropdown  
 - [ ] ชิปสถานะกรอง = **ข้อความล้วน** (`smartGuardTourFilterChipClass`)  
 - [ ] `onEmbeddedToolbar` ครบทุกหน้ารายการที่มีกรอง  
 - [ ] พนักงาน / ประจำจุด / จัดเวร: ปุ่มเพิ่มในแถวเมนู  
 - [ ] **ไม่มี** `displayName` / หัว `h3` ซ้ำชื่อแท็บใต้เนื้อหา  
-- [ ] `npx tsc --noEmit` ผ่านหลังแก้ UI
+- [ ] `npx tsc --noEmit` ผ่านหลังแก้ UI  
+- [ ] เทียบ `agent-verify-before-done.mdc` ก่อนจบ
