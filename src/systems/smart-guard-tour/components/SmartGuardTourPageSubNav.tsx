@@ -11,6 +11,7 @@ import {
   smartGuardTourInlineSubNavShellClass,
   smartGuardTourListHeaderRowClass,
   smartGuardTourMobileSelectClass,
+  smartGuardTourNavDividerClass,
   smartGuardTourPanelClass,
   smartGuardTourPanelDividerClass,
   smartGuardTourPanelSectionClass,
@@ -26,9 +27,10 @@ export type SmartGuardTourPageSubNavItem = {
 };
 
 /**
- * หัวหน้า + เมนูย่อย — แม่แบบซักผ้า ManageHub
- * เดสก์ท็อป: ชื่อซ้าย · แท็บ + ปุ่มแอ็กชันขวา **แถวเดียว**
- * มือถือ: ชื่อ + ปุ่มแอ็กชันแถวเดียว · dropdown แท็บแถวถัดไป
+ * หัวหน้า + เมนู — แม่แบบซักผ้า ManageHub
+ *
+ * แถวเดียว (เดสก์ท็อป): ชื่อ | แท็บหลัก | เส้น | เมนูย่อยภายใน (ปุ่ม+เส้นบาง) | เส้น | กรอง/เพิ่ม
+ * มือถือ: ชื่อ | เมนูย่อยภายใน + กรอง/เพิ่ม · dropdown แท็บหลักแถวถัดไป
  */
 export function SmartGuardTourPageSubNav({
   title,
@@ -39,6 +41,10 @@ export function SmartGuardTourPageSubNav({
   activeKey,
   onSelect,
   ariaLabel,
+  secondaryItems,
+  secondaryActiveKey,
+  onSecondarySelect,
+  secondaryAriaLabel,
   action,
   mobileSelect,
   children,
@@ -53,8 +59,12 @@ export function SmartGuardTourPageSubNav({
   activeKey?: string;
   onSelect?: (key: string) => void;
   ariaLabel?: string;
+  /** เมนูย่อยภายใน — ปุ่มในแถวหัว คั่นเส้นบาง (ห้ามวางในเนื้อหา) */
+  secondaryItems?: SmartGuardTourPageSubNavItem[];
+  secondaryActiveKey?: string;
+  onSecondarySelect?: (key: string) => void;
+  secondaryAriaLabel?: string;
   action?: ReactNode;
-  /** override ป้าย/id · ส่ง false เพื่อบังคับ pill บนมือถือ (ไม่แนะนำ — ผิดกฎโมดูล) */
   mobileSelect?: {
     id: string;
     label: string;
@@ -65,8 +75,14 @@ export function SmartGuardTourPageSubNav({
 }) {
   const autoId = useId();
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
+  const hasSecondary = Boolean(
+    secondaryItems?.length && onSecondarySelect && secondaryActiveKey != null,
+  );
   const activeItem = items?.find((i) => i.key === activeKey);
-  const sub = subtitle ?? activeItem?.label;
+  const activeSecondary = secondaryItems?.find((i) => i.key === secondaryActiveKey);
+  const sub =
+    subtitle ??
+    (activeSecondary ? `${activeItem?.label ?? ""} · ${activeSecondary.label}`.replace(/^ · /, "") : activeItem?.label);
   const autoMobileSelect =
     mobileSelect === false
       ? null
@@ -89,14 +105,14 @@ export function SmartGuardTourPageSubNav({
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
-                <span className="hidden h-4 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
-                <p className="hidden min-w-0 truncate text-sm font-semibold text-[#66638c] sm:block">{sub}</p>
+                <span className="hidden h-4 w-px shrink-0 bg-slate-200/90 lg:block" aria-hidden />
+                <p className="hidden min-w-0 truncate text-sm font-semibold text-[#66638c] lg:block">{sub}</p>
               </>
             ) : null}
           </div>
 
           <div
-            className={cn(smartGuardTourToolbarRowClass, "shrink-0")}
+            className={cn(smartGuardTourToolbarRowClass, "max-w-[min(100%,42rem)] justify-end overflow-x-auto")}
             role="group"
             aria-label="เครื่องมือหน้า"
           >
@@ -105,7 +121,7 @@ export function SmartGuardTourPageSubNav({
                 <nav
                   className={smartGuardTourInlineSubNavShellClass}
                   role="tablist"
-                  aria-label={ariaLabel ?? "เมนูย่อย"}
+                  aria-label={ariaLabel ?? "เมนูหลัก"}
                 >
                   {items!.map((item) => {
                     const active = activeKey === item.key;
@@ -126,13 +142,52 @@ export function SmartGuardTourPageSubNav({
                             {item.icon}
                           </span>
                         ) : null}
-                        <span>{item.label}</span>
+                        <span>{item.shortLabel ?? item.label}</span>
                       </button>
                     );
                   })}
                 </nav>
               </div>
             ) : null}
+
+            {hasTabs && hasSecondary ? (
+              <span className={cn(smartGuardTourNavDividerClass, useMobileSelect && "hidden sm:block")} aria-hidden />
+            ) : null}
+
+            {hasSecondary ? (
+              <nav
+                className={smartGuardTourInlineSubNavShellClass}
+                role="tablist"
+                aria-label={secondaryAriaLabel ?? "เมนูย่อยภายใน"}
+              >
+                {secondaryItems!.map((item, i) => {
+                  const active = secondaryActiveKey === item.key;
+                  return (
+                    <span key={item.key} className="inline-flex items-center">
+                      {i > 0 ? <span className={smartGuardTourNavDividerClass} aria-hidden /> : null}
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        aria-current={active ? "page" : undefined}
+                        title={item.label}
+                        aria-label={item.label}
+                        onClick={() => onSecondarySelect?.(item.key)}
+                        className={smartGuardTourInlineSubNavBtnClass(active)}
+                      >
+                        {item.icon ? (
+                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                            {item.icon}
+                          </span>
+                        ) : null}
+                        <span>{item.shortLabel ?? item.label}</span>
+                      </button>
+                    </span>
+                  );
+                })}
+              </nav>
+            ) : null}
+
             {action}
           </div>
         </div>

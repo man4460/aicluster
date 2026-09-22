@@ -72,10 +72,13 @@ export function SmartGuardTourFilterToggleButton({
 export function SmartGuardTourPageFilterAction({
   toolbar,
   leading,
+  leadingDivider = false,
 }: {
   toolbar: SmartGuardTourListToolbarApi | null;
   /** เช่นปุ่มกลับภาพรวม */
   leading?: ReactNode;
+  /** เส้นบางก่อนกลุ่มกรอง/เพิ่ม เมื่อมีเมนูหลัก/ย่อยทางซ้ายแล้ว */
+  leadingDivider?: boolean;
 }) {
   const showFilter = Boolean(
     toolbar &&
@@ -87,25 +90,28 @@ export function SmartGuardTourPageFilterAction({
   if (!toolbar && !leading) return null;
   if (!leading && toolbar && !showFilter && !hasExtra) return null;
 
+  const tools =
+    toolbar && (showFilter || hasExtra) ? (
+      <div className={smartGuardTourInlineSubNavShellClass}>
+        {showFilter ? (
+          <SmartGuardTourFilterToggleButton
+            filterOpen={toolbar.filterOpen ?? false}
+            hasActiveFilters={toolbar.hasActiveFilters ?? false}
+            filterId={toolbar.filterId!}
+            onToggle={toolbar.toggleFilter!}
+          />
+        ) : null}
+        {toolbar.extra}
+      </div>
+    ) : null;
+
+  const needDividerBeforeTools = Boolean(tools) && (leadingDivider || Boolean(leading));
+
   return (
     <>
       {leading}
-      {leading && toolbar && (showFilter || hasExtra) ? (
-        <span className={smartGuardTourNavDividerClass} aria-hidden />
-      ) : null}
-      {toolbar && (showFilter || hasExtra) ? (
-        <div className={smartGuardTourInlineSubNavShellClass}>
-          {showFilter ? (
-            <SmartGuardTourFilterToggleButton
-              filterOpen={toolbar.filterOpen ?? false}
-              hasActiveFilters={toolbar.hasActiveFilters ?? false}
-              filterId={toolbar.filterId!}
-              onToggle={toolbar.toggleFilter!}
-            />
-          ) : null}
-          {toolbar.extra}
-        </div>
-      ) : null}
+      {needDividerBeforeTools ? <span className={smartGuardTourNavDividerClass} aria-hidden /> : null}
+      {tools}
     </>
   );
 }
