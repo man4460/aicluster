@@ -477,7 +477,7 @@ export function SmartGuardTourSettingsClient({ initialShop }: { initialShop: Sma
         ) : null}
 
         {tab === "link" ? (
-          <ModuleQrMonthlyGate moduleSlug={SMART_GUARD_TOUR_MODULE_SLUG} title="ลิงก์ / QR โมดูลธุรกิจ รปภ.">
+          <ModuleQrMonthlyGate moduleSlug={SMART_GUARD_TOUR_MODULE_SLUG} title="ลิงก์ / QR ธุรกิจ รปภ.">
             <div className="space-y-3">
               <p className="text-xs font-semibold text-[#66638c]">
                 ลิงก์สาธารณะใช้ได้เฉพาะแพ็กรายเดือน — สายรายวันสร้าง/เปิดไม่ได้ (กันคัดลอกลิงก์แล้วดาวน์เกรด)

@@ -92,7 +92,8 @@ function SmartGuardTourModuleChromeInner({
               </svg>
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">โมดูล</p>
+              <h1 className="mt-0.5 truncate text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
                 {SMART_GUARD_TOUR_MODULE_DISPLAY_NAME}
               </h1>
               {shopName ? (
@@ -132,7 +133,7 @@ function SmartGuardTourModuleChromeInner({
           </div>
         </div>
 
-        <nav aria-label="เมนูโมดูลธุรกิจ รปภ." className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden">
+        <nav aria-label="เมนูธุรกิจ รปภ." className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden">
           <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {SMART_GUARD_TOUR_NAV_ITEMS.map((item) => {
               const active = isSmartGuardTourModuleNavItemActive(pathname, item.key);
@@ -154,7 +155,7 @@ function SmartGuardTourModuleChromeInner({
       <AppUsageGuideModal
         open={usageGuideOpen}
         onClose={() => setUsageGuideOpen(false)}
-        title="คู่มือ — โมดูล ธุรกิจ รปภ."
+        title="คู่มือ — ธุรกิจ รปภ."
         subtitle="แดชบอร์ด · จัดการ · การเงิน · ตั้งค่า"
         sections={[
           {
@@ -183,7 +184,7 @@ function SmartGuardTourModuleChromeInner({
 
       {children}
 
-      <AppMobileDockShell ariaLabel="เมนูล่างโมดูลธุรกิจ รปภ.">
+      <AppMobileDockShell ariaLabel="เมนูล่างธุรกิจ รปภ.">
         <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
           {SMART_GUARD_TOUR_NAV_ITEMS.map((item) => {
             const active = isSmartGuardTourModuleNavItemActive(pathname, item.key);

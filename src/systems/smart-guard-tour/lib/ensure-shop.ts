@@ -96,7 +96,7 @@ export async function ensureSmartGuardShop(
         ownerUserId,
         trialSessionId,
         slug,
-        displayName: "โมดูล ธุรกิจ รปภ.",
+        displayName: "ธุรกิจ รปภ.",
         portalEnabled: true,
         portalSosEnabled: true,
       },

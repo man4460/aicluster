@@ -74,7 +74,7 @@ export const CLUB_EVENT_MODULE_GROUP_ID = 1 as const;
 export const USED_CAR_SHOWROOM_MODULE_SLUG = "used-car-showroom" as const;
 export const USED_CAR_SHOWROOM_MODULE_GROUP_ID = 1 as const;
 
-/** โมดูล ธุรกิจ รปภ. — สายตรวจ GPS · เหตุการณ์ · เว็บ /guard/[slug] */
+/** ธุรกิจ รปภ. — สายตรวจ GPS · เหตุการณ์ · เว็บ /guard/[slug] */
 export const SMART_GUARD_TOUR_MODULE_SLUG = "smart-guard-tour" as const;
 export const SMART_GUARD_TOUR_MODULE_GROUP_ID = 1 as const;
 /** LMS — สถาบัน / คอร์ส / ผู้เรียน / ใบรับรอง */
@@ -225,7 +225,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === CLUB_EVENT_MODULE_SLUG) return "บริหารชมรม";
   if (slug === USED_CAR_SHOWROOM_MODULE_SLUG) return "โชว์รูมรถมือสอง";
-  if (slug === SMART_GUARD_TOUR_MODULE_SLUG) return "โมดูล ธุรกิจ รปภ.";
+  if (slug === SMART_GUARD_TOUR_MODULE_SLUG) return "ธุรกิจ รปภ.";
   if (slug === LMS_MODULE_SLUG) return "LMS คอร์สออนไลน์";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";

@@ -1,5 +1,5 @@
 ---
-description: โมดูล ธุรกิจ รปภ. (smart-guard-tour) — แม่แบบโมดูลแดชบอร์ด
+description: ธุรกิจ รปภ. (smart-guard-tour) — แม่แบบโมดูลแดชบอร์ด
 globs:
   - src/systems/smart-guard-tour/**
   - src/app/(dashboard)/dashboard/smart-guard-tour/**
@@ -8,7 +8,7 @@ globs:
 alwaysApply: false
 ---
 
-# โมดูล ธุรกิจ รปภ. — Smart Guard Tour
+# ธุรกิจ รปภ. — Smart Guard Tour
 
 **Slug:** `smart-guard-tour` · **groupId:** 1 · **daily:** 1 token  
 **แดชบอร์ด:** `/dashboard/smart-guard-tour` · **พอร์ทัล (ภายหลัง):** `/guard/[slug]`

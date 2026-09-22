@@ -14,7 +14,7 @@ export default async function SmartGuardTourLayout({ children }: { children: Rea
     unstable_rethrow(e);
     console.error("[smart-guard-tour layout] require", e);
     return (
-      <DashboardDataLoadError message="โหลดโมดูลธุรกิจ รปภ. ไม่สำเร็จ — ตรวจสอบการเชื่อมต่อฐานข้อมูลและสิทธิ์บัญชี" />
+      <DashboardDataLoadError message="โหลดธุรกิจ รปภ. ไม่สำเร็จ — ตรวจสอบการเชื่อมต่อฐานข้อมูลและสิทธิ์บัญชี" />
     );
   }
 
@@ -37,7 +37,7 @@ export default async function SmartGuardTourLayout({ children }: { children: Rea
     console.error("[smart-guard-tour layout] trial", e);
   }
 
-  let shopName = "โมดูล ธุรกิจ รปภ.";
+  let shopName = "ธุรกิจ รปภ.";
   try {
     const { shop } = await loadSmartGuardTourPage();
     shopName = shop.displayName;
