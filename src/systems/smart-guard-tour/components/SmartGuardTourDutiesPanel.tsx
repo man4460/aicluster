@@ -161,10 +161,10 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
   return (
     <div className="min-w-0 space-y-3">
       {notice.popup}
-      <div className="flex flex-row flex-wrap items-end justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex min-w-0 flex-row flex-nowrap items-end justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">จัดเวร</h3>
-          <label className="mt-1 block space-y-1 text-xs font-bold text-[#4d47b6]">
+          <label className="mt-1 block max-w-[11rem] space-y-1 text-xs font-bold text-[#4d47b6] sm:max-w-[14rem]">
             วันที่
             <input
               type="date"
@@ -177,7 +177,7 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
         {!readOnly ? (
           <button
             type="button"
-            className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px]")}
+            className={cn(smartGuardTourPrimaryButtonClass, "mb-0.5 min-w-[40px] shrink-0")}
             aria-label="เพิ่มเวรประจำจุด"
             onClick={openAdd}
             disabled={!data?.posts.length || !data?.staff.length}

@@ -405,7 +405,7 @@ async function main() {
     },
     {
       slug: "smart-guard-tour",
-      title: "จุดตรวจ รปภ. อัจฉริยะ",
+      title: "โมดูล ธุรกิจ รปภ.",
       description:
         "กลุ่ม 1 (Basic) — จุดตรวจ สายตรวจ กะ เหตุการณ์ และการเงินไซต์ /guard/[slug]",
       groupId: 1,

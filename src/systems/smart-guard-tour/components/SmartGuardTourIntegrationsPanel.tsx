@@ -304,15 +304,16 @@ export function SmartGuardTourIntegrationsPanel({
       </label>
 
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-black text-[#1e1b4b]">จับคู่พนักงาน</p>
+        <div className="flex flex-row flex-nowrap items-center justify-between gap-2">
+          <p className="min-w-0 truncate text-sm font-black text-[#1e1b4b]">จับคู่พนักงาน</p>
           <button
             type="button"
-            className={smartGuardTourOutlineButtonClass}
+            className={cn(smartGuardTourOutlineButtonClass, "shrink-0")}
             disabled={busy || !shop.attendanceLinkEnabled || roster.length === 0}
             onClick={() => void autoMatch()}
           >
-            จับคู่ตามเบอร์อัตโนมัติ
+            <span className="sm:hidden">จับคู่</span>
+            <span className="hidden sm:inline">จับคู่ตามเบอร์อัตโนมัติ</span>
           </button>
         </div>
         {guardStaff.length === 0 ? (

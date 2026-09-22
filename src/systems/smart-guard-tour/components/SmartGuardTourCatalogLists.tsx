@@ -42,8 +42,10 @@ import {
   smartGuardTourFilterChipClass,
   smartGuardTourFilterChipShellClass,
   smartGuardTourFinanceStatsGridClass,
+  smartGuardTourListHeaderRowClass,
   smartGuardTourOutlineButtonClass,
   smartGuardTourStatInlineClass,
+  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 function IconFilterFunnel({ className }: { className?: string }) {
@@ -158,36 +160,38 @@ function ListShell({
 }) {
   return (
     <div className="min-w-0 space-y-3">
-      <div className="flex flex-row items-start justify-between gap-3">
+      <div className={smartGuardTourListHeaderRowClass}>
         <div className="min-w-0">
-          <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">{title}</h3>
+          <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">{title}</h3>
           {description ? (
             <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">{description}</p>
           ) : null}
         </div>
-        <button
-          type="button"
-          aria-expanded={filterOpen}
-          aria-controls={filterId}
-          aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-          title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-          className={cn(
-            smartGuardTourOutlineButtonClass,
-            "relative min-w-[40px] sm:min-w-0",
-            filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-            filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-          )}
-          onClick={() => setFilterOpen((o) => !o)}
-        >
-          <IconFilterFunnel className="h-4 w-4" />
-          <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-          {filtersActive ? (
-            <span
-              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
-              aria-hidden
-            />
-          ) : null}
-        </button>
+        <div className={smartGuardTourToolbarRowClass}>
+          <button
+            type="button"
+            aria-expanded={filterOpen}
+            aria-controls={filterId}
+            aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+            title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+            className={cn(
+              smartGuardTourOutlineButtonClass,
+              "relative min-w-[40px] sm:min-w-0",
+              filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+              filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+            )}
+            onClick={() => setFilterOpen((o) => !o)}
+          >
+            <IconFilterFunnel className="h-4 w-4" />
+            <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+            {filtersActive ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+                aria-hidden
+              />
+            ) : null}
+          </button>
+        </div>
       </div>
 
       <div id={filterId} className={cn("space-y-2.5", filterOpen ? "block" : "hidden")}>

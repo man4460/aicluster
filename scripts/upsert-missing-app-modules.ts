@@ -34,7 +34,7 @@ const MISSING_MODULE_SEEDS = [
   },
   {
     slug: "smart-guard-tour",
-    title: "จุดตรวจ รปภ. อัจฉริยะ",
+    title: "โมดูล ธุรกิจ รปภ.",
     description:
       "กลุ่ม 1 — จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · /guard/[slug]",
     groupId: 1,

@@ -76,7 +76,7 @@ function SmartGuardTourModuleChromeInner({
       <header
         className={cn(shellClass, "flex flex-col px-4 py-4 sm:px-6 sm:py-5", headerCollapsed && "hidden")}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+        <div className="flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-orange-500 text-white shadow-sm"
@@ -92,8 +92,7 @@ function SmartGuardTourModuleChromeInner({
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">โมดูล</p>
-              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
+              <h1 className="truncate text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
                 {SMART_GUARD_TOUR_MODULE_DISPLAY_NAME}
               </h1>
               {shopName ? (
@@ -102,7 +101,7 @@ function SmartGuardTourModuleChromeInner({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setUsageGuideOpen(true)}
@@ -133,7 +132,7 @@ function SmartGuardTourModuleChromeInner({
           </div>
         </div>
 
-        <nav aria-label="เมนูจุดตรวจ รปภ." className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden">
+        <nav aria-label="เมนูโมดูลธุรกิจ รปภ." className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden">
           <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {SMART_GUARD_TOUR_NAV_ITEMS.map((item) => {
               const active = isSmartGuardTourModuleNavItemActive(pathname, item.key);
@@ -155,7 +154,7 @@ function SmartGuardTourModuleChromeInner({
       <AppUsageGuideModal
         open={usageGuideOpen}
         onClose={() => setUsageGuideOpen(false)}
-        title="คู่มือ — จุดตรวจ รปภ."
+        title="คู่มือ — โมดูล ธุรกิจ รปภ."
         subtitle="แดชบอร์ด · จัดการ · การเงิน · ตั้งค่า"
         sections={[
           {
@@ -184,7 +183,7 @@ function SmartGuardTourModuleChromeInner({
 
       {children}
 
-      <AppMobileDockShell ariaLabel="เมนูล่างจุดตรวจ รปภ.">
+      <AppMobileDockShell ariaLabel="เมนูล่างโมดูลธุรกิจ รปภ.">
         <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
           {SMART_GUARD_TOUR_NAV_ITEMS.map((item) => {
             const active = isSmartGuardTourModuleNavItemActive(pathname, item.key);

@@ -46,7 +46,7 @@ function SmartGuardTourHeaderBarNavInner({ onExpand }: { onExpand: () => void })
 
   return (
     <div className={appDashboardModuleHeaderNavRowClass}>
-      <nav className={appDashboardModuleHeaderNavShellClass} aria-label="เมนูโมดูลจุดตรวจ รปภ.">
+      <nav className={appDashboardModuleHeaderNavShellClass} aria-label="เมนูโมดูลธุรกิจ รปภ.">
         {SMART_GUARD_TOUR_NAV_ITEMS.map((item) => {
           const active = isSmartGuardTourModuleNavItemActive(pathname, item.key);
           return (

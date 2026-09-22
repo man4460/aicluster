@@ -19,6 +19,8 @@ import {
   smartGuardTourFieldClass,
   smartGuardTourOutlineButtonClass,
   smartGuardTourPrimaryButtonClass,
+  smartGuardTourListHeaderRowClass,
+  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 type PostRow = {
@@ -150,21 +152,23 @@ export function SmartGuardTourPostsPanel() {
   return (
     <div className="min-w-0 space-y-3">
       {notice.popup}
-      <div className="flex flex-row items-start justify-between gap-3">
-        <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
+      <div className={smartGuardTourListHeaderRowClass}>
+        <h3 className="min-w-0 truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
           จุดรักษาการณ์
         </h3>
-        <button
-          type="button"
-          aria-label="เพิ่มจุดรักษาการณ์"
-          className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
-          onClick={openAdd}
-        >
-          <span className="sm:hidden" aria-hidden>
-            +
-          </span>
-          <span className="hidden sm:inline">+ เพิ่มจุด</span>
-        </button>
+        <div className={smartGuardTourToolbarRowClass}>
+          <button
+            type="button"
+            aria-label="เพิ่มจุดรักษาการณ์"
+            className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
+            onClick={openAdd}
+          >
+            <span className="sm:hidden" aria-hidden>
+              +
+            </span>
+            <span className="hidden sm:inline">+ เพิ่มจุด</span>
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -28,6 +28,8 @@ import {
   smartGuardTourFilterChipShellClass,
   smartGuardTourOutlineButtonClass,
   smartGuardTourPrimaryButtonClass,
+  smartGuardTourListHeaderRowClass,
+  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 type StaffRow = {
@@ -216,11 +218,11 @@ export function SmartGuardTourStaffPanel() {
       {notice.popup}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปพนักงาน" />
 
-      <div className="flex flex-row items-start justify-between gap-3">
+      <div className={smartGuardTourListHeaderRowClass}>
         <div className="min-w-0">
-          <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
+          <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className={smartGuardTourToolbarRowClass}>
           <button
             type="button"
             aria-expanded={filterOpen}

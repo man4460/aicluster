@@ -160,20 +160,21 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
         activeKey={tab}
         onSelect={(k) => setTab(k as SmartGuardTourDashboardTabKey)}
         ariaLabel="เมนูย่อยแดชบอร์ด"
-      >
-        {tab !== "overview" ? (
-          <div className="mb-3">
+        action={
+          tab !== "overview" ? (
             <button
               type="button"
-              className={smartGuardTourOutlineButtonClass}
+              className={cn(smartGuardTourOutlineButtonClass, "min-w-[40px] sm:min-w-0")}
               onClick={() => setTab("overview")}
+              aria-label="กลับภาพรวม"
+              title="กลับภาพรวม"
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-              กลับภาพรวม
+              <span className="hidden sm:inline">กลับภาพรวม</span>
             </button>
-          </div>
-        ) : null}
-
+          ) : undefined
+        }
+      >
         {tab === "overview" ? (
           <div className="space-y-3">
             <p className="text-xs font-semibold text-[#66638c]">

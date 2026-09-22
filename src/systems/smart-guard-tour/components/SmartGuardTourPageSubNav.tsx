@@ -9,12 +9,14 @@ import {
 import {
   smartGuardTourInlineSubNavBtnClass,
   smartGuardTourInlineSubNavShellClass,
+  smartGuardTourListHeaderRowClass,
   smartGuardTourMobileSelectClass,
   smartGuardTourNavDividerClass,
   smartGuardTourPanelClass,
   smartGuardTourPanelDividerClass,
   smartGuardTourPanelSectionClass,
   smartGuardTourSectionHeadingClass,
+  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 export type SmartGuardTourPageSubNavItem = {
@@ -106,7 +108,7 @@ export function SmartGuardTourPageSubNav({
           </div>
 
           <div
-            className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+            className={cn(smartGuardTourToolbarRowClass, "min-w-0")}
             role="group"
             aria-label={ariaLabel ?? "เครื่องมือหน้า"}
           >
@@ -242,9 +244,9 @@ export function SmartGuardTourPageBlock({
   return (
     <div className={cn(!first && cn(smartGuardTourPanelDividerClass, "mt-4 pt-4"), className)}>
       {title || action ? (
-        <div className="mb-3 flex flex-row flex-wrap items-start justify-between gap-2 sm:gap-3">
+        <div className={cn(smartGuardTourListHeaderRowClass, "mb-3")}>
           {title ? (
-            <h3 className={smartGuardTourSectionHeadingClass}>
+            <h3 className={cn(smartGuardTourSectionHeadingClass, "min-w-0 truncate")}>
               {titleIcon ? (
                 <span
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[#4d47b6] ring-1 ring-slate-200/80"
@@ -258,7 +260,7 @@ export function SmartGuardTourPageBlock({
           ) : (
             <span />
           )}
-          {action ? <div className="shrink-0">{action}</div> : null}
+          {action ? <div className={smartGuardTourToolbarRowClass}>{action}</div> : null}
         </div>
       ) : null}
       {children}

@@ -6,7 +6,7 @@ export const SMART_GUARD_TOUR_FINANCE_PATH = `${SMART_GUARD_TOUR_BASE}/finance`;
 export const SMART_GUARD_TOUR_MANAGE_PATH = `${SMART_GUARD_TOUR_BASE}/manage`;
 export const SMART_GUARD_TOUR_SETTINGS_PATH = `${SMART_GUARD_TOUR_BASE}/settings`;
 
-export const SMART_GUARD_TOUR_MODULE_DISPLAY_NAME = "จุดตรวจ รปภ. อัจฉริยะ";
+export const SMART_GUARD_TOUR_MODULE_DISPLAY_NAME = "โมดูล ธุรกิจ รปภ.";
 export const SMART_GUARD_TOUR_HEADER_COLLAPSE_KEY = "mawell-smart-guard-tour-module-header-collapsed";
 export const SMART_GUARD_TOUR_HEADER_COLLAPSE_EVENT = "mawell-smart-guard-tour-header-collapse";
 

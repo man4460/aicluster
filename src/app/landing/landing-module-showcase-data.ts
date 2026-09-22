@@ -161,7 +161,7 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
   },
   {
     slug: "smart-guard-tour",
-    blurb: "จุดตรวจ รปภ. สายตรวจ GPS เหตุการณ์",
+    blurb: "ธุรกิจ รปภ. · จุดตรวจ · สายตรวจ GPS",
     coverSrc:
       "https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=900&q=78",
   },

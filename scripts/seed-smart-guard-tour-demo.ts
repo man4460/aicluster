@@ -18,7 +18,7 @@ async function main() {
     where: { slug: SMART_GUARD_TOUR_MODULE_SLUG },
     create: {
       slug: SMART_GUARD_TOUR_MODULE_SLUG,
-      title: "จุดตรวจ รปภ. อัจฉริยะ",
+      title: "โมดูล ธุรกิจ รปภ.",
       description: "กลุ่ม 1 — จุดตรวจ · สายตรวจ · กะ · เหตุการณ์ · การเงิน · /guard/[slug]",
       groupId: 1,
       sortOrder: 39,

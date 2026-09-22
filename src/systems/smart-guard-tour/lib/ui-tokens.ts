@@ -73,6 +73,14 @@ export const smartGuardTourSubtitleClass =
 
 export const smartGuardTourPageStackClass = "min-w-0 space-y-4";
 
+/** แถวปุ่มหัวแผง — nowrap · สูงเท่ากัน (แม่แบบซักผ้า laundryToolbarRowClass) */
+export const smartGuardTourToolbarRowClass =
+  "flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5";
+
+/** หัวรายการ: ชื่อซ้าย · ปุ่มกรอง/เพิ่ม/กลับขวา แถวเดียว */
+export const smartGuardTourListHeaderRowClass =
+  "flex min-w-0 flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3";
+
 export const smartGuardTourPrimaryTabShellClass =
   "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1";
 
