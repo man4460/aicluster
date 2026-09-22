@@ -33,6 +33,7 @@ import {
 import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
 import { SmartGuardTourIncidentsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourIncidentsPanel";
 import { SmartGuardTourCheckpointsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourCheckpointsPanel";
+import { SmartGuardTourContactsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourContactsAssetsPanels";
 import {
   smartGuardTourCardIconTileClass,
   type SmartGuardTourCardTone,
@@ -228,6 +229,8 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
           />
         ) : tab === "incidents" ? (
           <SmartGuardTourIncidentsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
+        ) : tab === "contacts" ? (
+          <SmartGuardTourContactsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "shifts" ? (
           <SmartGuardTourShiftsList
             key={tab}

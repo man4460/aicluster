@@ -70,6 +70,8 @@ export function smartGuardTourDashboardTabIcon(key: SmartGuardTourDashboardTabKe
       return <Route className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "incidents":
       return <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "contacts":
+      return <Contact className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "shifts":
       return <CalendarClock className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "map-view":
@@ -87,7 +89,7 @@ export function smartGuardTourManageGroupIcon(key: SmartGuardTourManageGroupKey)
       return <CalendarClock className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "staff":
       return <Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "misc":
+    case "assets":
       return <Package className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:
       return null;
@@ -106,8 +108,6 @@ export function smartGuardTourManageTabIcon(key: SmartGuardTourManageTabKey): Re
       return <Route className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "staff":
       return <Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "contacts":
-      return <Contact className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "assets":
       return <Package className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:

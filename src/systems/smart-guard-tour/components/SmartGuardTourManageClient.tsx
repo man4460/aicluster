@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   SMART_GUARD_TOUR_MANAGE_GROUPS,
+  isSmartGuardTourManageContactsLegacyTab,
   isSmartGuardTourManageIncidentsLegacyTab,
   parseSmartGuardTourManageLeaf,
   smartGuardTourDashboardTabHref,
@@ -22,10 +23,7 @@ import { SmartGuardTourPostsPanel } from "@/systems/smart-guard-tour/components/
 import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
 import { SmartGuardTourCheckpointsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourCheckpointsPanel";
 import { SmartGuardTourSchedulesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourSchedulesPanel";
-import {
-  SmartGuardTourAssetsPanel,
-  SmartGuardTourContactsPanel,
-} from "@/systems/smart-guard-tour/components/SmartGuardTourContactsAssetsPanels";
+import { SmartGuardTourAssetsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourContactsAssetsPanels";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
   smartGuardTourManageGroupIcon,
@@ -42,9 +40,14 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   useEffect(() => {
-    if (!isSmartGuardTourManageIncidentsLegacyTab(tabParam)) return;
-    router.replace(smartGuardTourDashboardTabHref("incidents"), { scroll: false });
-  }, [tabParam, router]);
+    if (isSmartGuardTourManageIncidentsLegacyTab(tabParam)) {
+      router.replace(smartGuardTourDashboardTabHref("incidents"), { scroll: false });
+      return;
+    }
+    if (isSmartGuardTourManageContactsLegacyTab(tabParam, subParam)) {
+      router.replace(smartGuardTourDashboardTabHref("contacts"), { scroll: false });
+    }
+  }, [tabParam, subParam, router]);
 
   const leaf = useMemo(
     () => parseSmartGuardTourManageLeaf(tabParam, subParam),
@@ -116,8 +119,6 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
           <SmartGuardTourCheckpointsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "schedules" ? (
           <SmartGuardTourSchedulesPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : leaf === "contacts" ? (
-          <SmartGuardTourContactsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "assets" ? (
           <SmartGuardTourAssetsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : null}

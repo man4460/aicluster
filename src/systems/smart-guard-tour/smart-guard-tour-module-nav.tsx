@@ -18,6 +18,7 @@ export type SmartGuardTourDashboardTabKey =
   | "checkpoints"
   | "tour-logs"
   | "incidents"
+  | "contacts"
   | "shifts"
   | "map-view";
 
@@ -27,13 +28,12 @@ export type SmartGuardTourManageLeafKey =
   | "duties"
   | "schedules"
   | "staff"
-  | "contacts"
   | "assets";
 
 /** @deprecated ใช้ SmartGuardTourManageLeafKey — เก็บ alias ชั่วคราว */
 export type SmartGuardTourManageTabKey = SmartGuardTourManageLeafKey;
 
-export type SmartGuardTourManageGroupKey = "sites" | "roster" | "staff" | "misc";
+export type SmartGuardTourManageGroupKey = "sites" | "roster" | "staff" | "assets";
 
 export type SmartGuardTourSettingsTab = "basic" | "finance" | "portal" | "hours" | "link" | "integrations";
 
@@ -78,13 +78,10 @@ export const SMART_GUARD_TOUR_MANAGE_GROUPS: SmartGuardTourManageGroup[] = [
     subs: [],
   },
   {
-    key: "misc",
-    label: "อื่นๆ",
-    shortLabel: "อื่นๆ",
-    subs: [
-      { key: "contacts", label: "ผู้ติดต่อ", shortLabel: "ติดต่อ" },
-      { key: "assets", label: "อุปกรณ์", shortLabel: "อุปกรณ์" },
-    ],
+    key: "assets",
+    label: "อุปกรณ์",
+    shortLabel: "อุปกรณ์",
+    subs: [],
   },
 ];
 
@@ -96,7 +93,13 @@ export const SMART_GUARD_TOUR_MANAGE_TAB_ITEMS: {
 }[] = SMART_GUARD_TOUR_MANAGE_GROUPS.flatMap((g) =>
   g.subs.length > 0
     ? g.subs.map((s) => ({ key: s.key, label: s.label, shortLabel: s.shortLabel }))
-    : [{ key: "staff" as const, label: g.label, shortLabel: g.shortLabel }],
+    : [
+        {
+          key: (g.key === "assets" ? "assets" : "staff") as SmartGuardTourManageLeafKey,
+          label: g.label,
+          shortLabel: g.shortLabel,
+        },
+      ],
 );
 
 const MANAGE_LEAF_TO_GROUP: Record<SmartGuardTourManageLeafKey, SmartGuardTourManageGroupKey> = {
@@ -105,15 +108,14 @@ const MANAGE_LEAF_TO_GROUP: Record<SmartGuardTourManageLeafKey, SmartGuardTourMa
   duties: "roster",
   schedules: "roster",
   staff: "staff",
-  contacts: "misc",
-  assets: "misc",
+  assets: "assets",
 };
 
 const MANAGE_GROUP_DEFAULT_LEAF: Record<SmartGuardTourManageGroupKey, SmartGuardTourManageLeafKey> = {
   sites: "checkpoints",
   roster: "duties",
   staff: "staff",
-  misc: "contacts",
+  assets: "assets",
 };
 
 export function smartGuardTourManageGroupForLeaf(
@@ -139,7 +141,6 @@ export function parseSmartGuardTourManageLeaf(
       v === "duties" ||
       v === "schedules" ||
       v === "staff" ||
-      v === "contacts" ||
       v === "assets"
     ) {
       return v;
@@ -153,7 +154,10 @@ export function parseSmartGuardTourManageLeaf(
   const leafFromTab = asLeaf(tabRaw);
   if (leafFromTab) return leafFromTab;
 
-  if (tabRaw === "sites" || tabRaw === "roster" || tabRaw === "misc" || tabRaw === "staff") {
+  // legacy misc → อุปกรณ์
+  if (tabRaw === "misc") return "assets";
+
+  if (tabRaw === "sites" || tabRaw === "roster" || tabRaw === "staff" || tabRaw === "assets") {
     const group = tabRaw as SmartGuardTourManageGroupKey;
     const subLeaf = asLeaf(subRaw);
     if (subLeaf && MANAGE_LEAF_TO_GROUP[subLeaf] === group) return subLeaf;
@@ -168,6 +172,14 @@ export function isSmartGuardTourManageIncidentsLegacyTab(raw: string | null | un
   return raw === "incidents";
 }
 
+/** true = ลิงก์เก่าผู้ติดต่อในจัดการ → เด้งไปแดชบอร์ด */
+export function isSmartGuardTourManageContactsLegacyTab(
+  tabRaw: string | null | undefined,
+  subRaw?: string | null | undefined,
+): boolean {
+  return tabRaw === "contacts" || (tabRaw === "misc" && subRaw === "contacts");
+}
+
 export function parseSmartGuardTourManageTab(
   raw: string | null | undefined,
 ): SmartGuardTourManageTabKey {
@@ -180,10 +192,16 @@ export function smartGuardTourManageHref(
 ): string {
   if (!leafOrGroup) return SMART_GUARD_TOUR_MANAGE_PATH;
 
-  if (leafOrGroup === "sites" || leafOrGroup === "roster" || leafOrGroup === "misc" || leafOrGroup === "staff") {
+  if (
+    leafOrGroup === "sites" ||
+    leafOrGroup === "roster" ||
+    leafOrGroup === "staff" ||
+    leafOrGroup === "assets"
+  ) {
     const group = leafOrGroup;
     const leaf = sub ?? MANAGE_GROUP_DEFAULT_LEAF[group];
     if (group === "staff") return `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=staff`;
+    if (group === "assets") return `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=assets`;
     if (leaf === MANAGE_GROUP_DEFAULT_LEAF[group]) {
       return `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=${group}`;
     }
@@ -193,6 +211,7 @@ export function smartGuardTourManageHref(
   const leaf = leafOrGroup as SmartGuardTourManageLeafKey;
   const group = MANAGE_LEAF_TO_GROUP[leaf];
   if (group === "staff") return `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=staff`;
+  if (group === "assets") return `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=assets`;
   if (leaf === MANAGE_GROUP_DEFAULT_LEAF[group]) {
     return leaf === "checkpoints" ? SMART_GUARD_TOUR_MANAGE_PATH : `${SMART_GUARD_TOUR_MANAGE_PATH}?tab=${group}`;
   }
@@ -228,6 +247,7 @@ export const SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS: {
   { key: "checkpoints", label: "จุดตรวจ", shortLabel: "จุดตรวจ" },
   { key: "tour-logs", label: "บันทึกสายตรวจ", shortLabel: "สายตรวจ" },
   { key: "incidents", label: "เหตุการณ์", shortLabel: "เหตุการณ์" },
+  { key: "contacts", label: "ผู้ติดต่อ", shortLabel: "ติดต่อ" },
   { key: "shifts", label: "กะ / ค่าแรง", shortLabel: "กะ" },
   { key: "map-view", label: "แผนที่", shortLabel: "แผนที่" },
 ];
@@ -277,6 +297,7 @@ export function parseSmartGuardTourDashboardTab(
     raw === "posts" ||
     raw === "tour-logs" ||
     raw === "incidents" ||
+    raw === "contacts" ||
     raw === "shifts" ||
     raw === "map-view"
   ) {
