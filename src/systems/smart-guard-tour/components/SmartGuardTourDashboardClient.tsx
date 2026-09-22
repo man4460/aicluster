@@ -1,17 +1,8 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CalendarClock,
-  MapPin,
-  Package,
-  Route,
-  Shield,
-} from "lucide-react";
-import { cn } from "@/lib/cn";
+import { ArrowLeft } from "lucide-react";
 import {
   SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS,
   parseSmartGuardTourDashboardTab,
@@ -32,12 +23,8 @@ import {
 } from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
 import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
 import { SmartGuardTourIncidentsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourIncidentsPanel";
-import { SmartGuardTourCheckpointsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourCheckpointsPanel";
 import { SmartGuardTourContactsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourContactsAssetsPanels";
-import {
-  smartGuardTourCardIconTileClass,
-  type SmartGuardTourCardTone,
-} from "@/systems/smart-guard-tour/lib/card-tones";
+import { SmartGuardTourOverviewPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourOverviewPanel";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
   smartGuardTourDashboardTabIcon,
@@ -45,10 +32,8 @@ import {
   smartGuardTourPageTitleTone,
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
 import {
-  smartGuardTourFinanceStatsGridClass,
   smartGuardTourInlineSubNavBtnClass,
   smartGuardTourPageStackClass,
-  smartGuardTourStatInlineClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 const DASHBOARD_TAB_ITEMS = SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS.map((item) => ({
@@ -56,83 +41,25 @@ const DASHBOARD_TAB_ITEMS = SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS.map((item) => (
   icon: smartGuardTourDashboardTabIcon(item.key),
 }));
 
-const TONE_BORDER: Record<SmartGuardTourCardTone, string> = {
-  sky: "border-l-sky-500",
-  emerald: "border-l-emerald-500",
-  rose: "border-l-rose-500",
-  orange: "border-l-orange-500",
-  amber: "border-l-amber-500",
-  slate: "border-l-slate-400",
-  violet: "border-l-violet-500",
-  indigo: "border-l-indigo-500",
-};
-
-type StatKey =
-  | "checkpointCount"
-  | "tourLogTodayCount"
-  | "incidentOpenCount"
-  | "staffOnShiftCount"
-  | "scheduleTodayCount"
-  | "assetCount";
-
-const STAT_CARDS: {
-  key: StatKey;
-  label: string;
-  tab?: SmartGuardTourDashboardTabKey;
-  href?: string;
-  tone: SmartGuardTourCardTone;
-  icon: ReactNode;
-}[] = [
-  {
-    key: "checkpointCount",
-    label: "จุดตรวจ",
-    tab: "checkpoints",
-    tone: "sky",
-    icon: <MapPin className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-  {
-    key: "tourLogTodayCount",
-    label: "สายตรวจวันนี้",
-    tab: "tour-logs",
-    tone: "emerald",
-    icon: <Route className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-  {
-    key: "incidentOpenCount",
-    label: "เหตุการณ์เปิด",
-    tab: "incidents",
-    tone: "rose",
-    icon: <AlertTriangle className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-  {
-    key: "staffOnShiftCount",
-    label: "รปภ. เข้ากะ",
-    tab: "shifts",
-    tone: "orange",
-    icon: <Shield className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-  {
-    key: "scheduleTodayCount",
-    label: "ตารางใช้งาน",
-    href: smartGuardTourManageHref("schedules"),
-    tone: "amber",
-    icon: <CalendarClock className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-  {
-    key: "assetCount",
-    label: "อุปกรณ์",
-    href: smartGuardTourManageHref("assets"),
-    tone: "slate",
-    icon: <Package className="h-4 w-4" strokeWidth={2.25} aria-hidden />,
-  },
-];
-
 export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = parseSmartGuardTourDashboardTab(searchParams.get("tab"));
-  const { data, notice } = useSmartGuardCatalog();
+  const tabRaw = searchParams.get("tab");
+  const tab = parseSmartGuardTourDashboardTab(tabRaw);
+  const { data, notice, loading } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
+
+  useEffect(() => {
+    if (tabRaw === "checkpoints") {
+      router.replace(smartGuardTourManageHref("checkpoints"));
+    }
+  }, [tabRaw, router]);
+
+  useEffect(() => {
+    if (tab === "overview" || tab === "posts" || tab === "map-view") {
+      setToolbar(null);
+    }
+  }, [tab]);
 
   const setTab = useCallback(
     (next: SmartGuardTourDashboardTabKey) => {
@@ -144,18 +71,6 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
   const onEmbeddedToolbar = useCallback((api: SmartGuardTourListToolbarApi | null) => {
     setToolbar(api);
   }, []);
-
-  const today = data.today;
-  const stats = {
-    checkpointCount: data.checkpoints.filter((c) => c.isActive).length,
-    tourLogTodayCount: data.tourLogs.filter((t) => t.entryOn === today).length,
-    incidentOpenCount: data.incidents.filter(
-      (i) => i.status === "PENDING" || i.status === "IN_PROGRESS",
-    ).length,
-    staffOnShiftCount: data.shifts.filter((s) => s.onDuty && s.shiftOn === today).length,
-    scheduleTodayCount: data.schedules.filter((s) => s.isActive).length,
-    assetCount: data.assets.length,
-  };
 
   const backBtn =
     tab !== "overview" ? (
@@ -170,6 +85,14 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
         <span className="hidden sm:inline">กลับภาพรวม</span>
       </button>
     ) : null;
+
+  if (tabRaw === "checkpoints") {
+    return (
+      <div className={smartGuardTourPageStackClass}>
+        <p className="p-4 text-sm text-[#66638c]">กำลังไปหน้าจัดการจุดตรวจ…</p>
+      </div>
+    );
+  }
 
   return (
     <div className={smartGuardTourPageStackClass}>
@@ -189,38 +112,7 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
         action={<SmartGuardTourPageFilterAction toolbar={toolbar} leading={backBtn} />}
       >
         {tab === "overview" ? (
-          <div className="space-y-3">
-            <div className={smartGuardTourFinanceStatsGridClass}>
-              {STAT_CARDS.map((card) => (
-                <button
-                  key={card.key}
-                  type="button"
-                  onClick={() => {
-                    if (card.href) router.push(card.href);
-                    else if (card.tab) setTab(card.tab);
-                  }}
-                  className={cn(
-                    smartGuardTourStatInlineClass,
-                    "border-l-[3px] text-left transition hover:ring-1 hover:ring-orange-200/80",
-                    TONE_BORDER[card.tone],
-                  )}
-                  aria-label={`ไปที่ ${card.label}`}
-                >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
-                    <span className={smartGuardTourCardIconTileClass(card.tone)}>{card.icon}</span>
-                    {card.label}
-                  </span>
-                  <span className="text-xl font-black tabular-nums text-[#1e1b4b]">
-                    {stats[card.key].toLocaleString("th-TH")}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : tab === "posts" ? (
-          <SmartGuardTourDutiesPanel readOnly />
-        ) : tab === "checkpoints" ? (
-          <SmartGuardTourCheckpointsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
+          <SmartGuardTourOverviewPanel data={data} loading={loading} onGoTab={setTab} />
         ) : tab === "tour-logs" ? (
           <SmartGuardTourTourLogsList
             key={tab}
@@ -229,14 +121,16 @@ export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialS
           />
         ) : tab === "incidents" ? (
           <SmartGuardTourIncidentsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
-        ) : tab === "contacts" ? (
-          <SmartGuardTourContactsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
+        ) : tab === "posts" ? (
+          <SmartGuardTourDutiesPanel readOnly />
         ) : tab === "shifts" ? (
           <SmartGuardTourShiftsList
             key={tab}
             rows={data.shifts}
             onEmbeddedToolbar={onEmbeddedToolbar}
           />
+        ) : tab === "contacts" ? (
+          <SmartGuardTourContactsPanel key={tab} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "map-view" ? (
           <SmartGuardTourMapPlaceholder checkpoints={data.checkpoints} />
         ) : null}

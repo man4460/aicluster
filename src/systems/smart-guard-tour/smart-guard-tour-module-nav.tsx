@@ -14,12 +14,11 @@ export type SmartGuardTourModuleNavKey = "dashboard" | "manage" | "finance" | "s
 
 export type SmartGuardTourDashboardTabKey =
   | "overview"
-  | "posts"
-  | "checkpoints"
   | "tour-logs"
   | "incidents"
-  | "contacts"
+  | "posts"
   | "shifts"
+  | "contacts"
   | "map-view";
 
 export type SmartGuardTourManageLeafKey =
@@ -237,18 +236,21 @@ export const SMART_GUARD_TOUR_NAV_ITEMS: SmartGuardTourNavItem[] = [
   },
 ];
 
+/**
+ * แดชบอร์ด = ปฏิบัติการวันนี้ (ops) — ไม่ซ้ำ CRUD กับการจัดการ
+ * CRUD จุดตรวจ / ตาราง / พนักงาน / อุปกรณ์ → หน้าจัดการเท่านั้น
+ */
 export const SMART_GUARD_TOUR_DASHBOARD_TAB_ITEMS: {
   key: SmartGuardTourDashboardTabKey;
   label: string;
   shortLabel?: string;
 }[] = [
   { key: "overview", label: "ภาพรวม" },
-  { key: "posts", label: "ประจำจุดวันนี้", shortLabel: "ประจำจุด" },
-  { key: "checkpoints", label: "จุดตรวจ", shortLabel: "จุดตรวจ" },
   { key: "tour-logs", label: "บันทึกสายตรวจ", shortLabel: "สายตรวจ" },
   { key: "incidents", label: "เหตุการณ์", shortLabel: "เหตุการณ์" },
-  { key: "contacts", label: "ผู้ติดต่อ", shortLabel: "ติดต่อ" },
+  { key: "posts", label: "ประจำจุดวันนี้", shortLabel: "ประจำจุด" },
   { key: "shifts", label: "กะ / ค่าแรง", shortLabel: "กะ" },
+  { key: "contacts", label: "ผู้ติดต่อ", shortLabel: "ติดต่อ" },
   { key: "map-view", label: "แผนที่", shortLabel: "แผนที่" },
 ];
 
@@ -289,11 +291,17 @@ export function isSmartGuardTourModuleNavItemActive(
   }
 }
 
+/** ลิงก์เก่าแดชบอร์ด `?tab=checkpoints` → เด้งไปจัดการจุดตรวจ */
+export function isSmartGuardTourDashboardCheckpointsLegacyTab(
+  raw: string | null | undefined,
+): boolean {
+  return raw === "checkpoints";
+}
+
 export function parseSmartGuardTourDashboardTab(
   raw: string | null | undefined,
 ): SmartGuardTourDashboardTabKey {
   if (
-    raw === "checkpoints" ||
     raw === "posts" ||
     raw === "tour-logs" ||
     raw === "incidents" ||

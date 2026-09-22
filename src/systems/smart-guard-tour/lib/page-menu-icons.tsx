@@ -62,18 +62,16 @@ export function smartGuardTourDashboardTabIcon(key: SmartGuardTourDashboardTabKe
   switch (key) {
     case "overview":
       return <LayoutDashboard className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "posts":
-      return <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "checkpoints":
-      return <MapPin className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "tour-logs":
       return <Route className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "incidents":
       return <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
-    case "contacts":
-      return <Contact className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "posts":
+      return <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "shifts":
       return <CalendarClock className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
+    case "contacts":
+      return <Contact className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     case "map-view":
       return <Map className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />;
     default:
