@@ -32,11 +32,11 @@ import {
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
 import { smartGuardTourPageStackClass } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
-export function SmartGuardTourManageClient({ initialShop }: { initialShop: SmartGuardShopDto }) {
+export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseSmartGuardTourManageTab(searchParams.get("tab"));
-  const { data, loading, notice } = useSmartGuardCatalog();
+  const { data, notice } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   const setTab = (key: SmartGuardTourManageTabKey) => {
@@ -65,16 +65,12 @@ export function SmartGuardTourManageClient({ initialShop }: { initialShop: Smart
         ariaLabel="เมนูย่อยการจัดการ"
         action={<SmartGuardTourPageFilterAction toolbar={toolbar} />}
       >
-        <p className="mb-3 text-xs font-semibold text-[#66638c]">
-          {initialShop.displayName}
-          {loading && tab !== "staff" ? " · กำลังโหลด…" : null}
-        </p>
         {tab === "staff" ? (
           <SmartGuardTourStaffPanel onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "posts" ? (
-          <SmartGuardTourPostsPanel />
+          <SmartGuardTourPostsPanel onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "duties" ? (
-          <SmartGuardTourDutiesPanel />
+          <SmartGuardTourDutiesPanel onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "checkpoints" ? (
           <SmartGuardTourCheckpointsList rows={data.checkpoints} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : tab === "schedules" ? (

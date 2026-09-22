@@ -5,7 +5,6 @@ import { AlertTriangle, Route, ShieldCheck } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { cn } from "@/lib/cn";
 import {
   assetRowRemoveIconButtonClass,
   IconRowRemove,
@@ -17,8 +16,9 @@ import {
 import { formatMinutesHm } from "@/systems/smart-guard-tour/lib/wage-engine";
 import {
   smartGuardTourFieldClass,
-  smartGuardTourPrimaryButtonClass,
+  smartGuardTourInlineSubNavBtnClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
+import type { SmartGuardTourListToolbarApi } from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
 
 type DutyPayload = {
   dutyOn: string;
@@ -55,7 +55,13 @@ type DutyPayload = {
   wageRules: { weeklyNormalCapMinutes: number; otMultiplier: number };
 };
 
-export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boolean }) {
+export function SmartGuardTourDutiesPanel({
+  readOnly = false,
+  onEmbeddedToolbar,
+}: {
+  readOnly?: boolean;
+  onEmbeddedToolbar?: (api: SmartGuardTourListToolbarApi | null) => void;
+}) {
   const notice = useAppNoticePopup();
   const [dutyOn, setDutyOn] = useState(bangkokDateKey());
   const [data, setData] = useState<DutyPayload | null>(null);
@@ -99,6 +105,27 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
     });
     setOpen(true);
   }
+
+  useEffect(() => {
+    if (!onEmbeddedToolbar || readOnly) return;
+    onEmbeddedToolbar({
+      showFilter: false,
+      extra: (
+        <button
+          type="button"
+          className={smartGuardTourInlineSubNavBtnClass(false)}
+          title="จัดเวร"
+          aria-label="เพิ่มเวรประจำจุด"
+          onClick={openAdd}
+          disabled={!data?.posts.length || !data?.staff.length}
+        >
+          <span aria-hidden>+</span>
+          <span className="hidden sm:inline">จัดเวร</span>
+        </button>
+      ),
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [onEmbeddedToolbar, readOnly, data?.posts.length, data?.staff.length]);
 
   async function save() {
     if (!form.postId || !form.staffId || !form.templateId) {
@@ -161,34 +188,15 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
   return (
     <div className="min-w-0 space-y-3">
       {notice.popup}
-      <div className="flex min-w-0 flex-row flex-nowrap items-end justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">จัดเวร</h3>
-          <label className="mt-1 block max-w-[11rem] space-y-1 text-xs font-bold text-[#4d47b6] sm:max-w-[14rem]">
-            วันที่
-            <input
-              type="date"
-              className={smartGuardTourFieldClass}
-              value={dutyOn}
-              onChange={(e) => setDutyOn(e.target.value || bangkokDateKey())}
-            />
-          </label>
-        </div>
-        {!readOnly ? (
-          <button
-            type="button"
-            className={cn(smartGuardTourPrimaryButtonClass, "mb-0.5 min-w-[40px] shrink-0")}
-            aria-label="เพิ่มเวรประจำจุด"
-            onClick={openAdd}
-            disabled={!data?.posts.length || !data?.staff.length}
-          >
-            <span className="sm:hidden" aria-hidden>
-              +
-            </span>
-            <span className="hidden sm:inline">+ จัดเวร</span>
-          </button>
-        ) : null}
-      </div>
+      <label className="block max-w-[11rem] space-y-1 text-xs font-bold text-[#4d47b6] sm:max-w-[14rem]">
+        วันที่
+        <input
+          type="date"
+          className={smartGuardTourFieldClass}
+          value={dutyOn}
+          onChange={(e) => setDutyOn(e.target.value || bangkokDateKey())}
+        />
+      </label>
 
       {warnings.length > 0 ? (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs font-semibold text-amber-900">
@@ -291,7 +299,6 @@ export function SmartGuardTourDutiesPanel({ readOnly = false }: { readOnly?: boo
               >
                 {(data?.staff ?? []).map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.displayName}
                     {s.displayName}
                     {s.wageBahtPerShift && s.wageBahtPerShift > 0
                       ? ` · สำรอง ${s.wageBahtPerShift}฿/กะ`

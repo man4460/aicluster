@@ -17,8 +17,8 @@ import {
 } from "@/systems/smart-guard-tour/lib/page-menu-icons";
 import { smartGuardTourPageStackClass } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
-export function SmartGuardTourFinanceClient({ initialShop }: { initialShop: SmartGuardShopDto }) {
-  const { data, loading, notice } = useSmartGuardCatalog();
+export function SmartGuardTourFinanceClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
+  const { data, notice } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   const onEmbeddedToolbar = useCallback((api: SmartGuardTourListToolbarApi | null) => {
@@ -34,10 +34,6 @@ export function SmartGuardTourFinanceClient({ initialShop }: { initialShop: Smar
         titleTone={smartGuardTourPageTitleTone("finance")}
         action={<SmartGuardTourPageFilterAction toolbar={toolbar} />}
       >
-        <p className="mb-3 text-xs font-semibold text-[#66638c]">
-          {initialShop.displayName}
-          {loading ? " · กำลังโหลด…" : null}
-        </p>
         <SmartGuardTourFinancePanel
           ledger={data.ledger}
           summary={data.financeSummary}

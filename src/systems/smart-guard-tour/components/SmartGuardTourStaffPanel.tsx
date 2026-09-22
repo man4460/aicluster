@@ -251,7 +251,7 @@ export function SmartGuardTourStaffPanel({
 
       {!embedded ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน รปภ.</h3>
+          <h3 className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">พนักงาน</h3>
           <button
             type="button"
             aria-label="เพิ่มพนักงาน"

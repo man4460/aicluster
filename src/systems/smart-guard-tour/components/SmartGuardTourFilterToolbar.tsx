@@ -9,10 +9,12 @@ import {
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 
 export type SmartGuardTourListToolbarApi = {
-  filterOpen: boolean;
-  hasActiveFilters: boolean;
-  filterId: string;
-  toggleFilter: () => void;
+  /** false = โชว์แค่ extra (ปุ่มเพิ่ม) ในแถวเมนู โดยไม่มีปุ่มกรอง */
+  showFilter?: boolean;
+  filterOpen?: boolean;
+  hasActiveFilters?: boolean;
+  filterId?: string;
+  toggleFilter?: () => void;
   /** ปุ่มเพิ่ม / แอ็กชันอื่นในแถวเมนู (หลังปุ่มกรอง) */
   extra?: ReactNode;
 };
@@ -66,7 +68,7 @@ export function SmartGuardTourFilterToggleButton({
   );
 }
 
-/** กลุ่มปุ่มกรอง (+ extra) สำหรับ slot `action` ของ PageSubNav */
+/** กลุ่มปุ่มกรอง / เพิ่ม สำหรับ slot `action` ของ PageSubNav */
 export function SmartGuardTourPageFilterAction({
   toolbar,
   leading,
@@ -75,19 +77,32 @@ export function SmartGuardTourPageFilterAction({
   /** เช่นปุ่มกลับภาพรวม */
   leading?: ReactNode;
 }) {
+  const showFilter = Boolean(
+    toolbar &&
+      toolbar.showFilter !== false &&
+      toolbar.toggleFilter &&
+      toolbar.filterId,
+  );
+  const hasExtra = Boolean(toolbar?.extra);
   if (!toolbar && !leading) return null;
+  if (!leading && toolbar && !showFilter && !hasExtra) return null;
+
   return (
     <>
       {leading}
-      {leading && toolbar ? <span className={smartGuardTourNavDividerClass} aria-hidden /> : null}
-      {toolbar ? (
+      {leading && toolbar && (showFilter || hasExtra) ? (
+        <span className={smartGuardTourNavDividerClass} aria-hidden />
+      ) : null}
+      {toolbar && (showFilter || hasExtra) ? (
         <div className={smartGuardTourInlineSubNavShellClass}>
-          <SmartGuardTourFilterToggleButton
-            filterOpen={toolbar.filterOpen}
-            hasActiveFilters={toolbar.hasActiveFilters}
-            filterId={toolbar.filterId}
-            onToggle={toolbar.toggleFilter}
-          />
+          {showFilter ? (
+            <SmartGuardTourFilterToggleButton
+              filterOpen={toolbar.filterOpen ?? false}
+              hasActiveFilters={toolbar.hasActiveFilters ?? false}
+              filterId={toolbar.filterId!}
+              onToggle={toolbar.toggleFilter!}
+            />
+          ) : null}
           {toolbar.extra}
         </div>
       ) : null}

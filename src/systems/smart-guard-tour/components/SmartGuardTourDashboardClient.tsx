@@ -124,11 +124,11 @@ const STAT_CARDS: {
   },
 ];
 
-export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: SmartGuardShopDto }) {
+export function SmartGuardTourDashboardClient({ initialShop: _shop }: { initialShop: SmartGuardShopDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseSmartGuardTourDashboardTab(searchParams.get("tab"));
-  const { data, loading, notice } = useSmartGuardCatalog();
+  const { data, notice } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   const setTab = useCallback(
@@ -188,10 +188,6 @@ export function SmartGuardTourDashboardClient({ initialShop }: { initialShop: Sm
       >
         {tab === "overview" ? (
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-[#66638c]">
-              {initialShop.displayName}
-              {loading ? " · กำลังโหลด…" : null}
-            </p>
             <div className={smartGuardTourFinanceStatsGridClass}>
               {STAT_CARDS.map((card) => (
                 <button

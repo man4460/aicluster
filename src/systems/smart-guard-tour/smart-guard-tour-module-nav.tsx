@@ -75,7 +75,7 @@ export const SMART_GUARD_TOUR_MANAGE_TAB_ITEMS: {
   { key: "posts", label: "จุดรักษาการณ์", shortLabel: "ประจำจุด" },
   { key: "duties", label: "จัดเวร", shortLabel: "จัดเวร" },
   { key: "schedules", label: "ตารางตรวจ", shortLabel: "ตาราง" },
-  { key: "staff", label: "พนักงาน รปภ.", shortLabel: "พนักงาน" },
+  { key: "staff", label: "พนักงาน", shortLabel: "พนักงาน" },
   { key: "incidents", label: "เหตุการณ์" },
   { key: "contacts", label: "ผู้ติดต่อฉุกเฉิน", shortLabel: "ติดต่อ" },
   { key: "assets", label: "อุปกรณ์", shortLabel: "อุปกรณ์" },

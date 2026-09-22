@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { cn } from "@/lib/cn";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -17,11 +16,10 @@ import {
 } from "@/systems/smart-guard-tour/lib/card-tones";
 import {
   smartGuardTourFieldClass,
+  smartGuardTourInlineSubNavBtnClass,
   smartGuardTourOutlineButtonClass,
-  smartGuardTourPrimaryButtonClass,
-  smartGuardTourListHeaderRowClass,
-  smartGuardTourToolbarRowClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
+import type { SmartGuardTourListToolbarApi } from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
 
 type PostRow = {
   id: string;
@@ -33,7 +31,11 @@ type PostRow = {
   isActive: boolean;
 };
 
-export function SmartGuardTourPostsPanel() {
+export function SmartGuardTourPostsPanel({
+  onEmbeddedToolbar,
+}: {
+  onEmbeddedToolbar?: (api: SmartGuardTourListToolbarApi | null) => void;
+}) {
   const notice = useAppNoticePopup();
   const [rows, setRows] = useState<PostRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,26 @@ export function SmartGuardTourPostsPanel() {
     });
     setOpen(true);
   }
+
+  useEffect(() => {
+    if (!onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      showFilter: false,
+      extra: (
+        <button
+          type="button"
+          className={smartGuardTourInlineSubNavBtnClass(false)}
+          title="เพิ่มจุดรักษาการณ์"
+          aria-label="เพิ่มจุดรักษาการณ์"
+          onClick={openAdd}
+        >
+          <span aria-hidden>+</span>
+          <span className="hidden sm:inline">เพิ่มจุด</span>
+        </button>
+      ),
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [onEmbeddedToolbar]);
 
   function openEdit(row: PostRow) {
     setEditId(row.id);
@@ -152,24 +174,6 @@ export function SmartGuardTourPostsPanel() {
   return (
     <div className="min-w-0 space-y-3">
       {notice.popup}
-      <div className={smartGuardTourListHeaderRowClass}>
-        <h3 className="min-w-0 truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
-          จุดรักษาการณ์
-        </h3>
-        <div className={smartGuardTourToolbarRowClass}>
-          <button
-            type="button"
-            aria-label="เพิ่มจุดรักษาการณ์"
-            className={cn(smartGuardTourPrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
-            onClick={openAdd}
-          >
-            <span className="sm:hidden" aria-hidden>
-              +
-            </span>
-            <span className="hidden sm:inline">+ เพิ่มจุด</span>
-          </button>
-        </div>
-      </div>
 
       <div className="space-y-2">
         {loading ? (
