@@ -316,7 +316,20 @@ export function SmartGuardTourStaffPanel({
           <p className="text-sm font-medium text-[#66638c]">กำลังโหลด…</p>
         ) : filtered.length === 0 ? (
           <AppEmptyState>
-            {rows.length === 0 ? "ยังไม่มีพนักงาน" : "ไม่พบตามตัวกรอง"}
+            {rows.length === 0 ? (
+              <>
+                <p>ยังไม่มีพนักงาน</p>
+                <button
+                  type="button"
+                  className={smartGuardTourInlineSubNavBtnClass(true)}
+                  onClick={openAdd}
+                >
+                  + เพิ่มพนักงานคนแรก
+                </button>
+              </>
+            ) : (
+              "ไม่พบตามตัวกรอง"
+            )}
           </AppEmptyState>
         ) : (
           filtered.map((row) => {

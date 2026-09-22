@@ -216,7 +216,28 @@ export function SmartGuardTourDutiesPanel({
         <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
       ) : data.duties.length === 0 ? (
         <AppEmptyState>
-          {data.posts.length === 0 ? "ยังไม่มีจุดรักษาการณ์" : "ยังไม่มีเวรวันนี้"}
+          {data.posts.length === 0 || data.staff.length === 0 ? (
+            <>
+              <p>ยังจัดเวรไม่ได้</p>
+              <p className="text-xs font-medium text-[#66638c]">
+                {data.staff.length === 0 ? "1) เพิ่มพนักงาน  " : ""}
+                {data.posts.length === 0 ? "2) เพิ่มจุดประจำ (แท็บจุด → ประจำจุด)" : ""}
+              </p>
+            </>
+          ) : (
+            <>
+              <p>ยังไม่มีเวรวันนี้</p>
+              {!readOnly ? (
+                <button
+                  type="button"
+                  className={smartGuardTourInlineSubNavBtnClass(true)}
+                  onClick={openAdd}
+                >
+                  + จัดเวร
+                </button>
+              ) : null}
+            </>
+          )}
         </AppEmptyState>
       ) : (
         <div className="space-y-2">

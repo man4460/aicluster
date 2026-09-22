@@ -20,13 +20,12 @@ import {
 import { SmartGuardTourStaffPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourStaffPanel";
 import { SmartGuardTourPostsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourPostsPanel";
 import { SmartGuardTourDutiesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourDutiesPanel";
+import { SmartGuardTourCheckpointsPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourCheckpointsPanel";
+import { SmartGuardTourSchedulesPanel } from "@/systems/smart-guard-tour/components/SmartGuardTourSchedulesPanel";
 import {
-  SmartGuardTourAssetsList,
-  SmartGuardTourCheckpointsList,
-  SmartGuardTourContactsList,
-  SmartGuardTourSchedulesList,
-  useSmartGuardCatalog,
-} from "@/systems/smart-guard-tour/components/SmartGuardTourCatalogLists";
+  SmartGuardTourAssetsPanel,
+  SmartGuardTourContactsPanel,
+} from "@/systems/smart-guard-tour/components/SmartGuardTourContactsAssetsPanels";
 import type { SmartGuardShopDto } from "@/systems/smart-guard-tour/lib/mappers";
 import {
   smartGuardTourManageGroupIcon,
@@ -40,7 +39,6 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const subParam = searchParams.get("sub");
-  const { data, notice } = useSmartGuardCatalog();
   const [toolbar, setToolbar] = useState<SmartGuardTourListToolbarApi | null>(null);
 
   useEffect(() => {
@@ -84,7 +82,6 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
 
   return (
     <div className={smartGuardTourPageStackClass}>
-      {notice.popup}
       <SmartGuardTourPageSubNav
         title="การจัดการ"
         titleIcon={smartGuardTourPageTitleIcon("manage")}
@@ -116,29 +113,13 @@ export function SmartGuardTourManageClient({ initialShop: _shop }: { initialShop
         ) : leaf === "duties" ? (
           <SmartGuardTourDutiesPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "checkpoints" ? (
-          <SmartGuardTourCheckpointsList
-            key={leaf}
-            rows={data.checkpoints}
-            onEmbeddedToolbar={onEmbeddedToolbar}
-          />
+          <SmartGuardTourCheckpointsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "schedules" ? (
-          <SmartGuardTourSchedulesList
-            key={leaf}
-            rows={data.schedules}
-            onEmbeddedToolbar={onEmbeddedToolbar}
-          />
+          <SmartGuardTourSchedulesPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "contacts" ? (
-          <SmartGuardTourContactsList
-            key={leaf}
-            rows={data.contacts}
-            onEmbeddedToolbar={onEmbeddedToolbar}
-          />
+          <SmartGuardTourContactsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : leaf === "assets" ? (
-          <SmartGuardTourAssetsList
-            key={leaf}
-            rows={data.assets}
-            onEmbeddedToolbar={onEmbeddedToolbar}
-          />
+          <SmartGuardTourAssetsPanel key={leaf} onEmbeddedToolbar={onEmbeddedToolbar} />
         ) : null}
       </SmartGuardTourPageSubNav>
     </div>

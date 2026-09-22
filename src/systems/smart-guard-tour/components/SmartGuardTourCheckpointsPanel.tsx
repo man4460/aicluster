@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
@@ -17,47 +17,53 @@ import {
 import {
   smartGuardTourFieldClass,
   smartGuardTourInlineSubNavBtnClass,
-  smartGuardTourOutlineButtonClass,
 } from "@/systems/smart-guard-tour/lib/ui-tokens";
 import type { SmartGuardTourListToolbarApi } from "@/systems/smart-guard-tour/components/SmartGuardTourFilterToolbar";
 
-type PostRow = {
+type CheckpointRow = {
   id: string;
   name: string;
-  code: string | null;
+  slug: string;
   zoneLabel: string | null;
   buildingLabel: string | null;
-  requiredStaffPerShift: number;
+  floorLabel: string | null;
+  lat: number | null;
+  lng: number | null;
+  geofenceRadiusM: number;
   isActive: boolean;
 };
 
-export function SmartGuardTourPostsPanel({
+const emptyForm = () => ({
+  name: "",
+  zoneLabel: "",
+  buildingLabel: "",
+  floorLabel: "",
+  lat: "",
+  lng: "",
+  geofenceRadiusM: 80,
+  isActive: true,
+});
+
+export function SmartGuardTourCheckpointsPanel({
   onEmbeddedToolbar,
 }: {
   onEmbeddedToolbar?: (api: SmartGuardTourListToolbarApi | null) => void;
 }) {
   const notice = useAppNoticePopup();
-  const [rows, setRows] = useState<PostRow[]>([]);
+  const [rows, setRows] = useState<CheckpointRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "",
-    code: "",
-    zoneLabel: "",
-    buildingLabel: "",
-    requiredStaffPerShift: 1,
-    isActive: true,
-  });
+  const [form, setForm] = useState(emptyForm);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/smart-guard-tour/session/posts", { credentials: "include" });
+      const res = await fetch("/api/smart-guard-tour/session/checkpoints", { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "โหลดไม่สำเร็จ");
-      setRows((data.posts as PostRow[]) ?? []);
+      setRows((data.checkpoints as CheckpointRow[]) ?? []);
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
     } finally {
@@ -71,14 +77,7 @@ export function SmartGuardTourPostsPanel({
 
   function openAdd() {
     setEditId(null);
-    setForm({
-      name: "",
-      code: "",
-      zoneLabel: "",
-      buildingLabel: "",
-      requiredStaffPerShift: 1,
-      isActive: true,
-    });
+    setForm(emptyForm());
     setOpen(true);
   }
 
@@ -90,26 +89,28 @@ export function SmartGuardTourPostsPanel({
         <button
           type="button"
           className={smartGuardTourInlineSubNavBtnClass(false)}
-          title="เพิ่มจุดรักษาการณ์"
-          aria-label="เพิ่มจุดรักษาการณ์"
+          title="เพิ่มจุดตรวจ"
+          aria-label="เพิ่มจุดตรวจ"
           onClick={openAdd}
         >
           <span aria-hidden>+</span>
-          <span className="hidden sm:inline">เพิ่มจุด</span>
+          <span className="hidden sm:inline">เพิ่มจุดตรวจ</span>
         </button>
       ),
     });
     return () => onEmbeddedToolbar(null);
   }, [onEmbeddedToolbar]);
 
-  function openEdit(row: PostRow) {
+  function openEdit(row: CheckpointRow) {
     setEditId(row.id);
     setForm({
       name: row.name,
-      code: row.code ?? "",
       zoneLabel: row.zoneLabel ?? "",
       buildingLabel: row.buildingLabel ?? "",
-      requiredStaffPerShift: row.requiredStaffPerShift,
+      floorLabel: row.floorLabel ?? "",
+      lat: row.lat != null ? String(row.lat) : "",
+      lng: row.lng != null ? String(row.lng) : "",
+      geofenceRadiusM: row.geofenceRadiusM,
       isActive: row.isActive,
     });
     setOpen(true);
@@ -117,23 +118,25 @@ export function SmartGuardTourPostsPanel({
 
   async function save() {
     if (!form.name.trim()) {
-      notice.error("กรอกชื่อจุด");
+      notice.error("กรอกชื่อจุดตรวจ");
       return;
     }
     setBusy(true);
     try {
       const payload = {
         name: form.name.trim(),
-        code: form.code.trim() || null,
         zoneLabel: form.zoneLabel.trim() || null,
         buildingLabel: form.buildingLabel.trim() || null,
-        requiredStaffPerShift: form.requiredStaffPerShift,
+        floorLabel: form.floorLabel.trim() || null,
+        lat: form.lat.trim() === "" ? null : Number(form.lat),
+        lng: form.lng.trim() === "" ? null : Number(form.lng),
+        geofenceRadiusM: form.geofenceRadiusM,
         isActive: form.isActive,
       };
       const res = await fetch(
         editId
-          ? `/api/smart-guard-tour/session/posts/${editId}`
-          : "/api/smart-guard-tour/session/posts",
+          ? `/api/smart-guard-tour/session/checkpoints/${editId}`
+          : "/api/smart-guard-tour/session/checkpoints",
         {
           method: editId ? "PATCH" : "POST",
           credentials: "include",
@@ -143,7 +146,7 @@ export function SmartGuardTourPostsPanel({
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "บันทึกไม่สำเร็จ");
-      notice.success(editId ? "อัปเดตแล้ว" : "เพิ่มแล้ว");
+      notice.success(editId ? "อัปเดตจุดตรวจแล้ว" : "เพิ่มจุดตรวจแล้ว");
       setOpen(false);
       await load();
     } catch (e) {
@@ -153,16 +156,16 @@ export function SmartGuardTourPostsPanel({
     }
   }
 
-  async function removeRow(row: PostRow) {
+  async function removeRow(row: CheckpointRow) {
     setBusy(true);
     try {
-      const res = await fetch(`/api/smart-guard-tour/session/posts/${row.id}`, {
+      const res = await fetch(`/api/smart-guard-tour/session/checkpoints/${row.id}`, {
         method: "DELETE",
         credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ลบไม่สำเร็จ");
-      notice.success("ปิดใช้งานแล้ว");
+      notice.success("ปิดใช้งานจุดตรวจแล้ว");
       await load();
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
@@ -174,34 +177,34 @@ export function SmartGuardTourPostsPanel({
   return (
     <div className="min-w-0 space-y-3">
       {notice.popup}
-
       <div className="space-y-2">
         {loading ? (
           <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : rows.length === 0 ? (
           <AppEmptyState>
-            <p>ยังไม่มีจุดรักษาการณ์</p>
+            <p>ยังไม่มีจุดตรวจ</p>
             <button type="button" className={smartGuardTourInlineSubNavBtnClass(true)} onClick={openAdd}>
-              + เพิ่มจุดแรก
+              + เพิ่มจุดตรวจแรก
             </button>
           </AppEmptyState>
         ) : (
           rows.map((row) => (
             <div
               key={row.id}
-              className={smartGuardTourTonedRowCardClass(row.isActive ? "orange" : "slate")}
+              className={smartGuardTourTonedRowCardClass(row.isActive ? "sky" : "slate")}
             >
               <div className="flex min-w-0 flex-1 items-start gap-3">
-                <span className={smartGuardTourCardIconTileClass(row.isActive ? "orange" : "slate")}>
-                  <ShieldCheck className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                <span className={smartGuardTourCardIconTileClass(row.isActive ? "sky" : "slate")}>
+                  <MapPin className="h-5 w-5" strokeWidth={2.25} aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-[#1e1b4b]">{row.name}</p>
                   <p className="truncate text-xs font-medium text-[#66638c]">
-                    {[row.code, row.zoneLabel, row.buildingLabel].filter(Boolean).join(" · ") || "—"}
+                    {[row.zoneLabel, row.buildingLabel, row.floorLabel].filter(Boolean).join(" · ") ||
+                      "—"}
                   </p>
                   <p className="text-[10px] font-bold text-[#66638c]">
-                    คน/กะ {row.requiredStaffPerShift} · {row.isActive ? "ใช้งาน" : "ปิด"}
+                    รัศมี {row.geofenceRadiusM} ม. · {row.isActive ? "ใช้งาน" : "ปิด"}
                   </p>
                 </div>
               </div>
@@ -234,7 +237,7 @@ export function SmartGuardTourPostsPanel({
       <FormModal
         open={open}
         onClose={() => setOpen(false)}
-        title={editId ? "แก้ไขจุดรักษาการณ์" : "เพิ่มจุดรักษาการณ์"}
+        title={editId ? "แก้ไขจุดตรวจ" : "เพิ่มจุดตรวจ"}
         size="md"
         footer={
           <FormModalFooterActions
@@ -248,22 +251,15 @@ export function SmartGuardTourPostsPanel({
       >
         <div className="space-y-3">
           <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
-            ชื่อ
+            ชื่อจุดตรวจ *
             <input
               className={smartGuardTourFieldClass}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="เช่น ประตูหลัก A"
             />
           </label>
-          <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
-            รหัส
-            <input
-              className={smartGuardTourFieldClass}
-              value={form.code}
-              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-            />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
               โซน
               <input
@@ -280,30 +276,57 @@ export function SmartGuardTourPostsPanel({
                 onChange={(e) => setForm((f) => ({ ...f, buildingLabel: e.target.value }))}
               />
             </label>
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              ชั้น
+              <input
+                className={smartGuardTourFieldClass}
+                value={form.floorLabel}
+                onChange={(e) => setForm((f) => ({ ...f, floorLabel: e.target.value }))}
+              />
+            </label>
           </div>
-          <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
-            คนต่อกะ
-            <input
-              type="number"
-              min={1}
-              max={8}
-              className={smartGuardTourFieldClass}
-              value={form.requiredStaffPerShift}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  requiredStaffPerShift: Math.max(1, Number(e.target.value) || 1),
-                }))
-              }
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold text-[#1e1b4b]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              ละติจูด
+              <input
+                className={smartGuardTourFieldClass}
+                inputMode="decimal"
+                value={form.lat}
+                onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))}
+                placeholder="13.7563"
+              />
+            </label>
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              ลองจิจูด
+              <input
+                className={smartGuardTourFieldClass}
+                inputMode="decimal"
+                value={form.lng}
+                onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))}
+                placeholder="100.5018"
+              />
+            </label>
+            <label className="block space-y-1 text-xs font-bold text-[#4d47b6]">
+              รัศมี geofence (ม.)
+              <input
+                className={smartGuardTourFieldClass}
+                type="number"
+                min={10}
+                max={2000}
+                value={form.geofenceRadiusM}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, geofenceRadiusM: Number(e.target.value) || 80 }))
+                }
+              />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-bold text-[#4d47b6]">
             <input
               type="checkbox"
               checked={form.isActive}
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
             />
-            ใช้งาน
+            เปิดใช้งาน
           </label>
         </div>
       </FormModal>
