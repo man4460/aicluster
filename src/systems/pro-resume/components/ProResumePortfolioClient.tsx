@@ -50,19 +50,21 @@ function ReorderButtons({
   onUp,
   onDown,
   label,
+  disabled = false,
 }: {
   index: number;
   total: number;
   onUp: () => void;
   onDown: () => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-0.5">
       <button
         type="button"
         className={proResumeRowIconButtonClass}
-        disabled={index === 0}
+        disabled={disabled || index === 0}
         aria-label={`เลื่อนขึ้น ${label}`}
         title="เลื่อนขึ้น (ไว้ด้านหน้า)"
         onClick={onUp}
@@ -72,7 +74,7 @@ function ReorderButtons({
       <button
         type="button"
         className={proResumeRowIconButtonClass}
-        disabled={index >= total - 1}
+        disabled={disabled || index >= total - 1}
         aria-label={`เลื่อนลง ${label}`}
         title="เลื่อนลง"
         onClick={onDown}
@@ -327,6 +329,28 @@ function CategoriesManageModal({
     }
   };
 
+  const moveCat = async (index: number, dir: -1 | 1) => {
+    const j = index + dir;
+    if (j < 0 || j >= categories.length) return;
+    const next = [...categories];
+    [next[index], next[j]] = [next[j]!, next[index]!];
+    setBusy(true);
+    try {
+      const res = await fetch("/api/pro-resume/session/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: next.map((c) => c.id) }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "จัดลำดับไม่สำเร็จ");
+      await onSaved();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "จัดลำดับไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteCat = async (id: string, name: string) => {
     const ok = await notice.confirm(`ลบหมวด «${name}» และผลงานในหมวดนี้ใช่หรือไม่?`);
     if (!ok) return;
@@ -372,7 +396,7 @@ function CategoriesManageModal({
           <p className="text-sm text-[#66638c]">ยังไม่มีหมวด — เพิ่มก่อนจัดผลงาน</p>
         ) : (
           <ul className="space-y-2">
-            {categories.map((cat) => (
+            {categories.map((cat, index) => (
               <li key={cat.id} className={proResumeTonedRowCardClass("violet")}>
                 {editingId === cat.id ? (
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -406,7 +430,17 @@ function CategoriesManageModal({
                   </div>
                 ) : (
                   <>
-                    <p className="min-w-0 flex-1 font-bold text-[#1e1b4b]">{cat.name}</p>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <ReorderButtons
+                        index={index}
+                        total={categories.length}
+                        label={cat.name}
+                        disabled={busy}
+                        onUp={() => void moveCat(index, -1)}
+                        onDown={() => void moveCat(index, 1)}
+                      />
+                      <p className="min-w-0 flex-1 font-bold text-[#1e1b4b]">{cat.name}</p>
+                    </div>
                     <div className="flex shrink-0 gap-1">
                       <button
                         type="button"
