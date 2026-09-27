@@ -507,25 +507,20 @@ export function ProResumePublicClient({
     [slug, viewQuery],
   );
 
-  const timeline = useMemo(() => {
-    const exp = data.experiences.map((e) => ({
-      kind: "exp" as const,
-      sort: e.startDate || "0000",
-      title: e.jobTitle,
-      subtitle: e.company,
-      range: `${e.startDate || "?"} – ${e.endDate || "ปัจจุบัน"}`,
-      body: e.achievements,
-    }));
-    const edu = data.educations.map((e) => ({
-      kind: "edu" as const,
-      sort: String(e.startYear ?? 0).padStart(4, "0"),
-      title: e.degree,
-      subtitle: e.institution,
-      range: `${e.startYear ?? "?"} – ${e.endYear ?? "ปัจจุบัน"}`,
-      body: e.description,
-    }));
-    return [...exp, ...edu].sort((a, b) => b.sort.localeCompare(a.sort));
-  }, [data.experiences, data.educations]);
+  const timeline = useMemo(
+    () =>
+      data.experiences
+        .map((e) => ({
+          kind: "exp" as const,
+          sort: e.startDate || "0000",
+          title: e.jobTitle,
+          subtitle: e.company,
+          range: `${e.startDate || "?"} – ${e.endDate || "ปัจจุบัน"}`,
+          body: e.achievements,
+        }))
+        .sort((a, b) => b.sort.localeCompare(a.sort)),
+    [data.experiences],
+  );
 
   const detailCategoryName = useMemo(() => {
     if (!detailItem) return null;
@@ -553,7 +548,7 @@ export function ProResumePublicClient({
           </span>
           <span className="min-w-0 truncate">
             <span className="lg:hidden">ประวัติ</span>
-            <span className="hidden lg:inline">ประสบการณ์ / การศึกษา</span>
+            <span className="hidden lg:inline">ประสบการณ์ / ใบรับรอง</span>
           </span>
         </button>
         <button
@@ -783,7 +778,7 @@ export function ProResumePublicClient({
           >
             {timeline.length ? (
               <ProResumePortalSection
-                title="ประสบการณ์ & การศึกษา"
+                title="ประสบการณ์"
                 subtitle="ไทม์ไลน์แนวตั้ง"
                 titleIcon={proResumeSectionIcon("experience")}
                 titleTone="violet"
@@ -814,8 +809,9 @@ export function ProResumePublicClient({
               </ProResumePortalSection>
             ) : null}
 
-            {data.certificates.length ? (
+            {data.certificates.length || data.educations.length ? (
               <ProResumePortalSection title="ใบรับรอง" titleIcon={proResumeSectionIcon("certificate")} titleTone="emerald">
+                {data.certificates.length ? (
                 <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3">
                   {data.certificates.map((c) => (
                     <li key={c.id} className="min-w-0">
@@ -844,6 +840,34 @@ export function ProResumePublicClient({
                     </li>
                   ))}
                 </ul>
+                ) : null}
+                {data.educations.length ? (
+                  <div className={cn(data.certificates.length ? "mt-5 border-t border-dashed border-slate-200/90 pt-4" : "")}>
+                    <h3 className="mb-2.5 flex items-center gap-2 text-sm font-black text-[#1e1b4b]">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sky-100 text-sky-700" aria-hidden>
+                        {proResumeTimelineKindIcon("edu")}
+                      </span>
+                      การศึกษา
+                    </h3>
+                    <ul className="grid gap-2 sm:grid-cols-2 sm:gap-2.5">
+                      {data.educations.map((e) => (
+                        <li
+                          key={e.id}
+                          className="min-w-0 rounded-lg border border-l-[3px] border-slate-200/90 border-l-sky-400 bg-sky-50/50 p-2.5 shadow-sm sm:rounded-xl sm:p-3"
+                        >
+                          {e.startYear || e.endYear ? (
+                            <p className="text-[11px] font-bold uppercase leading-tight tracking-wide text-[#8b87b8] sm:text-xs">
+                              {e.startYear ?? "?"} – {e.endYear ?? "ปัจจุบัน"}
+                            </p>
+                          ) : null}
+                          <p className="mt-0.5 text-sm font-black leading-snug text-[#1e1b4b] sm:text-base">{e.degree}</p>
+                          <p className="text-xs font-semibold leading-snug text-[#4d47b6] sm:text-sm">{e.institution}</p>
+                          {e.description ? <ProResumeRichContent content={e.description} className="mt-1.5" /> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </ProResumePortalSection>
             ) : null}
 
