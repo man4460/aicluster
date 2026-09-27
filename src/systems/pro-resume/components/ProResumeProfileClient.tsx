@@ -331,43 +331,6 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
         </div>
 
         <SectionList
-          title="การศึกษา"
-          tone="sky"
-          icon={proResumeSectionIcon("education")}
-          onAdd={() => setEduModal("new")}
-          rows={educations.map((row, i) => (
-            <li key={row.id} className={proResumeTonedRowCardClass("sky")}>
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <ReorderButtons
-                  index={i}
-                  total={educations.length}
-                  label={row.degree}
-                  onUp={() => void moveItem("educations", educations, i, -1)}
-                  onDown={() => void moveItem("educations", educations, i, 1)}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#1e1b4b]">{row.degree}</p>
-                  <p className="text-sm text-[#66638c]">{row.institution}</p>
-                  {(row.startYear || row.endYear) && (
-                    <p className="text-xs text-[#8b87b8]">
-                      {row.startYear ?? "?"} – {row.endYear ?? "ปัจจุบัน"}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-1 self-end sm:self-center">
-                <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${row.degree}`} title="แก้ไข" onClick={() => setEduModal(row)}>
-                  <IconRowEdit className="h-4 w-4" />
-                </button>
-                <button type="button" className={assetRowRemoveIconButtonClass} aria-label={`ลบ ${row.degree}`} title="ลบ" onClick={() => void deleteRow("educations", row.id, row.degree)}>
-                  <IconRowRemove className="h-4 w-4" />
-                </button>
-              </div>
-            </li>
-          ))}
-        />
-
-        <SectionList
           title="ประสบการณ์"
           tone="violet"
           icon={proResumeSectionIcon("experience")}
@@ -440,7 +403,44 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
               </div>
             </li>
           ))}
-        />
+        >
+          <SubSectionList
+            title="การศึกษา"
+            tone="sky"
+            icon={proResumeSectionIcon("education")}
+            onAdd={() => setEduModal("new")}
+            rows={educations.map((row, i) => (
+              <li key={row.id} className={proResumeTonedRowCardClass("sky")}>
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <ReorderButtons
+                    index={i}
+                    total={educations.length}
+                    label={row.degree}
+                    onUp={() => void moveItem("educations", educations, i, -1)}
+                    onDown={() => void moveItem("educations", educations, i, 1)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[#1e1b4b]">{row.degree}</p>
+                    <p className="text-sm text-[#66638c]">{row.institution}</p>
+                    {(row.startYear || row.endYear) && (
+                      <p className="text-xs text-[#8b87b8]">
+                        {row.startYear ?? "?"} – {row.endYear ?? "ปัจจุบัน"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1 self-end sm:self-center">
+                  <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${row.degree}`} title="แก้ไข" onClick={() => setEduModal(row)}>
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button type="button" className={assetRowRemoveIconButtonClass} aria-label={`ลบ ${row.degree}`} title="ลบ" onClick={() => void deleteRow("educations", row.id, row.degree)}>
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          />
+        </SectionList>
       </ProResumePagePanel>
 
       <EducationModal open={eduModal !== null} row={eduModal} onClose={() => setEduModal(null)} onSaved={loadAll} notice={notice} />
@@ -456,12 +456,14 @@ function SectionList({
   icon,
   onAdd,
   rows,
+  children,
 }: {
   title: string;
   tone: "sky" | "violet" | "emerald";
   icon: React.ReactNode;
   onAdd: () => void;
   rows: React.ReactNode[];
+  children?: React.ReactNode;
 }) {
   return (
     <div className="space-y-2 border-t border-slate-200/80 pt-4">
@@ -474,6 +476,38 @@ function SectionList({
         </h3>
         <button type="button" className={proResumePrimaryButtonClass} onClick={onAdd} aria-label={`เพิ่ม${title}`}>
           + <span className="hidden sm:inline">เพิ่ม</span>
+        </button>
+      </div>
+      {rows.length ? <ul className="space-y-2">{rows}</ul> : <p className="text-sm text-[#66638c]">ยังไม่มีรายการ</p>}
+      {children}
+    </div>
+  );
+}
+
+function SubSectionList({
+  title,
+  tone,
+  icon,
+  onAdd,
+  rows,
+}: {
+  title: string;
+  tone: "sky" | "violet" | "emerald";
+  icon: React.ReactNode;
+  onAdd: () => void;
+  rows: React.ReactNode[];
+}) {
+  return (
+    <div className="mt-3 space-y-2 border-t border-dashed border-slate-200/80 pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-[#4d47b6]">
+          <span className={proResumeCardIconTileClass(tone, "md")} aria-hidden>
+            {icon}
+          </span>
+          {title}
+        </h4>
+        <button type="button" className={proResumeOutlineButtonClass} onClick={onAdd} aria-label={`เพิ่ม${title}`}>
+          + <span className="hidden sm:inline">เพิ่ม{title}</span>
         </button>
       </div>
       {rows.length ? <ul className="space-y-2">{rows}</ul> : <p className="text-sm text-[#66638c]">ยังไม่มีรายการ</p>}
