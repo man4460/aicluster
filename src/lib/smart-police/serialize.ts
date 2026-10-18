@@ -1,4 +1,8 @@
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  smartPoliceDaysSinceReceived,
+  smartPoliceIsOverdue,
+} from "@/lib/smart-police/case-ops";
 import type {
   SmartPoliceCaseDetail,
   SmartPoliceCaseListItem,
@@ -13,7 +17,11 @@ type CaseWithCounts = {
   title: string;
   caseType: string;
   status: SmartPoliceCaseDetail["status"];
+  priority: SmartPoliceCaseDetail["priority"];
   incidentAt: Date | null;
+  receivedAt: Date | null;
+  sentToProsecutorAt: Date | null;
+  investigationResult: SmartPoliceCaseDetail["investigationResult"];
   incidentPlace: string | null;
   summary: string | null;
   printCount: number;
@@ -102,13 +110,20 @@ export function mapSmartPoliceEvidence(e: {
 }
 
 export function mapSmartPoliceCaseListItem(row: CaseWithCounts): SmartPoliceCaseListItem {
+  const daysSinceReceived = smartPoliceDaysSinceReceived(row.receivedAt);
   return {
     id: row.id,
     caseNumber: row.caseNumber,
     title: row.title,
     caseType: row.caseType,
     status: row.status,
+    priority: row.priority ?? "NORMAL",
     incidentAt: row.incidentAt?.toISOString() ?? null,
+    receivedAt: row.receivedAt?.toISOString() ?? null,
+    sentToProsecutorAt: row.sentToProsecutorAt?.toISOString() ?? null,
+    investigationResult: row.investigationResult ?? "INVESTIGATING",
+    daysSinceReceived,
+    overdue: smartPoliceIsOverdue(row.priority ?? "NORMAL", daysSinceReceived),
     documentCount: row._count?.documents ?? 0,
     partyCount: row._count?.parties ?? 0,
     printCount: row.printCount,

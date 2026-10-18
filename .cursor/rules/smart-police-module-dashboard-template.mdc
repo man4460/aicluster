@@ -1,0 +1,62 @@
+---
+description: Smart Police — สำนวนสอบสวน (วิซาร์ด · วันแรก · ความสำคัญ · ส่งอัยการ) UX MAWELL
+globs:
+  - src/systems/smart-police/**
+  - src/app/(dashboard)/dashboard/smart-police/**
+  - src/app/api/smart-police/**
+  - src/lib/smart-police/**
+---
+
+# Smart Police — แม่แบบโมดูล
+
+อ้างอิงแนวทาง [สอบสวน.com](https://xn--q3cb3bkbq.com/) / วิดีโอสร้างสำนวนแรก — **ไม่ก็อป UI** ใช้ UX MAWELL (laundry tokens · FormModal · Bangkok time · sidebar เมนูโมดูล)
+
+## โครงสร้าง
+
+| ส่วน | ตำแหน่ง |
+|------|---------|
+| UI | `src/systems/smart-police/` |
+| API | `src/app/api/smart-police/` |
+| lib | `src/lib/smart-police/` |
+| tokens | `lib/ui-tokens.ts` |
+| nav / sidebar | `smart-police-nav.ts` · `dashboard-profile-module-sidebar.mdc` |
+
+## บังคับ — วิซาร์ด «สร้างสำนวนแรก»
+
+1. เปิดคดีใหม่ผ่าน **FormModal หลายขั้น** (`SmartPoliceCasesClient`) — ไม่ใช้ฟอร์มฟิลด์เดียว
+2. ขั้น: (1) ประเภท·ชื่อ·สถานที่·วัน/เวลารับคดี·ความสำคัญ → (2) ข้อหาจากคลัง → (3) ผู้กล่าวหา+ผู้ต้องหา → (4) ยืนยัน
+3. `POST /api/smart-police/cases` ด้วย `bootstrap: true` + parties + `receivedAt` → generate วันแรก (`MEMO` · `STATEMENT_ALL` · `PROPERTY_LIST`) → ไป `?tab=docs`
+4. วัน/เวลา: `bangkokDateKey` · `formatBangkokTimeHm` · `AppTime24Input`
+
+## บังคับ — Checklist พิมพ์วันแรก
+
+- นิยาม: `src/lib/smart-police/day1-checklist.ts` (`buildSmartPoliceDay1Checklist`)
+- แผงในแท็บเอกสาร: สถานะทำแล้ว/ยัง · สร้างที่ขาด · พิมพ์ทีละฉบับ
+- อย่า hardcode รายการ checklist ในคอมโพเนนต์ — ใช้ helper
+
+## บังคับ — ความสำคัญ + วันรับคดี
+
+- Schema: `SmartPoliceCasePriority` (`LOW` | `NORMAL` | `HIGH` | `URGENT`)
+- รายการ: ชิปความสำคัญ · นับวันรับคดี (`smartPoliceDaysSinceReceived` ใน `case-ops.ts`) · กรอง priority / ส่งอัยการ
+- ภาพรวม: การ์ดเดียว + สรุปเกินกำหนด / ด่วน / ยังไม่ส่งอัยการ (`reports/overview`)
+- เกินกำหนดเชิงปฏิบัติ: `smartPoliceIsOverdue` (ไม่ใช่กฎหมาย)
+
+## บังคับ — ส่งอัยการ
+
+- UI ข้อมูลคดี: `sentToProsecutorAt` · เมื่อ `investigationResult = PROSECUTE` แนะนำกรอกวันส่ง
+- กรองรายการ `prosecutor=sent|pending`
+- แม่แบบ builtin: หมายเรียก · รายงาน · หน้าปกส่งอัยการ (`default-templates.ts` — ensure ตามชื่อ)
+- whitelist สร้างเอกสาร manual รวม `PROPERTY_LIST` · `INVESTIGATION_REPORT`
+
+## ห้าม
+
+- ก็อปเลย์เอาต์สอบสวน.com
+- เปิดคดีโดยไม่ผ่านวิซาร์ดเมื่อเรียกจากปุ่ม «สำนวนแรก»
+- นับวันด้วย UTC `toISOString().slice(0,10)` — ใช้ Bangkok helpers
+- ลืม `prisma generate` หลังแก้ schema priority
+
+## นอกขอบเขต (รอบนี้)
+
+- อ่านบัตรประชาชน / offline desktop
+- คลังแบบฟอร์ม 50+ ครบ
+- พอร์ทัลประชาชน

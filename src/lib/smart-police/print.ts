@@ -93,6 +93,7 @@ export function buildSmartPolicePrintVars(
       SMART_POLICE_INVESTIGATION_RESULT_LABEL[caseDetail.investigationResult],
     receivedAt: formatThaiDateTime(caseDetail.receivedAt),
     receivedTimeHm: caseDetail.receivedTimeHm ?? "",
+    sentToProsecutorAt: formatThaiDateTime(caseDetail.sentToProsecutorAt),
     dailyLogNo: caseDetail.dailyLogNo ?? "",
     partiesList: partiesList || "—",
     evidenceList: evidenceList || "—",

@@ -1,4 +1,5 @@
 import type {
+  SmartPoliceCasePriority,
   SmartPoliceCaseStatus,
   SmartPoliceCustodyMode,
   SmartPoliceDocumentKind,
@@ -6,6 +7,8 @@ import type {
   SmartPolicePartyRole,
   SmartPoliceWitnessSide,
 } from "@/generated/prisma/enums";
+
+export type { SmartPoliceCasePriority };
 
 export type SmartPoliceProfileDto = {
   id: string;
@@ -82,7 +85,13 @@ export type SmartPoliceCaseListItem = {
   title: string;
   caseType: string;
   status: SmartPoliceCaseStatus;
+  priority: SmartPoliceCasePriority;
   incidentAt: string | null;
+  receivedAt: string | null;
+  sentToProsecutorAt: string | null;
+  investigationResult: SmartPoliceInvestigationResult;
+  daysSinceReceived: number | null;
+  overdue: boolean;
   documentCount: number;
   partyCount: number;
   printCount: number;
@@ -150,6 +159,13 @@ export const SMART_POLICE_CASE_STATUS_LABEL: Record<SmartPoliceCaseStatus, strin
   OPEN: "เปิดคดี",
   IN_PROGRESS: "สอบสวน",
   CLOSED: "ปิดคดี",
+};
+
+export const SMART_POLICE_CASE_PRIORITY_LABEL: Record<SmartPoliceCasePriority, string> = {
+  LOW: "ต่ำ",
+  NORMAL: "ปกติ",
+  HIGH: "สูง",
+  URGENT: "ด่วน",
 };
 
 export const SMART_POLICE_PARTY_ROLE_LABEL: Record<SmartPolicePartyRole, string> = {

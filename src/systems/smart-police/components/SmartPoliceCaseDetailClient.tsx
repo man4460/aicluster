@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppDashboardSection,
   AppSectionHeader,
@@ -12,6 +12,11 @@ import {
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
+  buildSmartPoliceDay1Checklist,
+  day1ChecklistSummary,
+} from "@/lib/smart-police/day1-checklist";
+import {
+  SMART_POLICE_CASE_PRIORITY_LABEL,
   SMART_POLICE_CASE_RELATIONS,
   SMART_POLICE_CASE_STATUS_LABEL,
   SMART_POLICE_CASE_TYPES,
@@ -30,6 +35,7 @@ import type {
   SmartPoliceOfficerDto,
   SmartPolicePartyDto,
 } from "@/lib/smart-police/types";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
 import {
   smartPoliceFieldClass,
@@ -52,6 +58,7 @@ import {
   smartPoliceToastSuccessClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import type {
+  SmartPoliceCasePriority,
   SmartPoliceCaseStatus,
   SmartPoliceCustodyMode,
   SmartPoliceDocumentKind,
@@ -98,7 +105,16 @@ const emptyEvidence = {
 
 export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   const router = useRouter();
-  const [tab, setTab] = useState<CaseTab>("info");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<CaseTab>(
+    initialTab === "docs" ||
+      initialTab === "parties" ||
+      initialTab === "evidence" ||
+      initialTab === "behavior"
+      ? initialTab
+      : "info",
+  );
   const [data, setData] = useState<SmartPoliceCaseDetail | null>(null);
   const [officers, setOfficers] = useState<SmartPoliceOfficerDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +175,12 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
       }
     })();
   }, []);
+
+  const day1Items = useMemo(
+    () => (data ? buildSmartPoliceDay1Checklist(data) : []),
+    [data],
+  );
+  const day1Summary = useMemo(() => day1ChecklistSummary(day1Items), [day1Items]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -419,6 +441,22 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               </select>
             </label>
             <label className={smartPoliceLabelClass}>
+              ความสำคัญ
+              <select
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={data.priority ?? "NORMAL"}
+                onChange={(e) => void patchCase({ priority: e.target.value })}
+              >
+                {(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
+                  (k) => (
+                    <option key={k} value={k}>
+                      {SMART_POLICE_CASE_PRIORITY_LABEL[k]}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className={smartPoliceLabelClass}>
               ประเภทคดี
               <select
                 className={cn(smartPoliceFieldClass, "mt-1")}
@@ -581,6 +619,37 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className={smartPoliceLabelClass}>
+              วันส่งอัยการ
+              <input
+                type="date"
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={toDateInput(data.sentToProsecutorAt)}
+                onChange={(e) =>
+                  void patchCase({
+                    sentToProsecutorAt: e.target.value
+                      ? `${e.target.value}T12:00:00+07:00`
+                      : null,
+                  })
+                }
+              />
+              {data.investigationResult === "PROSECUTE" && !data.sentToProsecutorAt ? (
+                <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                  ผลสั่งฟ้อง — แนะนำกรอกวันส่งอัยการ{" "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() =>
+                      void patchCase({
+                        sentToProsecutorAt: `${bangkokDateKey()}T12:00:00+07:00`,
+                      })
+                    }
+                  >
+                    ใช้วันนี้
+                  </button>
+                </p>
+              ) : null}
             </label>
             <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ที่เกิดเหตุ
@@ -821,6 +890,77 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
         {tab === "docs" ? (
           <div role="tabpanel" className="space-y-3">
+            <div className={cn(smartPolicePanelClass, "space-y-3 p-3 sm:p-4")}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-black text-[#1e1b4b]">Checklist พิมพ์วันแรก</h3>
+                  <p className={cn(smartPoliceSubtitleClass, "mt-0.5")}>
+                    ทำแล้ว {day1Summary.done}/{day1Summary.total}
+                    {day1Summary.pending > 0 ? ` · ค้าง ${day1Summary.pending} ฉบับ` : " · ครบแล้ว"}
+                  </p>
+                </div>
+                {day1Summary.pending > 0 ? (
+                  <button
+                    type="button"
+                    className={smartPolicePrimaryButtonClass}
+                    disabled={genBusy}
+                    onClick={() =>
+                      void generateDocs(["MEMO", "STATEMENT_ALL", "PROPERTY_LIST"])
+                    }
+                  >
+                    {genBusy ? "…" : "สร้างที่ขาดทั้งหมด"}
+                  </button>
+                ) : null}
+              </div>
+              <ul className="space-y-2">
+                {day1Items.map((item) => (
+                  <li
+                    key={item.key}
+                    className={cn(
+                      smartPoliceListRowAccentClass(item.done ? "emerald" : "amber"),
+                      "flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+                    )}
+                  >
+                    <div className="min-w-0 text-left">
+                      <p className="text-sm font-semibold text-[#1e1b4b]">{item.label}</p>
+                      <p className="text-[11px] font-medium text-[#66638c]">
+                        {item.done ? "มีเอกสารแล้ว" : "ยังไม่มี — สร้างหรือพิมพ์เมื่อพร้อม"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                      {!item.done && item.generateKind ? (
+                        <button
+                          type="button"
+                          className={smartPoliceOutlineButtonClass}
+                          disabled={genBusy}
+                          onClick={() => void generateDocs([item.generateKind!])}
+                        >
+                          สร้าง
+                        </button>
+                      ) : null}
+                      {item.documentId ? (
+                        <>
+                          <Link
+                            href={documentPreviewHref(caseId, item.documentId)}
+                            className={cn(smartPolicePrimaryButtonClass, "inline-flex")}
+                          >
+                            A4
+                          </Link>
+                          <button
+                            type="button"
+                            className={smartPoliceOutlineButtonClass}
+                            onClick={() => void printDoc(item.documentId!)}
+                          >
+                            พิมพ์
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <AppSectionHeader
               className="flex flex-row flex-wrap items-start justify-between gap-2"
               actionWrapClassName="shrink-0"
@@ -868,7 +1008,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             {templateOptions.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 <span className="text-xs font-semibold text-[#66638c]">แม่แบบ:</span>
-                {templateOptions.slice(0, 6).map((t) => (
+                {templateOptions.slice(0, 10).map((t) => (
                   <button
                     key={t.id}
                     type="button"
@@ -930,7 +1070,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </li>
               ))}
               {data.documents.length === 0 ? (
-                <p className={smartPoliceMutedTextClass}>ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือปุ่มด้านบน</p>
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือ checklist ด้านบน</p>
               ) : null}
             </ul>
           </div>

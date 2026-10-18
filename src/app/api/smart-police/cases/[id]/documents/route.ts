@@ -23,7 +23,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!title) return NextResponse.json({ error: "กรุณาระบุชื่อเอกสาร" }, { status: 400 });
 
   const kind = (typeof body.kind === "string" ? body.kind : "OTHER") as SmartPoliceDocumentKind;
-  if (!["NARRATIVE", "STATEMENT", "WARRANT", "REPORT", "MEMO", "OTHER"].includes(kind)) {
+  if (
+    ![
+      "NARRATIVE",
+      "STATEMENT",
+      "WARRANT",
+      "REPORT",
+      "MEMO",
+      "PROPERTY_LIST",
+      "INVESTIGATION_REPORT",
+      "OTHER",
+    ].includes(kind)
+  ) {
     return NextResponse.json({ error: "ประเภทเอกสารไม่ถูกต้อง" }, { status: 400 });
   }
 

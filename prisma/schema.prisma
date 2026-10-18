@@ -6917,6 +6917,13 @@ enum SmartPoliceCaseStatus {
   CLOSED
 }
 
+enum SmartPoliceCasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 enum SmartPolicePartyRole {
   COMPLAINANT
   SUSPECT
@@ -7024,6 +7031,7 @@ model SmartPoliceCase {
   title                  String                         @db.VarChar(255)
   caseType               String                         @default("คดีอาญา") @map("case_type") @db.VarChar(80)
   status                 SmartPoliceCaseStatus          @default(OPEN)
+  priority               SmartPoliceCasePriority        @default(NORMAL)
   courtType              String?                        @map("court_type") @db.VarChar(80)
   chargeText             String?                        @map("charge_text") @db.Text
   lawRefs                String?                        @map("law_refs") @db.Text

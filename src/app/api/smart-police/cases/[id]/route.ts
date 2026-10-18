@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { withSmartPoliceOwner } from "@/lib/smart-police/api-route";
 import { mapSmartPoliceCaseDetail } from "@/lib/smart-police/serialize";
 import type {
+  SmartPoliceCasePriority,
   SmartPoliceCaseStatus,
   SmartPoliceCustodyMode,
   SmartPoliceInvestigationResult,
@@ -54,6 +55,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (typeof body.status === "string") {
     const s = body.status as SmartPoliceCaseStatus;
     if (["OPEN", "IN_PROGRESS", "CLOSED"].includes(s)) data.status = s;
+  }
+  if (typeof body.priority === "string") {
+    const p = body.priority as SmartPoliceCasePriority;
+    if (["LOW", "NORMAL", "HIGH", "URGENT"].includes(p)) data.priority = p;
   }
   if (body.incidentPlace !== undefined) {
     data.incidentPlace = typeof body.incidentPlace === "string" ? body.incidentPlace.trim() || null : null;

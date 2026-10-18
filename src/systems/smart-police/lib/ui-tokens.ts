@@ -117,13 +117,16 @@ export const smartPoliceStatsGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-4 
 export const smartPoliceListRowClass =
   "flex flex-col gap-2 rounded-lg border border-slate-200/90 bg-white p-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/30 sm:flex-row sm:items-center sm:justify-between sm:p-3.5";
 
-export const smartPoliceListRowAccentClass = (tone: "indigo" | "violet" | "amber" | "sky" | "emerald") => {
+export const smartPoliceListRowAccentClass = (
+  tone: "indigo" | "violet" | "amber" | "sky" | "emerald" | "rose",
+) => {
   const map = {
     indigo: "border-l-[3px] border-l-indigo-500 bg-indigo-50/40 border-indigo-200/80",
     violet: "border-l-[3px] border-l-violet-500 bg-violet-50/40 border-violet-200/80",
     amber: "border-l-[3px] border-l-amber-500 bg-amber-50/40 border-amber-200/80",
     sky: "border-l-[3px] border-l-sky-500 bg-sky-50/40 border-sky-200/80",
     emerald: "border-l-[3px] border-l-emerald-500 bg-emerald-50/40 border-emerald-200/80",
+    rose: "border-l-[3px] border-l-rose-500 bg-rose-50/40 border-rose-200/80",
   } as const;
   return cn(
     "flex items-start justify-between gap-2 rounded-lg border p-3 shadow-sm",

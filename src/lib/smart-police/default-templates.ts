@@ -169,4 +169,80 @@ export const SMART_POLICE_BUILTIN_TEMPLATES: BuiltinTemplateSeed[] = [
 วันที่ {{todayThai}}
 ({{investigator}})`,
   },
+  {
+    kind: "WARRANT",
+    name: "หมายเรียกผู้ต้องหา",
+    sortOrder: 8,
+    content: `หมายเรียกผู้ต้องหา
+
+เลขที่คดี {{caseNumber}}
+เรื่อง {{caseTitle}}
+ข้อหา {{chargeText}}
+
+เรียน {{partyName}}
+ที่อยู่ {{partyAddress}}
+
+ให้มาพบพนักงานสอบสวน ณ {{stationName}}
+วันที่ …………………… เวลา …………………… น.
+เพื่อสอบสวนในคดีตามเลขข้างต้น
+
+หากไม่มาตามหมายอาจถูกออกหมายจับตามกฎหมาย
+
+{{stationName}}
+วันที่ {{todayThai}}
+({{investigator}})
+พนักงานสอบสวน`,
+  },
+  {
+    kind: "REPORT",
+    name: "รายงานความคืบหน้าการสอบสวน",
+    sortOrder: 9,
+    content: `รายงานความคืบหน้าการสอบสวน
+
+เลขที่คดี {{caseNumber}} — {{caseTitle}}
+สถานะ {{caseStatus}}
+ผลชั้นสอบสวน {{investigationResult}}
+วันรับคดี {{receivedAt}}
+
+สรุปความคืบหน้า
+{{summary}}
+
+พฤติการณ์
+{{behaviorText}}
+
+บุคคลที่เกี่ยวข้อง
+{{partiesList}}
+
+{{stationName}}
+วันที่ {{todayThai}}
+({{investigator}})`,
+  },
+  {
+    kind: "REPORT",
+    name: "หน้าปกส่งสำนวนอัยการ",
+    sortOrder: 10,
+    content: `หน้าปกส่งสำนวนอัยการ
+
+{{stationName}}
+เลขที่คดี {{caseNumber}}
+เรื่อง {{caseTitle}}
+ข้อหา {{chargeText}}
+กฎหมายที่อ้าง {{lawRefs}}
+
+ผลชั้นสอบสวน {{investigationResult}}
+วันส่งอัยการ {{sentToProsecutorAt}}
+
+เรียน อัยการจังหวัด / อัยการผู้รับผิดชอบ
+
+ข้าพเจ้า {{investigator}} พนักงานสอบสวน ได้ดำเนินการสอบสวนคดีนี้เสร็จสิ้นแล้ว
+จึงขอส่งสำนวนพร้อมเอกสารที่เกี่ยวข้องเพื่อพิจารณาต่อไป
+
+รายการเอกสารแนบ
+…………………………………………………………………………………………………………
+
+ลงชื่อ ………………………………
+({{investigator}})
+พนักงานสอบสวน
+วันที่ {{todayThai}}`,
+  },
 ];

@@ -42,6 +42,7 @@ alwaysApply: true
 | **ร้านออนไลน์ (สินค้า · หน้าร้าน · ฟอร์ม)** | **`ecommerce-store-module-dashboard-template.mdc`** · `EcommerceProductsClient` · `EcommerceStorefrontClient` |
 | **โชว์รูมรถมือสอง** | **`used-car-showroom-module-dashboard-template.mdc`** · Manage กรอง+FormModal · Settings 5 แท็บ · พอร์ทัล `/car/[slug]` |
 | **ธุรกิจ รปภ.** | **`smart-guard-tour-module-dashboard-template.mdc`** · กรองในแถวเมนูย่อย · ชิปสถานะ**ข้อความล้วน** · `/guard/[slug]` |
+| **Smart Police (สำนวน)** | **`smart-police-module-dashboard-template.mdc`** · วิซาร์ดสำนวนแรก · day1 checklist · priority · ส่งอัยการ |
 
 ## หลังออกแบบ
 
@@ -62,4 +63,4 @@ alwaysApply: true
 - ทำรายการจัดการแบบช่อง inline ไม่มีกรอง/โมดัลเพิ่ม  
 - ใส่ `px-*` / `max-w-*` ซ้ำรอบเนื้อหาโมดูล wide จนกล่องไม่เต็มขอบ  
 
-**แม่แบบรอง (โครงสร้างเทียบ):** คาร์แคร์/บาร์เบอร์ `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` · **ร้านออนไลน์** `ecommerce-store-module-dashboard-template.mdc` · **โชว์รูมรถ** `used-car-showroom-module-dashboard-template.mdc` · **ธุรกิจ รปภ.** `smart-guard-tour-module-dashboard-template.mdc` — ใช้เมื่อโดเมนต่าง แต่ **UX ชุดล่าสุด (กรอง · popup · finance page แยก · ตั้งค่าครบ)** ให้ยึด **ซักผ้า** เป็นหลัก (ยกเว้นกฎเฉพาะในแม่แบบโมดูลนั้น เช่น ชิปกรองข้อความล้วนของ รปภ.)
+**แม่แบบรอง (โครงสร้างเทียบ):** คาร์แคร์/บาร์เบอร์ `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` · **ร้านออนไลน์** `ecommerce-store-module-dashboard-template.mdc` · **โชว์รูมรถ** `used-car-showroom-module-dashboard-template.mdc` · **ธุรกิจ รปภ.** `smart-guard-tour-module-dashboard-template.mdc` · **Smart Police** `smart-police-module-dashboard-template.mdc` — ใช้เมื่อโดเมนต่าง แต่ **UX ชุดล่าสุด (กรอง · popup · finance page แยก · ตั้งค่าครบ)** ให้ยึด **ซักผ้า** เป็นหลัก (ยกเว้นกฎเฉพาะในแม่แบบโมดูลนั้น เช่น ชิปกรองข้อความล้วนของ รปภ.)
