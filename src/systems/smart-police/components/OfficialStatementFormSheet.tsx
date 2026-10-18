@@ -4,6 +4,9 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { cn } from "@/lib/cn";
 import type { StatementHeaderFields, StatementPage } from "@/lib/smart-police/form-templates";
 import {
+  OVERLAY_FONT_PT,
+  OVERLAY_STMT_FONT_PT,
+  OVERLAY_STMT_LINE_H,
   STATEMENT_COMPLAINANT_BG,
   STATEMENT_COMPLAINANT_OVERLAY_FIELDS,
   STATEMENT_CONTINUATION_BG,
@@ -16,7 +19,7 @@ import {
 
 /**
  * แม่แบบราชการจริง (PNG) + ช่องพิมพ์โปร่งใสทับจุดไข่ปลา
- * — เห็นฟอร์มเหมือนของจริง · พิมพ์ได้เหมือน Word · ดึงแม่แบบเดียวมาใช้
+ * ตัวอักษรชิดเส้นจุด · ไม่คร่อมแถว
  */
 
 function OverlayInput({
@@ -29,21 +32,6 @@ function OverlayInput({
   onChange: (v: string) => void;
 }) {
   const box = mmBox(field);
-  const common = {
-    position: "absolute" as const,
-    ...box,
-    margin: 0,
-    padding: field.multiline ? "0 1mm" : "0 0.5mm",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    boxShadow: "none",
-    fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
-    fontSize: "11pt",
-    lineHeight: field.multiline ? "7.2mm" : "1.2",
-    color: "#111",
-    caretColor: "#111",
-  };
 
   if (field.multiline) {
     return (
@@ -51,7 +39,21 @@ function OverlayInput({
         ariaLabel={String(field.key)}
         value={value}
         onChange={onChange}
-        style={common}
+        style={{
+          position: "absolute",
+          ...box,
+          margin: 0,
+          padding: `0.6mm 1.2mm 0`,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          boxShadow: "none",
+          fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
+          fontSize: OVERLAY_STMT_FONT_PT,
+          lineHeight: `${OVERLAY_STMT_LINE_H}mm`,
+          color: "#111",
+          caretColor: "#111",
+        }}
       />
     );
   }
@@ -64,8 +66,21 @@ function OverlayInput({
       spellCheck={false}
       className="sp-word-field"
       style={{
-        ...common,
+        position: "absolute",
+        ...box,
+        margin: 0,
+        padding: "0 0.4mm",
+        border: "none",
+        outline: "none",
+        background: "transparent",
+        boxShadow: "none",
+        fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
+        fontSize: OVERLAY_FONT_PT,
+        lineHeight: box.height,
         height: box.height,
+        color: "#111",
+        caretColor: "#111",
+        verticalAlign: "bottom",
       }}
     />
   );
@@ -113,11 +128,7 @@ function LinedOverlay({
   );
 }
 
-function fieldValue(
-  field: OverlayField,
-  header: StatementHeaderFields,
-  pageText: string,
-): string {
+function fieldValue(field: OverlayField, header: StatementHeaderFields, pageText: string): string {
   if (field.key === "statementBody") return pageText;
   if (field.key === "amphoe") return header.amphoe || header.district;
   return String(header[field.key as keyof StatementHeaderFields] ?? "");
@@ -165,7 +176,6 @@ export function OfficialStatementFormSheet({
         boxSizing: "border-box",
       }}
     >
-      {/* แม่แบบของจริง */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={bg}
@@ -174,7 +184,6 @@ export function OfficialStatementFormSheet({
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-fill"
       />
 
-      {/* ช่องพิมพ์ทับจุดว่าง */}
       {fields.map((field, i) => (
         <OverlayInput
           key={`${field.key}-${i}-${pageIndex}`}

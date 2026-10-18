@@ -1,6 +1,6 @@
 /**
- * แม่แบบคำให้การผู้กล่าวหา — พื้นหลัง PNG ราชการจริง + พิกัดช่องพิมพ์ (มม. บน A4 210×297)
- * วัดจาก public/smart-police/statement-complainant-template.png (เส้นตั้งคั่น ≈ 47.3 มม.)
+ * แม่แบบคำให้การผู้กล่าวหา — PNG ราชการ + ช่องพิมพ์ (มม. บน A4 210×297)
+ * ช่องเตี้ย · ระยะบรรทัดคำให้การ 7.25 มม. — ตัวอักษรอยู่บนจุดไข่ปลา ไม่คร่อมแถว
  */
 
 import type { StatementHeaderFields } from "@/lib/smart-police/form-templates/statement-types";
@@ -8,87 +8,89 @@ import type { StatementHeaderFields } from "@/lib/smart-police/form-templates/st
 export const STATEMENT_PAGE_W_MM = 210;
 export const STATEMENT_PAGE_H_MM = 297;
 
+export const OVERLAY_FIELD_H = 3.8;
+export const OVERLAY_STMT_LINE_H = 7.25;
+export const OVERLAY_FONT_PT = "10pt";
+export const OVERLAY_STMT_FONT_PT = "11pt";
+
 export type OverlayFieldKey = keyof StatementHeaderFields | "statementBody";
 
 export type OverlayField = {
   key: OverlayFieldKey;
-  /** มม. จากขอบซ้าย/บนของหน้า A4 */
   left: number;
   top: number;
   width: number;
   height: number;
   multiline?: boolean;
-  /** หน้า 0 = หน้าแรก · หน้าต่อใช้ชุดอื่น */
   page?: "first" | "cont";
 };
 
-/** หน้า 1 — ช่องว่างบนจุดไข่ปลา (ไม่ทับป้ายข้อความ) */
 export const STATEMENT_COMPLAINANT_OVERLAY_FIELDS: OverlayField[] = [
   // —— แถบซ้าย ——
-  { key: "partyName", left: 7, top: 82, width: 38, height: 5.5 },
-  { key: "partyRoleLabel", left: 14, top: 90.5, width: 31, height: 5 },
-  { key: "partyPhone", left: 7, top: 103, width: 38, height: 5.5 },
-  { key: "partyIdCard", left: 7, top: 117, width: 38, height: 5.5 },
-  { key: "idIssuedOn", left: 7, top: 129, width: 38, height: 5 },
-  { key: "idExpiresOn", left: 7, top: 137.5, width: 38, height: 5 },
-  { key: "idIssuedAt", left: 7, top: 146, width: 38, height: 5 },
+  { key: "partyName", left: 7, top: 81.2, width: 37, height: OVERLAY_FIELD_H },
+  { key: "partyRoleLabel", left: 16, top: 88.8, width: 28, height: OVERLAY_FIELD_H },
+  { key: "partyPhone", left: 7, top: 101.2, width: 37, height: OVERLAY_FIELD_H },
+  { key: "partyIdCard", left: 7, top: 114.8, width: 37, height: OVERLAY_FIELD_H },
+  { key: "idIssuedOn", left: 7, top: 126.8, width: 37, height: OVERLAY_FIELD_H },
+  { key: "idExpiresOn", left: 7, top: 135.0, width: 37, height: OVERLAY_FIELD_H },
+  { key: "idIssuedAt", left: 7, top: 143.2, width: 37, height: OVERLAY_FIELD_H },
 
-  // —— สถานี / วันที่ (คอลัมน์ขวา) ——
-  { key: "stationName", left: 78, top: 55.5, width: 38, height: 5 },
-  { key: "district", left: 128, top: 55.5, width: 28, height: 5 },
-  { key: "province", left: 168, top: 55.5, width: 28, height: 5 },
-  { key: "dayThai", left: 70, top: 63.5, width: 22, height: 5 },
-  { key: "monthThai", left: 108, top: 63.5, width: 36, height: 5 },
-  { key: "yearThai", left: 160, top: 63.5, width: 28, height: 5 },
+  // —— สถานี / วันที่ ——
+  { key: "stationName", left: 80, top: 54.5, width: 36, height: OVERLAY_FIELD_H },
+  { key: "district", left: 130, top: 54.5, width: 26, height: OVERLAY_FIELD_H },
+  { key: "province", left: 170, top: 54.5, width: 26, height: OVERLAY_FIELD_H },
+  { key: "dayThai", left: 70, top: 62.2, width: 20, height: OVERLAY_FIELD_H },
+  { key: "monthThai", left: 108, top: 62.2, width: 34, height: OVERLAY_FIELD_H },
+  { key: "yearThai", left: 160, top: 62.2, width: 26, height: OVERLAY_FIELD_H },
 
   // —— คดีระหว่าง ——
-  { key: "complainantLine", left: 78, top: 74, width: 88, height: 5 },
-  { key: "suspectLine", left: 78, top: 82, width: 88, height: 5 },
+  { key: "complainantLine", left: 80, top: 72.8, width: 84, height: OVERLAY_FIELD_H },
+  { key: "suspectLine", left: 80, top: 80.6, width: 84, height: OVERLAY_FIELD_H },
 
   // —— ต่อหน้า / สอบสวน ——
-  { key: "investigator", left: 72, top: 92, width: 124, height: 5 },
-  { key: "commanderLine", left: 52, top: 99.5, width: 144, height: 5 },
-  { key: "interviewPlace", left: 78, top: 107, width: 118, height: 5 },
+  { key: "investigator", left: 74, top: 90.4, width: 120, height: OVERLAY_FIELD_H },
+  { key: "commanderLine", left: 52, top: 97.6, width: 142, height: OVERLAY_FIELD_H },
+  { key: "interviewPlace", left: 80, top: 105.2, width: 114, height: OVERLAY_FIELD_H },
 
   // —— บุคคล ——
-  { key: "partyName", left: 62, top: 115.5, width: 90, height: 5 },
-  { key: "partyAge", left: 168, top: 115.5, width: 16, height: 5 },
-  { key: "ethnicity", left: 72, top: 123.5, width: 28, height: 5 },
-  { key: "partyNationality", left: 118, top: 123.5, width: 28, height: 5 },
-  { key: "religion", left: 164, top: 123.5, width: 28, height: 5 },
-  { key: "partyOccupation", left: 68, top: 131.5, width: 128, height: 5 },
+  { key: "partyName", left: 64, top: 113.6, width: 86, height: OVERLAY_FIELD_H },
+  { key: "partyAge", left: 170, top: 113.6, width: 14, height: OVERLAY_FIELD_H },
+  { key: "ethnicity", left: 74, top: 121.2, width: 26, height: OVERLAY_FIELD_H },
+  { key: "partyNationality", left: 120, top: 121.2, width: 26, height: OVERLAY_FIELD_H },
+  { key: "religion", left: 166, top: 121.2, width: 26, height: OVERLAY_FIELD_H },
+  { key: "partyOccupation", left: 70, top: 128.6, width: 124, height: OVERLAY_FIELD_H },
 
   // —— ที่อยู่ ——
-  { key: "houseNo", left: 88, top: 152, width: 28, height: 5 },
-  { key: "moo", left: 130, top: 152, width: 16, height: 5 },
-  { key: "tambon", left: 168, top: 152, width: 28, height: 5 },
-  { key: "amphoe", left: 78, top: 159.5, width: 48, height: 5 },
-  { key: "province", left: 148, top: 159.5, width: 48, height: 5 },
-  { key: "villageHead", left: 92, top: 167, width: 42, height: 5 },
-  { key: "kamnan", left: 158, top: 167, width: 38, height: 5 },
-  { key: "fatherName", left: 72, top: 174.5, width: 48, height: 5 },
-  { key: "motherName", left: 148, top: 174.5, width: 48, height: 5 },
-  { key: "relationshipNote", left: 118, top: 182, width: 78, height: 5 },
+  { key: "houseNo", left: 90, top: 144.2, width: 26, height: OVERLAY_FIELD_H },
+  { key: "moo", left: 132, top: 144.2, width: 14, height: OVERLAY_FIELD_H },
+  { key: "tambon", left: 170, top: 144.2, width: 26, height: OVERLAY_FIELD_H },
+  { key: "amphoe", left: 80, top: 151.4, width: 46, height: OVERLAY_FIELD_H },
+  { key: "province", left: 150, top: 151.4, width: 46, height: OVERLAY_FIELD_H },
+  { key: "villageHead", left: 94, top: 158.6, width: 40, height: OVERLAY_FIELD_H },
+  { key: "kamnan", left: 160, top: 158.6, width: 36, height: OVERLAY_FIELD_H },
+  { key: "fatherName", left: 74, top: 165.6, width: 46, height: OVERLAY_FIELD_H },
+  { key: "motherName", left: 150, top: 165.6, width: 46, height: OVERLAY_FIELD_H },
+  { key: "relationshipNote", left: 122, top: 172.4, width: 74, height: OVERLAY_FIELD_H },
 
-  // —— ข้อความคำให้การ ——
+  // —— คำให้การ (บรรทัดจุด ≈ 7.25 มม.) ——
   {
     key: "statementBody",
-    left: 50,
-    top: 198,
-    width: 146,
-    height: 78,
+    left: 51,
+    top: 179.5,
+    width: 144,
+    height: 98,
     multiline: true,
   },
 ];
 
 export const STATEMENT_CONTINUATION_OVERLAY_FIELDS: OverlayField[] = [
-  { key: "partyName", left: 48, top: 18, width: 100, height: 5.5 },
+  { key: "partyName", left: 50, top: 17.5, width: 96, height: OVERLAY_FIELD_H },
   {
     key: "statementBody",
-    left: 18,
-    top: 32,
-    width: 174,
-    height: 248,
+    left: 16,
+    top: 30,
+    width: 176,
+    height: 250,
     multiline: true,
     page: "cont",
   },
