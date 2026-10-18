@@ -379,7 +379,17 @@ export function OfficialStatementFormSheet({
               }}
             >
               <L>คดีระหว่าง</L>
-              <span style={{ fontSize: "26pt", lineHeight: 0.8 }} aria-hidden>
+              <span
+                style={{
+                  fontSize: "42pt",
+                  lineHeight: 0.85,
+                  fontWeight: 400,
+                  transform: "scaleY(1.15)",
+                  display: "inline-block",
+                  padding: "0 1mm",
+                }}
+                aria-hidden
+              >
                 {"{"}
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6mm" }}>
