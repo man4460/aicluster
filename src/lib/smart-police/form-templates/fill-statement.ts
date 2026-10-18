@@ -29,7 +29,7 @@ export function createEmptyPage(seedQuestions?: string[]): StatementPage {
   const qs =
     seedQuestions && seedQuestions.length > 0
       ? seedQuestions
-      : ["ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ", ""];
+      : ["", ""];
   return {
     id: newId("page"),
     qa: qs.map((q) => createEmptyQa(q)),
@@ -94,39 +94,57 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
   };
 }
 
-const FORM_DOC_STYLES = `
-.sp-form-root { font-family: "TH Sarabun New","Sarabun",Tahoma,sans-serif; font-size: 15px; line-height: 1.45; color: #111; }
-.sp-autofill { background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
-.sp-autofill-title { font-weight: 700; color: #0c4a6e; margin: 0 0 8px; font-size: 13px; }
-.sp-autofill-hint { margin: 8px 0 0; font-size: 12px; color: #0369a1; }
-.sp-autofill-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.sp-autofill-table th { text-align: left; width: 9rem; padding: 3px 6px; color: #334155; font-weight: 600; vertical-align: top; }
-.sp-autofill-table td { padding: 3px 6px; border-bottom: 1px dotted #cbd5e1; }
-.sp-form-sep { border: none; border-top: 1px dashed #94a3b8; margin: 14px 0; }
-.sp-form-body table { width: 100%; border-collapse: collapse; }
-.sp-form-body td, .sp-form-body th { border: 1px solid #64748b; padding: 4px 6px; vertical-align: top; min-height: 1.2em; }
-.sp-form-body p { margin: 0.15em 0; }
-`;
-
-export function statementFormDocumentCss(): string {
-  return FORM_DOC_STYLES;
+/** คำถามเริ่มต้นตามบทบาท — พงส. แก้/พิมพ์ต่อได้ */
+function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: string): string[] {
+  const hint = behaviorHint.trim();
+  if (role === "COMPLAINANT") {
+    return [
+      "ขอทราบชื่อ นามสกุล อายุ อาชีพ และที่อยู่ปัจจุบันของท่าน",
+      "ท่านมาให้การในฐานะใด และเกี่ยวข้องกับคดีนี้อย่างไร",
+      hint
+        ? `ขอให้ท่านเล่าเหตุการณ์ตามที่ทราบเกี่ยวกับ ${hint.slice(0, 80)}${hint.length > 80 ? "…" : ""}`
+        : "ขอให้ท่านเล่าเหตุการณ์ที่เกิดขึ้นตามลำดับเวลา",
+      "ท่านต้องการให้ดำเนินคดีกับผู้ใด หรือมีข้อเรียกร้องอย่างไร",
+    ];
+  }
+  if (role === "SUSPECT") {
+    return [
+      "ขอทราบชื่อ นามสกุล อายุ อาชีพ และที่อยู่ปัจจุบันของท่าน",
+      "ท่านทราบข้อหาที่ถูกกล่าวหาหรือไม่ และต้องการชี้แจงอย่างไร",
+      hint
+        ? `เกี่ยวกับพฤติการณ์ที่กล่าวหา (${hint.slice(0, 80)}${hint.length > 80 ? "…" : ""}) ท่านขอชี้แจงว่าอย่างไร`
+        : "ขอให้ท่านชี้แจงข้อเท็จจริงตามที่ทราบ",
+      "ท่านมีพยานหรือหลักฐานที่จะนำสืบหรือไม่",
+    ];
+  }
+  return [
+    "ขอทราบชื่อ นามสกุล อายุ อาชีพ และที่อยู่ปัจจุบันของท่าน",
+    "ท่านเกี่ยวข้องหรือรู้เห็นเหตุการณ์ในคดีนี้อย่างไร",
+    hint
+      ? `ขอให้ท่านเล่าสิ่งที่รู้เห็นเกี่ยวกับ ${hint.slice(0, 80)}${hint.length > 80 ? "…" : ""}`
+      : "ขอให้ท่านเล่าสิ่งที่รู้เห็นตามลำดับเวลา",
+    "ท่านมีสิ่งใดเพิ่มเติมที่จะให้การหรือไม่",
+  ];
 }
 
-/** @deprecated ใช้ fillStatementDocument จาก fill-statement-server */
-export function fillStatementDocumentSync(input: FillStatementInput): StatementDocumentContentV1 {
+/**
+ * สร้างแบบจำลองฟอร์มคำให้การ — เติมหัวจากคดี/บุคคล + หน้าถาม–ตอบให้พงส. พิมพ์ต่อ
+ * (ไม่ดึง fs/Word ใน client path)
+ */
+export function fillStatementDocument(input: FillStatementInput): StatementDocumentContentV1 {
   const meta = statementTemplateMetaForRole(input.role);
   const hint = (input.behaviorHint ?? "").trim();
-  const firstPage = createEmptyPage([
-    "ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ",
-    "มีพยานหรือหลักฐานเกี่ยวข้องอย่างไร",
-  ]);
-  if (hint && firstPage.qa[0]) firstPage.qa[0].answer = hint;
   return {
     templateSlug: meta.slug,
     version: 1,
     header: buildHeader(input),
-    pages: [firstPage],
+    pages: [createEmptyPage(seedQuestionsForRole(input.role, hint))],
   };
+}
+
+/** @deprecated ใช้ fillStatementDocument */
+export function fillStatementDocumentSync(input: FillStatementInput): StatementDocumentContentV1 {
+  return fillStatementDocument(input);
 }
 
 export function serializeStatementDocument(doc: StatementDocumentContent): string {
@@ -179,6 +197,7 @@ export function statementDocumentToPlainText(doc: StatementDocumentContent): str
     h.stationName,
     `เลขที่คดี ${h.caseNumber}`,
     `เรื่อง ${h.caseTitle}`,
+    `ผู้ให้การ ${h.partyName} (${h.partyRoleLabel})`,
     "",
   ];
   let qNo = 1;
@@ -195,4 +214,8 @@ export function statementDocumentToPlainText(doc: StatementDocumentContent): str
 
 export function isStatementJsonContent(raw: string): boolean {
   return parseStatementDocumentContent(raw) != null;
+}
+
+export function statementFormDocumentCss(): string {
+  return "";
 }
