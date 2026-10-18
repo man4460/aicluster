@@ -10,8 +10,6 @@ import {
   smartPoliceCardHeaderRowClass,
   smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
-  smartPoliceFilterChipClass,
-  smartPoliceFilterChipShellClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
@@ -138,38 +136,45 @@ export function SmartPoliceDashboardClient() {
           ))}
         </div>
 
-        <div className={cn(smartPoliceFilterChipShellClass, "mt-2")} role="tablist" aria-label="กรองด่วน">
-          <Link
-            href="/dashboard/smart-police/cases?prosecutor=pending"
-            className={smartPoliceFilterChipClass(false)}
-            role="tab"
-          >
-            ยังไม่ส่งอัยการ
-            {s?.notSentToProsecutor != null ? (
-              <span className="tabular-nums text-[#5b61ff]">{s.notSentToProsecutor}</span>
-            ) : null}
-          </Link>
-          <Link
-            href="/dashboard/smart-police/cases?priority=URGENT"
-            className={smartPoliceFilterChipClass(false)}
-            role="tab"
-          >
-            คดีด่วน
-            {s?.urgentCount != null ? (
-              <span className="tabular-nums text-amber-700">{s.urgentCount}</span>
-            ) : null}
-          </Link>
-          <Link
-            href="/dashboard/smart-police/cases"
-            className={smartPoliceFilterChipClass(false)}
-            role="tab"
-          >
-            คดีทั้งหมด
-          </Link>
-        </div>
-
         <div className={cn(smartPolicePanelDividerClass, "mt-2.5 space-y-1.5 pt-2.5")}>
-          <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
+            <nav
+              className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-0.5 text-[11px] font-semibold"
+              aria-label="กรองด่วน"
+            >
+              <Link
+                href="/dashboard/smart-police/cases?prosecutor=pending"
+                className="text-[#5b61ff] underline-offset-2 hover:underline"
+              >
+                ยังไม่ส่งอัยการ
+                {s?.notSentToProsecutor != null ? (
+                  <span className="ml-0.5 tabular-nums">{s.notSentToProsecutor}</span>
+                ) : null}
+              </Link>
+              <span className="text-slate-300" aria-hidden>
+                ·
+              </span>
+              <Link
+                href="/dashboard/smart-police/cases?priority=URGENT"
+                className="text-amber-700 underline-offset-2 hover:underline"
+              >
+                คดีด่วน
+                {s?.urgentCount != null ? (
+                  <span className="ml-0.5 tabular-nums">{s.urgentCount}</span>
+                ) : null}
+              </Link>
+              <span className="text-slate-300" aria-hidden>
+                ·
+              </span>
+              <Link
+                href="/dashboard/smart-police/cases"
+                className="text-[#66638c] underline-offset-2 hover:underline hover:text-[#4d47b6]"
+              >
+                คดีทั้งหมด
+              </Link>
+            </nav>
+          </div>
 
           {loading ? (
             <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
