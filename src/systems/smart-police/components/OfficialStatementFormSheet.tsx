@@ -472,27 +472,69 @@ export function OfficialStatementFormSheet({
               />
             </Row>
 
-            <Row>
+            {/* ชื่อ…อาชีพ — ขยายชิดขอบซ้าย–ขวา */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "2mm",
+                width: "100%",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
               <L>ชื่อ</L>
-              <Dot aria-label="ชื่อ" value={h.partyName} onChange={(v) => set("partyName", v)} minCh={14} />
+              <Dot aria-label="ชื่อ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={8} />
               <L>อายุ</L>
-              <Dot aria-label="อายุ" value={h.partyAge} onChange={(v) => set("partyAge", v)} minCh={2} />
-              <span>ปี</span>
-            </Row>
-            <Row>
-              <L>เชื้อชาติ</L>
-              <Dot aria-label="เชื้อชาติ" value={h.ethnicity} onChange={(v) => set("ethnicity", v)} minCh={4} />
-              <L>สัญชาติ</L>
-              <Dot
-                aria-label="สัญชาติ"
-                value={h.partyNationality}
-                onChange={(v) => set("partyNationality", v)}
-                minCh={4}
-              />
-              <L>ศาสนา</L>
-              <Dot aria-label="ศาสนา" value={h.religion} onChange={(v) => set("religion", v)} minCh={4} />
-            </Row>
-            <Row>
+              <Dot aria-label="อายุ" value={h.partyAge} onChange={(v) => set("partyAge", v)} minCh={3} />
+              <span style={{ flexShrink: 0 }}>ปี</span>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                columnGap: "2mm",
+                width: "100%",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>เชื้อชาติ</L>
+                <Dot aria-label="เชื้อชาติ" value={h.ethnicity} onChange={(v) => set("ethnicity", v)} flex minCh={3} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>สัญชาติ</L>
+                <Dot
+                  aria-label="สัญชาติ"
+                  value={h.partyNationality}
+                  onChange={(v) => set("partyNationality", v)}
+                  flex
+                  minCh={3}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>ศาสนา</L>
+                <Dot aria-label="ศาสนา" value={h.religion} onChange={(v) => set("religion", v)} flex minCh={3} />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "1.5mm",
+                width: "100%",
+                minHeight: LINE,
+                margin: "0 0 0.5mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
               <L>อาชีพ</L>
               <Dot
                 aria-label="อาชีพ"
@@ -501,8 +543,16 @@ export function OfficialStatementFormSheet({
                 flex
                 minCh={8}
               />
-            </Row>
-            <p style={{ margin: "0 0 1.2mm", fontSize: "9.5pt", lineHeight: 1.25, color: "#222" }}>
+            </div>
+            <p
+              style={{
+                margin: "0 0 1.2mm",
+                width: "100%",
+                fontSize: "9.5pt",
+                lineHeight: 1.3,
+                color: "#222",
+              }}
+            >
               (ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ
               หรือไม่ ให้ลงตามประเภทที่รับ)
             </p>
