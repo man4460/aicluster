@@ -17,7 +17,7 @@ function dot(value: string): string {
   return v ? esc(v) : "………………";
 }
 
-/** HTML แบบฟอร์มราชการสำหรับพรีวิว/พิมพ์ */
+/** HTML แบบฟอร์มราชการตามแม่แบบ คำให้การผู้กล่าวหา.docx */
 export function buildOfficialStatementFormHtml(opts: {
   header: StatementHeaderFields;
   pages: StatementPage[];
@@ -38,11 +38,6 @@ export function buildOfficialStatementFormHtml(opts: {
 
   return `<div class="sp-off">
 <style>${OFFICIAL_STATEMENT_FORM_CSS}</style>
-<div class="sp-off-head">
-<img class="sp-off-garuda" src="/smart-police/garuda.svg" alt="" width="52" height="60"/>
-<p class="sp-off-org">สำนักงานตำรวจแห่งชาติ</p>
-<p class="sp-off-title">${esc(opts.formTitle)}</p>
-</div>
 <div class="sp-off-grid">
 <aside class="sp-off-side">
 <div class="sp-off-field"><span class="sp-off-label">คำให้การของ</span><div class="sp-off-dot">${dot(h.partyName)}</div></div>
@@ -52,9 +47,15 @@ export function buildOfficialStatementFormHtml(opts: {
 <div class="sp-off-field"><span class="sp-off-label">ออกเมื่อ</span><div class="sp-off-dot">${dot(h.idIssuedOn)}</div></div>
 <div class="sp-off-field"><span class="sp-off-label">หมดอายุ</span><div class="sp-off-dot">${dot(h.idExpiresOn)}</div></div>
 <div class="sp-off-field"><span class="sp-off-label">ออกให้ ณ</span><div class="sp-off-dot">${dot(h.idIssuedAt)}</div></div>
-<div class="sp-off-field" style="text-align:center;margin-top:1.5rem"><span class="sp-off-label">ลงชื่อ</span> ……… <span class="sp-off-label">บันทึก</span></div>
+<div class="sp-off-field" style="text-align:center;margin-top:2rem"><span class="sp-off-label">ลงชื่อ</span> ……… <span class="sp-off-label">บันทึก</span></div>
+<p style="font-size:10px;margin-top:2rem;color:#444">(ส ๕๖ - ๔)</p>
 </aside>
 <div class="sp-off-main">
+<div class="sp-off-head">
+<img class="sp-off-garuda" src="/smart-police/garuda.png" alt="" width="56" height="64"/>
+<p class="sp-off-org">สำนักงานตำรวจแห่งชาติ</p>
+<p class="sp-off-title">${esc(opts.formTitle)}</p>
+</div>
 <div class="sp-off-row"><span class="sp-off-label">สถานีตำรวจ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.stationName)}</span>
 <span class="sp-off-label">เขต/อำเภอ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.district)}</span>
 <span class="sp-off-label">จังหวัด</span> <span class="sp-off-dot sp-off-flex1">${dot(h.province)}</span></div>
@@ -70,6 +71,7 @@ export function buildOfficialStatementFormHtml(opts: {
 </div>
 </div>
 <div class="sp-off-row"><span class="sp-off-label">ต่อหน้า</span> <span class="sp-off-dot sp-off-flex1">${dot(h.investigator)}</span></div>
+<div class="sp-off-row"><span class="sp-off-dot sp-off-flex1">${dot(h.commanderLine)}</span></div>
 <div class="sp-off-row"><span class="sp-off-label">สอบสวนที่</span> <span class="sp-off-dot sp-off-flex1">${dot(h.interviewPlace)}</span></div>
 <div class="sp-off-row"><span class="sp-off-label">ชื่อ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.partyName)}</span>
 <span class="sp-off-label">อายุ</span> <span class="sp-off-dot">${dot(h.partyAge)}</span> ปี</div>
@@ -83,8 +85,13 @@ export function buildOfficialStatementFormHtml(opts: {
 <span class="sp-off-label">แขวง/ตำบล</span> <span class="sp-off-dot sp-off-flex1">${dot(h.tambon)}</span></div>
 <div class="sp-off-row"><span class="sp-off-label">เขต/อำเภอ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.amphoe || h.district)}</span>
 <span class="sp-off-label">จังหวัด</span> <span class="sp-off-dot sp-off-flex1">${dot(h.province)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">ชื่อผู้ใหญ่บ้าน</span> <span class="sp-off-dot sp-off-flex1">${dot(h.villageHead)}</span>
+<span class="sp-off-label">ชื่อกำนัน</span> <span class="sp-off-dot sp-off-flex1">${dot(h.kamnan)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">ชื่อบิดา</span> <span class="sp-off-dot sp-off-flex1">${dot(h.fatherName)}</span>
+<span class="sp-off-label">ชื่อมารดา</span> <span class="sp-off-dot sp-off-flex1">${dot(h.motherName)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">เกี่ยวข้องเป็นอะไรกับคู่กรณี</span> <span class="sp-off-dot sp-off-flex1">${dot(h.relationshipNote)}</span></div>
+<p><strong>ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า</strong></p>
 <div class="sp-off-qa">
-<div class="sp-off-qa-title">บันทึกคำให้การ (ถาม / ตอบ)</div>
 ${qaHtml}
 </div>
 <div class="sp-off-sign">

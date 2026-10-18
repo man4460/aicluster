@@ -39,6 +39,11 @@ const EMPTY_HEADER_EXTRAS: Pick<
   | "moo"
   | "tambon"
   | "amphoe"
+  | "villageHead"
+  | "kamnan"
+  | "fatherName"
+  | "motherName"
+  | "relationshipNote"
 > = {
   district: "",
   dayThai: "",
@@ -56,6 +61,11 @@ const EMPTY_HEADER_EXTRAS: Pick<
   moo: "",
   tambon: "",
   amphoe: "",
+  villageHead: "",
+  kamnan: "",
+  fatherName: "",
+  motherName: "",
+  relationshipNote: "ไม่เกี่ยวข้อง สาบานตนแล้ว",
 };
 
 export function normalizeStatementHeader(

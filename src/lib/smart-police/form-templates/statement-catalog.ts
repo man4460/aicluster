@@ -9,7 +9,7 @@ export const SMART_POLICE_STATEMENT_TEMPLATES: StatementTemplateMeta[] = [
   {
     slug: "statement-complainant",
     title: "คำให้การผู้กล่าวหา",
-    description: "ใช้ฟอร์ม Word จริง (คำให้การผู้กล่าวหา.docx) — เติมข้อมูลคดี · พิมพ์ถาม–ตอบ · บันทึกแล้วได้ไฟล์ Word ในสำนวน",
+    description: "แม่แบบราชการตาม คำให้การผู้กล่าวหา.docx (ส ๕๖-๔) — ครุฑ · แถบซ้าย · จุดไข่ปลา · ถาม/ตอบ · บันทึกสำนวน",
     roles: ["COMPLAINANT"],
     blankFormId: "2",
   },

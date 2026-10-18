@@ -14,25 +14,24 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 }
 .sp-off * { box-sizing: border-box; }
 .sp-off-head { text-align: center; margin-bottom: 6px; }
-.sp-off-garuda { width: 52px; height: auto; display: block; margin: 0 auto 2px; }
-.sp-off-org { font-size: 15px; font-weight: 700; margin: 0; }
+.sp-off-garuda { width: 56px; height: auto; display: block; margin: 0 auto 2px; }
+.sp-off-org { font-size: 14.5px; font-weight: 700; margin: 0; }
 .sp-off-title {
-  font-size: 17px; font-weight: 700; margin: 4px 0 8px;
-  text-decoration: underline; text-underline-offset: 3px;
+  font-size: 15.5px; font-weight: 700; margin: 2px 0 8px;
 }
 .sp-off-grid {
   display: grid;
-  grid-template-columns: 58mm 1fr;
+  grid-template-columns: 46mm 1fr;
   gap: 0;
-  border-top: 1px solid #222;
-  min-height: 180mm;
+  min-height: 200mm;
 }
 .sp-off-side {
   border-right: 1px solid #222;
-  padding: 8px 8px 8px 0;
-  font-size: 14px;
+  padding: 4px 8px 8px 0;
+  font-size: 13.5px;
+  position: relative;
 }
-.sp-off-main { padding: 8px 0 8px 10px; font-size: 15px; }
+.sp-off-main { padding: 0 0 8px 10px; font-size: 14.5px; }
 .sp-off-field { margin-bottom: 10px; }
 .sp-off-label { font-weight: 700; display: inline; }
 .sp-off-dot, .sp-off-input {

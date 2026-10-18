@@ -56,6 +56,11 @@ export type StatementHeaderFields = {
   moo: string;
   tambon: string;
   amphoe: string;
+  villageHead: string;
+  kamnan: string;
+  fatherName: string;
+  motherName: string;
+  relationshipNote: string;
 };
 
 /** v1 — ถาม/ตอบอย่างเดียว (legacy) */
