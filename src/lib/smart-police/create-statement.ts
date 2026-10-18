@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
+import {
+  fillStatementDocument,
+  serializeStatementDocument,
+  statementDocumentTitle,
+  statementDocumentToPlainText,
+} from "@/lib/smart-police/form-templates";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail } from "@/lib/smart-police/serialize";
-import { buildStatementByCaseRelation } from "@/lib/smart-police/case-relation-statements";
 import { resolveInvestigatorName } from "@/lib/smart-police/generate-docs";
-import { statementTitleForRole } from "@/lib/smart-police/statement-form";
 import { appOriginFromRequest, generateStatementDocxFile } from "@/lib/smart-police/word-file";
 
 function formatThaiDate(d = new Date()): string {
@@ -37,32 +41,36 @@ export async function createStatementForParty(opts: {
   );
   const vars = buildSmartPolicePrintVars(profile, caseDetail, { investigator });
 
-  const evidenceSummary = caseDetail.evidence
-    .map((e, i) => `${i + 1}. ${e.name}${e.quantityLabel ? ` จำนวน ${e.quantityLabel}` : ""}`)
-    .join("\n");
-
-  const bodyText = buildStatementByCaseRelation({
+  const statementDoc = fillStatementDocument({
+    role: party.role,
+    stationName: profile.stationName,
+    stationAddress: profile.stationAddress,
+    province: profile.province,
+    commanderRank: profile.commanderRank,
+    commanderName: profile.commanderName,
     caseNumber: row.caseNumber,
     caseTitle: row.title,
-    chargeText: caseDetail.chargeText ?? "",
-    stationName: profile.stationName,
+    caseType: caseDetail.caseType,
+    chargeText: caseDetail.chargeText,
+    lawRefs: caseDetail.lawRefs,
     investigator,
     todayThai: vars.todayThai || formatThaiDate(),
-    behaviorText: caseDetail.behaviorText ?? caseDetail.summary ?? "",
     partyName: party.fullName,
     partyAge: party.age != null ? String(party.age) : "",
-    partyNationality: party.nationality ?? "",
-    partyIdCard: party.idCard ?? "",
-    partyAddress: party.address ?? "",
-    partyPhone: party.phone ?? "",
-    role: party.role,
-    caseRelation: party.caseRelation,
-    pleaStatus: party.pleaStatus,
-    occupation: party.occupation,
-    workplace: party.workplace,
-    evidenceSummary,
+    partyNationality: party.nationality,
+    partyIdCard: party.idCard,
+    partyAddress: party.address,
+    partyPhone: party.phone,
+    partyOccupation: party.occupation,
+    partyWorkplace: party.workplace,
+    partyCaseRelation: party.caseRelation,
+    partyPleaStatus: party.pleaStatus,
+    behaviorHint: caseDetail.behaviorText ?? caseDetail.summary,
   });
-  const title = `${statementTitleForRole(party.role)} — ${party.fullName}`;
+
+  const content = serializeStatementDocument(statementDoc);
+  const title = statementDocumentTitle(statementDoc, party.role);
+  const plainForWord = statementDocumentToPlainText(statementDoc);
 
   const maxSort = await prisma.smartPoliceDocument.aggregate({
     where: { caseId: opts.caseId },
@@ -75,7 +83,7 @@ export async function createStatementForParty(opts: {
       partyId: party.id,
       kind: "STATEMENT",
       title,
-      content: bodyText,
+      content,
       sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
     },
   });
@@ -89,7 +97,7 @@ export async function createStatementForParty(opts: {
       ownerUserId: opts.ownerUserId,
       caseId: opts.caseId,
       documentId: doc.id,
-      bodyText,
+      bodyText: plainForWord,
       appOrigin: opts.appOrigin,
       narrativePageUrl,
     });

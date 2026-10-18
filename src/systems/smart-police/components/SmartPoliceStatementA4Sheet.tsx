@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { SmartPoliceA4PreviewModel } from "@/lib/smart-police/document-a4-preview";
 import { cn } from "@/lib/cn";
 
@@ -66,32 +67,67 @@ export function SmartPoliceStatementA4Sheet({
         </p>
       ))}
 
-      <table className="mt-3 w-full border-collapse text-[15px]">
-        <thead>
-          <tr className="bg-sky-100">
-            <th className="w-12 border border-slate-700 px-2 py-1.5 text-center font-bold">ข้อ</th>
-            <th className="border border-slate-700 px-2 py-1.5 text-center font-bold">รายละเอียดคำให้การ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {model.statementItems.map((it) => {
-            const text = it.text.trim();
-            const empty = !text || /^[.\s…]+$/.test(text);
-            return (
-              <tr key={it.no}>
-                <td className="border border-slate-700 px-2 py-2 text-center font-semibold">{it.no}</td>
-                <td className="min-h-[2.5em] border border-slate-700 px-2 py-2 align-top">
-                  {empty ? (
-                    <span className="text-slate-400">…………………………………………………………………………………………………………</span>
-                  ) : (
-                    text
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {model.isStatementJson && model.statementPages.length > 0 ? (
+        <div className="mt-3 space-y-6">
+          {model.statementPages.map((page) => (
+            <div key={`page-${page.pageNo}`} className={page.pageNo > 1 ? "pt-4 border-t border-dashed border-slate-300" : ""}>
+              {page.pageTotal > 1 ? (
+                <p className="mb-2 text-center text-[12px] font-semibold text-[#4d47b6]">
+                  หน้า {page.pageNo} / {page.pageTotal}
+                </p>
+              ) : null}
+              <table className="w-full border-collapse text-[15px]">
+                <tbody>
+                  {page.qa.map((qa) => (
+                    <Fragment key={qa.no}>
+                      <tr>
+                        <td className="border border-slate-700 bg-sky-50 px-2 py-2 align-top font-semibold">
+                          ถาม {qa.no}. {qa.question.trim() || "…………………………………………"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="min-h-[2.5em] border border-slate-700 px-2 py-2 align-top whitespace-pre-wrap">
+                          ตอบ{" "}
+                          {qa.answer.trim()
+                            ? qa.answer
+                            : "…………………………………………………………………………………………………………"}
+                        </td>
+                      </tr>
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <table className="mt-3 w-full border-collapse text-[15px]">
+          <thead>
+            <tr className="bg-sky-100">
+              <th className="w-12 border border-slate-700 px-2 py-1.5 text-center font-bold">ข้อ</th>
+              <th className="border border-slate-700 px-2 py-1.5 text-center font-bold">รายละเอียดคำให้การ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {model.statementItems.map((it) => {
+              const text = it.text.trim();
+              const empty = !text || /^[.\s…]+$/.test(text);
+              return (
+                <tr key={it.no}>
+                  <td className="border border-slate-700 px-2 py-2 text-center font-semibold">{it.no}</td>
+                  <td className="min-h-[2.5em] border border-slate-700 px-2 py-2 align-top">
+                    {empty ? (
+                      <span className="text-slate-400">…………………………………………………………………………………………………………</span>
+                    ) : (
+                      text
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
 
       <div className="mt-4 space-y-2 text-justify">
         {model.bodyParagraphs.map((p) => (

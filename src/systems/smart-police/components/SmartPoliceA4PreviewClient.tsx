@@ -85,6 +85,14 @@ export function SmartPoliceA4PreviewClient({
             </span>
             ปิด
           </Link>
+          {model.editHref ? (
+            <Link
+              href={model.editHref}
+              className="inline-flex min-h-[40px] items-center rounded-xl border border-emerald-500/50 bg-emerald-600/80 px-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            >
+              แก้ไขคำให้การ
+            </Link>
+          ) : null}
           <button
             type="button"
             disabled={printBusy}

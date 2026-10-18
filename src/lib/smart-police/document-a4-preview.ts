@@ -1,5 +1,10 @@
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
+  parseStatementDocumentContent,
+  statementDocumentToPlainText,
+  type StatementDocumentContent,
+} from "@/lib/smart-police/form-templates";
+import {
   applySmartPoliceTemplate,
   buildSmartPolicePrintDocumentHtml,
   buildSmartPolicePrintVars,
@@ -22,6 +27,14 @@ export type SmartPoliceA4MetaRow = { label: string; value: string };
 
 export type SmartPoliceA4StatementItem = { no: number; text: string };
 
+export type SmartPoliceA4QaItem = { no: number; question: string; answer: string };
+
+export type SmartPoliceA4StatementPage = {
+  pageNo: number;
+  pageTotal: number;
+  qa: SmartPoliceA4QaItem[];
+};
+
 export type SmartPoliceA4SignatureBlock = {
   caption: string;
   nameLine: string;
@@ -32,6 +45,8 @@ export type SmartPoliceA4PreviewModel = {
   documentId: string;
   kind: SmartPoliceDocumentKind;
   isStatementForm: boolean;
+  /** คำให้การแบบ JSON หลายหน้า + ถาม/ตอบ */
+  isStatementJson: boolean;
   docRef: string;
   documentTitle: string;
   subtitle: string;
@@ -46,12 +61,14 @@ export type SmartPoliceA4PreviewModel = {
   metaRows: SmartPoliceA4MetaRow[];
   preamble: string[];
   statementItems: SmartPoliceA4StatementItem[];
+  statementPages: SmartPoliceA4StatementPage[];
   bodyParagraphs: string[];
   signatures: SmartPoliceA4SignatureBlock[];
   dateLine: string | null;
   footer: string | null;
   wordFileUrl: string | null;
   wordFileName: string | null;
+  editHref: string | null;
 };
 
 function escapeHtml(s: string): string {
@@ -147,6 +164,7 @@ export function buildSmartPoliceA4PreviewModel(opts: {
       documentId: document.id,
       kind: document.kind,
       isStatementForm: false,
+      isStatementJson: false,
       docRef: docRef(caseDetail.caseNumber, document.id),
       documentTitle: document.title,
       subtitle,
@@ -164,12 +182,14 @@ export function buildSmartPoliceA4PreviewModel(opts: {
       ],
       preamble: [],
       statementItems: [],
+      statementPages: [],
       bodyParagraphs: paragraphs,
       signatures: [],
       dateLine: formatThaiDate(new Date()),
       footer: profile.printFooter,
       wordFileUrl: document.wordFileUrl,
       wordFileName: document.wordFileName,
+      editHref: null,
     };
   }
 
@@ -238,6 +258,7 @@ export function buildSmartPoliceA4PreviewModel(opts: {
     documentId: document.id,
     kind: document.kind,
     isStatementForm: true,
+    isStatementJson: false,
     docRef: docRef(caseDetail.caseNumber, document.id),
     documentTitle: title,
     subtitle,
@@ -252,6 +273,7 @@ export function buildSmartPoliceA4PreviewModel(opts: {
     metaRows,
     preamble,
     statementItems: parseStatementItems(bodyText),
+    statementPages: [],
     bodyParagraphs: [
       "ข้าพเจ้าได้อ่านคำให้การนี้แล้ว ยืนยันว่าเป็นความจริงทุกประการ",
     ],
@@ -260,6 +282,89 @@ export function buildSmartPoliceA4PreviewModel(opts: {
     footer: profile.printFooter,
     wordFileUrl: document.wordFileUrl,
     wordFileName: document.wordFileName,
+    editHref: `/dashboard/smart-police/cases/${caseDetail.id}/documents/${document.id}/edit`,
+  };
+}
+
+function buildModelFromStatementJson(opts: {
+  profile: SmartPoliceProfileDto;
+  caseDetail: SmartPoliceCaseDetail;
+  document: SmartPoliceDocumentDto;
+  party: SmartPolicePartyDto | null;
+  json: StatementDocumentContent;
+}): SmartPoliceA4PreviewModel {
+  const { profile, caseDetail, document, party, json } = opts;
+  const h = json.header;
+  const commanderLine = h.commanderLine || null;
+  const title =
+    party != null
+      ? statementTitleForRole(party.role)
+      : document.title.split("—")[0]?.trim() || document.title;
+
+  let qNo = 1;
+  const statementPages: SmartPoliceA4StatementPage[] = json.pages.map((page, idx) => {
+    const qa = page.qa.map((item) => {
+      const row = {
+        no: qNo,
+        question: item.question.trim(),
+        answer: item.answer.trim(),
+      };
+      qNo += 1;
+      return row;
+    });
+    return {
+      pageNo: idx + 1,
+      pageTotal: json.pages.length,
+      qa,
+    };
+  });
+
+  const metaRows: SmartPoliceA4MetaRow[] = [
+    { label: "ชื่อ-สกุล", value: dottedValue(h.partyName, h.partyName || "…………") },
+    { label: "บทบาท", value: h.partyRoleLabel || "—" },
+    { label: "อายุ", value: h.partyAge ? `${h.partyAge} ปี` : dottedValue(null, "………… ปี") },
+    { label: "สัญชาติ", value: dottedValue(h.partyNationality) },
+    { label: "เลขบัตรประชาชน", value: dottedValue(h.partyIdCard) },
+    { label: "ที่อยู่", value: dottedValue(h.partyAddress) },
+    { label: "โทรศัพท์", value: dottedValue(h.partyPhone, "—") },
+    { label: "ข้อหา", value: dottedValue(h.chargeText, "—") },
+    { label: "พนักงานสอบสวน", value: dottedValue(h.investigator) },
+  ];
+
+  return {
+    caseId: caseDetail.id,
+    documentId: document.id,
+    kind: document.kind,
+    isStatementForm: true,
+    isStatementJson: true,
+    docRef: docRef(h.caseNumber || caseDetail.caseNumber, document.id),
+    documentTitle: title,
+    subtitle: `เลขที่คดี ${h.caseNumber || caseDetail.caseNumber} · ${h.caseType || caseDetail.caseType}`,
+    stationName: h.stationName || profile.stationName,
+    stationAddress: h.stationAddress || profile.stationAddress,
+    province: h.province || profile.province,
+    commanderLine,
+    caseNumber: h.caseNumber || caseDetail.caseNumber,
+    caseTitle: h.caseTitle || caseDetail.title,
+    caseType: h.caseType || caseDetail.caseType,
+    kindLabel: SMART_POLICE_DOCUMENT_KIND_LABEL.STATEMENT,
+    metaRows,
+    preamble: ["ข้าพเจ้าขอให้การต่อพนักงานสอบสวนว่า"],
+    statementItems: [],
+    statementPages,
+    bodyParagraphs: ["ข้าพเจ้าได้อ่านคำให้การนี้แล้ว ยืนยันว่าเป็นความจริงทุกประการ"],
+    signatures: [
+      { caption: "ลงชื่อผู้ให้การ", nameLine: h.partyName || "……………………………………" },
+      {
+        caption: "ลงชื่อพนักงานสอบสวน",
+        nameLine: h.investigator.trim() || "……………………………………",
+      },
+    ],
+    dateLine: h.todayThai || formatThaiDate(new Date()),
+    footer: profile.printFooter,
+    wordFileUrl: document.wordFileUrl,
+    wordFileName: document.wordFileName,
+    editHref: `/dashboard/smart-police/cases/${caseDetail.id}/documents/${document.id}/edit`,
   };
 }
 
@@ -273,6 +378,24 @@ export function buildSmartPoliceA4PreviewFromCase(opts: {
     : null;
 
   const vars = buildSmartPolicePrintVars(opts.profile, opts.caseDetail);
+  const json = parseStatementDocumentContent(opts.document.content);
+
+  if (opts.document.kind === "STATEMENT" && json) {
+    const model = buildModelFromStatementJson({
+      profile: opts.profile,
+      caseDetail: opts.caseDetail,
+      document: opts.document,
+      party,
+      json,
+    });
+    const bodyText = statementDocumentToPlainText(json);
+    return {
+      model,
+      bodyText,
+      printHtml: buildSmartPoliceStatementA4PrintHtml(model, bodyText),
+    };
+  }
+
   let bodyText = applySmartPoliceTemplate(opts.document.content, vars);
 
   if (opts.document.kind === "STATEMENT" && party) {
@@ -354,6 +477,13 @@ export const SMART_POLICE_A4_PRINT_CSS = `
   .spa4-sig .name { text-align: center; }
   .spa4-date { margin-top: 20px; text-align: center; font-size: 15pt; }
   .spa4-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 12pt; color: #64748b; text-align: center; }
+  .spa4-qa { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 15pt; }
+  .spa4-qa th, .spa4-qa td { border: 1px solid #334155; padding: 6px 8px; vertical-align: top; }
+  .spa4-qa th { background: #e0f2fe; font-weight: 700; text-align: left; }
+  .spa4-qa .q { background: #f0f9ff; font-weight: 600; }
+  .spa4-qa .a { min-height: 2.2em; white-space: pre-wrap; }
+  .spa4-page-label { text-align: center; font-size: 12pt; color: #475569; margin: 4px 0 10px; }
+  .spa4-break { page-break-before: always; break-before: page; }
 `;
 
 function metaRowsHtml(rows: SmartPoliceA4MetaRow[]): string {
@@ -376,10 +506,29 @@ function statementItemsHtml(items: SmartPoliceA4StatementItem[]): string {
   return `<table class="spa4-items"><thead><tr><th>ข้อ</th><th>รายละเอียดคำให้การ</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-export function buildSmartPoliceStatementA4PrintHtml(
-  model: SmartPoliceA4PreviewModel,
-  _bodyText: string,
-): string {
+function statementQaPagesHtml(pages: SmartPoliceA4StatementPage[]): string {
+  if (pages.length === 0) return "";
+  return pages
+    .map((page, idx) => {
+      const rows = page.qa
+        .map((qa) => {
+          const q = qa.question || "…………………………………………";
+          const a = qa.answer || "…………………………………………………………………………………………………………";
+          return `<tr><td class="q">ถาม ${qa.no}. ${escapeHtml(q)}</td></tr>
+<tr><td class="a">ตอบ ${escapeHtml(a)}</td></tr>`;
+        })
+        .join("");
+      const pageLabel =
+        page.pageTotal > 1
+          ? `<div class="spa4-page-label">หน้า ${page.pageNo} / ${page.pageTotal}</div>`
+          : "";
+      const breakClass = idx > 0 ? " spa4-break" : "";
+      return `<div class="spa4-qa-page${breakClass}">${pageLabel}<table class="spa4-qa"><tbody>${rows}</tbody></table></div>`;
+    })
+    .join("");
+}
+
+function statementSheetInnerHtml(model: SmartPoliceA4PreviewModel): string {
   const addr = [model.stationAddress, model.province].filter(Boolean).join(" ");
   const preamble = model.preamble.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
   const body = model.bodyParagraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
@@ -397,15 +546,12 @@ export function buildSmartPoliceStatementA4PrintHtml(
           <div class="spa4-sig"><div>ลงชื่อพนักงานสอบสวน</div><div class="line"></div><div class="name">(……………………………………)</div></div>
         </div>`;
 
-  return `<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="utf-8"/>
-<title>${escapeHtml(model.documentTitle)} — ${escapeHtml(model.caseNumber)}</title>
-<style>${SMART_POLICE_A4_PRINT_CSS}</style>
-</head>
-<body>
-<div class="spa4">
+  const qaOrItems =
+    model.isStatementJson && model.statementPages.length > 0
+      ? statementQaPagesHtml(model.statementPages)
+      : statementItemsHtml(model.statementItems);
+
+  return `
   <div class="spa4-head">
     <div class="spa4-logo">โลโก้</div>
     <div class="spa4-station">
@@ -423,11 +569,27 @@ export function buildSmartPoliceStatementA4PrintHtml(
   <div class="spa4-meta">${metaRowsHtml(model.metaRows)}</div>
   <hr class="spa4-rule"/>
   <div class="spa4-preamble">${preamble}</div>
-  ${statementItemsHtml(model.statementItems)}
+  ${qaOrItems}
   <div class="spa4-body">${body}</div>
   ${sigGrid}
   ${model.dateLine ? `<div class="spa4-date">วันที่ ${escapeHtml(model.dateLine)}</div>` : ""}
-  ${model.footer ? `<div class="spa4-footer">${escapeHtml(model.footer)}</div>` : ""}
+  ${model.footer ? `<div class="spa4-footer">${escapeHtml(model.footer)}</div>` : ""}`;
+}
+
+export function buildSmartPoliceStatementA4PrintHtml(
+  model: SmartPoliceA4PreviewModel,
+  _bodyText: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(model.documentTitle)} — ${escapeHtml(model.caseNumber)}</title>
+<style>${SMART_POLICE_A4_PRINT_CSS}</style>
+</head>
+<body>
+<div class="spa4">
+${statementSheetInnerHtml(model)}
 </div>
 <script>
 window.addEventListener("load", function () {

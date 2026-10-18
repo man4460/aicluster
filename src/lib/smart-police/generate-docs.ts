@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
-import { buildStatementByCaseRelation } from "@/lib/smart-police/case-relation-statements";
+import {
+  fillStatementDocument,
+  serializeStatementDocument,
+  statementDocumentTitle,
+  statementDocumentToPlainText,
+} from "@/lib/smart-police/form-templates";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail, type SmartPoliceCaseDetailRow } from "@/lib/smart-police/serialize";
-import { statementTitleForRole } from "@/lib/smart-police/statement-form";
 import {
   SMART_POLICE_CUSTODY_MODE_LABEL,
   SMART_POLICE_INVESTIGATION_RESULT_LABEL,
@@ -345,28 +349,35 @@ export async function generateSmartPoliceDocs(opts: {
 
   if (opts.kinds.includes("STATEMENT_ALL")) {
     for (const party of caseDetail.parties) {
-      const bodyText = buildStatementByCaseRelation({
+      const statementDoc = fillStatementDocument({
+        role: party.role,
+        stationName: profile.stationName,
+        stationAddress: profile.stationAddress,
+        province: profile.province,
+        commanderRank: profile.commanderRank,
+        commanderName: profile.commanderName,
         caseNumber: caseDetail.caseNumber,
         caseTitle: caseDetail.title,
-        chargeText: caseDetail.chargeText ?? "",
-        stationName: profile.stationName,
+        caseType: caseDetail.caseType,
+        chargeText: caseDetail.chargeText,
+        lawRefs: caseDetail.lawRefs,
         investigator,
         todayThai,
-        behaviorText: caseDetail.behaviorText ?? caseDetail.summary ?? "",
         partyName: party.fullName,
         partyAge: party.age != null ? String(party.age) : "",
-        partyNationality: party.nationality ?? "",
-        partyIdCard: party.idCard ?? "",
-        partyAddress: party.address ?? "",
-        partyPhone: party.phone ?? "",
-        role: party.role,
-        caseRelation: party.caseRelation,
-        pleaStatus: party.pleaStatus,
-        occupation: party.occupation,
-        workplace: party.workplace,
-        evidenceSummary: evidenceList,
+        partyNationality: party.nationality,
+        partyIdCard: party.idCard,
+        partyAddress: party.address,
+        partyPhone: party.phone,
+        partyOccupation: party.occupation,
+        partyWorkplace: party.workplace,
+        partyCaseRelation: party.caseRelation,
+        partyPleaStatus: party.pleaStatus,
+        behaviorHint: caseDetail.behaviorText ?? caseDetail.summary,
       });
-      const title = `${statementTitleForRole(party.role)} — ${party.fullName}`;
+      const content = serializeStatementDocument(statementDoc);
+      const title = statementDocumentTitle(statementDoc, party.role);
+      const plainForWord = statementDocumentToPlainText(statementDoc);
 
       const existing = await prisma.smartPoliceDocument.findFirst({
         where: { caseId: opts.caseId, kind: "STATEMENT", partyId: party.id },
@@ -377,7 +388,7 @@ export async function generateSmartPoliceDocs(opts: {
       if (existing) {
         doc = await prisma.smartPoliceDocument.update({
           where: { id: existing.id },
-          data: { title, content: bodyText },
+          data: { title, content },
         });
       } else {
         doc = await prisma.smartPoliceDocument.create({
@@ -386,7 +397,7 @@ export async function generateSmartPoliceDocs(opts: {
             partyId: party.id,
             kind: "STATEMENT",
             title,
-            content: bodyText,
+            content,
             sortOrder: await nextSort(opts.caseId),
           },
         });
@@ -398,7 +409,7 @@ export async function generateSmartPoliceDocs(opts: {
           ownerUserId: opts.ownerUserId,
           caseId: opts.caseId,
           documentId: doc.id,
-          bodyText,
+          bodyText: plainForWord,
           appOrigin: opts.appOrigin,
           narrativePageUrl,
         });

@@ -98,6 +98,10 @@ function documentPreviewHref(caseId: string, docId: string) {
   return `/dashboard/smart-police/cases/${caseId}/documents/${docId}`;
 }
 
+function documentEditHref(caseId: string, docId: string) {
+  return `/dashboard/smart-police/cases/${caseId}/documents/${docId}/edit`;
+}
+
 function toDateInput(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -380,7 +384,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     }
     const json = (await res.json()) as { document?: { id: string } };
     if (json.document?.id) {
-      router.push(documentPreviewHref(caseId, json.document.id));
+      router.push(documentEditHref(caseId, json.document.id));
       return;
     }
     await load();
@@ -1213,9 +1217,20 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                     </Link>
                   </div>
                   <div className={cn(smartPoliceToolbarRowClass, "shrink-0")}>
+                    {d.kind === "STATEMENT" ? (
+                      <Link
+                        href={documentEditHref(caseId, d.id)}
+                        className={cn(smartPolicePrimaryButtonClass, "inline-flex")}
+                      >
+                        แก้ไข
+                      </Link>
+                    ) : null}
                     <Link
                       href={documentPreviewHref(caseId, d.id)}
-                      className={cn(smartPolicePrimaryButtonClass, "inline-flex")}
+                      className={cn(
+                        d.kind === "STATEMENT" ? smartPoliceOutlineButtonClass : smartPolicePrimaryButtonClass,
+                        "inline-flex",
+                      )}
                     >
                       A4
                     </Link>
