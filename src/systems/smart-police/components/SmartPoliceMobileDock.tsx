@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
+import {
+  AppMobileDockShell,
+  appMobileDockGridClass,
+  appMobileDockLinkClass,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   IconSpCase,
@@ -25,12 +29,6 @@ function dockIcon(key: SmartPoliceMainKey) {
   return IconSpSettings;
 }
 
-function isActive(pathname: string, href: string, includes?: readonly string[]) {
-  if (href === "/dashboard/smart-police") return pathname === href;
-  if (includes?.some((p) => pathname.startsWith(p))) return true;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 export function SmartPoliceMobileDock() {
   const pathname = usePathname() ?? "";
   const activeMain = smartPoliceMainKeyFromPathname(pathname);
@@ -39,22 +37,20 @@ export function SmartPoliceMobileDock() {
     <AppMobileDockShell ariaLabel="เมนูล่าง Smart Police">
       <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
         {smartPoliceMainMenuItems.map((item) => {
-          const active = activeMain === item.key || isActive(pathname, item.href, item.includes);
+          const active = activeMain === item.key;
           const Icon = dockIcon(item.key);
           return (
             <li key={item.key} className="min-w-0">
               <Link
                 href={item.href}
-                className={cn(
-                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-0.5 py-1.5 text-center transition-all active:scale-90",
-                  active
-                    ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20"
-                    : "text-slate-500 hover:bg-white/45",
-                )}
                 aria-current={active ? "page" : undefined}
+                aria-label={item.label}
+                className={appMobileDockLinkClass(active)}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="max-w-full truncate text-[8px] font-black leading-none">{item.label}</span>
+                <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                  {item.label}
+                </span>
               </Link>
             </li>
           );

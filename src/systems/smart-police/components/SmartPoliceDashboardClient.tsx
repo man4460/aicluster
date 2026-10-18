@@ -6,11 +6,21 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
-  appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { IconSpCase, IconSpPlus, IconSpPrint } from "@/systems/smart-police/components/SmartPoliceIcons";
-import { smartPoliceHeroCardClass, smartPoliceStatCardClass } from "@/systems/smart-police/smart-police-tokens";
+import { IconSpCase, IconSpPlus, IconSpPrint, IconSpSettings } from "@/systems/smart-police/components/SmartPoliceIcons";
+import {
+  smartPoliceListRowClass,
+  smartPoliceMutedTextClass,
+  smartPoliceOutlineButtonClass,
+  smartPolicePageStackClass,
+  smartPolicePanelClass,
+  smartPolicePanelSectionClass,
+  smartPolicePrimaryButtonClass,
+  smartPolicePrimaryIconButtonClass,
+  smartPoliceStatInlineClass,
+  smartPoliceStatsGridClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 import { SMART_POLICE_CASE_STATUS_LABEL } from "@/lib/smart-police/types";
 import type { SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
@@ -53,86 +63,94 @@ export function SmartPoliceDashboardClient() {
   const s = data?.summary;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <section className={smartPoliceHeroCardClass}>
+    <div className={smartPolicePageStackClass}>
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <AppSectionHeader
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="ภาพรวมคดี"
-          description="จัดการสำนวน พิมพ์หมาย และรายงาน — เริ่มจากเปิดคดีใหม่หรือตั้งค่าหัวกระดาษสถานี"
+          description="เปิดคดีใหม่ หรือตั้งค่าหัวกระดาษสถานี"
           action={
-            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5">
               <Link
                 href="/dashboard/smart-police/settings"
-                className={cn(appTemplateOutlineButtonClass, "min-h-[40px] min-w-[40px] px-3 sm:min-w-0 sm:px-4")}
+                className={smartPoliceOutlineButtonClass}
                 aria-label="ตั้งค่าสถานี"
               >
+                <IconSpSettings className="h-4 w-4 sm:hidden" aria-hidden />
                 <span className="hidden sm:inline">ตั้งค่า</span>
-                <span className="sm:hidden">⚙</span>
               </Link>
               <Link
                 href="/dashboard/smart-police/cases"
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-2 rounded-xl px-3 sm:min-w-0 sm:px-4"
+                className={smartPoliceOutlineButtonClass}
                 aria-label="เปิดรายการคดี"
               >
-                <IconSpCase className="h-5 w-5 sm:hidden" />
+                <IconSpCase className="h-4 w-4 sm:hidden" aria-hidden />
                 <span className="hidden sm:inline">คดีทั้งหมด</span>
               </Link>
               <Link
                 href="/dashboard/smart-police/cases?new=1"
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl sm:min-w-0 sm:px-4"
+                className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
                 aria-label="เปิดคดีใหม่"
               >
-                <IconSpPlus className="h-5 w-5" />
-                <span className="hidden sm:inline">+ คดีใหม่</span>
+                <IconSpPlus className="h-4 w-4" aria-hidden />
+              </Link>
+              <Link
+                href="/dashboard/smart-police/cases?new=1"
+                className={cn(smartPolicePrimaryButtonClass, "hidden sm:inline-flex")}
+                aria-label="เปิดคดีใหม่"
+              >
+                <IconSpPlus className="h-3.5 w-3.5" aria-hidden />
+                คดีใหม่
               </Link>
             </div>
           }
         />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className={cn("mt-4", smartPoliceStatsGridClass)}>
           {[
             { label: "คดีทั้งหมด", value: s?.totalCases ?? "—" },
             { label: "เปิดคดี", value: s?.openCases ?? "—" },
             { label: "สอบสวน", value: s?.inProgress ?? "—" },
-            { label: "พิมพ์สะสม", value: s?.totalPrints ?? "—", icon: IconSpPrint },
-          ].map((card, i, arr) => (
-            <div
-              key={card.label}
-              className={cn(
-                smartPoliceStatCardClass,
-                arr.length % 2 === 1 && i === arr.length - 1 && "col-span-2 sm:col-span-1",
-              )}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[#8b87b8]">{card.label}</p>
-              <p className="mt-1 text-2xl font-black tabular-nums text-[#1e1b4b]">{card.value}</p>
+            { label: "พิมพ์สะสม", value: s?.totalPrints ?? "—", icon: true },
+          ].map((card) => (
+            <div key={card.label} className={smartPoliceStatInlineClass}>
+              <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#8b87b8]">
+                {"icon" in card && card.icon ? <IconSpPrint className="h-3 w-3" aria-hidden /> : null}
+                {card.label}
+              </p>
+              <p className="text-xl font-black tabular-nums text-[#1e1b4b] sm:text-2xl">{card.value}</p>
             </div>
           ))}
         </div>
       </section>
 
       <AppDashboardSection>
-        <AppSectionHeader title="คดีล่าสุด" description="อัปเดตล่าสุดจากระบบ" />
+        <AppSectionHeader
+          title="คดีล่าสุด"
+          description="อัปเดตล่าสุดจากระบบ"
+        />
         {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
         ) : !data?.recentCases.length ? (
           <AppEmptyState>ยังไม่มีคดี — กด «คดีใหม่» เพื่อเริ่มบันทึกสำนวน</AppEmptyState>
         ) : (
-          <ul className="space-y-2">
+          <ul className="mt-3 space-y-2">
             {data.recentCases.map((c) => (
               <li key={c.id}>
-                <Link
-                  href={`/dashboard/smart-police/cases/${c.id}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 transition hover:bg-white/80"
-                >
+                <Link href={`/dashboard/smart-police/cases/${c.id}`} className={smartPoliceListRowClass}>
                   <div className="min-w-0 text-left">
-                    <p className="truncate font-semibold text-[#1e1b4b]">
-                      {c.caseNumber} · {c.title}
+                    <p className="truncate text-sm font-bold text-[#1e1b4b]">
+                      <span className="text-[#4d47b6]">{c.caseNumber}</span>
+                      <span className="mx-1.5 text-slate-300" aria-hidden>
+                        ·
+                      </span>
+                      {c.title}
                     </p>
-                    <p className="text-xs text-[#66638c]">
+                    <p className="mt-0.5 text-xs font-medium text-[#66638c]">
                       {SMART_POLICE_CASE_STATUS_LABEL[c.status]} · {c.documentCount} เอกสาร
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-[#8b87b8]">เปิด →</span>
+                  <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิด →</span>
                 </Link>
               </li>
             ))}

@@ -3,11 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppDashboardSection, AppEmptyState, AppSectionHeader } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
 import {
   SMART_POLICE_DOCUMENT_KIND_LABEL,
 } from "@/lib/smart-police/types";
 import type { SmartPoliceTemplateDto } from "@/lib/smart-police/types";
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
+import {
+  smartPoliceFieldClass,
+  smartPoliceLabelClass,
+  smartPoliceListRowClass,
+  smartPoliceMutedTextClass,
+  smartPoliceOutlineButtonClass,
+  smartPolicePrimaryButtonClass,
+  smartPoliceSubtitleClass,
+  smartPoliceTextareaClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 
 export function SmartPoliceTemplatesClient() {
   const [templates, setTemplates] = useState<SmartPoliceTemplateDto[]>([]);
@@ -65,13 +76,17 @@ export function SmartPoliceTemplatesClient() {
       <AppDashboardSection>
         <AppSectionHeader
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="แม่แบบเอกสาร"
-          description="สำนวน คำให้การ หมายเรียก — มีแม่แบบระบบให้แล้ว · ใช้ตัวแปร {{caseNumber}} {{partyName}}"
+          description={
+            <span className={smartPoliceSubtitleClass}>
+              สำนวน คำให้การ หมายเรียก — มีแม่แบบระบบให้แล้ว · ใช้ตัวแปร {"{{caseNumber}}"} {"{{partyName}}"}
+            </span>
+          }
           action={
             <button
               type="button"
-              className="app-btn-primary min-h-[40px] rounded-xl px-4"
+              className={smartPolicePrimaryButtonClass}
               onClick={() => {
                 setEditingId(null);
                 setForm({ kind: "NARRATIVE", name: "", content: "" });
@@ -83,21 +98,18 @@ export function SmartPoliceTemplatesClient() {
           }
         />
         {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
         ) : templates.length === 0 ? (
           <AppEmptyState>ไม่มีแม่แบบ</AppEmptyState>
         ) : (
           <ul className="space-y-2">
             {templates.map((t) => (
-              <li
-                key={t.id}
-                className="flex flex-col gap-2 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between"
-              >
+              <li key={t.id} className={smartPoliceListRowClass}>
                 <div className="min-w-0">
                   <p className="font-semibold text-[#1e1b4b]">
                     {t.name}
                     {t.isBuiltin ? (
-                      <span className="ml-2 rounded-lg bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
+                      <span className="ml-2 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
                         ระบบ
                       </span>
                     ) : null}
@@ -110,14 +122,14 @@ export function SmartPoliceTemplatesClient() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="app-btn-soft min-h-[40px] rounded-xl px-3 text-sm"
+                    className={smartPoliceOutlineButtonClass}
                     onClick={() => void toggleActive(t)}
                   >
                     {t.isActive ? "ปิด" : "เปิด"}
                   </button>
                   <button
                     type="button"
-                    className="app-btn-primary min-h-[40px] rounded-xl px-3 text-sm"
+                    className={smartPolicePrimaryButtonClass}
                     onClick={() => {
                       setEditingId(t.id);
                       setForm({ kind: t.kind, name: t.name, content: t.content });
@@ -135,10 +147,10 @@ export function SmartPoliceTemplatesClient() {
 
       <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "แก้แม่แบบ" : "แม่แบบใหม่"}>
         <div className="space-y-3 text-left">
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ประเภท
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.kind}
               onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))}
             >
@@ -149,14 +161,18 @@ export function SmartPoliceTemplatesClient() {
               ))}
             </select>
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ชื่อ *
-            <input className="app-input mt-1 w-full rounded-xl" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            <input
+              className={cn(smartPoliceFieldClass, "mt-1")}
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             เนื้อหา
             <textarea
-              className="app-input mt-1 min-h-[220px] w-full rounded-xl font-mono text-sm"
+              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[13.75rem] font-mono text-sm")}
               value={form.content}
               onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
             />

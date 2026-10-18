@@ -8,7 +8,6 @@ import {
   AppSectionHeader,
   AppTime24Input,
   openPrintableHtml,
-  appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
@@ -32,7 +31,26 @@ import type {
   SmartPolicePartyDto,
 } from "@/lib/smart-police/types";
 import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
-import { smartPoliceInnerCardClass } from "@/systems/smart-police/smart-police-tokens";
+import {
+  smartPoliceFieldClass,
+  smartPoliceLabelClass,
+  smartPoliceListRowAccentClass,
+  smartPoliceListRowClass,
+  smartPoliceMobileSelectClass,
+  smartPoliceMutedTextClass,
+  smartPoliceOutlineButtonClass,
+  smartPolicePageStackClass,
+  smartPolicePanelClass,
+  smartPolicePanelSectionClass,
+  smartPolicePrimaryButtonClass,
+  smartPolicePrimaryTabPillClass,
+  smartPolicePrimaryTabShellClass,
+  smartPoliceRowIconButtonClass,
+  smartPoliceRowRemoveIconButtonClass,
+  smartPoliceSubtitleClass,
+  smartPoliceTextareaClass,
+  smartPoliceToastSuccessClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 import type {
   SmartPoliceCaseStatus,
   SmartPoliceCustodyMode,
@@ -41,12 +59,7 @@ import type {
   SmartPolicePartyRole,
   SmartPoliceWitnessSide,
 } from "@/generated/prisma/enums";
-import {
-  assetRowEditIconButtonClass,
-  assetRowRemoveIconButtonClass,
-  IconRowEdit,
-  IconRowRemove,
-} from "@/systems/asset/components/AssetRowActionIcons";
+import { IconRowEdit, IconRowRemove } from "@/systems/asset/components/AssetRowActionIcons";
 
 type CaseTab = "info" | "parties" | "evidence" | "behavior" | "docs";
 
@@ -318,7 +331,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     showToast("สร้างคำให้การแล้ว");
   }
 
-  if (loading) return <p className="text-sm text-[#66638c]">กำลังโหลดคดี…</p>;
+  if (loading) return <p className={smartPoliceMutedTextClass}>กำลังโหลดคดี…</p>;
   if (!data) {
     return (
       <p className="text-sm text-rose-600">
@@ -336,14 +349,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {toast ? (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
-          {toast}
-        </p>
-      ) : null}
+    <div className={smartPolicePageStackClass}>
+      {toast ? <p className={smartPoliceToastSuccessClass}>{toast}</p> : null}
 
-      <div className={smartPoliceInnerCardClass}>
+      <div className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 text-left">
             <p className="text-xs font-bold text-[#4d47b6]">{data.caseNumber}</p>
@@ -361,10 +370,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
       <AppDashboardSection>
         <div className="mb-3 sm:hidden">
-          <label className="text-xs font-semibold text-[#66638c]">
+          <label className={smartPoliceLabelClass}>
             ส่วนสำนวน
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceMobileSelectClass, "mt-1")}
               value={tab}
               onChange={(e) => setTab(e.target.value as CaseTab)}
             >
@@ -377,19 +386,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           </label>
         </div>
         <div className="mb-4 hidden sm:block">
-          <nav role="tablist" className="flex flex-wrap gap-2" aria-label="ส่วนสำนวน">
+          <nav role="tablist" className={smartPolicePrimaryTabShellClass} aria-label="ส่วนสำนวน">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 role="tab"
                 aria-selected={tab === t.key}
-                className={cn(
-                  "min-h-10 rounded-xl px-3.5 text-sm font-semibold",
-                  tab === t.key
-                    ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                    : "border border-white/60 bg-white/70 text-[#4d47b6]",
-                )}
+                className={smartPolicePrimaryTabPillClass(tab === t.key)}
                 onClick={() => setTab(t.key)}
               >
                 {t.label}
@@ -400,10 +404,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
         {tab === "info" ? (
           <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               สถานะ
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.status}
                 onChange={(e) => void patchCase({ status: e.target.value })}
               >
@@ -414,10 +418,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ประเภทคดี
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.caseType}
                 onChange={(e) => void patchCase({ caseType: e.target.value })}
               >
@@ -428,10 +432,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               อำนาจศาล
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.courtType ?? "จังหวัด"}
                 onChange={(e) => void patchCase({ courtType: e.target.value })}
               >
@@ -442,10 +446,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               การควบคุมผู้ต้องหา
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.custodyMode ?? ""}
                 onChange={(e) =>
                   void patchCase({ custodyMode: e.target.value || null })
@@ -461,11 +465,11 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 )}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ข้อหา
               <div className="mt-1 flex flex-col gap-2 sm:flex-row">
                 <input
-                  className="app-input w-full flex-1 rounded-xl"
+                  className={cn(smartPoliceFieldClass, "flex-1")}
                   defaultValue={data.chargeText ?? ""}
                   key={`charge-${data.updatedAt}`}
                   onBlur={(e) => {
@@ -476,7 +480,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 />
                 <button
                   type="button"
-                  className="app-btn-primary shrink-0 rounded-xl px-3 text-xs font-semibold"
+                  className={cn(smartPolicePrimaryButtonClass, "shrink-0")}
                   onClick={() => setChargePickerOpen(true)}
                 >
                   เลือกจากคลัง
@@ -486,10 +490,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 เลือกจากคลังข้อหา หรือพิมพ์แก้ไขเองได้
               </p>
             </label>
-            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               กฎหมายที่อ้าง
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 defaultValue={data.lawRefs ?? ""}
                 key={`law-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -497,11 +501,11 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }}
               />
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               วันรับคดี
               <input
                 type="date"
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={toDateInput(data.receivedAt)}
                 onChange={(e) =>
                   void patchCase({
@@ -510,7 +514,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }
               />
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               เวลารับคดี (ไทย)
               <div className="mt-1">
                 <AppTime24Input
@@ -519,10 +523,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 />
               </div>
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ปจว. ข้อรับคดี
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 defaultValue={data.dailyLogNo ?? ""}
                 key={`log-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -532,10 +536,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }}
               />
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               พนักงานสอบสวนเจ้าของคดี
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.investigatorOfficerId ?? ""}
                 onChange={(e) =>
                   void patchCase({ investigatorOfficerId: e.target.value || null })
@@ -549,11 +553,11 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               วันเกิดเหตุ
               <input
                 type="date"
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={toDateInput(data.incidentAt)}
                 onChange={(e) =>
                   void patchCase({
@@ -562,10 +566,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }
               />
             </label>
-            <label className="text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ผลชั้นสอบสวน
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={data.investigationResult}
                 onChange={(e) => void patchCase({ investigationResult: e.target.value })}
               >
@@ -578,10 +582,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ที่เกิดเหตุ
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 defaultValue={data.incidentPlace ?? ""}
                 key={`place-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -591,10 +595,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }}
               />
             </label>
-            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               สรุปสั้น
               <textarea
-                className="app-input mt-1 min-h-[64px] w-full rounded-xl"
+                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4rem]")}
                 defaultValue={data.summary ?? ""}
                 key={`sum-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -611,11 +615,15 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               className="flex flex-row items-start justify-between gap-3"
               actionWrapClassName="shrink-0"
               title="บุคคลในคดี"
-              description="ระบุ «เกี่ยวกับคดี» ให้ถูกต้อง — ใช้สร้างคำให้การอัตโนมัติ"
+              description={
+                <span className={smartPoliceSubtitleClass}>
+                  ระบุ «เกี่ยวกับคดี» ให้ถูกต้อง — ใช้สร้างคำให้การอัตโนมัติ
+                </span>
+              }
               action={
                 <button
                   type="button"
-                  className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
+                  className={smartPolicePrimaryButtonClass}
                   onClick={() => {
                     setEditingPartyId(null);
                     setPartyForm(emptyParty);
@@ -630,7 +638,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               {data.parties.map((p) => (
                 <li
                   key={p.id}
-                  className="flex flex-col gap-2 rounded-xl border border-l-[3px] border-violet-200 border-l-violet-500 bg-violet-50/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  className={cn(
+                    smartPoliceListRowAccentClass("violet"),
+                    "flex-col sm:flex-row sm:items-center sm:justify-between",
+                  )}
                 >
                   <div className="min-w-0 text-left text-sm">
                     <p className="font-semibold text-[#1e1b4b]">
@@ -649,7 +660,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <button
                       type="button"
-                      className="app-btn-primary rounded-xl px-3 py-2 text-xs"
+                      className={smartPolicePrimaryButtonClass}
                       disabled={genBusy}
                       onClick={() => void createStatementForParty(p.id)}
                     >
@@ -657,7 +668,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                     </button>
                     <button
                       type="button"
-                      className={assetRowEditIconButtonClass}
+                      className={smartPoliceRowIconButtonClass}
                       aria-label={`แก้ไข ${p.fullName}`}
                       onClick={() => openEditParty(p)}
                     >
@@ -665,7 +676,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                     </button>
                     <button
                       type="button"
-                      className={assetRowRemoveIconButtonClass}
+                      className={smartPoliceRowRemoveIconButtonClass}
                       aria-label={`ลบ ${p.fullName}`}
                       onClick={() => void deleteParty(p)}
                     >
@@ -675,7 +686,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </li>
               ))}
               {data.parties.length === 0 ? (
-                <p className="text-sm text-[#66638c]">ยังไม่มีรายชื่อ</p>
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีรายชื่อ</p>
               ) : null}
             </ul>
           </div>
@@ -690,7 +701,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               action={
                 <button
                   type="button"
-                  className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
+                  className={smartPolicePrimaryButtonClass}
                   onClick={() => {
                     setEditingEvidenceId(null);
                     setEvidenceForm(emptyEvidence);
@@ -705,7 +716,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               {data.evidence.map((e) => (
                 <li
                   key={e.id}
-                  className="flex items-start justify-between gap-2 rounded-xl border border-l-[3px] border-amber-200 border-l-amber-500 bg-amber-50/40 px-3 py-2"
+                  className={smartPoliceListRowAccentClass("amber")}
                 >
                   <div className="min-w-0 text-left text-sm">
                     <p className="font-semibold text-[#1e1b4b]">
@@ -721,7 +732,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
-                      className={assetRowEditIconButtonClass}
+                      className={smartPoliceRowIconButtonClass}
                       aria-label={`แก้ไข ${e.name}`}
                       onClick={() => openEditEvidence(e)}
                     >
@@ -729,7 +740,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                     </button>
                     <button
                       type="button"
-                      className={assetRowRemoveIconButtonClass}
+                      className={smartPoliceRowRemoveIconButtonClass}
                       aria-label={`ลบ ${e.name}`}
                       onClick={() => void deleteEvidence(e)}
                     >
@@ -739,7 +750,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </li>
               ))}
               {data.evidence.length === 0 ? (
-                <p className="text-sm text-[#66638c]">ยังไม่มีของกลาง</p>
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีของกลาง</p>
               ) : null}
             </ul>
           </div>
@@ -747,14 +758,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
         {tab === "behavior" ? (
           <div role="tabpanel" className="space-y-3 text-left">
-            <label className="block text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               พฤติการณ์
               <div className="mt-1 flex flex-wrap gap-2">
                 {SMART_POLICE_SAMPLE_BEHAVIORS.map((b) => (
                   <button
                     key={b}
                     type="button"
-                    className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 text-xs")}
+                    className={smartPoliceOutlineButtonClass}
                     onClick={() => void patchCase({ behaviorText: b })}
                   >
                     ใส่ตัวอย่างยาบ้า
@@ -762,7 +773,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </div>
               <textarea
-                className="app-input mt-2 min-h-[120px] w-full rounded-xl"
+                className={cn(smartPoliceTextareaClass, "mt-2 min-h-[7.5rem]")}
                 defaultValue={data.behaviorText ?? ""}
                 key={`beh-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -772,10 +783,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }}
               />
             </label>
-            <label className="block text-sm text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ความเสียหาย (ถ้ามี)
               <textarea
-                className="app-input mt-1 min-h-[64px] w-full rounded-xl"
+                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4rem]")}
                 defaultValue={data.damageNote ?? ""}
                 key={`dmg-${data.updatedAt}`}
                 onBlur={(e) => {
@@ -788,7 +799,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 type="button"
-                className="app-btn-primary rounded-xl px-4 py-2 text-sm"
+                className={smartPolicePrimaryButtonClass}
                 disabled={genBusy}
                 onClick={() => void generateDocs(["MEMO"])}
               >
@@ -796,7 +807,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               </button>
               <button
                 type="button"
-                className={cn(appTemplateOutlineButtonClass, "rounded-xl px-4 py-2 text-sm")}
+                className={smartPoliceOutlineButtonClass}
                 disabled={genBusy}
                 onClick={() =>
                   void generateDocs(["STATEMENT_ALL", "MEMO", "INVESTIGATION_REPORT", "PROPERTY_LIST"])
@@ -818,7 +829,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
-                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    className={smartPoliceOutlineButtonClass}
                     disabled={genBusy}
                     onClick={() => void generateDocs(["STATEMENT_ALL"])}
                   >
@@ -826,7 +837,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   </button>
                   <button
                     type="button"
-                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    className={smartPoliceOutlineButtonClass}
                     disabled={genBusy}
                     onClick={() => void generateDocs(["PROPERTY_LIST"])}
                   >
@@ -834,7 +845,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   </button>
                   <button
                     type="button"
-                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    className={smartPoliceOutlineButtonClass}
                     disabled={genBusy}
                     onClick={() => void generateDocs(["INVESTIGATION_REPORT"])}
                   >
@@ -842,7 +853,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   </button>
                   <button
                     type="button"
-                    className="app-btn-primary min-h-[40px] rounded-xl px-3 text-xs"
+                    className={smartPolicePrimaryButtonClass}
                     onClick={() => {
                       setEditingDocId(null);
                       setDocForm({ kind: "NARRATIVE", title: "", content: "" });
@@ -861,7 +872,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   <button
                     key={t.id}
                     type="button"
-                    className={cn(appTemplateOutlineButtonClass, "rounded-lg px-2 py-1 text-[11px]")}
+                    className={cn(smartPoliceOutlineButtonClass, "px-2 text-[11px]")}
                     onClick={() => {
                       setDocForm({ kind: t.kind, title: t.name, content: t.content });
                       setEditingDocId(null);
@@ -877,7 +888,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               {data.documents.map((d) => (
                 <li
                   key={d.id}
-                  className="flex flex-col gap-2 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className={smartPoliceListRowClass}
                 >
                   <div className="min-w-0 text-left">
                     <p className="text-xs font-bold text-[#4d47b6]">
@@ -893,20 +904,20 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Link
                       href={documentPreviewHref(caseId, d.id)}
-                      className="app-btn-primary inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs"
+                      className={cn(smartPolicePrimaryButtonClass, "inline-flex")}
                     >
                       A4
                     </Link>
                     <button
                       type="button"
-                      className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
+                      className={smartPoliceOutlineButtonClass}
                       onClick={() => void printDoc(d.id)}
                     >
                       พิมพ์
                     </button>
                     <button
                       type="button"
-                      className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
+                      className={smartPoliceOutlineButtonClass}
                       onClick={() => {
                         setEditingDocId(d.id);
                         setDocForm({ kind: d.kind, title: d.title, content: d.content });
@@ -919,7 +930,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </li>
               ))}
               {data.documents.length === 0 ? (
-                <p className="text-sm text-[#66638c]">ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือปุ่มด้านบน</p>
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือปุ่มด้านบน</p>
               ) : null}
             </ul>
           </div>
@@ -942,10 +953,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         }
       >
         <div className="grid gap-3 text-left sm:grid-cols-2">
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             บทบาท
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.role}
               onChange={(e) =>
                 setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))
@@ -958,10 +969,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             เกี่ยวกับคดี *
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.caseRelation}
               onChange={(e) => setPartyForm((f) => ({ ...f, caseRelation: e.target.value }))}
             >
@@ -973,35 +984,35 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               ))}
             </select>
           </label>
-          <label className="text-sm sm:col-span-2">
+          <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
             ชื่อ *
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.fullName}
               onChange={(e) => setPartyForm((f) => ({ ...f, fullName: e.target.value }))}
             />
           </label>
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             อายุ
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.age}
               onChange={(e) => setPartyForm((f) => ({ ...f, age: e.target.value }))}
             />
           </label>
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             เลขบัตร
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.idCard}
               onChange={(e) => setPartyForm((f) => ({ ...f, idCard: e.target.value }))}
             />
           </label>
           {partyForm.role === "WITNESS" ? (
-            <label className="text-sm">
+            <label className={smartPoliceLabelClass}>
               พยานฝ่าย
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={partyForm.witnessSide}
                 onChange={(e) =>
                   setPartyForm((f) => ({
@@ -1017,10 +1028,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             </label>
           ) : null}
           {partyForm.role === "SUSPECT" ? (
-            <label className="text-sm">
+            <label className={smartPoliceLabelClass}>
               ผู้ต้องหาให้การ
               <select
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={partyForm.pleaStatus}
                 onChange={(e) => setPartyForm((f) => ({ ...f, pleaStatus: e.target.value }))}
               >
@@ -1033,26 +1044,26 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               </select>
             </label>
           ) : null}
-          <label className="text-sm sm:col-span-2">
+          <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
             ที่อยู่
             <textarea
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.address}
               onChange={(e) => setPartyForm((f) => ({ ...f, address: e.target.value }))}
             />
           </label>
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             อาชีพ
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.occupation}
               onChange={(e) => setPartyForm((f) => ({ ...f, occupation: e.target.value }))}
             />
           </label>
-          <label className="text-sm">
+          <label className={smartPoliceLabelClass}>
             ที่ทำงาน/ตำแหน่ง
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={partyForm.workplace}
               onChange={(e) => setPartyForm((f) => ({ ...f, workplace: e.target.value }))}
             />
@@ -1076,50 +1087,50 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         }
       >
         <div className="space-y-3 text-left">
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             รายการ *
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.name}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             จำนวน (เช่น 10 เม็ด)
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.quantityLabel}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             เลขยึด
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.seizureNo}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ยึด/ได้จาก
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.seizedFrom}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ผู้ถือกรรมสิทธิ์
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.ownerName}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             เหตุที่ไปอยู่ที่ผู้ต้องหา
             <textarea
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={evidenceForm.ownerNote}
               onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
             />
@@ -1143,10 +1154,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         }
       >
         <div className="space-y-3 text-left">
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ประเภท
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={docForm.kind}
               onChange={(e) =>
                 setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
@@ -1161,18 +1172,18 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               )}
             </select>
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ชื่อเอกสาร
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={docForm.title}
               onChange={(e) => setDocForm((f) => ({ ...f, title: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             เนื้อหา
             <textarea
-              className="app-input mt-1 min-h-[200px] w-full rounded-xl font-mono text-sm"
+              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[12.5rem] font-mono text-sm")}
               value={docForm.content}
               onChange={(e) => setDocForm((f) => ({ ...f, content: e.target.value }))}
             />

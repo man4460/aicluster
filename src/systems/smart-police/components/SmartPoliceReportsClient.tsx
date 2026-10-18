@@ -4,9 +4,17 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AppCompareBarList, AppDashboardSection, AppSectionHeader } from "@/components/app-templates";
 import { SMART_POLICE_CASE_STATUS_LABEL, SMART_POLICE_DOCUMENT_KIND_LABEL } from "@/lib/smart-police/types";
-import { smartPoliceStatCardClass } from "@/systems/smart-police/smart-police-tokens";
 import { cn } from "@/lib/cn";
 import type { SmartPoliceCaseStatus, SmartPoliceDocumentKind } from "@/generated/prisma/enums";
+import {
+  smartPoliceIconButtonClass,
+  smartPoliceListRowClass,
+  smartPoliceMutedTextClass,
+  smartPolicePageStackClass,
+  smartPoliceStatInlineClass,
+  smartPoliceStatsGridClass,
+  smartPoliceSubtitleClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 
 type Overview = {
   summary: {
@@ -64,28 +72,30 @@ export function SmartPoliceReportsClient() {
     : [];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className={smartPolicePageStackClass}>
       <AppDashboardSection>
         <AppSectionHeader
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="รายงานสรุป"
-          description="ภาพรวมคดี เอกสาร และการพิมพ์"
+          description={
+            <span className={smartPoliceSubtitleClass}>ภาพรวมคดี เอกสาร และการพิมพ์</span>
+          }
           action={
             <button
               type="button"
-              className="app-btn-soft min-h-[40px] min-w-[40px] rounded-xl sm:min-w-0 sm:px-4"
+              className={cn(smartPoliceIconButtonClass, "sm:min-w-0 sm:px-3")}
               aria-label="รีเฟรชข้อมูลรายงาน"
               disabled={loading}
               aria-busy={loading}
               onClick={() => void load()}
             >
               <span className={cn(loading && "inline-block animate-spin")}>↻</span>
-              <span className="hidden sm:inline sm:ml-1.5">รีเฟรช</span>
+              <span className="hidden sm:inline">รีเฟรช</span>
             </button>
           }
         />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className={cn("mt-4", smartPoliceStatsGridClass)}>
           {[
             { label: "คดีทั้งหมด", value: s?.totalCases ?? 0 },
             { label: "ปิดคดี", value: s?.closed ?? 0 },
@@ -94,7 +104,7 @@ export function SmartPoliceReportsClient() {
             <div
               key={c.label}
               className={cn(
-                smartPoliceStatCardClass,
+                smartPoliceStatInlineClass,
                 arr.length % 2 === 1 && i === arr.length - 1 && "col-span-2 sm:col-span-1",
                 "span" in c && c.span && "col-span-2 sm:col-span-1",
               )}
@@ -130,18 +140,22 @@ export function SmartPoliceReportsClient() {
 
       <AppDashboardSection>
         <AppSectionHeader title="คดีล่าสุดในรายงาน" />
-        <ul className="space-y-2">
-          {(data?.recentCases ?? []).map((c) => (
-            <li key={c.id}>
-              <Link
-                href={`/dashboard/smart-police/cases/${c.id}`}
-                className="block rounded-xl border border-white/50 bg-white/50 px-3 py-2 text-left text-sm hover:bg-white/80"
-              >
-                {c.caseNumber} — {c.title} ({c.documentCount} เอกสาร)
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {loading && !data ? (
+          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
+        ) : (
+          <ul className="space-y-2">
+            {(data?.recentCases ?? []).map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/dashboard/smart-police/cases/${c.id}`}
+                  className={cn(smartPoliceListRowClass, "block text-sm")}
+                >
+                  {c.caseNumber} — {c.title} ({c.documentCount} เอกสาร)
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </AppDashboardSection>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AppEmptyState, appTemplateOutlineButtonClass } from "@/components/app-templates";
+import { AppEmptyState } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
@@ -9,11 +9,23 @@ import {
   type SmartPoliceChargeDto,
 } from "@/lib/smart-police/types";
 import {
-  assetRowEditIconButtonClass,
-  assetRowRemoveIconButtonClass,
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import {
+  smartPoliceFieldClass,
+  smartPoliceFilterChipClass,
+  smartPoliceFilterChipShellClass,
+  smartPoliceLabelClass,
+  smartPoliceListRowAccentClass,
+  smartPoliceMutedTextClass,
+  smartPoliceOutlineButtonClass,
+  smartPolicePrimaryButtonClass,
+  smartPoliceRowIconButtonClass,
+  smartPoliceRowRemoveIconButtonClass,
+  smartPoliceSubtitleClass,
+  smartPoliceTextareaClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 
 const emptyForm = {
   category: "ทั่วไป",
@@ -102,34 +114,25 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-[#66638c]">
+        <p className={smartPoliceSubtitleClass}>
           คลังข้อหาระบบ + ข้อหาที่สถานีเพิ่มเอง · ใช้เลือกตอนกรอกข้อมูลคดี
         </p>
-        <button
-          type="button"
-          className="app-btn-primary min-h-[40px] shrink-0 rounded-xl px-4 text-sm"
-          onClick={openAdd}
-        >
+        <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>
           + เพิ่มข้อหาสถานี
         </button>
       </div>
 
       <input
-        className="app-input min-h-[44px] w-full rounded-xl"
+        className={smartPoliceFieldClass}
         placeholder="ค้นหาข้อหา / กฎหมาย / คำค้น"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className={smartPoliceFilterChipShellClass}>
         <button
           type="button"
-          className={cn(
-            "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold",
-            !category
-              ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-              : "border border-white/60 bg-white/70 text-[#4d47b6]",
-          )}
+          className={smartPoliceFilterChipClass(!category)}
           onClick={() => setCategory("")}
         >
           ทั้งหมด
@@ -138,12 +141,7 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
           <button
             key={c}
             type="button"
-            className={cn(
-              "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold",
-              category === c
-                ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                : "border border-white/60 bg-white/70 text-[#4d47b6]",
-            )}
+            className={smartPoliceFilterChipClass(category === c)}
             onClick={() => setCategory(c)}
           >
             {c}
@@ -152,17 +150,14 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
       </div>
 
       {loading ? (
-        <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+        <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
       ) : charges.length === 0 ? (
         <AppEmptyState tone="violet">ไม่พบข้อหา</AppEmptyState>
       ) : (
         <ul className="max-h-[55vh] space-y-2 overflow-y-auto">
           {charges.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-start justify-between gap-2 rounded-xl border border-l-[3px] border-sky-200 border-l-sky-500 bg-sky-50/40 px-3 py-2"
-            >
-              <div className="min-w-0 text-left text-sm">
+            <li key={c.id} className={smartPoliceListRowAccentClass("sky")}>
+              <div className="min-w-0 flex-1 text-left text-sm">
                 <p className="text-[10px] font-bold text-[#4d47b6]">
                   {c.category}
                   {c.isBuiltin ? " · ระบบ" : " · สถานี"}
@@ -175,23 +170,28 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
-                    className={assetRowEditIconButtonClass}
+                    className={smartPoliceRowIconButtonClass}
                     aria-label={`แก้ไข ${c.chargeText}`}
                     onClick={() => openEdit(c)}
                   >
-                    <IconRowEdit className="h-4 w-4" />
+                    <IconRowEdit className="h-4 w-4" aria-hidden />
                   </button>
                   <button
                     type="button"
-                    className={assetRowRemoveIconButtonClass}
+                    className={smartPoliceRowRemoveIconButtonClass}
                     aria-label={`ลบ ${c.chargeText}`}
                     onClick={() => void remove(c)}
                   >
-                    <IconRowRemove className="h-4 w-4" />
+                    <IconRowRemove className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
               ) : (
-                <span className={cn(appTemplateOutlineButtonClass, "pointer-events-none rounded-lg px-2 py-1 text-[10px]")}>
+                <span
+                  className={cn(
+                    smartPoliceOutlineButtonClass,
+                    "pointer-events-none px-2 text-[10px]",
+                  )}
+                >
                   ระบบ
                 </span>
               )}
@@ -217,10 +217,10 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
         }
       >
         <div className="space-y-3 text-left">
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             หมวด
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
             >
@@ -231,26 +231,26 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
               ))}
             </select>
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             ข้อความข้อหา *
             <textarea
-              className="app-input mt-1 min-h-[80px] w-full rounded-xl"
+              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[5rem]")}
               value={form.chargeText}
               onChange={(e) => setForm((f) => ({ ...f, chargeText: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             กฎหมายที่อ้าง
             <textarea
-              className="app-input mt-1 min-h-[64px] w-full rounded-xl"
+              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4rem]")}
               value={form.lawRefs}
               onChange={(e) => setForm((f) => ({ ...f, lawRefs: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className={smartPoliceLabelClass}>
             คำค้น (ช่วยค้นหา)
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.keywords}
               onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
             />

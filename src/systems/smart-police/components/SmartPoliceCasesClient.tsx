@@ -7,13 +7,24 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
-  appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { SMART_POLICE_CASE_STATUS_LABEL, SMART_POLICE_CASE_TYPES } from "@/lib/smart-police/types";
 import type { SmartPoliceCaseListItem } from "@/lib/smart-police/types";
 import { IconSpPlus } from "@/systems/smart-police/components/SmartPoliceIcons";
+import {
+  smartPoliceFieldClass,
+  smartPoliceFilterChipClass,
+  smartPoliceFilterChipShellClass,
+  smartPoliceLabelClass,
+  smartPoliceListRowAccentClass,
+  smartPoliceMutedTextClass,
+  smartPoliceOutlineButtonClass,
+  smartPolicePrimaryButtonClass,
+  smartPolicePrimaryIconButtonClass,
+  smartPoliceTextareaClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 import type { SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
 function FilterIcon({ className }: { className?: string }) {
@@ -90,21 +101,22 @@ export function SmartPoliceCasesClient() {
           title="รายการคดี"
           description="ค้นหาเลขคดีหรือชื่อเรื่อง · กรองสถานะ"
           action={
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 aria-expanded={filterOpen}
                 aria-controls="sp-cases-filter-panel"
                 aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
                 className={cn(
-                  appTemplateOutlineButtonClass,
-                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
+                  smartPoliceOutlineButtonClass,
+                  "relative",
                   filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
                   filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
                 )}
                 onClick={() => setFilterOpen((o) => !o)}
               >
-                <FilterIcon className="h-5 w-5" />
+                <FilterIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
                 {filtersActive && !filterOpen ? (
                   <span
@@ -115,12 +127,20 @@ export function SmartPoliceCasesClient() {
               </button>
               <button
                 type="button"
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl sm:min-w-0 sm:px-4"
+                className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
                 aria-label="เปิดคดีใหม่"
                 onClick={() => setModalOpen(true)}
               >
-                <IconSpPlus className="h-5 w-5 sm:hidden" />
-                <span className="hidden sm:inline">+ คดีใหม่</span>
+                <IconSpPlus className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className={cn(smartPolicePrimaryButtonClass, "hidden sm:inline-flex")}
+                aria-label="เปิดคดีใหม่"
+                onClick={() => setModalOpen(true)}
+              >
+                <IconSpPlus className="h-3.5 w-3.5" aria-hidden />
+                คดีใหม่
               </button>
             </div>
           }
@@ -130,7 +150,7 @@ export function SmartPoliceCasesClient() {
           id="sp-cases-filter-panel"
           className={cn("mt-3 space-y-3", filterOpen ? "block" : "hidden")}
         >
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะ">
+          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
             {(
               [
                 { key: "" as const, label: "ทั้งหมด" },
@@ -144,12 +164,7 @@ export function SmartPoliceCasesClient() {
                 type="button"
                 role="tab"
                 aria-selected={status === chip.key}
-                className={cn(
-                  "min-h-8 rounded-lg px-3 text-[11px] font-semibold sm:min-h-9 sm:text-xs",
-                  status === chip.key
-                    ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                    : "border border-white/60 bg-white/70 text-[#4d47b6]",
-                )}
+                className={smartPoliceFilterChipClass(status === chip.key)}
                 onClick={() => setStatus(chip.key)}
               >
                 {chip.label}
@@ -157,7 +172,7 @@ export function SmartPoliceCasesClient() {
             ))}
           </div>
           <input
-            className="app-input min-h-[44px] w-full rounded-xl"
+            className={smartPoliceFieldClass}
             placeholder="ค้นหาเลขคดี / ชื่อเรื่อง"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -166,7 +181,7 @@ export function SmartPoliceCasesClient() {
           {filtersActive ? (
             <button
               type="button"
-              className="text-xs font-semibold text-[#5b61ff] underline"
+              className="text-xs font-bold text-[#5b61ff] underline"
               onClick={() => {
                 setQ("");
                 setStatus("");
@@ -178,7 +193,7 @@ export function SmartPoliceCasesClient() {
         </div>
 
         {loading ? (
-          <p className="mt-4 text-sm text-[#66638c]">กำลังโหลด…</p>
+          <p className={cn("mt-4", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
         ) : cases.length === 0 ? (
           <AppEmptyState className="mt-4">
             {filtersActive
@@ -191,18 +206,22 @@ export function SmartPoliceCasesClient() {
               <li key={c.id}>
                 <Link
                   href={`/dashboard/smart-police/cases/${c.id}`}
-                  className="flex flex-col gap-1 rounded-2xl border border-l-[3px] border-indigo-200 border-l-indigo-500 bg-indigo-50/40 px-4 py-3 text-left transition hover:bg-indigo-50/70 sm:flex-row sm:items-center sm:justify-between"
+                  className={cn(smartPoliceListRowAccentClass("indigo"), "flex-col sm:flex-row sm:items-center")}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-[#1e1b4b]">
-                      <span className="text-[#4d47b6]">{c.caseNumber}</span> — {c.title}
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-sm font-bold text-[#1e1b4b]">
+                      <span className="text-[#4d47b6]">{c.caseNumber}</span>
+                      <span className="mx-1.5 text-slate-300" aria-hidden>
+                        —
+                      </span>
+                      {c.title}
                     </p>
-                    <p className="text-xs text-[#66638c]">
+                    <p className="mt-0.5 text-xs font-medium text-[#66638c]">
                       {c.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[c.status]} · {c.documentCount}{" "}
                       เอกสาร · {c.partyCount} บุคคล
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-[#5b61ff]">เปิดคดี →</span>
+                  <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิดคดี →</span>
                 </Link>
               </li>
             ))}
@@ -210,20 +229,20 @@ export function SmartPoliceCasesClient() {
         )}
       </AppDashboardSection>
 
-      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title="เปิดคดีใหม่">
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-[#2e2a58]">
+      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title="เปิดคดีใหม่" mobileCentered>
+        <div className="space-y-3 text-left">
+          <label className={smartPoliceLabelClass}>
             ชื่อเรื่องคดี *
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium text-[#2e2a58]">
+          <label className={smartPoliceLabelClass}>
             ประเภทคดี
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.caseType}
               onChange={(e) => setForm((f) => ({ ...f, caseType: e.target.value }))}
             >
@@ -234,18 +253,18 @@ export function SmartPoliceCasesClient() {
               ))}
             </select>
           </label>
-          <label className="block text-sm font-medium text-[#2e2a58]">
+          <label className={smartPoliceLabelClass}>
             สถานที่เกิดเหตุ
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={form.incidentPlace}
               onChange={(e) => setForm((f) => ({ ...f, incidentPlace: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium text-[#2e2a58]">
+          <label className={smartPoliceLabelClass}>
             สรุปเหตุ (ย่อ)
             <textarea
-              className="app-input mt-1 min-h-[80px] w-full rounded-xl"
+              className={cn(smartPoliceTextareaClass, "mt-1")}
               value={form.summary}
               onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
             />

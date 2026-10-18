@@ -13,6 +13,12 @@ import {
   IconSpTemplate,
 } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
+  smartPoliceDesktopNavLinkClass,
+  smartPoliceIconButtonClass,
+  smartPoliceModuleShellClass,
+  smartPoliceSubtitleClass,
+} from "@/systems/smart-police/lib/ui-tokens";
+import {
   SMART_POLICE_HEADER_COLLAPSE_EVENT,
   SMART_POLICE_MODULE_DISPLAY_NAME,
   readSmartPoliceHeaderCollapsed,
@@ -21,9 +27,6 @@ import {
   writeSmartPoliceHeaderCollapsed,
   type SmartPoliceMainKey,
 } from "@/systems/smart-police/smart-police-nav";
-
-const navItemBase =
-  "flex min-h-[44px] w-full min-w-0 touch-manipulation select-none items-center justify-center gap-1.5 rounded-2xl px-2 text-center text-xs font-semibold transition-colors active:opacity-90 sm:gap-2 sm:px-3 sm:text-sm";
 
 function navIcon(key: SmartPoliceMainKey) {
   if (key === "overview") return IconSpHome;
@@ -40,12 +43,14 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
       className="h-4 w-4"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth={2.4}
       aria-hidden
     >
-      {collapsed ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+      {collapsed ? (
+        <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
+      ) : (
+        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
+      )}
     </svg>
   );
 }
@@ -71,29 +76,38 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
   }, [headerCollapsed]);
 
   return (
-    <div className="-mt-1 max-w-full space-y-4 pb-24 sm:mt-0 sm:space-y-6 sm:pb-0">
+    <div className={cn("flex min-w-0 flex-col gap-4 sm:gap-6", "max-lg:pb-24 lg:pb-0")}>
       <header
         className={cn(
-          "-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden",
+          smartPoliceModuleShellClass,
+          "flex flex-col px-4 py-4 sm:px-6 sm:py-5",
           headerCollapsed && "hidden",
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#8b87b8]">
-              กลุ่ม 2 (Silver) · 1 โทเคน/วัน
-            </p>
-            <h1 className="bg-gradient-to-r from-[#1e1b4b] to-[#4d47b6] bg-clip-text text-xl font-black tracking-tight text-transparent sm:text-2xl">
-              {SMART_POLICE_MODULE_DISPLAY_NAME}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-              สำนวนคดี · คำให้การ · หมายเรียก · พิมพ์เอกสาร · รายงานสรุป — อิงรูปแบบ SmartPolice
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0000BF] via-[#5b61ff] to-[#ec4899] text-white shadow-sm"
+              aria-hidden
+            >
+              <IconSpCase className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4d47b6]">
+                กลุ่ม 2 · 1 โทเคน/วัน
+              </p>
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
+                {SMART_POLICE_MODULE_DISPLAY_NAME}
+              </h1>
+              <p className={smartPoliceSubtitleClass}>
+                สำนวนคดี · คำให้การ · หมายเรียก · พิมพ์เอกสาร
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={toggleHeaderCollapse}
-            className="inline-flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+            className={smartPoliceIconButtonClass}
             aria-pressed={headerCollapsed}
             aria-label="ซ่อนส่วนหัวโมดูล"
             title="ซ่อนส่วนหัวโมดูล"
@@ -102,24 +116,20 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
             <HeaderCollapseGlyph collapsed={headerCollapsed} />
           </button>
         </div>
+
         <nav
           aria-label="เมนู Smart Police"
-          className="mt-3 hidden border-t border-white/60 pt-3 sm:mt-4 sm:block sm:pt-4"
+          className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block"
         >
-          <ul className="grid grid-cols-5 gap-2">
+          <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {smartPoliceMainMenuItems.map((item) => {
               const active = activeMain === item.key;
               const Icon = navIcon(item.key);
               return (
-                <li key={item.key} className="min-w-0">
+                <li key={item.key} className="min-w-0 shrink-0 flex-[1_1_0%]">
                   <Link
                     href={item.href}
-                    className={cn(
-                      navItemBase,
-                      active
-                        ? "bg-gradient-to-br from-[#ede9ff] via-white to-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20"
-                        : "app-btn-soft text-[#66638c]",
-                    )}
+                    className={smartPoliceDesktopNavLinkClass(active)}
                     aria-current={active ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -131,7 +141,8 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
           </ul>
         </nav>
       </header>
-      <div className="-mx-3 sm:mx-0">{children}</div>
+
+      {children}
       <SmartPoliceMobileDock />
     </div>
   );

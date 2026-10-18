@@ -7,11 +7,26 @@ import { cn } from "@/lib/cn";
 import type { SmartPoliceOfficerDto, SmartPoliceProfileDto } from "@/lib/smart-police/types";
 import { SmartPoliceChargesPanel } from "@/systems/smart-police/components/SmartPoliceChargesPanel";
 import {
-  assetRowEditIconButtonClass,
-  assetRowRemoveIconButtonClass,
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import {
+  smartPoliceFieldClass,
+  smartPoliceLabelClass,
+  smartPoliceListRowAccentClass,
+  smartPoliceMobileSelectClass,
+  smartPoliceMutedTextClass,
+  smartPolicePageStackClass,
+  smartPolicePrimaryButtonClass,
+  smartPolicePrimaryIconButtonClass,
+  smartPolicePrimaryTabPillClass,
+  smartPolicePrimaryTabShellClass,
+  smartPoliceRowIconButtonClass,
+  smartPoliceRowRemoveIconButtonClass,
+  smartPoliceSubtitleClass,
+  smartPoliceTextareaClass,
+  smartPoliceToastSuccessClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 
 type SettingsTab = "agency" | "officers" | "charges";
 
@@ -104,51 +119,57 @@ export function SmartPoliceSettingsClient() {
     await loadOfficers();
   }
 
-  if (!profile) return <p className="text-sm text-[#66638c]">กำลังโหลด…</p>;
+  if (!profile) return <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>;
 
   return (
-    <div className="space-y-4">
-      {toast ? (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
-          {toast}
-        </p>
-      ) : null}
+    <div className={smartPolicePageStackClass}>
+      {toast ? <p className={smartPoliceToastSuccessClass}>{toast}</p> : null}
 
       <AppDashboardSection>
         <AppSectionHeader
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="ตั้งค่า"
-          description="ฐานข้อมูลกลาง — หน่วยงานและพนักงานสอบสวน"
+          description={
+            <span className={smartPoliceSubtitleClass}>ฐานข้อมูลกลาง — หน่วยงานและพนักงานสอบสวน</span>
+          }
           action={
             tab === "agency" ? (
               <button
                 type="button"
-                className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
+                className={smartPolicePrimaryButtonClass}
                 disabled={saving}
                 onClick={() => void saveProfile()}
               >
                 {saving ? "…" : "บันทึก"}
               </button>
             ) : tab === "officers" ? (
-              <button
-                type="button"
-                className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm sm:min-w-0 sm:px-4"
-                onClick={openAddOfficer}
-                aria-label="เพิ่มพนักงานสอบสวน"
-              >
-                <span className="sm:hidden">+</span>
-                <span className="hidden sm:inline">+ เพิ่มพงส.</span>
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
+                  onClick={openAddOfficer}
+                  aria-label="เพิ่มพนักงานสอบสวน"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={cn(smartPolicePrimaryButtonClass, "hidden sm:inline-flex")}
+                  onClick={openAddOfficer}
+                >
+                  + เพิ่มพงส.
+                </button>
+              </div>
             ) : null
           }
         />
 
         <div className="mb-3 sm:hidden">
-          <label className="text-xs font-semibold text-[#66638c]">
+          <label className={smartPoliceLabelClass}>
             กรุณาเลือกหมวดตั้งค่า
             <select
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceMobileSelectClass, "mt-1")}
               value={tab}
               onChange={(e) => setTab(e.target.value as SettingsTab)}
             >
@@ -160,7 +181,7 @@ export function SmartPoliceSettingsClient() {
         </div>
 
         <div className="mb-4 hidden sm:block">
-          <nav role="tablist" className="flex flex-wrap gap-2" aria-label="หมวดตั้งค่า">
+          <nav role="tablist" className={smartPolicePrimaryTabShellClass} aria-label="หมวดตั้งค่า">
             {(
               [
                 { key: "agency" as const, label: "หน่วยงาน" },
@@ -173,12 +194,7 @@ export function SmartPoliceSettingsClient() {
                 type="button"
                 role="tab"
                 aria-selected={tab === t.key}
-                className={cn(
-                  "min-h-10 rounded-xl px-4 text-sm font-semibold",
-                  tab === t.key
-                    ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                    : "border border-white/60 bg-white/70 text-[#4d47b6]",
-                )}
+                className={smartPolicePrimaryTabPillClass(tab === t.key)}
                 onClick={() => setTab(t.key)}
               >
                 {t.label}
@@ -195,112 +211,112 @@ export function SmartPoliceSettingsClient() {
 
         {tab === "agency" ? (
           <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">
-            <label className="text-sm font-medium text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ชื่อสถานี *
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.stationName}
                 onChange={(e) => setProfile((p) => (p ? { ...p, stationName: e.target.value } : p))}
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ที่อยู่สถานี
               <textarea
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceTextareaClass, "mt-1")}
                 value={profile.stationAddress ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, stationAddress: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               จังหวัด
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.province ?? ""}
                 onChange={(e) => setProfile((p) => (p ? { ...p, province: e.target.value } : p))}
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               คำนำหน้าเลขคดี
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.caseNumberPrefix}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, caseNumberPrefix: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ยศหัวหน้าหน่วย
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.commanderRank ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, commanderRank: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ชื่อหัวหน้าหน่วย
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.commanderName ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, commanderName: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ตำแหน่งหัวหน้าหน่วย
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.commanderTitle ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, commanderTitle: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ยศหัวหน้างาน
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.headOfWorkRank ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, headOfWorkRank: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58]">
+            <label className={smartPoliceLabelClass}>
               ชื่อหัวหน้างาน
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.headOfWorkName ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, headOfWorkName: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               พนักงานสอบสวน (ค่าเริ่มต้นในเอกสาร — ซิงก์จากพงส.ที่ตั้งเป็นค่าเริ่มได้)
               <input
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceFieldClass, "mt-1")}
                 value={profile.investigatorDefault ?? ""}
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, investigatorDefault: e.target.value } : p))
                 }
               />
             </label>
-            <label className="text-sm font-medium text-[#2e2a58] sm:col-span-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
               ท้ายกระดาษพิมพ์
               <textarea
-                className="app-input mt-1 w-full rounded-xl"
+                className={cn(smartPoliceTextareaClass, "mt-1")}
                 value={profile.printFooter ?? ""}
                 onChange={(e) => setProfile((p) => (p ? { ...p, printFooter: e.target.value } : p))}
               />
             </label>
           </div>
-        ) : (
+        ) : tab === "officers" ? (
           <div role="tabpanel" className="space-y-2">
             {officers.length === 0 ? (
               <AppEmptyState tone="violet">
@@ -312,11 +328,8 @@ export function SmartPoliceSettingsClient() {
             ) : (
               <ul className="space-y-2">
                 {officers.map((o) => (
-                  <li
-                    key={o.id}
-                    className="flex items-start justify-between gap-2 rounded-xl border border-l-[3px] border-indigo-200 border-l-indigo-500 bg-indigo-50/50 px-3 py-2"
-                  >
-                    <div className="min-w-0 text-left">
+                  <li key={o.id} className={smartPoliceListRowAccentClass("indigo")}>
+                    <div className="min-w-0 flex-1 text-left">
                       <p className="font-semibold text-[#1e1b4b]">
                         {[o.rankTitle, o.fullName].filter(Boolean).join(" ")}
                         {o.isDefault ? (
@@ -328,21 +341,21 @@ export function SmartPoliceSettingsClient() {
                     <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
-                        className={assetRowEditIconButtonClass}
+                        className={smartPoliceRowIconButtonClass}
                         aria-label={`แก้ไข ${o.fullName}`}
                         title="แก้ไข"
                         onClick={() => openEditOfficer(o)}
                       >
-                        <IconRowEdit className="h-4 w-4" />
+                        <IconRowEdit className="h-4 w-4" aria-hidden />
                       </button>
                       <button
                         type="button"
-                        className={assetRowRemoveIconButtonClass}
+                        className={smartPoliceRowRemoveIconButtonClass}
                         aria-label={`ลบ ${o.fullName}`}
                         title="ลบ"
                         onClick={() => void deleteOfficer(o.id, o.fullName)}
                       >
-                        <IconRowRemove className="h-4 w-4" />
+                        <IconRowRemove className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </li>
@@ -350,7 +363,7 @@ export function SmartPoliceSettingsClient() {
               </ul>
             )}
           </div>
-        )}
+        ) : null}
       </AppDashboardSection>
 
       <FormModal
@@ -369,31 +382,31 @@ export function SmartPoliceSettingsClient() {
         }
       >
         <div className="space-y-3 text-left">
-          <label className="block text-sm font-medium">
+          <label className={smartPoliceLabelClass}>
             ชื่อ *
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={officerForm.fullName}
               onChange={(e) => setOfficerForm((f) => ({ ...f, fullName: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium">
+          <label className={smartPoliceLabelClass}>
             ยศ
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={officerForm.rankTitle}
               onChange={(e) => setOfficerForm((f) => ({ ...f, rankTitle: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium">
+          <label className={smartPoliceLabelClass}>
             ตำแหน่ง
             <input
-              className="app-input mt-1 w-full rounded-xl"
+              className={cn(smartPoliceFieldClass, "mt-1")}
               value={officerForm.position}
               onChange={(e) => setOfficerForm((f) => ({ ...f, position: e.target.value }))}
             />
           </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <label className="flex items-center gap-2 text-sm font-medium text-[#2e2a58]">
             <input
               type="checkbox"
               checked={officerForm.isDefault}

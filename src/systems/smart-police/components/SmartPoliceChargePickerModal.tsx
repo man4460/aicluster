@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import type { SmartPoliceChargeDto } from "@/lib/smart-police/types";
+import {
+  smartPoliceFieldClass,
+  smartPoliceFilterChipClass,
+  smartPoliceFilterChipShellClass,
+  smartPoliceMutedTextClass,
+} from "@/systems/smart-police/lib/ui-tokens";
 
 type Props = {
   open: boolean;
@@ -65,21 +71,16 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
     >
       <div className="space-y-3 text-left">
         <input
-          className="app-input min-h-[44px] w-full rounded-xl"
+          className={smartPoliceFieldClass}
           placeholder="ค้นหา เช่น ยาบ้า · ลักทรัพย์ · เมาแล้วขับ"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           aria-label="ค้นหาข้อหา"
         />
-        <div className="flex flex-wrap gap-1.5">
+        <div className={smartPoliceFilterChipShellClass}>
           <button
             type="button"
-            className={cn(
-              "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold",
-              !category
-                ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                : "border border-white/60 bg-white/70 text-[#4d47b6]",
-            )}
+            className={smartPoliceFilterChipClass(!category)}
             onClick={() => setCategory("")}
           >
             ทั้งหมด
@@ -88,12 +89,7 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
             <button
               key={c}
               type="button"
-              className={cn(
-                "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold",
-                category === c
-                  ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
-                  : "border border-white/60 bg-white/70 text-[#4d47b6]",
-              )}
+              className={smartPoliceFilterChipClass(category === c)}
               onClick={() => setCategory(c)}
             >
               {c}
@@ -101,9 +97,9 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
           ))}
         </div>
         {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลดคลังข้อหา…</p>
+          <p className={smartPoliceMutedTextClass}>กำลังโหลดคลังข้อหา…</p>
         ) : charges.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-sm text-[#66638c]">
+          <p className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-[#66638c]">
             ไม่พบข้อหา — ลองเปลี่ยนคำค้น หรือเพิ่มในตั้งค่า → คลังข้อหา
           </p>
         ) : (
@@ -115,10 +111,10 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
                   <button
                     type="button"
                     className={cn(
-                      "w-full rounded-xl border px-3 py-2.5 text-left transition",
+                      "w-full rounded-lg border px-3 py-2.5 text-left transition",
                       active
                         ? "border-[#5b61ff] bg-[#5b61ff]/10 ring-2 ring-[#5b61ff]/25"
-                        : "border-white/60 bg-white/70 hover:bg-white",
+                        : "border-slate-200/90 bg-white hover:border-indigo-200 hover:bg-indigo-50/30",
                     )}
                     onClick={() => setSelectedId(c.id)}
                     onDoubleClick={() => {
