@@ -175,13 +175,36 @@ function renderQaBlocks(root: HTMLElement, value: string) {
 
 function currentQaBlock(root: HTMLElement): HTMLElement | null {
   const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return null;
+  if (!sel || sel.rangeCount === 0) {
+    return root.querySelector(`.${QA_BLOCK_CLASS}:last-child`);
+  }
   let node: Node | null = sel.anchorNode;
   while (node && node !== root) {
     if (node instanceof HTMLElement && node.classList.contains(QA_BLOCK_CLASS)) return node;
+    // เบราว์เซอร์สร้าง <div> เองโดยไม่มีคลาส — รับเป็นบล็อกถาม–ตอบ
+    if (node instanceof HTMLElement && node.parentElement === root && node.tagName === "DIV") {
+      node.classList.add(QA_BLOCK_CLASS);
+      return node;
+    }
     node = node.parentNode;
   }
   return root.querySelector(`.${QA_BLOCK_CLASS}:last-child`);
+}
+
+/** รวมข้อความหลวมให้เป็นบล็อก .sp-stmt-qa-block ก่อนกด Enter */
+function normalizeRootToBlocks(root: HTMLElement) {
+  for (const child of [...root.children]) {
+    if (child instanceof HTMLElement && child.tagName === "DIV" && !child.classList.contains(QA_BLOCK_CLASS)) {
+      child.classList.add(QA_BLOCK_CLASS);
+    }
+  }
+  if (root.querySelector(`.${QA_BLOCK_CLASS}`)) return;
+  const text = (root.innerText || "").replace(/\u200b/g, "");
+  if (!text.trim()) {
+    root.innerHTML = "";
+    return;
+  }
+  renderQaBlocks(root, text);
 }
 
 /**
@@ -222,6 +245,7 @@ function LinedBody({
     const root = ref.current;
     if (!root) return;
     root.focus({ preventScroll: true });
+    normalizeRootToBlocks(root);
     if (!isBlankBody(serializeQaBlocks(root))) return;
     e?.preventDefault();
     root.innerHTML = "";
@@ -234,29 +258,39 @@ function LinedBody({
   function onEnter(shift: boolean) {
     const root = ref.current;
     if (!root) return;
-    if (isBlankBody(serializeQaBlocks(root))) {
-      ensureStarter();
-      return;
-    }
-    const cur = currentQaBlock(root);
-    if (!cur) return;
+    normalizeRootToBlocks(root);
 
-    if (shift) {
-      const blank = createQaBlock("");
-      cur.after(blank);
-      placeCaretInBlock(blank, 0);
+    if (isBlankBody(serializeQaBlocks(root))) {
+      root.innerHTML = "";
+      const block = createQaBlock(QA_STARTER);
+      root.appendChild(block);
+      root.focus({ preventScroll: true });
+      placeCaretInBlock(block, QA_STARTER.length);
       emit();
       return;
     }
 
+    let cur = currentQaBlock(root);
+    if (!cur) {
+      const raw = serializeQaBlocks(root);
+      renderQaBlocks(root, isBlankBody(raw) ? QA_STARTER : raw);
+      cur = currentQaBlock(root);
+    }
+    if (!cur) return;
+
     const curText = (cur.textContent || "").replace(/\u200b/g, "");
-    const prefix = QA_ANS_PREFIX.test(curText)
-      ? `ถาม ${nextQuestionNoFromRoot(root)}. `
-      : "ตอบ ";
+    const prefix = shift
+      ? ""
+      : QA_ANS_PREFIX.test(curText)
+        ? `ถาม ${nextQuestionNoFromRoot(root)}. `
+        : "ตอบ ";
     const next = createQaBlock(prefix);
     cur.after(next);
-    placeCaretInBlock(next, prefix.length);
-    emit();
+    root.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      placeCaretInBlock(next, prefix.length);
+      emit();
+    });
   }
 
   function onTab(shift: boolean) {
@@ -342,6 +376,13 @@ function LinedBody({
             e.preventDefault();
             e.stopPropagation();
             onEnter(e.shiftKey);
+          }
+        }}
+        onBeforeInput={(e) => {
+          const it = (e as unknown as InputEvent).inputType;
+          if (it === "insertParagraph" || it === "insertLineBreak") {
+            e.preventDefault();
+            onEnter(false);
           }
         }}
         onFocus={() => {
