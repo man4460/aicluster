@@ -99,14 +99,18 @@ const WIZARD_TITLES = [
   "ขั้น 4 · ยืนยัน",
 ];
 
+type CaseStatusFilter = "" | SmartPoliceCaseStatus | "active";
+type CasePriorityFilter = "" | SmartPoliceCasePriority | "elevated";
+
 export function SmartPoliceCasesClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [cases, setCases] = useState<SmartPoliceCaseListItem[]>([]);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"" | SmartPoliceCaseStatus>("");
-  const [priority, setPriority] = useState<"" | SmartPoliceCasePriority>("");
+  const [status, setStatus] = useState<CaseStatusFilter>("");
+  const [priority, setPriority] = useState<CasePriorityFilter>("");
   const [prosecutor, setProsecutor] = useState<"" | "sent" | "pending">("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -115,7 +119,7 @@ export function SmartPoliceCasesClient() {
   const [wizard, setWizard] = useState<WizardState>(emptyWizard);
   const [chargePickerOpen, setChargePickerOpen] = useState(false);
 
-  const filtersActive = Boolean(q.trim() || status || priority || prosecutor);
+  const filtersActive = Boolean(q.trim() || status || priority || prosecutor || overdueOnly);
 
   const refresh = useCallback(async () => {
     const params = new URLSearchParams();
@@ -123,11 +127,12 @@ export function SmartPoliceCasesClient() {
     if (status) params.set("status", status);
     if (priority) params.set("priority", priority);
     if (prosecutor) params.set("prosecutor", prosecutor);
+    if (overdueOnly) params.set("overdue", "1");
     const res = await fetch(`/api/smart-police/cases?${params}`, { cache: "no-store" });
     if (!res.ok) return;
     const data = (await res.json()) as { cases: SmartPoliceCaseListItem[] };
     setCases(data.cases);
-  }, [q, status, priority, prosecutor]);
+  }, [q, status, priority, prosecutor, overdueOnly]);
 
   useEffect(() => {
     void (async () => {
@@ -143,12 +148,26 @@ export function SmartPoliceCasesClient() {
       setError(null);
       setModalOpen(true);
     }
+    const st = searchParams.get("status");
+    if (st === "active" || st === "OPEN" || st === "IN_PROGRESS" || st === "CLOSED") {
+      setStatus(st);
+    }
     const prio = searchParams.get("priority");
-    if (prio && ["LOW", "NORMAL", "HIGH", "URGENT"].includes(prio)) {
-      setPriority(prio as SmartPoliceCasePriority);
+    if (prio === "elevated" || (prio && ["LOW", "NORMAL", "HIGH", "URGENT"].includes(prio))) {
+      setPriority(prio as CasePriorityFilter);
     }
     const pros = searchParams.get("prosecutor");
     if (pros === "sent" || pros === "pending") setProsecutor(pros);
+    if (searchParams.get("overdue") === "1") setOverdueOnly(true);
+
+    if (
+      searchParams.has("status") ||
+      searchParams.has("priority") ||
+      searchParams.has("prosecutor") ||
+      searchParams.has("overdue")
+    ) {
+      setFilterOpen(true);
+    }
   }, [searchParams]);
 
   const canNext = useMemo(() => {
@@ -298,10 +317,11 @@ export function SmartPoliceCasesClient() {
               {(
                 [
                   { key: "" as const, label: "สถานะทั้งหมด" },
+                  { key: "active" as const, label: "เปิด/สอบสวน" },
                   ...(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
                     (k) => ({ key: k, label: SMART_POLICE_CASE_STATUS_LABEL[k] }),
                   ),
-                ] as { key: "" | SmartPoliceCaseStatus; label: string }[]
+                ] as { key: CaseStatusFilter; label: string }[]
               ).map((chip) => (
                 <button
                   key={`st-${chip.key || "all"}`}
@@ -320,10 +340,11 @@ export function SmartPoliceCasesClient() {
               {(
                 [
                   { key: "" as const, label: "ทุกความสำคัญ" },
+                  { key: "elevated" as const, label: "ด่วน/สูง" },
                   ...(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
                     (k) => ({ key: k, label: SMART_POLICE_CASE_PRIORITY_LABEL[k] }),
                   ),
-                ] as { key: "" | SmartPoliceCasePriority; label: string }[]
+                ] as { key: CasePriorityFilter; label: string }[]
               ).map((chip) => (
                 <button
                   key={`pr-${chip.key || "all"}`}
@@ -358,6 +379,16 @@ export function SmartPoliceCasesClient() {
                 </button>
               ))}
             </div>
+            <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={overdueOnly}
+              className={smartPoliceFilterTextClass(overdueOnly)}
+              onClick={() => setOverdueOnly((v) => !v)}
+            >
+              เกินกำหนด
+            </button>
             {filtersActive ? (
               <>
                 <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
@@ -369,6 +400,7 @@ export function SmartPoliceCasesClient() {
                     setStatus("");
                     setPriority("");
                     setProsecutor("");
+                    setOverdueOnly(false);
                   }}
                 >
                   ล้างกรอง

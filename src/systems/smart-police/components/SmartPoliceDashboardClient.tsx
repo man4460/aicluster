@@ -100,19 +100,60 @@ export function SmartPoliceDashboardClient() {
         </div>
 
         <div className={cn("mt-1.5 shrink-0", smartPoliceStatsGridClass)}>
-          {[
-            { label: "ทั้งหมด", value: s?.totalCases ?? "—" },
-            { label: "เปิด/สอบสวน", value: (s?.openCases ?? 0) + (s?.inProgress ?? 0) },
-            { label: "เกินกำหนด", value: s?.overdueCount ?? "—", warn: true },
-            { label: "ด่วน/สูง", value: s?.urgentCount ?? "—", warn: true },
-            { label: "ยังไม่ส่ง", value: s?.notSentToProsecutor ?? "—" },
-            { label: "พิมพ์", value: s?.totalPrints ?? "—", icon: true },
-          ].map((card) => (
+          {(
+            [
+              {
+                label: "ทั้งหมด",
+                value: s?.totalCases ?? "—",
+                href: "/dashboard/smart-police/cases",
+                aria: "ดูคดีทั้งหมด",
+              },
+              {
+                label: "เปิด/สอบสวน",
+                value: (s?.openCases ?? 0) + (s?.inProgress ?? 0),
+                href: "/dashboard/smart-police/cases?status=active",
+                aria: "กรองคดีเปิดและกำลังสอบสวน",
+              },
+              {
+                label: "เกินกำหนด",
+                value: s?.overdueCount ?? "—",
+                href: "/dashboard/smart-police/cases?overdue=1",
+                aria: "กรองคดีเกินกำหนด",
+                warn: true,
+              },
+              {
+                label: "ด่วน/สูง",
+                value: s?.urgentCount ?? "—",
+                href: "/dashboard/smart-police/cases?priority=elevated",
+                aria: "กรองคดีความสำคัญด่วนหรือสูง",
+                warn: true,
+              },
+              {
+                label: "ยังไม่ส่ง",
+                value: s?.notSentToProsecutor ?? "—",
+                href: "/dashboard/smart-police/cases?prosecutor=pending",
+                aria: "กรองคดียังไม่ส่งอัยการ",
+              },
+              {
+                label: "พิมพ์",
+                value: s?.totalPrints ?? "—",
+                href: "/dashboard/smart-police/reports",
+                aria: "ดูรายงานการพิมพ์",
+                icon: true,
+              },
+            ] as const
+          ).map((card) => (
             <div key={card.label} className={smartPoliceStatCellClass}>
-              <div
+              <Link
+                href={card.href}
+                aria-label={card.aria}
+                title={card.aria}
                 className={cn(
                   smartPoliceStatInlineClass,
-                  "warn" in card && card.warn && (s?.overdueCount || s?.urgentCount)
+                  "transition hover:bg-white hover:ring-1 hover:ring-[#5b61ff]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35",
+                  "warn" in card &&
+                    card.warn &&
+                    (Number(s?.overdueCount) > 0 || Number(s?.urgentCount) > 0)
                     ? "ring-1 ring-amber-200/80"
                     : undefined,
                 )}
@@ -131,7 +172,7 @@ export function SmartPoliceDashboardClient() {
                 >
                   {card.value}
                 </p>
-              </div>
+              </Link>
             </div>
           ))}
         </div>

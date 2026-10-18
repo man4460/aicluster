@@ -37,15 +37,30 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
-  const status = url.searchParams.get("status") as SmartPoliceCaseStatus | null;
-  const priority = url.searchParams.get("priority") as SmartPoliceCasePriority | null;
+  const statusRaw = (url.searchParams.get("status") ?? "").trim();
+  const priorityRaw = (url.searchParams.get("priority") ?? "").trim();
   const prosecutor = url.searchParams.get("prosecutor"); // sent | pending | ""
+  const overdueOnly = url.searchParams.get("overdue") === "1";
+
+  /** status=active → เปิด + สอบสวน · priority=elevated → ด่วน + สูง */
+  const statusFilter =
+    statusRaw === "active"
+      ? ({ in: ["OPEN", "IN_PROGRESS"] as SmartPoliceCaseStatus[] } as const)
+      : statusRaw && ["OPEN", "IN_PROGRESS", "CLOSED"].includes(statusRaw)
+        ? (statusRaw as SmartPoliceCaseStatus)
+        : undefined;
+  const priorityFilter =
+    priorityRaw === "elevated"
+      ? ({ in: ["HIGH", "URGENT"] as SmartPoliceCasePriority[] } as const)
+      : priorityRaw && PRIORITIES.includes(priorityRaw as SmartPoliceCasePriority)
+        ? (priorityRaw as SmartPoliceCasePriority)
+        : undefined;
 
   const rows = await prisma.smartPoliceCase.findMany({
     where: {
       ownerUserId: gate.ctx.ownerUserId,
-      ...(status ? { status } : {}),
-      ...(priority && PRIORITIES.includes(priority) ? { priority } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(priorityFilter ? { priority: priorityFilter } : {}),
       ...(prosecutor === "sent"
         ? { sentToProsecutorAt: { not: null } }
         : prosecutor === "pending"
@@ -66,9 +81,12 @@ export async function GET(req: Request) {
     include: CASE_LIST_INCLUDE,
   });
 
-  return NextResponse.json({
-    cases: rows.map(mapSmartPoliceCaseListItem),
-  });
+  let cases = rows.map(mapSmartPoliceCaseListItem);
+  if (overdueOnly) {
+    cases = cases.filter((c) => c.overdue);
+  }
+
+  return NextResponse.json({ cases });
 }
 
 export async function POST(req: Request) {
