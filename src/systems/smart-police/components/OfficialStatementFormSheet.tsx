@@ -274,9 +274,9 @@ export function OfficialStatementFormSheet({
               <img
                 src="/smart-police/garuda.png"
                 alt=""
-                width={96}
-                height={110}
-                style={{ display: "block", margin: "0 auto 1.5mm", height: "28mm", width: "auto" }}
+                width={84}
+                height={96}
+                style={{ display: "block", margin: "0 auto 1.2mm", height: "24mm", width: "auto" }}
               />
               <p style={{ margin: 0, fontSize: "20pt", fontWeight: 700, lineHeight: 1.15 }}>
                 สำนักงานตำรวจแห่งชาติ
