@@ -369,53 +369,54 @@ export function OfficialStatementFormSheet({
               </div>
             </div>
 
+            {/* คดีระหว่าง — ปีกกา · เส้นบนชิดปลายบน · เส้นล่างชิดปลายล่าง */}
             <div
               style={{
-                display: "flex",
+                display: "grid",
+                gridTemplateColumns: "auto auto 1fr",
                 alignItems: "stretch",
                 columnGap: "2mm",
-                margin: "1mm 0 1.5mm",
-                minHeight: "14mm",
+                margin: "2mm 0 2.5mm",
+                height: "22mm",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
                 <L>คดีระหว่าง</L>
               </div>
-              {/* ปีกกาสูงเต็ม — ครอบจากแถวผู้กล่าวหาถึงผู้ต้องหา */}
-              <div
-                aria-hidden
-                style={{
-                  flexShrink: 0,
-                  width: "5mm",
-                  alignSelf: "stretch",
-                  display: "flex",
-                }}
-              >
+              <div aria-hidden style={{ width: "6mm", height: "100%" }}>
                 <svg
                   viewBox="0 0 24 100"
                   preserveAspectRatio="none"
                   style={{ width: "100%", height: "100%", display: "block" }}
                 >
                   <path
-                    d="M18 2 C8 2 6 12 6 22 L6 38 C6 46 2 50 2 50 C2 50 6 54 6 62 L6 78 C6 88 8 98 18 98"
+                    d="M20 1 C9 1 7 14 7 25 L7 40 C7 47 3 50 3 50 C3 50 7 53 7 60 L7 75 C7 86 9 99 20 99"
                     fill="none"
                     stroke="#111"
-                    strokeWidth="2.4"
+                    strokeWidth="2.6"
                     strokeLinecap="round"
                   />
                 </svg>
               </div>
               <div
                 style={{
-                  flex: 1,
-                  minWidth: 0,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  gap: "1.2mm",
+                  minWidth: 0,
+                  height: "100%",
                 }}
               >
-                <Row style={{ margin: 0, minHeight: LINE }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: "2mm",
+                    width: "100%",
+                    lineHeight: LINE,
+                    fontSize: BODY,
+                  }}
+                >
                   <Dot
                     aria-label="ผู้กล่าวหาในคดี"
                     value={h.complainantLine}
@@ -424,8 +425,17 @@ export function OfficialStatementFormSheet({
                     minCh={10}
                   />
                   <L>ผู้กล่าวหา</L>
-                </Row>
-                <Row style={{ margin: 0, minHeight: LINE }}>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: "2mm",
+                    width: "100%",
+                    lineHeight: LINE,
+                    fontSize: BODY,
+                  }}
+                >
                   <Dot
                     aria-label="ผู้ต้องหาในคดี"
                     value={h.suspectLine}
@@ -434,7 +444,7 @@ export function OfficialStatementFormSheet({
                     minCh={10}
                   />
                   <L>ผู้ต้องหา</L>
-                </Row>
+                </div>
               </div>
             </div>
 
