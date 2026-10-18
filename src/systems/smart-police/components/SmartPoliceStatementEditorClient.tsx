@@ -345,7 +345,7 @@ export function SmartPoliceStatementEditorClient({
           </button>
         ) : null}
         <p className="ml-auto hidden text-[11px] text-slate-300 sm:block">
-          คลิกบนฟอร์มแล้วพิมพ์เหมือน Word · เพิ่มหน้า = ใบต่อ · บันทึกเข้าสำนวน
+          พิมพ์บนจุดไข่ปลาเหมือน Word (ไม่มีกล่อง) · เพิ่มหน้า = ใบต่อ
         </p>
       </div>
 
