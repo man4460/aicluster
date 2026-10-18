@@ -24,7 +24,7 @@ import {
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
-  smartPolicePrimaryButtonClass,
+  smartPolicePrimaryIconButtonClass,
   smartPoliceScrollListClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
@@ -232,6 +232,16 @@ export function SmartPoliceFormsClient() {
   );
 }
 
+function IconDownload({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 4v10" strokeLinecap="round" />
+      <path d="M8 10l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 18h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function FormRow({ item }: { item: SmartPoliceBlankFormItem }) {
   const href = smartPoliceBlankFormHref(item.fileName);
   const kind = fileKindOf(item.fileName);
@@ -243,11 +253,11 @@ function FormRow({ item }: { item: SmartPoliceBlankFormItem }) {
         <p className="text-[10px] font-bold text-[#4d47b6]">{item.category}</p>
         <p className="text-[13px] font-semibold text-[#1e1b4b]">{item.title}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-2">
         <span
           className={cn(
-            "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
-            kind === "pdf" ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800",
+            "inline-flex items-center text-[11px] font-bold",
+            kind === "pdf" ? "text-rose-600" : "text-emerald-600",
           )}
         >
           {extLabel(item.fileName)}
@@ -255,10 +265,11 @@ function FormRow({ item }: { item: SmartPoliceBlankFormItem }) {
         <a
           href={href}
           download={item.fileName}
-          className={smartPolicePrimaryButtonClass}
+          className={smartPolicePrimaryIconButtonClass}
           aria-label={`ดาวน์โหลด ${item.title}`}
+          title="ดาวน์โหลด"
         >
-          ดาวน์โหลด
+          <IconDownload className="h-3.5 w-3.5" />
         </a>
       </div>
     </li>
