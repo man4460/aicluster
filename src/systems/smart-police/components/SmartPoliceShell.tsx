@@ -1,40 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { SmartPoliceMobileDock } from "@/systems/smart-police/components/SmartPoliceMobileDock";
+import { IconSpCase } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
-  IconSpCase,
-  IconSpHome,
-  IconSpReport,
-  IconSpSettings,
-  IconSpTemplate,
-} from "@/systems/smart-police/components/SmartPoliceIcons";
-import {
-  smartPoliceDesktopNavLinkClass,
   smartPoliceIconButtonClass,
   smartPoliceModuleShellClass,
-  smartPoliceSubtitleClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import {
   SMART_POLICE_HEADER_COLLAPSE_EVENT,
   SMART_POLICE_MODULE_DISPLAY_NAME,
   readSmartPoliceHeaderCollapsed,
-  smartPoliceMainKeyFromPathname,
-  smartPoliceMainMenuItems,
   writeSmartPoliceHeaderCollapsed,
-  type SmartPoliceMainKey,
 } from "@/systems/smart-police/smart-police-nav";
-
-function navIcon(key: SmartPoliceMainKey) {
-  if (key === "overview") return IconSpHome;
-  if (key === "cases") return IconSpCase;
-  if (key === "templates") return IconSpTemplate;
-  if (key === "reports") return IconSpReport;
-  return IconSpSettings;
-}
 
 function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
   return (
@@ -55,9 +34,11 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+/**
+ * Chrome Smart Police — เดสก์ท็อป: เมนูโมดูลอยู่ป๊อปอัปรูปโปรไฟล์ (DashboardShell)
+ * มือถือ: ใช้ dock ล่าง
+ */
 export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() ?? "";
-  const activeMain = smartPoliceMainKeyFromPathname(pathname);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   useEffect(() => {
@@ -99,8 +80,8 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
               <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
                 {SMART_POLICE_MODULE_DISPLAY_NAME}
               </h1>
-              <p className={smartPoliceSubtitleClass}>
-                สำนวนคดี · คำให้การ · หมายเรียก · พิมพ์เอกสาร
+              <p className="mt-0.5 hidden text-xs font-medium leading-relaxed text-[#66638c] md:block">
+                คลิกรูปโปรไฟล์มุมขวาบนเพื่อเปิดเมนูโมดูล
               </p>
             </div>
           </div>
@@ -116,30 +97,6 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
             <HeaderCollapseGlyph collapsed={headerCollapsed} />
           </button>
         </div>
-
-        <nav
-          aria-label="เมนู Smart Police"
-          className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block"
-        >
-          <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {smartPoliceMainMenuItems.map((item) => {
-              const active = activeMain === item.key;
-              const Icon = navIcon(item.key);
-              return (
-                <li key={item.key} className="min-w-0 shrink-0 flex-[1_1_0%]">
-                  <Link
-                    href={item.href}
-                    className={smartPoliceDesktopNavLinkClass(active)}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </header>
 
       {children}

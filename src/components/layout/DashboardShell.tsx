@@ -6,8 +6,13 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, Suspense } from "react";
 import { DemoSessionAccountMenuItem, DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
+import { DashboardProfileModuleMenu } from "@/components/layout/DashboardProfileModuleMenu";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
+import {
+  getModuleProfileSidebar,
+  usesProfileModuleSidebar,
+} from "@/lib/dashboard/module-profile-sidebar";
 import {
   AppBrowserFullscreenButton,
   appDashboardBrandGradientBarClass,
@@ -817,6 +822,9 @@ export function DashboardShell({
   const showMediaRegistryHeaderBar = onMediaRegistryModule && mediaRegistryHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
+  /** โมเดลใหม่: เมนูโมดูลในป๊อปอัปโปรไฟล์ · ซ่อน sidebar ซ้าย (เริ่ม Smart Police) */
+  const profileModuleSidebar = getModuleProfileSidebar(pathname);
+  const useProfileModuleSidebarNav = usesProfileModuleSidebar(pathname);
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
   const mobileNavCandidates = mainMenuItems
@@ -1465,6 +1473,10 @@ export function DashboardShell({
   }, [accountOpen]);
 
   useEffect(() => {
+    setAccountOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     if (!moduleMenuOpen) return;
     function onDoc(e: MouseEvent) {
       if (!moduleMenuRef.current?.contains(e.target as Node)) setModuleMenuOpen(false);
@@ -1500,6 +1512,8 @@ export function DashboardShell({
               appDashboardHeaderIconButtonClass,
               systemFocusLayout && "hidden",
               moduleStaffKiosk && "hidden",
+              /** โมเดลโปรไฟล์-เมนู: เดสก์ท็อปไม่ใช้แฮมเบอร์เกอร์ sidebar — ใช้คลิกรูปโปรไฟล์ */
+              useProfileModuleSidebarNav && "md:hidden",
             )}
             aria-expanded={isMdUp ? !sidebarCollapsed : drawerOpen}
             aria-controls={isMdUp ? undefined : menuId}
@@ -2134,67 +2148,141 @@ export function DashboardShell({
             )}
           </div>
 
-          {/* ขวา: มือถือเหลือโปรไฟล์ · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
+          {/* ขวา: รูปโปรไฟล์ → ป๊อปอัป (โมดูลเมนูบนเดสก์ท็อปเมื่อ useProfileModuleSidebar) · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
           <div className="flex shrink-0 flex-nowrap items-center gap-0.5 border-l border-white/20 pl-1.5 sm:gap-1.5 sm:pl-2.5 md:gap-2 md:pl-3.5">
-            <div className="hidden shrink-0 md:block">
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
-                  alt=""
-                  width={36}
-                  height={32}
-                  className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
-                  {username.slice(0, 1).toUpperCase()}
-                </div>
+            <div
+              className={cn(
+                "relative shrink-0",
+                /** โหมดปกติ: ป๊อปอัปบัญชีเฉพาะมือถือ · โหมดโปรไฟล์-เมนู: ป๊อปอัปทุกขนาด */
+                !useProfileModuleSidebarNav && "md:contents",
               )}
-            </div>
-
-            <div className="relative shrink-0 md:hidden" ref={accountWrapRef}>
-              <button
-                type="button"
-                suppressHydrationWarning
-                className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible")}
-                aria-expanded={accountOpen}
-                aria-label={
-                  demoSession
-                    ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
-                    : "เมนูบัญชี"
-                }
-                onClick={() => setAccountOpen((o) => !o)}
-              >
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
-                    {username.slice(0, 1).toUpperCase()}
+              ref={accountWrapRef}
+            >
+              {useProfileModuleSidebarNav ? (
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  className={cn(
+                    appDashboardHeaderIconButtonClass,
+                    "relative overflow-visible",
+                    accountOpen && "bg-white/20 ring-2 ring-white/50",
+                  )}
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
+                  aria-label={
+                    demoSession
+                      ? "เมนูโมดูลและบัญชี — บัญชีทดลอง"
+                      : profileModuleSidebar
+                        ? `เมนู ${profileModuleSidebar.moduleTitle}`
+                        : "เมนูบัญชี"
+                  }
+                  title={
+                    profileModuleSidebar
+                      ? `เมนู ${profileModuleSidebar.moduleTitle}`
+                      : "เมนูบัญชี"
+                  }
+                  onClick={() => setAccountOpen((o) => !o)}
+                >
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 shrink-0 rounded-full border-2 border-white/60 object-cover shadow-md"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
+                      {username.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  {demoSession ? (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
+                      title="บัญชีทดลอง"
+                      aria-hidden
+                    >
+                      ทด
+                    </span>
+                  ) : null}
+                </button>
+              ) : (
+                <>
+                  <div className="hidden shrink-0 md:block">
+                    {avatarUrl ? (
+                      <Image
+                        src={avatarUrl}
+                        alt=""
+                        width={36}
+                        height={32}
+                        className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
+                        {username.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
                   </div>
-                )}
-                {demoSession ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
-                    title="บัญชีทดลอง"
-                    aria-hidden
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible md:hidden")}
+                    aria-expanded={accountOpen}
+                    aria-label={
+                      demoSession
+                        ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
+                        : "เมนูบัญชี"
+                    }
+                    onClick={() => setAccountOpen((o) => !o)}
                   >
-                    ทด
-                  </span>
-                ) : null}
-              </button>
+                    {avatarUrl ? (
+                      <Image
+                        src={avatarUrl}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
+                        {username.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    {demoSession ? (
+                      <span
+                        className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
+                        title="บัญชีทดลอง"
+                        aria-hidden
+                      >
+                        ทด
+                      </span>
+                    ) : null}
+                  </button>
+                </>
+              )}
+
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-[min(18rem,calc(100vw-1.25rem))] rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  className={cn(
+                    "absolute right-0 z-40 mt-2 overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl backdrop-blur-xl",
+                    useProfileModuleSidebarNav
+                      ? "w-[min(20rem,calc(100vw-1.25rem))]"
+                      : "w-[min(18rem,calc(100vw-1.25rem))] p-1.5 md:hidden",
+                    useProfileModuleSidebarNav && "p-1.5",
+                  )}
                   role="menu"
                 >
+                  {useProfileModuleSidebarNav && profileModuleSidebar ? (
+                    <div className="hidden md:block">
+                      <DashboardProfileModuleMenu
+                        config={profileModuleSidebar}
+                        onNavigate={() => setAccountOpen(false)}
+                      />
+                    </div>
+                  ) : null}
                   {demoSession ? (
                     <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
                   ) : null}
@@ -2204,8 +2292,21 @@ export function DashboardShell({
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
-                    <span className="text-lg">👤</span>
+                    <span className="text-lg" aria-hidden>
+                      👤
+                    </span>
                     โปรไฟล์ของคุณ
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
+                    role="menuitem"
+                    onClick={() => setAccountOpen(false)}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      🏠
+                    </span>
+                    หน้าแรกแดชบอร์ด
                   </Link>
                   <LogoutButton
                     className="mt-0.5 flex w-full items-center justify-start gap-2.5 rounded-xl border-0 bg-transparent px-3.5 py-2.5 text-left text-sm font-bold text-rose-600 shadow-none hover:bg-rose-50"
@@ -2217,7 +2318,7 @@ export function DashboardShell({
             <span className="hidden sm:contents">
               <AppBrowserFullscreenButton className="h-10 w-10" />
             </span>
-            <span className="hidden sm:contents">
+            <span className={cn("hidden sm:contents", useProfileModuleSidebarNav && "md:hidden")}>
               <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
             </span>
           </div>
@@ -2238,7 +2339,7 @@ export function DashboardShell({
           className={cn(
             "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
             sidebarCollapsed && "md:!hidden",
-            (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
+            (systemFocusLayout || moduleStaffKiosk || useProfileModuleSidebarNav) && "md:hidden",
             moduleStaffKiosk && "!hidden !my-0",
           )}
           aria-label="เมนูหลัก"
