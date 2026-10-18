@@ -10,7 +10,7 @@ export async function getSmartPoliceDocumentPreview(
 ) {
   const row = await prisma.smartPoliceCase.findFirst({
     where: { id: caseId, ownerUserId },
-    include: { parties: true, documents: true },
+    include: { parties: true, documents: true, evidence: true },
   });
   if (!row) return null;
 

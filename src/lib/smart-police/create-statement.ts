@@ -3,11 +3,9 @@ import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail } from "@/lib/smart-police/serialize";
-import {
-  buildOfficialStatementFormText,
-  statementTitleForRole,
-  type StatementFormContext,
-} from "@/lib/smart-police/statement-form";
+import { buildStatementByCaseRelation } from "@/lib/smart-police/case-relation-statements";
+import { resolveInvestigatorName } from "@/lib/smart-police/generate-docs";
+import { statementTitleForRole } from "@/lib/smart-police/statement-form";
 import { appOriginFromRequest, generateStatementDocxFile } from "@/lib/smart-police/word-file";
 
 function formatThaiDate(d = new Date()): string {
@@ -24,7 +22,7 @@ export async function createStatementForParty(opts: {
 }) {
   const row = await prisma.smartPoliceCase.findFirst({
     where: { id: opts.caseId, ownerUserId: opts.ownerUserId },
-    include: { parties: true, documents: true },
+    include: { parties: true, documents: true, evidence: true },
   });
   if (!row) throw new Error("ไม่พบคดี");
 
@@ -33,26 +31,37 @@ export async function createStatementForParty(opts: {
 
   const profile = await getOrCreateSmartPoliceProfile(opts.ownerUserId);
   const caseDetail = mapSmartPoliceCaseDetail(row);
-  const vars = buildSmartPolicePrintVars(profile, caseDetail);
+  const investigator = await resolveInvestigatorName(
+    opts.ownerUserId,
+    caseDetail.investigatorOfficerId,
+  );
+  const vars = buildSmartPolicePrintVars(profile, caseDetail, { investigator });
 
-  const ctx: StatementFormContext = {
+  const evidenceSummary = caseDetail.evidence
+    .map((e, i) => `${i + 1}. ${e.name}${e.quantityLabel ? ` จำนวน ${e.quantityLabel}` : ""}`)
+    .join("\n");
+
+  const bodyText = buildStatementByCaseRelation({
     caseNumber: row.caseNumber,
     caseTitle: row.title,
+    chargeText: caseDetail.chargeText ?? "",
     stationName: profile.stationName,
-    investigator: profile.investigatorDefault ?? "",
+    investigator,
     todayThai: vars.todayThai || formatThaiDate(),
-    party: {
-      fullName: party.fullName,
-      role: party.role,
-      age: party.age,
-      nationality: party.nationality,
-      idCard: party.idCard,
-      address: party.address,
-      phone: party.phone,
-    },
-  };
-
-  const bodyText = buildOfficialStatementFormText(ctx);
+    behaviorText: caseDetail.behaviorText ?? caseDetail.summary ?? "",
+    partyName: party.fullName,
+    partyAge: party.age != null ? String(party.age) : "",
+    partyNationality: party.nationality ?? "",
+    partyIdCard: party.idCard ?? "",
+    partyAddress: party.address ?? "",
+    partyPhone: party.phone ?? "",
+    role: party.role,
+    caseRelation: party.caseRelation,
+    pleaStatus: party.pleaStatus,
+    occupation: party.occupation,
+    workplace: party.workplace,
+    evidenceSummary,
+  });
   const title = `${statementTitleForRole(party.role)} — ${party.fullName}`;
 
   const maxSort = await prisma.smartPoliceDocument.aggregate({

@@ -417,6 +417,7 @@ model User {
   smartPoliceProfile                 SmartPoliceProfile?
   smartPoliceCases                   SmartPoliceCase[]
   smartPoliceTemplates               SmartPoliceTemplate[]
+  smartPoliceOfficers                SmartPoliceOfficer[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -6929,7 +6930,29 @@ enum SmartPoliceDocumentKind {
   WARRANT
   REPORT
   MEMO
+  PROPERTY_LIST
+  INVESTIGATION_REPORT
   OTHER
+}
+
+enum SmartPoliceCustodyMode {
+  DETAIN_REMAND
+  NOT_ARRESTED
+  UNKNOWN
+  SURRENDER_RELEASE
+  SURRENDER_DETAIN
+  OTHER
+}
+
+enum SmartPoliceInvestigationResult {
+  INVESTIGATING
+  PROSECUTE
+  NOT_PROSECUTE
+}
+
+enum SmartPoliceWitnessSide {
+  COMPLAINANT
+  SUSPECT
 }
 
 model SmartPoliceProfile {
@@ -6941,6 +6964,9 @@ model SmartPoliceProfile {
   province            String?  @db.VarChar(120)
   commanderRank       String?  @map("commander_rank") @db.VarChar(80)
   commanderName       String?  @map("commander_name") @db.VarChar(200)
+  commanderTitle      String?  @map("commander_title") @db.VarChar(120)
+  headOfWorkRank      String?  @map("head_of_work_rank") @db.VarChar(80)
+  headOfWorkName      String?  @map("head_of_work_name") @db.VarChar(200)
   investigatorDefault String?  @map("investigator_default") @db.VarChar(200)
   caseNumberPrefix    String   @default("ส.") @map("case_number_prefix") @db.VarChar(32)
   printFooter         String?  @map("print_footer") @db.Text
@@ -6950,46 +6976,106 @@ model SmartPoliceProfile {
   @@map("smart_police_profiles")
 }
 
+model SmartPoliceOfficer {
+  id           String   @id @default(cuid())
+  ownerUserId  String   @map("owner_user_id") @db.VarChar(191)
+  owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  fullName     String   @map("full_name") @db.VarChar(200)
+  rankTitle    String?  @map("rank_title") @db.VarChar(120)
+  position     String?  @db.VarChar(200)
+  birthDate    DateTime? @map("birth_date")
+  isDefault    Boolean  @default(false) @map("is_default")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  cases SmartPoliceCase[]
+
+  @@index([ownerUserId, sortOrder], map: "spofficer_owner_sort_idx")
+  @@map("smart_police_officers")
+}
+
 model SmartPoliceCase {
-  id            String                @id @default(cuid())
-  ownerUserId   String                @map("owner_user_id") @db.VarChar(191)
-  owner         User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  caseNumber    String                @map("case_number") @db.VarChar(64)
-  title         String                @db.VarChar(255)
-  caseType      String                @default("คดีอาญา") @map("case_type") @db.VarChar(80)
-  status        SmartPoliceCaseStatus @default(OPEN)
-  incidentAt    DateTime?             @map("incident_at")
-  incidentPlace String?               @map("incident_place") @db.Text
-  summary       String?               @db.Text
-  printCount    Int                   @default(0) @map("print_count")
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @updatedAt @map("updated_at")
+  id                     String                         @id @default(cuid())
+  ownerUserId            String                         @map("owner_user_id") @db.VarChar(191)
+  owner                  User                           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  caseNumber             String                         @map("case_number") @db.VarChar(64)
+  title                  String                         @db.VarChar(255)
+  caseType               String                         @default("คดีอาญา") @map("case_type") @db.VarChar(80)
+  status                 SmartPoliceCaseStatus          @default(OPEN)
+  courtType              String?                        @map("court_type") @db.VarChar(80)
+  chargeText             String?                        @map("charge_text") @db.Text
+  lawRefs                String?                        @map("law_refs") @db.Text
+  receivedAt             DateTime?                      @map("received_at")
+  receivedTimeHm         String?                        @map("received_time_hm") @db.VarChar(8)
+  dailyLogNo             String?                        @map("daily_log_no") @db.VarChar(64)
+  custodyMode            SmartPoliceCustodyMode?        @map("custody_mode")
+  investigatorOfficerId  String?                        @map("investigator_officer_id") @db.VarChar(191)
+  investigatorOfficer    SmartPoliceOfficer?            @relation(fields: [investigatorOfficerId], references: [id], onDelete: SetNull)
+  investigationResult    SmartPoliceInvestigationResult @default(INVESTIGATING) @map("investigation_result")
+  sentToProsecutorAt     DateTime?                      @map("sent_to_prosecutor_at")
+  behaviorText           String?                        @map("behavior_text") @db.Text
+  damageNote             String?                        @map("damage_note") @db.Text
+  detainAt               DateTime?                      @map("detain_at")
+  incidentAt             DateTime?                      @map("incident_at")
+  incidentPlace          String?                        @map("incident_place") @db.Text
+  summary                String?                        @db.Text
+  printCount             Int                            @default(0) @map("print_count")
+  createdAt              DateTime                       @default(now()) @map("created_at")
+  updatedAt              DateTime                       @updatedAt @map("updated_at")
 
   parties   SmartPoliceParty[]
   documents SmartPoliceDocument[]
+  evidence  SmartPoliceEvidence[]
 
   @@unique([ownerUserId, caseNumber], map: "spcase_owner_number_uidx")
   @@index([ownerUserId, status, updatedAt], map: "spcase_owner_status_idx")
+  @@index([investigatorOfficerId], map: "spcase_officer_idx")
   @@map("smart_police_cases")
 }
 
 model SmartPoliceParty {
-  id          String               @id @default(cuid())
-  caseId      String               @map("case_id") @db.VarChar(191)
-  case        SmartPoliceCase      @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  role        SmartPolicePartyRole
-  fullName    String               @map("full_name") @db.VarChar(200)
-  age         Int?
-  nationality String?              @default("ไทย") @db.VarChar(64)
-  idCard      String?              @map("id_card") @db.VarChar(32)
-  address     String?              @db.Text
-  phone       String?              @db.VarChar(32)
-  sortOrder   Int                  @default(0) @map("sort_order")
+  id           String                 @id @default(cuid())
+  caseId       String                 @map("case_id") @db.VarChar(191)
+  case         SmartPoliceCase        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  role         SmartPolicePartyRole
+  fullName     String                 @map("full_name") @db.VarChar(200)
+  age          Int?
+  nationality  String?                @default("ไทย") @db.VarChar(64)
+  idCard       String?                @map("id_card") @db.VarChar(32)
+  address      String?                @db.Text
+  phone        String?                @db.VarChar(32)
+  caseRelation String?                @map("case_relation") @db.VarChar(200)
+  witnessSide  SmartPoliceWitnessSide? @map("witness_side")
+  pleaStatus   String?                @map("plea_status") @db.VarChar(200)
+  occupation   String?                @db.VarChar(200)
+  workplace    String?                @db.Text
+  sortOrder    Int                    @default(0) @map("sort_order")
 
   statementDocuments SmartPoliceDocument[]
 
   @@index([caseId], map: "spparty_case_idx")
   @@map("smart_police_parties")
+}
+
+model SmartPoliceEvidence {
+  id            String           @id @default(cuid())
+  caseId        String           @map("case_id") @db.VarChar(191)
+  case          SmartPoliceCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name          String           @db.VarChar(255)
+  quantityLabel String?          @map("quantity_label") @db.VarChar(120)
+  seizureNo     String?          @map("seizure_no") @db.VarChar(64)
+  seizedFrom    String?          @map("seized_from") @db.VarChar(255)
+  ownerName     String?          @map("owner_name") @db.VarChar(200)
+  ownerNote     String?          @map("owner_note") @db.Text
+  labReceivedAt DateTime?        @map("lab_received_at")
+  labResult     String?          @map("lab_result") @db.Text
+  sortOrder     Int              @default(0) @map("sort_order")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@index([caseId], map: "spevidence_case_idx")
+  @@map("smart_police_evidence")
 }
 
 model SmartPoliceDocument {

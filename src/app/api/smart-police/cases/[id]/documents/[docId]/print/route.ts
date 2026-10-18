@@ -18,7 +18,7 @@ export async function POST(
 
   const row = await prisma.smartPoliceCase.findFirst({
     where: { id: caseId, ownerUserId: gate.ctx.ownerUserId },
-    include: { parties: true, documents: true },
+    include: { parties: true, documents: true, evidence: true },
   });
   if (!row) return NextResponse.json({ error: "ไม่พบคดี" }, { status: 404 });
 

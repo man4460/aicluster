@@ -115,14 +115,58 @@ export const SMART_POLICE_BUILTIN_TEMPLATES: BuiltinTemplateSeed[] = [
 เลขที่คดี {{caseNumber}} — {{caseTitle}}
 ประเภทคดี {{caseType}}
 สถานะ {{caseStatus}}
+ข้อหา {{chargeText}}
 
 สรุปเหตุการณ์
+{{behaviorText}}
 {{summary}}
 
 จำนวนเอกสารในคดี {{documentCount}} ฉบับ
 จำนวนบุคคลที่เกี่ยวข้อง {{partyCount}} ราย
+จำนวนของกลาง {{evidenceCount}} รายการ
 
 {{stationName}}
 วันที่ {{todayThai}}`,
+  },
+  {
+    kind: "PROPERTY_LIST",
+    name: "บัญชีของกลาง",
+    sortOrder: 6,
+    content: `บัญชีของกลาง / รายการทรัพย์
+
+เลขที่คดี {{caseNumber}}
+เรื่อง {{caseTitle}}
+{{stationName}}
+วันที่ {{todayThai}}
+
+{{evidenceList}}
+
+ลงชื่อผู้จัดทำ ………………………………
+({{investigator}})`,
+  },
+  {
+    kind: "INVESTIGATION_REPORT",
+    name: "รายงานการสอบสวน",
+    sortOrder: 7,
+    content: `รายงานการสอบสวน
+
+เลขที่คดี {{caseNumber}} — {{caseTitle}}
+ประเภทคดี {{caseType}}
+ข้อหา {{chargeText}}
+กฎหมายที่อ้าง {{lawRefs}}
+ผลชั้นสอบสวน {{investigationResult}}
+
+พฤติการณ์
+{{behaviorText}}
+
+บุคคลที่เกี่ยวข้อง
+{{partiesList}}
+
+ของกลาง
+{{evidenceList}}
+
+{{stationName}}
+วันที่ {{todayThai}}
+({{investigator}})`,
   },
 ];

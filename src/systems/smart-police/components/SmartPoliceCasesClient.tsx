@@ -7,6 +7,7 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
+  appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
@@ -15,12 +16,21 @@ import type { SmartPoliceCaseListItem } from "@/lib/smart-police/types";
 import { IconSpPlus } from "@/systems/smart-police/components/SmartPoliceIcons";
 import type { SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
+function FilterIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function SmartPoliceCasesClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [cases, setCases] = useState<SmartPoliceCaseListItem[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"" | SmartPoliceCaseStatus>("");
+  const [filterOpen, setFilterOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,6 +40,8 @@ export function SmartPoliceCasesClient() {
     incidentPlace: "",
     summary: "",
   });
+
+  const filtersActive = Boolean(q.trim() || status);
 
   const refresh = useCallback(async () => {
     const params = new URLSearchParams();
@@ -78,50 +90,108 @@ export function SmartPoliceCasesClient() {
           title="รายการคดี"
           description="ค้นหาเลขคดีหรือชื่อเรื่อง · กรองสถานะ"
           action={
-            <button
-              type="button"
-              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl sm:min-w-0 sm:px-4"
-              aria-label="เปิดคดีใหม่"
-              onClick={() => setModalOpen(true)}
-            >
-              <IconSpPlus className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline">+ คดีใหม่</span>
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                aria-expanded={filterOpen}
+                aria-controls="sp-cases-filter-panel"
+                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
+                  filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+                  filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+                )}
+                onClick={() => setFilterOpen((o) => !o)}
+              >
+                <FilterIcon className="h-5 w-5" />
+                <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {filtersActive && !filterOpen ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl sm:min-w-0 sm:px-4"
+                aria-label="เปิดคดีใหม่"
+                onClick={() => setModalOpen(true)}
+              >
+                <IconSpPlus className="h-5 w-5 sm:hidden" />
+                <span className="hidden sm:inline">+ คดีใหม่</span>
+              </button>
+            </div>
           }
         />
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+
+        <div
+          id="sp-cases-filter-panel"
+          className={cn("mt-3 space-y-3", filterOpen ? "block" : "hidden")}
+        >
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะ">
+            {(
+              [
+                { key: "" as const, label: "ทั้งหมด" },
+                ...(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
+                  (k) => ({ key: k, label: SMART_POLICE_CASE_STATUS_LABEL[k] }),
+                ),
+              ] as { key: "" | SmartPoliceCaseStatus; label: string }[]
+            ).map((chip) => (
+              <button
+                key={chip.key || "all"}
+                type="button"
+                role="tab"
+                aria-selected={status === chip.key}
+                className={cn(
+                  "min-h-8 rounded-lg px-3 text-[11px] font-semibold sm:min-h-9 sm:text-xs",
+                  status === chip.key
+                    ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
+                    : "border border-white/60 bg-white/70 text-[#4d47b6]",
+                )}
+                onClick={() => setStatus(chip.key)}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
           <input
-            className="app-input min-h-[44px] flex-1 rounded-xl"
+            className="app-input min-h-[44px] w-full rounded-xl"
             placeholder="ค้นหาเลขคดี / ชื่อเรื่อง"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="ค้นหาคดี"
           />
-          <select
-            className="app-input min-h-[44px] rounded-xl sm:w-44"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as "" | SmartPoliceCaseStatus)}
-            aria-label="กรองสถานะ"
-          >
-            <option value="">ทุกสถานะ</option>
-            {(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map((k) => (
-              <option key={k} value={k}>
-                {SMART_POLICE_CASE_STATUS_LABEL[k]}
-              </option>
-            ))}
-          </select>
+          {filtersActive ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-[#5b61ff] underline"
+              onClick={() => {
+                setQ("");
+                setStatus("");
+              }}
+            >
+              ล้างกรอง
+            </button>
+          ) : null}
         </div>
+
         {loading ? (
           <p className="mt-4 text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : cases.length === 0 ? (
-          <AppEmptyState className="mt-4">ไม่พบคดี — สร้างคดีใหม่เพื่อเริ่มบันทึกสำนวน</AppEmptyState>
+          <AppEmptyState className="mt-4">
+            {filtersActive
+              ? "ไม่พบคดีตามเงื่อนไขกรอง"
+              : "ไม่พบคดี — สร้างคดีใหม่เพื่อเริ่มบันทึกสำนวน"}
+          </AppEmptyState>
         ) : (
           <ul className="mt-4 space-y-2">
             {cases.map((c) => (
               <li key={c.id}>
                 <Link
                   href={`/dashboard/smart-police/cases/${c.id}`}
-                  className="flex flex-col gap-1 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 text-left transition hover:bg-white/80 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-1 rounded-2xl border border-l-[3px] border-indigo-200 border-l-indigo-500 bg-indigo-50/40 px-4 py-3 text-left transition hover:bg-indigo-50/70 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-[#1e1b4b]">

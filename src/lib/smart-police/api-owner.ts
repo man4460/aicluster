@@ -16,6 +16,9 @@ export function mapSmartPoliceProfile(row: {
   province: string | null;
   commanderRank: string | null;
   commanderName: string | null;
+  commanderTitle: string | null;
+  headOfWorkRank: string | null;
+  headOfWorkName: string | null;
   investigatorDefault: string | null;
   caseNumberPrefix: string;
   printFooter: string | null;
@@ -27,6 +30,9 @@ export function mapSmartPoliceProfile(row: {
     province: row.province,
     commanderRank: row.commanderRank,
     commanderName: row.commanderName,
+    commanderTitle: row.commanderTitle,
+    headOfWorkRank: row.headOfWorkRank,
+    headOfWorkName: row.headOfWorkName,
     investigatorDefault: row.investigatorDefault,
     caseNumberPrefix: row.caseNumberPrefix,
     printFooter: row.printFooter,
@@ -37,7 +43,28 @@ export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
   const count = await prisma.smartPoliceTemplate.count({
     where: { ownerUserId, isBuiltin: true },
   });
-  if (count > 0) return;
+  if (count > 0) {
+    // ensure new kinds exist for older installs
+    for (const t of SMART_POLICE_BUILTIN_TEMPLATES) {
+      const exists = await prisma.smartPoliceTemplate.findFirst({
+        where: { ownerUserId, isBuiltin: true, name: t.name },
+      });
+      if (!exists) {
+        await prisma.smartPoliceTemplate.create({
+          data: {
+            ownerUserId,
+            kind: t.kind,
+            name: t.name,
+            content: t.content,
+            sortOrder: t.sortOrder,
+            isBuiltin: true,
+            isActive: true,
+          },
+        });
+      }
+    }
+    return;
+  }
   await prisma.smartPoliceTemplate.createMany({
     data: SMART_POLICE_BUILTIN_TEMPLATES.map((t) => ({
       ownerUserId,

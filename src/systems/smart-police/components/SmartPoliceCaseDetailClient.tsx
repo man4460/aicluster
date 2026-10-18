@@ -6,40 +6,103 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AppDashboardSection,
   AppSectionHeader,
+  AppTime24Input,
   openPrintableHtml,
+  appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
+  SMART_POLICE_CASE_RELATIONS,
   SMART_POLICE_CASE_STATUS_LABEL,
   SMART_POLICE_CASE_TYPES,
+  SMART_POLICE_COURT_TYPES,
+  SMART_POLICE_CUSTODY_MODE_LABEL,
   SMART_POLICE_DOCUMENT_KIND_LABEL,
+  SMART_POLICE_INVESTIGATION_RESULT_LABEL,
   SMART_POLICE_PARTY_ROLE_LABEL,
+  SMART_POLICE_PLEA_OPTIONS,
+  SMART_POLICE_SAMPLE_BEHAVIORS,
+  SMART_POLICE_SAMPLE_CHARGES,
+  SMART_POLICE_WITNESS_SIDE_LABEL,
 } from "@/lib/smart-police/types";
-import type { SmartPoliceCaseDetail } from "@/lib/smart-police/types";
-import { IconSpPrint } from "@/systems/smart-police/components/SmartPoliceIcons";
+import type {
+  SmartPoliceCaseDetail,
+  SmartPoliceEvidenceDto,
+  SmartPoliceOfficerDto,
+  SmartPolicePartyDto,
+} from "@/lib/smart-police/types";
 import { smartPoliceInnerCardClass } from "@/systems/smart-police/smart-police-tokens";
-import type { SmartPoliceCaseStatus, SmartPoliceDocumentKind, SmartPolicePartyRole } from "@/generated/prisma/enums";
+import type {
+  SmartPoliceCaseStatus,
+  SmartPoliceCustodyMode,
+  SmartPoliceDocumentKind,
+  SmartPoliceInvestigationResult,
+  SmartPolicePartyRole,
+  SmartPoliceWitnessSide,
+} from "@/generated/prisma/enums";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+
+type CaseTab = "info" | "parties" | "evidence" | "behavior" | "docs";
 
 function documentPreviewHref(caseId: string, docId: string) {
   return `/dashboard/smart-police/cases/${caseId}/documents/${docId}`;
 }
 
+function toDateInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+}
+
+const emptyParty = {
+  role: "COMPLAINANT" as SmartPolicePartyRole,
+  fullName: "",
+  age: "",
+  idCard: "",
+  address: "",
+  caseRelation: "",
+  witnessSide: "" as "" | SmartPoliceWitnessSide,
+  pleaStatus: "",
+  occupation: "",
+  workplace: "",
+};
+
+const emptyEvidence = {
+  name: "",
+  quantityLabel: "",
+  seizureNo: "",
+  seizedFrom: "",
+  ownerName: "",
+  ownerNote: "",
+};
+
 export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   const router = useRouter();
+  const [tab, setTab] = useState<CaseTab>("info");
   const [data, setData] = useState<SmartPoliceCaseDetail | null>(null);
+  const [officers, setOfficers] = useState<SmartPoliceOfficerDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
   const [partyModal, setPartyModal] = useState(false);
+  const [editingPartyId, setEditingPartyId] = useState<string | null>(null);
+  const [partyForm, setPartyForm] = useState(emptyParty);
+
+  const [evidenceModal, setEvidenceModal] = useState(false);
+  const [editingEvidenceId, setEditingEvidenceId] = useState<string | null>(null);
+  const [evidenceForm, setEvidenceForm] = useState(emptyEvidence);
+
   const [docModal, setDocModal] = useState(false);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [partyForm, setPartyForm] = useState({
-    role: "COMPLAINANT" as SmartPolicePartyRole,
-    fullName: "",
-    age: "",
-    idCard: "",
-    address: "",
-  });
   const [docForm, setDocForm] = useState({
     kind: "NARRATIVE" as SmartPoliceDocumentKind,
     title: "",
@@ -48,9 +111,6 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   const [templateOptions, setTemplateOptions] = useState<
     { id: string; name: string; kind: SmartPoliceDocumentKind; content: string }[]
   >([]);
-  const [toast, setToast] = useState<string | null>(null);
-  const [statementBusyPartyId, setStatementBusyPartyId] = useState<string | null>(null);
-  const [syncBusy, setSyncBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/smart-police/cases/${caseId}`, { cache: "no-store" });
@@ -69,39 +129,143 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch("/api/smart-police/templates", { cache: "no-store" });
-      if (!res.ok) return;
-      const json = (await res.json()) as {
-        templates: { id: string; name: string; kind: SmartPoliceDocumentKind; content: string; isActive: boolean }[];
-      };
-      setTemplateOptions(json.templates.filter((t) => t.isActive));
+      const [offRes, tplRes] = await Promise.all([
+        fetch("/api/smart-police/officers", { cache: "no-store" }),
+        fetch("/api/smart-police/templates", { cache: "no-store" }),
+      ]);
+      if (offRes.ok) {
+        const j = (await offRes.json()) as { officers: SmartPoliceOfficerDto[] };
+        setOfficers(j.officers);
+      }
+      if (tplRes.ok) {
+        const j = (await tplRes.json()) as {
+          templates: { id: string; name: string; kind: SmartPoliceDocumentKind; content: string; isActive: boolean }[];
+        };
+        setTemplateOptions(j.templates.filter((t) => t.isActive));
+      }
     })();
   }, []);
 
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
+
   async function patchCase(patch: Record<string, unknown>) {
-    await fetch(`/api/smart-police/cases/${caseId}`, {
+    const res = await fetch(`/api/smart-police/cases/${caseId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    await load();
+    if (res.ok) {
+      const json = (await res.json()) as { case: SmartPoliceCaseDetail };
+      setData(json.case);
+    }
+  }
+
+  async function generateDocs(
+    kinds: ("STATEMENT_ALL" | "MEMO" | "INVESTIGATION_REPORT" | "PROPERTY_LIST")[],
+  ) {
+    setGenBusy(true);
+    const res = await fetch(`/api/smart-police/cases/${caseId}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kinds, generateWord: true, syncNarrative: true }),
+    });
+    setGenBusy(false);
+    if (!res.ok) {
+      const err = (await res.json()) as { error?: string };
+      showToast(err.error ?? "สร้างเอกสารไม่สำเร็จ");
+      return;
+    }
+    const json = (await res.json()) as { case?: SmartPoliceCaseDetail };
+    if (json.case) setData(json.case);
+    else await load();
+    showToast("สร้างเอกสารแล้ว");
+    setTab("docs");
   }
 
   async function saveParty() {
     if (!partyForm.fullName.trim()) return;
     setSaving(true);
-    await fetch(`/api/smart-police/cases/${caseId}/parties`, {
-      method: "POST",
+    const payload = {
+      ...partyForm,
+      age: partyForm.age ? Number(partyForm.age) : null,
+      witnessSide: partyForm.witnessSide || null,
+    };
+    const url = editingPartyId
+      ? `/api/smart-police/cases/${caseId}/parties/${editingPartyId}`
+      : `/api/smart-police/cases/${caseId}/parties`;
+    await fetch(url, {
+      method: editingPartyId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...partyForm,
-        age: partyForm.age ? Number(partyForm.age) : null,
-      }),
+      body: JSON.stringify(payload),
     });
     setSaving(false);
     setPartyModal(false);
-    setPartyForm({ role: "COMPLAINANT", fullName: "", age: "", idCard: "", address: "" });
+    setEditingPartyId(null);
+    setPartyForm(emptyParty);
     await load();
+  }
+
+  async function deleteParty(p: SmartPolicePartyDto) {
+    if (!window.confirm(`ลบ ${p.fullName}?`)) return;
+    await fetch(`/api/smart-police/cases/${caseId}/parties/${p.id}`, { method: "DELETE" });
+    await load();
+  }
+
+  function openEditParty(p: SmartPolicePartyDto) {
+    setEditingPartyId(p.id);
+    setPartyForm({
+      role: p.role,
+      fullName: p.fullName,
+      age: p.age != null ? String(p.age) : "",
+      idCard: p.idCard ?? "",
+      address: p.address ?? "",
+      caseRelation: p.caseRelation ?? "",
+      witnessSide: p.witnessSide ?? "",
+      pleaStatus: p.pleaStatus ?? "",
+      occupation: p.occupation ?? "",
+      workplace: p.workplace ?? "",
+    });
+    setPartyModal(true);
+  }
+
+  async function saveEvidence() {
+    if (!evidenceForm.name.trim()) return;
+    setSaving(true);
+    const url = editingEvidenceId
+      ? `/api/smart-police/cases/${caseId}/evidence/${editingEvidenceId}`
+      : `/api/smart-police/cases/${caseId}/evidence`;
+    await fetch(url, {
+      method: editingEvidenceId ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(evidenceForm),
+    });
+    setSaving(false);
+    setEvidenceModal(false);
+    setEditingEvidenceId(null);
+    setEvidenceForm(emptyEvidence);
+    await load();
+  }
+
+  async function deleteEvidence(e: SmartPoliceEvidenceDto) {
+    if (!window.confirm(`ลบ ${e.name}?`)) return;
+    await fetch(`/api/smart-police/cases/${caseId}/evidence/${e.id}`, { method: "DELETE" });
+    await load();
+  }
+
+  function openEditEvidence(e: SmartPoliceEvidenceDto) {
+    setEditingEvidenceId(e.id);
+    setEvidenceForm({
+      name: e.name,
+      quantityLabel: e.quantityLabel ?? "",
+      seizureNo: e.seizureNo ?? "",
+      seizedFrom: e.seizedFrom ?? "",
+      ownerName: e.ownerName ?? "",
+      ownerNote: e.ownerNote ?? "",
+    });
+    setEvidenceModal(true);
   }
 
   async function saveDoc() {
@@ -118,52 +282,6 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     setSaving(false);
     setDocModal(false);
     setEditingDocId(null);
-    setDocForm({ kind: "NARRATIVE", title: "", content: "" });
-    await load();
-  }
-
-  async function createStatementForParty(partyId: string) {
-    setStatementBusyPartyId(partyId);
-    const res = await fetch(`/api/smart-police/cases/${caseId}/statements`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ partyId, generateWord: true, syncNarrative: true }),
-    });
-    setStatementBusyPartyId(null);
-    if (!res.ok) {
-      const err = (await res.json()) as { error?: string };
-      setToast(err.error ?? "สร้างคำให้การไม่สำเร็จ");
-      return;
-    }
-    const json = (await res.json()) as { document?: { id: string } };
-    if (json.document?.id) {
-      router.push(documentPreviewHref(caseId, json.document.id));
-      return;
-    }
-    setToast("สร้างคำให้การ + ไฟล์ Word และผูกลิงก์ในสำนวนแล้ว");
-    setTimeout(() => setToast(null), 3500);
-    await load();
-  }
-
-  async function syncNarrativeLinks() {
-    setSyncBusy(true);
-    await fetch(`/api/smart-police/cases/${caseId}/sync-narrative-links`, { method: "POST" });
-    setSyncBusy(false);
-    setToast("อัปเดตลิงก์ในสำนวนคดีแล้ว");
-    setTimeout(() => setToast(null), 3000);
-    await load();
-  }
-
-  async function exportWord(docId: string) {
-    setSaving(true);
-    const res = await fetch(`/api/smart-police/cases/${caseId}/documents/${docId}/word`, {
-      method: "POST",
-    });
-    setSaving(false);
-    if (!res.ok) return;
-    const json = (await res.json()) as { document: { wordFileUrl: string }; downloadUrl?: string };
-    if (json.downloadUrl) window.open(json.downloadUrl, "_blank", "noopener,noreferrer");
-    else if (json.document.wordFileUrl) window.open(json.document.wordFileUrl, "_blank", "noopener,noreferrer");
     await load();
   }
 
@@ -177,18 +295,29 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     await load();
   }
 
-  function applyTemplate(templateId: string) {
-    const t = templateOptions.find((x) => x.id === templateId);
-    if (!t) return;
-    setDocForm({ kind: t.kind, title: t.name, content: t.content });
-    setEditingDocId(null);
-    setDocModal(true);
+  async function createStatementForParty(partyId: string) {
+    setGenBusy(true);
+    const res = await fetch(`/api/smart-police/cases/${caseId}/statements`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partyId, generateWord: true, syncNarrative: true }),
+    });
+    setGenBusy(false);
+    if (!res.ok) {
+      const err = (await res.json()) as { error?: string };
+      showToast(err.error ?? "สร้างคำให้การไม่สำเร็จ");
+      return;
+    }
+    const json = (await res.json()) as { document?: { id: string } };
+    if (json.document?.id) {
+      router.push(documentPreviewHref(caseId, json.document.id));
+      return;
+    }
+    await load();
+    showToast("สร้างคำให้การแล้ว");
   }
 
   if (loading) return <p className="text-sm text-[#66638c]">กำลังโหลดคดี…</p>;
-  const statementDocs = data?.documents.filter((d) => d.kind === "STATEMENT") ?? [];
-  const narrativeDoc = data?.documents.find((d) => d.kind === "NARRATIVE");
-
   if (!data) {
     return (
       <p className="text-sm text-rose-600">
@@ -197,6 +326,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     );
   }
 
+  const tabs: { key: CaseTab; label: string }[] = [
+    { key: "info", label: "ข้อมูลคดี" },
+    { key: "parties", label: "บุคคล" },
+    { key: "evidence", label: "ของกลาง" },
+    { key: "behavior", label: "พฤติการณ์" },
+    { key: "docs", label: "เอกสาร" },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {toast ? (
@@ -204,320 +341,618 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           {toast}
         </p>
       ) : null}
+
       <div className={smartPoliceInnerCardClass}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 text-left">
             <p className="text-xs font-bold text-[#4d47b6]">{data.caseNumber}</p>
             <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">{data.title}</h2>
             <p className="mt-1 text-sm text-[#66638c]">
-              {data.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[data.status]} · พิมพ์ {data.printCount}{" "}
-              ครั้ง
+              {data.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[data.status]}
+              {data.chargeText ? ` · ${data.chargeText.slice(0, 40)}${data.chargeText.length > 40 ? "…" : ""}` : ""}
             </p>
           </div>
-          <Link href="/dashboard/smart-police/cases" className={cn("text-sm font-semibold text-[#5b61ff]")}>
+          <Link href="/dashboard/smart-police/cases" className="text-sm font-semibold text-[#5b61ff]">
             ← รายการคดี
           </Link>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-sm text-[#2e2a58]">
-            สถานะ
+      </div>
+
+      <AppDashboardSection>
+        <div className="mb-3 sm:hidden">
+          <label className="text-xs font-semibold text-[#66638c]">
+            ส่วนสำนวน
             <select
               className="app-input mt-1 w-full rounded-xl"
-              value={data.status}
-              onChange={(e) => void patchCase({ status: e.target.value })}
+              value={tab}
+              onChange={(e) => setTab(e.target.value as CaseTab)}
             >
-              {(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map((k) => (
-                <option key={k} value={k}>
-                  {SMART_POLICE_CASE_STATUS_LABEL[k]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm text-[#2e2a58]">
-            ประเภทคดี
-            <select
-              className="app-input mt-1 w-full rounded-xl"
-              value={data.caseType}
-              onChange={(e) => void patchCase({ caseType: e.target.value })}
-            >
-              {SMART_POLICE_CASE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {tabs.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
                 </option>
               ))}
             </select>
           </label>
         </div>
-        <label className="mt-2 block text-sm text-[#2e2a58]">
-          สรุปเหตุ
-          <textarea
-            className="app-input mt-1 min-h-[72px] w-full rounded-xl"
-            defaultValue={data.summary ?? ""}
-            onBlur={(e) => {
-              if (e.target.value !== (data.summary ?? "")) void patchCase({ summary: e.target.value });
-            }}
-          />
-        </label>
-      </div>
-
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start"
-          title="บุคคลที่เกี่ยวข้อง"
-          action={
-            <button type="button" className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm" onClick={() => setPartyModal(true)}>
-              + เพิ่ม
-            </button>
-          }
-        />
-        <ul className="space-y-2">
-          {data.parties.map((p) => (
-            <li
-              key={p.id}
-              className="flex flex-col gap-2 rounded-xl border border-white/50 bg-white/50 px-3 py-2 text-sm text-left sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <span className="font-semibold text-[#4d47b6]">{SMART_POLICE_PARTY_ROLE_LABEL[p.role]}</span> —{" "}
-                {p.fullName}
-                {p.idCard ? <span className="text-[#66638c]"> · {p.idCard}</span> : null}
-              </div>
+        <div className="mb-4 hidden sm:block">
+          <nav role="tablist" className="flex flex-wrap gap-2" aria-label="ส่วนสำนวน">
+            {tabs.map((t) => (
               <button
+                key={t.key}
                 type="button"
-                className="app-btn-primary shrink-0 rounded-xl px-3 py-2 text-xs sm:text-sm"
-                disabled={statementBusyPartyId === p.id}
-                onClick={() => void createStatementForParty(p.id)}
+                role="tab"
+                aria-selected={tab === t.key}
+                className={cn(
+                  "min-h-10 rounded-xl px-3.5 text-sm font-semibold",
+                  tab === t.key
+                    ? "bg-gradient-to-r from-[#4f2f9a] to-[#5b61ff] text-white"
+                    : "border border-white/60 bg-white/70 text-[#4d47b6]",
+                )}
+                onClick={() => setTab(t.key)}
               >
-                {statementBusyPartyId === p.id ? "กำลังสร้าง…" : "สร้างคำให้การตามแบบ + Word"}
+                {t.label}
               </button>
-            </li>
-          ))}
-          {data.parties.length === 0 && <p className="text-sm text-[#66638c]">ยังไม่มีรายชื่อ</p>}
-        </ul>
-      </AppDashboardSection>
+            ))}
+          </nav>
+        </div>
 
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start"
-          title="คำให้การ (Microsoft Word)"
-          description="แบบฟอร์มราชการ · สร้าง .docx · ลิงก์เชื่อมโยงในสำนวนคดีอัตโนมัติ"
-          action={
-            <button
-              type="button"
-              className="app-btn-soft min-h-[40px] rounded-xl px-3 text-sm"
-              disabled={syncBusy}
-              onClick={() => void syncNarrativeLinks()}
-            >
-              {syncBusy ? "…" : "ผูกลิงก์ในสำนวน"}
-            </button>
-          }
-        />
-        {statementDocs.length === 0 ? (
-          <p className="text-sm text-[#66638c]">ยังไม่มีคำให้การ — เลือกบุคคลด้านบนแล้วกด «สร้างคำให้การตามแบบ + Word»</p>
-        ) : (
-          <ul className="space-y-2">
-            {statementDocs.map((d) => (
-              <li
-                key={d.id}
-                className="flex flex-col gap-2 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        {tab === "info" ? (
+          <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">
+            <label className="text-sm text-[#2e2a58]">
+              สถานะ
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.status}
+                onChange={(e) => void patchCase({ status: e.target.value })}
               >
-                <div className="min-w-0 text-left">
-                  <Link
-                    href={documentPreviewHref(caseId, d.id)}
-                    className="font-semibold text-[#1e1b4b] underline decoration-[#5b61ff]/40 underline-offset-2 hover:text-[#5b61ff]"
-                  >
-                    {d.title}
-                  </Link>
-                  <p className="text-xs text-[#66638c]">
-                    {d.wordFileUrl ? (
-                      <a
-                        href={d.wordFileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-[#5b61ff] underline"
-                      >
-                        เปิดใน Word ({d.wordFileName ?? "ไฟล์ .docx"})
-                      </a>
-                    ) : (
-                      "ยังไม่มีไฟล์ Word"
-                    )}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Link
-                    href={documentPreviewHref(caseId, d.id)}
-                    className="app-btn-primary inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs"
-                  >
-                    เปิดแบบฟอร์ม A4
-                  </Link>
-                  {!d.wordFileUrl ? (
+                {(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map((k) => (
+                  <option key={k} value={k}>
+                    {SMART_POLICE_CASE_STATUS_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              ประเภทคดี
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.caseType}
+                onChange={(e) => void patchCase({ caseType: e.target.value })}
+              >
+                {SMART_POLICE_CASE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              อำนาจศาล
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.courtType ?? "จังหวัด"}
+                onChange={(e) => void patchCase({ courtType: e.target.value })}
+              >
+                {SMART_POLICE_COURT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              การควบคุมผู้ต้องหา
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.custodyMode ?? ""}
+                onChange={(e) =>
+                  void patchCase({ custodyMode: e.target.value || null })
+                }
+              >
+                <option value="">— เลือก —</option>
+                {(Object.keys(SMART_POLICE_CUSTODY_MODE_LABEL) as SmartPoliceCustodyMode[]).map(
+                  (k) => (
+                    <option key={k} value={k}>
+                      {SMART_POLICE_CUSTODY_MODE_LABEL[k]}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+              ข้อหา
+              <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                <input
+                  className="app-input w-full flex-1 rounded-xl"
+                  defaultValue={data.chargeText ?? ""}
+                  key={`charge-${data.updatedAt}`}
+                  onBlur={(e) => {
+                    if (e.target.value !== (data.chargeText ?? "")) {
+                      void patchCase({ chargeText: e.target.value, title: e.target.value || data.title });
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={cn(appTemplateOutlineButtonClass, "shrink-0 rounded-xl px-3 text-xs")}
+                  onClick={() => {
+                    const c = SMART_POLICE_SAMPLE_CHARGES[0];
+                    void patchCase({
+                      chargeText: c.chargeText,
+                      lawRefs: c.lawRefs,
+                      title: c.chargeText,
+                    });
+                  }}
+                >
+                  ตัวอย่างยาบ้า
+                </button>
+              </div>
+            </label>
+            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+              กฎหมายที่อ้าง
+              <input
+                className="app-input mt-1 w-full rounded-xl"
+                defaultValue={data.lawRefs ?? ""}
+                key={`law-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.lawRefs ?? "")) void patchCase({ lawRefs: e.target.value });
+                }}
+              />
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              วันรับคดี
+              <input
+                type="date"
+                className="app-input mt-1 w-full rounded-xl"
+                value={toDateInput(data.receivedAt)}
+                onChange={(e) =>
+                  void patchCase({
+                    receivedAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
+                  })
+                }
+              />
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              เวลารับคดี (ไทย)
+              <div className="mt-1">
+                <AppTime24Input
+                  value={data.receivedTimeHm ?? ""}
+                  onChange={(hm) => void patchCase({ receivedTimeHm: hm || null })}
+                />
+              </div>
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              ปจว. ข้อรับคดี
+              <input
+                className="app-input mt-1 w-full rounded-xl"
+                defaultValue={data.dailyLogNo ?? ""}
+                key={`log-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.dailyLogNo ?? "")) {
+                    void patchCase({ dailyLogNo: e.target.value });
+                  }
+                }}
+              />
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              พนักงานสอบสวนเจ้าของคดี
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.investigatorOfficerId ?? ""}
+                onChange={(e) =>
+                  void patchCase({ investigatorOfficerId: e.target.value || null })
+                }
+              >
+                <option value="">— ใช้ค่าเริ่มจากตั้งค่า —</option>
+                {officers.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {[o.rankTitle, o.fullName].filter(Boolean).join(" ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              วันเกิดเหตุ
+              <input
+                type="date"
+                className="app-input mt-1 w-full rounded-xl"
+                value={toDateInput(data.incidentAt)}
+                onChange={(e) =>
+                  void patchCase({
+                    incidentAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
+                  })
+                }
+              />
+            </label>
+            <label className="text-sm text-[#2e2a58]">
+              ผลชั้นสอบสวน
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={data.investigationResult}
+                onChange={(e) => void patchCase({ investigationResult: e.target.value })}
+              >
+                {(
+                  Object.keys(SMART_POLICE_INVESTIGATION_RESULT_LABEL) as SmartPoliceInvestigationResult[]
+                ).map((k) => (
+                  <option key={k} value={k}>
+                    {SMART_POLICE_INVESTIGATION_RESULT_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+              ที่เกิดเหตุ
+              <input
+                className="app-input mt-1 w-full rounded-xl"
+                defaultValue={data.incidentPlace ?? ""}
+                key={`place-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.incidentPlace ?? "")) {
+                    void patchCase({ incidentPlace: e.target.value });
+                  }
+                }}
+              />
+            </label>
+            <label className="text-sm text-[#2e2a58] sm:col-span-2">
+              สรุปสั้น
+              <textarea
+                className="app-input mt-1 min-h-[64px] w-full rounded-xl"
+                defaultValue={data.summary ?? ""}
+                key={`sum-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.summary ?? "")) void patchCase({ summary: e.target.value });
+                }}
+              />
+            </label>
+          </div>
+        ) : null}
+
+        {tab === "parties" ? (
+          <div role="tabpanel" className="space-y-3">
+            <AppSectionHeader
+              className="flex flex-row items-start justify-between gap-3"
+              actionWrapClassName="shrink-0"
+              title="บุคคลในคดี"
+              description="ระบุ «เกี่ยวกับคดี» ให้ถูกต้อง — ใช้สร้างคำให้การอัตโนมัติ"
+              action={
+                <button
+                  type="button"
+                  className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
+                  onClick={() => {
+                    setEditingPartyId(null);
+                    setPartyForm(emptyParty);
+                    setPartyModal(true);
+                  }}
+                >
+                  + เพิ่ม
+                </button>
+              }
+            />
+            <ul className="space-y-2">
+              {data.parties.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex flex-col gap-2 rounded-xl border border-l-[3px] border-violet-200 border-l-violet-500 bg-violet-50/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 text-left text-sm">
+                    <p className="font-semibold text-[#1e1b4b]">
+                      <span className="text-[#4d47b6]">{SMART_POLICE_PARTY_ROLE_LABEL[p.role]}</span>
+                      {" — "}
+                      {p.fullName}
+                    </p>
+                    <p className="text-xs text-[#66638c]">
+                      {p.caseRelation || "ยังไม่ระบุเกี่ยวกับคดี"}
+                      {p.witnessSide
+                        ? ` · ${SMART_POLICE_WITNESS_SIDE_LABEL[p.witnessSide]}`
+                        : ""}
+                      {p.pleaStatus ? ` · ${p.pleaStatus}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <button
                       type="button"
-                      className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
-                      onClick={() => void exportWord(d.id)}
+                      className="app-btn-primary rounded-xl px-3 py-2 text-xs"
+                      disabled={genBusy}
+                      onClick={() => void createStatementForParty(p.id)}
                     >
-                      สร้าง Word
+                      คำให้การ
                     </button>
-                  ) : null}
+                    <button
+                      type="button"
+                      className={assetRowEditIconButtonClass}
+                      aria-label={`แก้ไข ${p.fullName}`}
+                      onClick={() => openEditParty(p)}
+                    >
+                      <IconRowEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowRemoveIconButtonClass}
+                      aria-label={`ลบ ${p.fullName}`}
+                      onClick={() => void deleteParty(p)}
+                    >
+                      <IconRowRemove className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {data.parties.length === 0 ? (
+                <p className="text-sm text-[#66638c]">ยังไม่มีรายชื่อ</p>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
+
+        {tab === "evidence" ? (
+          <div role="tabpanel" className="space-y-3">
+            <AppSectionHeader
+              className="flex flex-row items-start justify-between gap-3"
+              actionWrapClassName="shrink-0"
+              title="รายการทรัพย์ / ของกลาง"
+              action={
+                <button
+                  type="button"
+                  className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
+                  onClick={() => {
+                    setEditingEvidenceId(null);
+                    setEvidenceForm(emptyEvidence);
+                    setEvidenceModal(true);
+                  }}
+                >
+                  + เพิ่ม
+                </button>
+              }
+            />
+            <ul className="space-y-2">
+              {data.evidence.map((e) => (
+                <li
+                  key={e.id}
+                  className="flex items-start justify-between gap-2 rounded-xl border border-l-[3px] border-amber-200 border-l-amber-500 bg-amber-50/40 px-3 py-2"
+                >
+                  <div className="min-w-0 text-left text-sm">
+                    <p className="font-semibold text-[#1e1b4b]">
+                      {e.name}
+                      {e.quantityLabel ? ` · ${e.quantityLabel}` : ""}
+                    </p>
+                    <p className="text-xs text-[#66638c]">
+                      {[e.seizedFrom && `ยึดจาก ${e.seizedFrom}`, e.ownerName && `เจ้าของ ${e.ownerName}`]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      className={assetRowEditIconButtonClass}
+                      aria-label={`แก้ไข ${e.name}`}
+                      onClick={() => openEditEvidence(e)}
+                    >
+                      <IconRowEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowRemoveIconButtonClass}
+                      aria-label={`ลบ ${e.name}`}
+                      onClick={() => void deleteEvidence(e)}
+                    >
+                      <IconRowRemove className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {data.evidence.length === 0 ? (
+                <p className="text-sm text-[#66638c]">ยังไม่มีของกลาง</p>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
+
+        {tab === "behavior" ? (
+          <div role="tabpanel" className="space-y-3 text-left">
+            <label className="block text-sm text-[#2e2a58]">
+              พฤติการณ์
+              <div className="mt-1 flex flex-wrap gap-2">
+                {SMART_POLICE_SAMPLE_BEHAVIORS.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 text-xs")}
+                    onClick={() => void patchCase({ behaviorText: b })}
+                  >
+                    ใส่ตัวอย่างยาบ้า
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="app-input mt-2 min-h-[120px] w-full rounded-xl"
+                defaultValue={data.behaviorText ?? ""}
+                key={`beh-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.behaviorText ?? "")) {
+                    void patchCase({ behaviorText: e.target.value });
+                  }
+                }}
+              />
+            </label>
+            <label className="block text-sm text-[#2e2a58]">
+              ความเสียหาย (ถ้ามี)
+              <textarea
+                className="app-input mt-1 min-h-[64px] w-full rounded-xl"
+                defaultValue={data.damageNote ?? ""}
+                key={`dmg-${data.updatedAt}`}
+                onBlur={(e) => {
+                  if (e.target.value !== (data.damageNote ?? "")) {
+                    void patchCase({ damageNote: e.target.value });
+                  }
+                }}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                className="app-btn-primary rounded-xl px-4 py-2 text-sm"
+                disabled={genBusy}
+                onClick={() => void generateDocs(["MEMO"])}
+              >
+                {genBusy ? "…" : "สร้างบันทึกพงส."}
+              </button>
+              <button
+                type="button"
+                className={cn(appTemplateOutlineButtonClass, "rounded-xl px-4 py-2 text-sm")}
+                disabled={genBusy}
+                onClick={() =>
+                  void generateDocs(["STATEMENT_ALL", "MEMO", "INVESTIGATION_REPORT", "PROPERTY_LIST"])
+                }
+              >
+                สร้างเอกสารทั้งหมด
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "docs" ? (
+          <div role="tabpanel" className="space-y-3">
+            <AppSectionHeader
+              className="flex flex-row flex-wrap items-start justify-between gap-2"
+              actionWrapClassName="shrink-0"
+              title="เอกสารในคดี"
+              action={
+                <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
-                    className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    disabled={genBusy}
+                    onClick={() => void generateDocs(["STATEMENT_ALL"])}
+                  >
+                    คำให้การทั้งหมด
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    disabled={genBusy}
+                    onClick={() => void generateDocs(["PROPERTY_LIST"])}
+                  >
+                    บัญชีของกลาง
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs")}
+                    disabled={genBusy}
+                    onClick={() => void generateDocs(["INVESTIGATION_REPORT"])}
+                  >
+                    รายงานสอบสวน
+                  </button>
+                  <button
+                    type="button"
+                    className="app-btn-primary min-h-[40px] rounded-xl px-3 text-xs"
                     onClick={() => {
-                      setEditingDocId(d.id);
-                      setDocForm({ kind: d.kind, title: d.title, content: d.content });
+                      setEditingDocId(null);
+                      setDocForm({ kind: "NARRATIVE", title: "", content: "" });
                       setDocModal(true);
                     }}
                   >
-                    แก้ไข
-                  </button>
-                  <button
-                    type="button"
-                    className="app-btn-soft inline-flex min-h-[40px] items-center gap-1 rounded-xl px-3 text-xs"
-                    aria-label={`พิมพ์ ${d.title}`}
-                    onClick={() => void printDoc(d.id)}
-                  >
-                    <IconSpPrint className="h-4 w-4" aria-hidden />
-                    <span className="hidden sm:inline">พิมพ์</span>
+                    + เอกสาร
                   </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {narrativeDoc ? (
-          <p className="mt-3 text-left text-xs text-[#66638c]">
-            สำนวนคดี:{" "}
-            <button
-              type="button"
-              className="font-semibold text-[#5b61ff] underline"
-              onClick={() => {
-                setEditingDocId(narrativeDoc.id);
-                setDocForm({
-                  kind: narrativeDoc.kind,
-                  title: narrativeDoc.title,
-                  content: narrativeDoc.content,
-                });
-                setDocModal(true);
-              }}
-            >
-              เปิดดูทะเบียนลิงก์ Word
-            </button>
-          </p>
+              }
+            />
+            {templateOptions.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-semibold text-[#66638c]">แม่แบบ:</span>
+                {templateOptions.slice(0, 6).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "rounded-lg px-2 py-1 text-[11px]")}
+                    onClick={() => {
+                      setDocForm({ kind: t.kind, title: t.name, content: t.content });
+                      setEditingDocId(null);
+                      setDocModal(true);
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <ul className="space-y-2">
+              {data.documents.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-col gap-2 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 text-left">
+                    <p className="text-xs font-bold text-[#4d47b6]">
+                      {SMART_POLICE_DOCUMENT_KIND_LABEL[d.kind]}
+                    </p>
+                    <Link
+                      href={documentPreviewHref(caseId, d.id)}
+                      className="font-semibold text-[#1e1b4b] underline decoration-[#5b61ff]/40 underline-offset-2"
+                    >
+                      {d.title}
+                    </Link>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Link
+                      href={documentPreviewHref(caseId, d.id)}
+                      className="app-btn-primary inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs"
+                    >
+                      A4
+                    </Link>
+                    <button
+                      type="button"
+                      className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
+                      onClick={() => void printDoc(d.id)}
+                    >
+                      พิมพ์
+                    </button>
+                    <button
+                      type="button"
+                      className="app-btn-soft min-h-[40px] rounded-xl px-3 text-xs"
+                      onClick={() => {
+                        setEditingDocId(d.id);
+                        setDocForm({ kind: d.kind, title: d.title, content: d.content });
+                        setDocModal(true);
+                      }}
+                    >
+                      แก้ไข
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {data.documents.length === 0 ? (
+                <p className="text-sm text-[#66638c]">ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือปุ่มด้านบน</p>
+              ) : null}
+            </ul>
+          </div>
         ) : null}
       </AppDashboardSection>
 
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 flex flex-wrap gap-2 self-start"
-          title="เอกสาร / สำนวน"
-          description="แก้ไขเนื้อหาแล้วกดพิมพ์ — ใช้แม่แบบจากเมนูแม่แบบได้"
-          action={
-            <>
-              {templateOptions.length > 0 ? (
-                <select
-                  className="app-input min-h-[40px] max-w-[11rem] rounded-xl text-xs"
-                  defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) applyTemplate(e.target.value);
-                    e.target.value = "";
-                  }}
-                  aria-label="สร้างจากแม่แบบ"
-                >
-                  <option value="">+ แม่แบบ</option>
-                  {templateOptions.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              <button
-                type="button"
-                className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm"
-                onClick={() => {
-                  setEditingDocId(null);
-                  setDocForm({ kind: "NARRATIVE", title: "", content: "" });
-                  setDocModal(true);
-                }}
-              >
-                + เอกสาร
-              </button>
-            </>
-          }
-        />
-        <ul className="space-y-2">
-          {data.documents.map((d) => (
-            <li
-              key={d.id}
-              className="flex flex-col gap-2 rounded-2xl border border-white/50 bg-white/55 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 text-left">
-                <Link
-                  href={documentPreviewHref(caseId, d.id)}
-                  className="font-semibold text-[#1e1b4b] underline decoration-[#5b61ff]/40 underline-offset-2 hover:text-[#5b61ff]"
-                >
-                  {d.title}
-                </Link>
-                <p className="text-xs text-[#66638c]">
-                  {SMART_POLICE_DOCUMENT_KIND_LABEL[d.kind]} · พิมพ์ {d.printCount} ครั้ง
-                  {d.wordFileUrl ? " · มีไฟล์ Word" : ""}
-                </p>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Link
-                  href={documentPreviewHref(caseId, d.id)}
-                  className="app-btn-primary inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs"
-                  aria-label={`เปิดแบบฟอร์ม ${d.title}`}
-                >
-                  เปิดแบบ
-                </Link>
-                <button
-                  type="button"
-                  className={cn("app-btn-soft min-h-[40px] min-w-[40px] rounded-xl px-3")}
-                  aria-label={`แก้ไข ${d.title}`}
-                  title="แก้ไข"
-                  onClick={() => {
-                    setEditingDocId(d.id);
-                    setDocForm({ kind: d.kind, title: d.title, content: d.content });
-                    setDocModal(true);
-                  }}
-                >
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="app-btn-soft inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3"
-                  aria-label={`พิมพ์ ${d.title}`}
-                  onClick={() => void printDoc(d.id)}
-                >
-                  <IconSpPrint className="h-4 w-4" aria-hidden />
-                  <span className="hidden sm:inline">พิมพ์</span>
-                </button>
-              </div>
-            </li>
-          ))}
-          {data.documents.length === 0 && (
-            <p className="text-sm text-[#66638c]">
-              ยังไม่มีเอกสาร — ไปที่{" "}
-              <Link href="/dashboard/smart-police/templates" className="font-semibold text-[#5b61ff]">
-                แม่แบบ
-              </Link>{" "}
-              แล้วสร้างเอกสารใหม่
-            </p>
-          )}
-        </ul>
-      </AppDashboardSection>
-
-      <FormModal open={partyModal} onClose={() => setPartyModal(false)} title="เพิ่มบุคคล">
-        <div className="space-y-3 text-left">
-          <label className="block text-sm">
+      <FormModal
+        open={partyModal}
+        onClose={() => setPartyModal(false)}
+        title={editingPartyId ? "แก้ไขบุคคล" : "เพิ่มบุคคล"}
+        size="lg"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setPartyModal(false)}
+            onSubmit={() => void saveParty()}
+            submitLabel="บันทึก"
+            submitDisabled={!partyForm.fullName.trim()}
+            loading={saving}
+          />
+        }
+      >
+        <div className="grid gap-3 text-left sm:grid-cols-2">
+          <label className="text-sm">
             บทบาท
             <select
               className="app-input mt-1 w-full rounded-xl"
               value={partyForm.role}
-              onChange={(e) => setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))}
+              onChange={(e) =>
+                setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))
+              }
             >
               {(Object.keys(SMART_POLICE_PARTY_ROLE_LABEL) as SmartPolicePartyRole[]).map((k) => (
                 <option key={k} value={k}>
@@ -526,24 +961,38 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               ))}
             </select>
           </label>
-          <label className="block text-sm">
-            ชื่อ-สกุล *
+          <label className="text-sm">
+            เกี่ยวกับคดี *
+            <select
+              className="app-input mt-1 w-full rounded-xl"
+              value={partyForm.caseRelation}
+              onChange={(e) => setPartyForm((f) => ({ ...f, caseRelation: e.target.value }))}
+            >
+              <option value="">— เลือก —</option>
+              {SMART_POLICE_CASE_RELATIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm sm:col-span-2">
+            ชื่อ *
             <input
               className="app-input mt-1 w-full rounded-xl"
               value={partyForm.fullName}
               onChange={(e) => setPartyForm((f) => ({ ...f, fullName: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className="text-sm">
             อายุ
             <input
               className="app-input mt-1 w-full rounded-xl"
-              inputMode="numeric"
               value={partyForm.age}
               onChange={(e) => setPartyForm((f) => ({ ...f, age: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          <label className="text-sm">
             เลขบัตร
             <input
               className="app-input mt-1 w-full rounded-xl"
@@ -551,7 +1000,43 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               onChange={(e) => setPartyForm((f) => ({ ...f, idCard: e.target.value }))}
             />
           </label>
-          <label className="block text-sm">
+          {partyForm.role === "WITNESS" ? (
+            <label className="text-sm">
+              พยานฝ่าย
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={partyForm.witnessSide}
+                onChange={(e) =>
+                  setPartyForm((f) => ({
+                    ...f,
+                    witnessSide: e.target.value as "" | SmartPoliceWitnessSide,
+                  }))
+                }
+              >
+                <option value="">—</option>
+                <option value="COMPLAINANT">{SMART_POLICE_WITNESS_SIDE_LABEL.COMPLAINANT}</option>
+                <option value="SUSPECT">{SMART_POLICE_WITNESS_SIDE_LABEL.SUSPECT}</option>
+              </select>
+            </label>
+          ) : null}
+          {partyForm.role === "SUSPECT" ? (
+            <label className="text-sm">
+              ผู้ต้องหาให้การ
+              <select
+                className="app-input mt-1 w-full rounded-xl"
+                value={partyForm.pleaStatus}
+                onChange={(e) => setPartyForm((f) => ({ ...f, pleaStatus: e.target.value }))}
+              >
+                <option value="">—</option>
+                {SMART_POLICE_PLEA_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="text-sm sm:col-span-2">
             ที่อยู่
             <textarea
               className="app-input mt-1 w-full rounded-xl"
@@ -559,28 +1044,128 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               onChange={(e) => setPartyForm((f) => ({ ...f, address: e.target.value }))}
             />
           </label>
+          <label className="text-sm">
+            อาชีพ
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={partyForm.occupation}
+              onChange={(e) => setPartyForm((f) => ({ ...f, occupation: e.target.value }))}
+            />
+          </label>
+          <label className="text-sm">
+            ที่ทำงาน/ตำแหน่ง
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={partyForm.workplace}
+              onChange={(e) => setPartyForm((f) => ({ ...f, workplace: e.target.value }))}
+            />
+          </label>
         </div>
-        <FormModalFooterActions onCancel={() => setPartyModal(false)} onSubmit={() => void saveParty()} loading={saving} submitLabel="บันทึก" />
       </FormModal>
 
-      <FormModal open={docModal} onClose={() => setDocModal(false)} title={editingDocId ? "แก้ไขเอกสาร" : "เอกสารใหม่"}>
+      <FormModal
+        open={evidenceModal}
+        onClose={() => setEvidenceModal(false)}
+        title={editingEvidenceId ? "แก้ไขของกลาง" : "เพิ่มของกลาง"}
+        size="md"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setEvidenceModal(false)}
+            onSubmit={() => void saveEvidence()}
+            submitLabel="บันทึก"
+            submitDisabled={!evidenceForm.name.trim()}
+            loading={saving}
+          />
+        }
+      >
+        <div className="space-y-3 text-left">
+          <label className="block text-sm">
+            รายการ *
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.name}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            จำนวน (เช่น 10 เม็ด)
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.quantityLabel}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            เลขยึด
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.seizureNo}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            ยึด/ได้จาก
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.seizedFrom}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            ผู้ถือกรรมสิทธิ์
+            <input
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.ownerName}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            เหตุที่ไปอยู่ที่ผู้ต้องหา
+            <textarea
+              className="app-input mt-1 w-full rounded-xl"
+              value={evidenceForm.ownerNote}
+              onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
+            />
+          </label>
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={docModal}
+        onClose={() => setDocModal(false)}
+        title={editingDocId ? "แก้ไขเอกสาร" : "เพิ่มเอกสาร"}
+        size="lg"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setDocModal(false)}
+            onSubmit={() => void saveDoc()}
+            submitLabel="บันทึก"
+            submitDisabled={!docForm.title.trim()}
+            loading={saving}
+          />
+        }
+      >
         <div className="space-y-3 text-left">
           <label className="block text-sm">
             ประเภท
             <select
               className="app-input mt-1 w-full rounded-xl"
               value={docForm.kind}
-              onChange={(e) => setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))}
+              onChange={(e) =>
+                setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
+              }
             >
-              {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map((k) => (
-                <option key={k} value={k}>
-                  {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
-                </option>
-              ))}
+              {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map(
+                (k) => (
+                  <option key={k} value={k}>
+                    {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
+                  </option>
+                ),
+              )}
             </select>
           </label>
           <label className="block text-sm">
-            ชื่อเอกสาร *
+            ชื่อเอกสาร
             <input
               className="app-input mt-1 w-full rounded-xl"
               value={docForm.title}
@@ -588,7 +1173,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             />
           </label>
           <label className="block text-sm">
-            เนื้อหา (ใช้ {"{{caseNumber}}"}, {"{{partyName}}"} ฯลฯ)
+            เนื้อหา
             <textarea
               className="app-input mt-1 min-h-[200px] w-full rounded-xl font-mono text-sm"
               value={docForm.content}
@@ -596,7 +1181,6 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             />
           </label>
         </div>
-        <FormModalFooterActions onCancel={() => setDocModal(false)} onSubmit={() => void saveDoc()} loading={saving} submitLabel="บันทึก" />
       </FormModal>
     </div>
   );

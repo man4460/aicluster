@@ -1,7 +1,9 @@
 import type { SmartPoliceProfileDto, SmartPoliceCaseDetail } from "@/lib/smart-police/types";
 import {
   SMART_POLICE_CASE_STATUS_LABEL,
+  SMART_POLICE_CUSTODY_MODE_LABEL,
   SMART_POLICE_DOCUMENT_KIND_LABEL,
+  SMART_POLICE_INVESTIGATION_RESULT_LABEL,
   SMART_POLICE_PARTY_ROLE_LABEL,
 } from "@/lib/smart-police/types";
 
@@ -46,10 +48,20 @@ export function buildSmartPolicePrintVars(
 ): SmartPolicePrintVars {
   const today = new Date();
   const partiesList = caseDetail.parties
-    .map(
-      (p, i) =>
-        `${i + 1}. ${SMART_POLICE_PARTY_ROLE_LABEL[p.role]} — ${p.fullName}${p.idCard ? ` (เลขบัตร ${p.idCard})` : ""}`,
-    )
+    .map((p, i) => {
+      const rel = p.caseRelation ? ` (${p.caseRelation})` : "";
+      return `${i + 1}. ${SMART_POLICE_PARTY_ROLE_LABEL[p.role]}${rel} — ${p.fullName}${p.idCard ? ` (เลขบัตร ${p.idCard})` : ""}`;
+    })
+    .join("\n");
+  const evidenceList = caseDetail.evidence
+    .map((e, i) => {
+      const bits = [
+        `${i + 1}. ${e.name}`,
+        e.quantityLabel ? `จำนวน ${e.quantityLabel}` : null,
+        e.ownerName ? `ผู้ถือกรรมสิทธิ์ ${e.ownerName}` : null,
+      ].filter(Boolean);
+      return bits.join(" · ");
+    })
     .join("\n");
   const firstParty = caseDetail.parties[0];
   return {
@@ -62,11 +74,28 @@ export function buildSmartPolicePrintVars(
     province: profile.province ?? "",
     commanderRank: profile.commanderRank ?? "",
     commanderName: profile.commanderName ?? "",
-    investigator: profile.investigatorDefault ?? "",
+    commanderTitle: profile.commanderTitle ?? "",
+    headOfWorkRank: profile.headOfWorkRank ?? "",
+    headOfWorkName: profile.headOfWorkName ?? "",
+    investigator: extra.investigator ?? profile.investigatorDefault ?? "",
     incidentAt: formatThaiDateTime(caseDetail.incidentAt),
     incidentPlace: caseDetail.incidentPlace ?? "—",
     summary: caseDetail.summary ?? "",
+    chargeText: caseDetail.chargeText ?? "",
+    lawRefs: caseDetail.lawRefs ?? "",
+    courtType: caseDetail.courtType ?? "",
+    behaviorText: caseDetail.behaviorText ?? "",
+    damageNote: caseDetail.damageNote ?? "",
+    custodyMode: caseDetail.custodyMode
+      ? SMART_POLICE_CUSTODY_MODE_LABEL[caseDetail.custodyMode]
+      : "",
+    investigationResult:
+      SMART_POLICE_INVESTIGATION_RESULT_LABEL[caseDetail.investigationResult],
+    receivedAt: formatThaiDateTime(caseDetail.receivedAt),
+    receivedTimeHm: caseDetail.receivedTimeHm ?? "",
+    dailyLogNo: caseDetail.dailyLogNo ?? "",
     partiesList: partiesList || "—",
+    evidenceList: evidenceList || "—",
     partyName: firstParty?.fullName ?? "",
     partyAge: firstParty?.age != null ? String(firstParty.age) : "",
     partyNationality: firstParty?.nationality ?? "",
@@ -74,6 +103,7 @@ export function buildSmartPolicePrintVars(
     partyIdCard: firstParty?.idCard ?? "",
     documentCount: String(caseDetail.documents.length),
     partyCount: String(caseDetail.parties.length),
+    evidenceCount: String(caseDetail.evidence.length),
     todayThai: formatThaiDate(today),
     printFooter: profile.printFooter ?? "",
     ...extra,

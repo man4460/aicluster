@@ -3,7 +3,8 @@ import { requireModulePage } from "@/lib/modules/guard";
 import { SMART_POLICE_MODULE_SLUG } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { withSmartPoliceOwner } from "@/lib/smart-police/api-route";
-import type { SmartPolicePartyRole } from "@/generated/prisma/enums";
+import { mapSmartPoliceParty } from "@/lib/smart-police/serialize";
+import type { SmartPolicePartyRole, SmartPoliceWitnessSide } from "@/generated/prisma/enums";
 
 export async function PATCH(
   req: Request,
@@ -33,9 +34,30 @@ export async function PATCH(
   if (body.idCard !== undefined) data.idCard = typeof body.idCard === "string" ? body.idCard.trim() || null : null;
   if (body.address !== undefined) data.address = typeof body.address === "string" ? body.address.trim() || null : null;
   if (body.phone !== undefined) data.phone = typeof body.phone === "string" ? body.phone.trim() || null : null;
+  if (body.caseRelation !== undefined) {
+    data.caseRelation = typeof body.caseRelation === "string" ? body.caseRelation.trim() || null : null;
+  }
+  if (body.witnessSide !== undefined) {
+    if (body.witnessSide === null || body.witnessSide === "") data.witnessSide = null;
+    else if (
+      typeof body.witnessSide === "string" &&
+      ["COMPLAINANT", "SUSPECT"].includes(body.witnessSide)
+    ) {
+      data.witnessSide = body.witnessSide as SmartPoliceWitnessSide;
+    }
+  }
+  if (body.pleaStatus !== undefined) {
+    data.pleaStatus = typeof body.pleaStatus === "string" ? body.pleaStatus.trim() || null : null;
+  }
+  if (body.occupation !== undefined) {
+    data.occupation = typeof body.occupation === "string" ? body.occupation.trim() || null : null;
+  }
+  if (body.workplace !== undefined) {
+    data.workplace = typeof body.workplace === "string" ? body.workplace.trim() || null : null;
+  }
 
   const updated = await prisma.smartPoliceParty.update({ where: { id: partyId }, data });
-  return NextResponse.json({ party: updated });
+  return NextResponse.json({ party: mapSmartPoliceParty(updated) });
 }
 
 export async function DELETE(
