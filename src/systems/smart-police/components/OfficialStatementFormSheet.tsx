@@ -15,7 +15,8 @@ const BODY = "13pt";
 const SMALL = "11pt";
 const TITLE = "15pt";
 const LINE = "6.2mm";
-const STMT_LINE = "7mm";
+/** ระยะบรรทัดโซนถาม–ตอบ — ใกล้เคียงแถวจุดไข่ปลาด้านบน */
+const STMT_LINE = "6.5mm";
 
 function Dot({
   value,
@@ -101,11 +102,14 @@ function LinedBody({
   onChange,
   ariaLabel,
   minHeight,
+  fill,
 }: {
   value: string;
   onChange: (v: string) => void;
   ariaLabel: string;
   minHeight: string;
+  /** ยืดเต็มพื้นที่ที่เหลือของคอลัมน์ */
+  fill?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
@@ -124,16 +128,24 @@ function LinedBody({
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
-      className="w-full whitespace-pre-wrap break-words outline-none"
+      data-placeholder={"ถาม 1. …\nตอบ …"}
+      className="sp-stmt-lined-body w-full whitespace-pre-wrap break-words outline-none"
       style={{
         minHeight,
+        flex: fill ? "1 1 auto" : undefined,
+        width: "100%",
+        boxSizing: "border-box",
         fontSize: BODY,
         lineHeight: STMT_LINE,
-        padding: "0 2mm",
-        borderLeft: "0.5pt solid #111",
-        borderRight: "0.5pt solid #111",
+        padding: "0 0 2mm",
+        marginBottom: "2mm",
         color: "#111",
-        backgroundImage: `repeating-linear-gradient(transparent 0, transparent calc(${STMT_LINE} - 0.35pt), #666 calc(${STMT_LINE} - 0.35pt), #666 ${STMT_LINE})`,
+        /* จุดไข่ปลาแนวนอน — โทนเดียวกับ sp-word-field ด้านบน */
+        backgroundImage: "radial-gradient(circle, #111 0.55pt, transparent 0.65pt)",
+        backgroundSize: `2.1mm ${STMT_LINE}`,
+        backgroundPosition: `0 calc(${STMT_LINE} - 1.1pt)`,
+        backgroundRepeat: "repeat",
+        backgroundAttachment: "local",
       }}
       onFocus={() => {
         focused.current = true;
@@ -178,7 +190,7 @@ export function OfficialStatementFormSheet({
         width: PAGE.w,
         height: PAGE.h,
         boxSizing: "border-box",
-        padding: "16mm 12mm 8mm 6mm",
+        padding: "16mm 12mm 14mm 6mm",
         fontFamily: FONT,
         fontSize: BODY,
         lineHeight: 1.25,
@@ -195,8 +207,9 @@ export function OfficialStatementFormSheet({
             </span>
           </Row>
           <LinedBody
-            ariaLabel="ข้อความคำให้การหน้าต่อ"
+            ariaLabel="ข้อความคำให้การหน้าต่อ — พิมพ์ถาม ตอบ บนเส้น"
             minHeight="250mm"
+            fill
             value={page?.text ?? ""}
             onChange={(t) => onPageTextChange(pageIndex, t)}
           />
@@ -267,8 +280,17 @@ export function OfficialStatementFormSheet({
             <p style={{ marginTop: "auto", fontSize: "9pt", color: "#444" }}>(ส ๕๖ - ๔)</p>
           </aside>
 
-          {/* เนื้อหาหลัก */}
-          <div style={{ paddingLeft: "3.5mm", display: "flex", flexDirection: "column", minWidth: 0 }}>
+          {/* เนื้อหาหลัก — คอลัมน์ยืดเต็มสูง ให้โซนเส้นถาม–ตอบกินพื้นที่ล่าง */}
+          <div
+            style={{
+              paddingLeft: "3.5mm",
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              minHeight: 0,
+              height: "100%",
+            }}
+          >
             <header style={{ textAlign: "center", marginBottom: "2.5mm" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -694,13 +716,14 @@ export function OfficialStatementFormSheet({
                 minCh={8}
               />
             </div>
-            <p style={{ margin: "0.5mm 0 1.5mm", fontWeight: 700, fontSize: BODY }}>
+            <p style={{ margin: "0.5mm 0 1mm", fontWeight: 700, fontSize: BODY, flexShrink: 0 }}>
               ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
             </p>
 
             <LinedBody
-              ariaLabel="ข้อความคำให้การ"
-              minHeight="62mm"
+              ariaLabel="ข้อความคำให้การ — พิมพ์ถาม ตอบ บนเส้น"
+              minHeight="70mm"
+              fill
               value={page?.text ?? ""}
               onChange={(t) => onPageTextChange(0, t)}
             />
