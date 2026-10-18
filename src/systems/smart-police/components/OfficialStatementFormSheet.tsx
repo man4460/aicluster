@@ -178,7 +178,7 @@ export function OfficialStatementFormSheet({
         width: PAGE.w,
         height: PAGE.h,
         boxSizing: "border-box",
-        padding: "11mm 12mm 8mm 6mm",
+        padding: "16mm 12mm 8mm 6mm",
         fontFamily: FONT,
         fontSize: BODY,
         lineHeight: 1.25,
