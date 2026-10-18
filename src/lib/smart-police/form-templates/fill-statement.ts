@@ -160,6 +160,20 @@ export function appendContinuationSheetPair(pages: StatementPage[]): StatementPa
   return [...ensureMinimumStatementPages(pages), createEmptyPage(), createEmptyPage()];
 }
 
+/** ข้อความที่ล้นหน้า pageIdx → ต้นหน้าถัดไป · หน้าสุดท้ายแล้วต่อใบต่อคู่ใหม่ */
+export function flowStatementOverflow(
+  pages: StatementPage[],
+  pageIdx: number,
+  text: string,
+): StatementPage[] {
+  let list = ensureMinimumStatementPages(pages);
+  if (pageIdx + 1 >= list.length) list = appendContinuationSheetPair(list);
+  const target = list[pageIdx + 1];
+  const existing = target.text ?? "";
+  const merged = !text.trim() ? existing : existing.trim() ? `${text}\n${existing}` : text;
+  return list.map((p, i) => (i === pageIdx + 1 ? { ...p, text: merged, qa: [] } : p));
+}
+
 /**
  * ลบใบต่อทั้งคู่ที่ครอบ index นี้ (หน้าแรก/หน้าหลัก ลบไม่ได้)
  * คืน null ถ้าลบไม่ได้

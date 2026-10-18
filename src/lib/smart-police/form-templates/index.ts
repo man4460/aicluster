@@ -6,6 +6,7 @@ export {
 } from "@/lib/smart-police/form-templates/statement-catalog";
 export {
   appendContinuationSheetPair,
+  flowStatementOverflow,
   createDefaultStatementPages,
   createEmptyPage,
   createEmptyQa,

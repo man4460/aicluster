@@ -8,10 +8,13 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { cn } from "@/lib/cn";
 
 type QaKind = "ask" | "ans";
 type QaRow = { id: string; kind: QaKind; text: string };
 type CaretTarget = "start" | "end" | number;
+export type QaFocus = { row: number; offset: number };
+export type QaFocusRequest = QaFocus & { nonce: number };
 
 const LABEL: Record<QaKind, string> = { ask: "ถาม", ans: "ตอบ" };
 const PLACEHOLDER: Record<QaKind, string> = { ask: "พิมพ์คำถาม…", ans: "พิมพ์คำตอบ…" };
@@ -114,6 +117,8 @@ export function StatementQaEditor({
   fill,
   lineHeight,
   fontSize,
+  onOverflow,
+  focusRequest,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -122,6 +127,9 @@ export function StatementQaEditor({
   fill?: boolean;
   lineHeight: string;
   fontSize: string;
+  /** แถวที่ล้นกรอบหน้า → ส่งต่อหน้าถัดไป (focus = แถว/ตำแหน่งเคอร์เซอร์ในข้อความที่ส่งต่อ) */
+  onOverflow?: (text: string, focus: QaFocus | null) => void;
+  focusRequest?: QaFocusRequest | null;
 }) {
   const [state, setState] = useState(() => ({ rows: parseQaText(value), source: value }));
   if (value !== state.source) {
@@ -132,6 +140,10 @@ export function StatementQaEditor({
   const rowsRef = useRef(rows);
   const cellRefs = useRef(new Map<string, HTMLDivElement>());
   const pendingFocus = useRef<{ id: string; at: CaretTarget } | null>(null);
+  const handledFocusNonce = useRef(0);
+  const composing = useRef(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     rowsRef.current = rows;
@@ -146,12 +158,44 @@ export function StatementQaEditor({
     setCaret(el, p.at);
   });
 
+  useLayoutEffect(() => {
+    if (!focusRequest || focusRequest.nonce === handledFocusNonce.current) return;
+    const row = rows[Math.min(focusRequest.row, rows.length - 1)];
+    const el = row ? cellRefs.current.get(row.id) : undefined;
+    if (!el) return;
+    handledFocusNonce.current = focusRequest.nonce;
+    setCaret(el, focusRequest.offset);
+    el.scrollIntoView({ block: "nearest" });
+  });
+
   function commit(next: QaRow[]) {
     rowsRef.current = next;
     const s = serializeQaRows(next);
     setState({ rows: next, source: s });
     onChange(s);
   }
+
+  useLayoutEffect(() => {
+    if (!onOverflow || composing.current) return;
+    const box = boxRef.current;
+    const group = groupRef.current;
+    if (!box || !group) return;
+    const limit = box.getBoundingClientRect().top + box.clientHeight + 1;
+    const rowEls = [...group.children];
+    const cut = rowEls.findIndex((el) => el.getBoundingClientRect().bottom > limit);
+    // cut 0 = แถวเดียวสูงเกินหน้า — ปล่อยไว้ ไม่ย้ายวน
+    if (cut <= 0) return;
+    const list = rowsRef.current;
+    const moved = list.slice(cut);
+    if (moved.length === 0) return;
+    let focus: QaFocus | null = null;
+    moved.forEach((r, j) => {
+      const el = cellRefs.current.get(r.id);
+      if (el && el === document.activeElement) focus = { row: j, offset: caretOffset(el) };
+    });
+    commit(list.slice(0, cut));
+    onOverflow(serializeQaRows(moved), focus);
+  });
 
   function syncText(id: string, el: HTMLElement) {
     const text = el.textContent ?? "";
@@ -260,7 +304,10 @@ export function StatementQaEditor({
       className="relative w-full"
       style={{ minHeight, flex: fill ? "1 1 auto" : undefined, marginBottom: "2mm" }}
     >
-      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+      <div
+        ref={boxRef}
+        className={cn("absolute inset-0 overflow-x-hidden", onOverflow ? "overflow-y-hidden" : "overflow-y-auto")}
+      >
         <div
           className="relative"
           style={{ minHeight: "100%", cursor: "text" }}
@@ -278,7 +325,7 @@ export function StatementQaEditor({
               />
             ))}
           </div>
-          <div role="group" aria-label={ariaLabel} className="relative">
+          <div ref={groupRef} role="group" aria-label={ariaLabel} className="relative">
             {rows.map((row, idx) => (
               <div
                 key={row.id}
@@ -328,6 +375,13 @@ export function StatementQaEditor({
                   onBeforeInput={(e) => onCellBeforeInput(e, idx)}
                   onPaste={(e) => onCellPaste(e, idx)}
                   onInput={(e) => syncText(row.id, e.currentTarget)}
+                  onCompositionStart={() => {
+                    composing.current = true;
+                  }}
+                  onCompositionEnd={(e) => {
+                    composing.current = false;
+                    syncText(row.id, e.currentTarget);
+                  }}
                 />
               </div>
             ))}

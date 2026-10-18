@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import {
   appendContinuationSheetPair,
   createDefaultStatementPages,
+  flowStatementOverflow,
   getStatementTemplateMeta,
   normalizeStatementHeader,
   removeStatementPageAt,
@@ -14,7 +15,7 @@ import {
   type StatementPage,
   type StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates";
-import { OfficialStatementFormSheet } from "@/systems/smart-police/components/OfficialStatementFormSheet";
+import { OfficialStatementFormDocument } from "@/systems/smart-police/components/OfficialStatementFormSheet";
 import {
   smartPoliceOutlineButtonClass,
   smartPolicePrimaryButtonClass,
@@ -38,6 +39,7 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
   );
   const [pages, setPages] = useState<StatementPage[]>(() => createDefaultStatementPages());
   const [pageIndex, setPageIndex] = useState(0);
+  const [scrollRequest, setScrollRequest] = useState<{ page: number; nonce: number } | null>(null);
 
   const blankHref = useMemo(() => {
     if (meta.blankFormId) return `/dashboard/smart-police/templates/${meta.blankFormId}`;
@@ -52,12 +54,20 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
     setPages((ps) => ps.map((p, i) => (i === pageIdx ? { ...p, text, qa: [] } : p)));
   }
 
+  function flowOverflow(pageIdx: number, text: string) {
+    setPages((ps) => flowStatementOverflow(ps, pageIdx, text));
+    setPageIndex(pageIdx + 1);
+  }
+
+  function goToPage(i: number) {
+    setPageIndex(i);
+    setScrollRequest((r) => ({ page: i, nonce: (r?.nonce ?? 0) + 1 }));
+  }
+
   function addContinuationSheet() {
-    setPages((ps) => {
-      const next = appendContinuationSheetPair(ps);
-      setPageIndex(ps.length);
-      return next;
-    });
+    const jumpTo = Math.max(pages.length, 2);
+    setPages((ps) => appendContinuationSheetPair(ps));
+    goToPage(jumpTo);
   }
 
   function removeContinuation() {
@@ -104,7 +114,7 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
               "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
               i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
             )}
-            onClick={() => setPageIndex(i)}
+            onClick={() => goToPage(i)}
             title={statementPageTabLabel(i)}
           >
             {statementPageTabLabel(i)}
@@ -129,13 +139,14 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">
-        <OfficialStatementFormSheet
+        <OfficialStatementFormDocument
           header={header}
           pages={pages}
-          pageIndex={pageIndex}
           onHeaderChange={patchHeader}
           onPageTextChange={updatePageText}
-          className="mb-8"
+          onPageOverflow={flowOverflow}
+          onActivePageChange={setPageIndex}
+          scrollRequest={scrollRequest}
         />
       </div>
     </div>

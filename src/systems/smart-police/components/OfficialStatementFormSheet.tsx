@@ -1,8 +1,12 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { StatementQaEditor } from "@/systems/smart-police/components/StatementQaEditor";
+import {
+  StatementQaEditor,
+  type QaFocus,
+  type QaFocusRequest,
+} from "@/systems/smart-police/components/StatementQaEditor";
 import {
   statementPageSlot,
   type StatementHeaderFields,
@@ -109,9 +113,18 @@ function LinedBody(props: {
   ariaLabel: string;
   minHeight: string;
   fill?: boolean;
+  onOverflow?: (text: string, focus: QaFocus | null) => void;
+  focusRequest?: QaFocusRequest | null;
 }) {
   return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={BODY} />;
 }
+
+/** กรอบเส้นหน้าหลัง/ใบต่อ — ด้านเย็บเล่มเว้นกว้าง · เส้นตั้งชิดด้านเย็บ */
+const LINED_TOP = "28mm";
+const LINED_BOTTOM = "22mm";
+const LINED_EDGE = "14mm";
+const LINED_BINDING = "50mm";
+const LINED_RULE = "0.55pt solid #111";
 
 export function OfficialStatementFormSheet({
   header,
@@ -119,6 +132,9 @@ export function OfficialStatementFormSheet({
   pageIndex,
   onHeaderChange,
   onPageTextChange,
+  onOverflow,
+  focusRequest,
+  onActivate,
   className,
 }: {
   header: StatementHeaderFields;
@@ -127,6 +143,10 @@ export function OfficialStatementFormSheet({
   formTitle?: string;
   onHeaderChange: <K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) => void;
   onPageTextChange: (pageIdx: number, text: string) => void;
+  /** ข้อความล้นหน้านี้ → ไหลไปหน้าถัดไป */
+  onOverflow?: (text: string, focus: QaFocus | null) => void;
+  focusRequest?: QaFocusRequest | null;
+  onActivate?: (pageIdx: number) => void;
   onQaChange?: unknown;
   onAddQa?: unknown;
   onRemoveQa?: unknown;
@@ -137,49 +157,85 @@ export function OfficialStatementFormSheet({
   const page = pages[pageIndex];
   const slot = statementPageSlot(pageIndex);
   const isLinedOnly = slot.kind === "main" || slot.kind === "cont";
+  const isFrontCont = slot.kind === "cont" && slot.side === "หน้า";
 
   return (
     <article
-      className={cn("sp-a4-sheet mx-auto bg-white text-[#111] shadow-xl print:shadow-none", className)}
+      data-sheet-index={pageIndex}
+      className={cn("sp-a4-sheet relative mx-auto bg-white text-[#111] shadow-xl print:shadow-none", className)}
       style={{
         width: PAGE.w,
         height: PAGE.h,
         boxSizing: "border-box",
-        padding: "16mm 12mm 14mm 6mm",
+        padding: isLinedOnly ? 0 : "16mm 12mm 14mm 6mm",
         fontFamily: FONT,
         fontSize: BODY,
         lineHeight: 1.25,
         overflow: "hidden",
       }}
+      onFocusCapture={() => onActivate?.(pageIndex)}
     >
       {isLinedOnly ? (
-        <div className="flex h-full flex-col">
-          <Row style={{ marginBottom: "3mm" }}>
-            {slot.kind === "main" ? (
-              <>
-                <L>บันทึกคำให้การ (หน้าหลัก) ของ</L>
-                <Dot aria-label="หน้าหลักของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={10} />
-                <span style={{ marginLeft: "auto", flexShrink: 0 }}>ด้านหลังแผ่น 1</span>
-              </>
-            ) : (
-              <>
+        <>
+          {isFrontCont ? (
+            <>
+              <Row
+                style={{
+                  position: "absolute",
+                  top: "14mm",
+                  left: `calc(${LINED_BINDING} + 2.5mm)`,
+                  right: LINED_EDGE,
+                }}
+              >
                 <L>ใบต่อคำให้การ ของ</L>
                 <Dot aria-label="ใบต่อของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={10} />
-                <span style={{ marginLeft: "auto", flexShrink: 0 }}>
-                  แผ่น {slot.sheetNo} · {slot.side}
+                <L>แผ่น</L>
+                <span
+                  style={{
+                    minWidth: "16mm",
+                    textAlign: "center",
+                    borderBottom: "0.5pt dotted #111",
+                    lineHeight: LINE,
+                  }}
+                >
+                  {slot.sheetNo}
                 </span>
-              </>
-            )}
-          </Row>
-          <LinedBody
-            ariaLabel={`${slot.label} — พิมพ์ถาม ตอบ บนเส้น`}
-            minHeight="250mm"
-            fill
-            value={page?.text ?? ""}
-            onChange={(t) => onPageTextChange(pageIndex, t)}
-          />
-          <p style={{ fontSize: "9pt", marginTop: "2mm", color: "#444" }}>({slot.formCode})</p>
-        </div>
+              </Row>
+              <p
+                style={{
+                  position: "absolute",
+                  left: LINED_EDGE,
+                  bottom: LINED_BOTTOM,
+                  margin: 0,
+                  fontSize: "10pt",
+                }}
+              >
+                ({slot.formCode})
+              </p>
+            </>
+          ) : null}
+          <div
+            className="flex flex-col"
+            style={{
+              position: "absolute",
+              top: LINED_TOP,
+              bottom: LINED_BOTTOM,
+              ...(isFrontCont
+                ? { left: LINED_BINDING, right: LINED_EDGE, borderLeft: LINED_RULE, paddingLeft: "2.5mm" }
+                : { left: LINED_EDGE, right: LINED_BINDING, borderRight: LINED_RULE, paddingRight: "2.5mm" }),
+            }}
+          >
+            <LinedBody
+              ariaLabel={`${slot.label} — พิมพ์ถาม ตอบ บนเส้น`}
+              minHeight="40mm"
+              fill
+              value={page?.text ?? ""}
+              onChange={(t) => onPageTextChange(pageIndex, t)}
+              onOverflow={onOverflow}
+              focusRequest={focusRequest}
+            />
+          </div>
+        </>
       ) : (
         <div
           className="grid h-full"
@@ -732,10 +788,66 @@ export function OfficialStatementFormSheet({
               fill
               value={page?.text ?? ""}
               onChange={(t) => onPageTextChange(0, t)}
+              onOverflow={onOverflow}
+              focusRequest={focusRequest}
             />
           </div>
         </div>
       )}
     </article>
+  );
+}
+
+/**
+ * ทุกหน้าเรียงต่อกันแบบ Word — พิมพ์หมดเส้นหน้าใด ข้อความไหลไปหน้าถัดไปเอง
+ * (ผู้เรียกต่อใบต่อคู่ใหม่ใน onPageOverflow เมื่อเป็นหน้าสุดท้าย)
+ */
+export function OfficialStatementFormDocument({
+  header,
+  pages,
+  onHeaderChange,
+  onPageTextChange,
+  onPageOverflow,
+  onActivePageChange,
+  scrollRequest,
+}: {
+  header: StatementHeaderFields;
+  pages: StatementPage[];
+  onHeaderChange: <K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) => void;
+  onPageTextChange: (pageIdx: number, text: string) => void;
+  /** ข้อความที่ล้นจากหน้า pageIdx — ใส่ต้นหน้า pageIdx + 1 (สร้างใบต่อถ้ายังไม่มี) */
+  onPageOverflow: (pageIdx: number, text: string) => void;
+  onActivePageChange?: (pageIdx: number) => void;
+  scrollRequest?: { page: number; nonce: number } | null;
+}) {
+  const [focusRequest, setFocusRequest] = useState<(QaFocusRequest & { page: number }) | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!scrollRequest) return;
+    rootRef.current
+      ?.querySelector(`[data-sheet-index="${scrollRequest.page}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [scrollRequest]);
+
+  return (
+    <div ref={rootRef} className="flex flex-col gap-6 pb-8">
+      {pages.map((p, i) => (
+        <OfficialStatementFormSheet
+          key={p.id}
+          header={header}
+          pages={pages}
+          pageIndex={i}
+          onHeaderChange={onHeaderChange}
+          onPageTextChange={onPageTextChange}
+          onActivate={onActivePageChange}
+          focusRequest={focusRequest?.page === i ? focusRequest : null}
+          onOverflow={(text, focus) => {
+            onPageOverflow(i, text);
+            if (focus) setFocusRequest((r) => ({ page: i + 1, ...focus, nonce: (r?.nonce ?? 0) + 1 }));
+          }}
+        />
+      ))}
+    </div>
   );
 }

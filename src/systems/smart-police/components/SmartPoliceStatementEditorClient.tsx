@@ -6,6 +6,7 @@ import { openPrintableHtml } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   appendContinuationSheetPair,
+  flowStatementOverflow,
   ensureStatementPagesDoc,
   getStatementTemplateMeta,
   isStatementDocumentV3,
@@ -19,7 +20,7 @@ import {
   type StatementHeaderFields,
 } from "@/lib/smart-police/form-templates";
 import type { SmartPoliceCaseDetail, SmartPoliceDocumentDto } from "@/lib/smart-police/types";
-import { OfficialStatementFormSheet } from "@/systems/smart-police/components/OfficialStatementFormSheet";
+import { OfficialStatementFormDocument } from "@/systems/smart-police/components/OfficialStatementFormSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
 
 /** ปุ่มบนแถบมืด — พิมพ์บนฟอร์มแบบ Word */
@@ -51,6 +52,7 @@ export function SmartPoliceStatementEditorClient({
   const [wordFileUrl, setWordFileUrl] = useState<string | null>(null);
   const [wordFileName, setWordFileName] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
+  const [scrollRequest, setScrollRequest] = useState<{ page: number; nonce: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -115,6 +117,20 @@ export function SmartPoliceStatementEditorClient({
     setDirty(true);
   }
 
+  function flowOverflow(pageIdx: number, text: string) {
+    setContent((c) => {
+      if (!c || !statementDocumentHasPages(c)) return c;
+      return { ...c, pages: flowStatementOverflow(c.pages, pageIdx, text) };
+    });
+    setPageIndex(pageIdx + 1);
+    setDirty(true);
+  }
+
+  function goToPage(i: number) {
+    setPageIndex(i);
+    setScrollRequest((r) => ({ page: i, nonce: (r?.nonce ?? 0) + 1 }));
+  }
+
   function addContinuationSheet() {
     if (!content || !statementDocumentHasPages(content)) return;
     const jumpTo = Math.max(content.pages.length, 2);
@@ -122,7 +138,7 @@ export function SmartPoliceStatementEditorClient({
       if (!c || !statementDocumentHasPages(c)) return c;
       return { ...c, pages: appendContinuationSheetPair(c.pages) };
     });
-    setPageIndex(jumpTo);
+    goToPage(jumpTo);
     setDirty(true);
   }
 
@@ -340,7 +356,7 @@ export function SmartPoliceStatementEditorClient({
               "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
               i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
             )}
-            onClick={() => setPageIndex(i)}
+            onClick={() => goToPage(i)}
             title={statementPageTabLabel(i)}
           >
             {statementPageTabLabel(i)}
@@ -360,13 +376,14 @@ export function SmartPoliceStatementEditorClient({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">
-        <OfficialStatementFormSheet
+        <OfficialStatementFormDocument
           header={content.header}
           pages={content.pages}
-          pageIndex={pageIndex}
           onHeaderChange={patchHeader}
           onPageTextChange={updatePageText}
-          className="mb-8"
+          onPageOverflow={flowOverflow}
+          onActivePageChange={setPageIndex}
+          scrollRequest={scrollRequest}
         />
         <p className="mx-auto mb-6 max-w-[210mm] text-center text-[12px] text-slate-100">
           ชื่อเอกสาร:{" "}
