@@ -32,8 +32,9 @@ const STMT_LINE = "7.8mm";
 const QA_STARTER = "ถาม\t";
 const QA_PLACEHOLDER = "ถาม\t…\nตอบ\t…";
 const QA_BLOCK_CLASS = "sp-stmt-qa-block";
-const QA_ANS_PREFIX = /^\s*ตอบ\b/;
-const QA_ASK_PREFIX = /^\s*ถาม\b/;
+/** ห้ามใช้ \\b — ภาษาไทยไม่ใช่ word char ทำให้จับ «ตอบ» ไม่ได้แล้ววนสร้างตอบตลอด */
+const QA_ANS_PREFIX = /^\s*ตอบ/;
+const QA_ASK_PREFIX = /^\s*ถาม/;
 
 function Dot({
   value,
