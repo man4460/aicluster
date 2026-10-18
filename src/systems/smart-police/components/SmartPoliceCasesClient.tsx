@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AppDashboardSection,
   AppEmptyState,
-  AppSectionHeader,
   AppTime24Input,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -22,13 +20,19 @@ import { bangkokDateKey, formatBangkokTimeHm } from "@/lib/time/bangkok";
 import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
 import { IconSpPlus } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
+  smartPoliceCardHeaderRowClass,
+  smartPoliceCardMetaClass,
+  smartPoliceCardTitleClass,
   smartPoliceFieldClass,
   smartPoliceFilterChipClass,
   smartPoliceFilterChipShellClass,
+  smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
   smartPoliceOutlineButtonClass,
+  smartPolicePanelClass,
+  smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryIconButtonClass,
 } from "@/systems/smart-police/lib/ui-tokens";
@@ -215,69 +219,67 @@ export function SmartPoliceCasesClient() {
 
   return (
     <>
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          title="รายการคดี"
-          description="วิซาร์ดสร้างสำนวนแรก · กรองความสำคัญ / ส่งอัยการ"
-          action={
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                aria-expanded={filterOpen}
-                aria-controls="sp-cases-filter-panel"
-                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  smartPoliceOutlineButtonClass,
-                  "relative",
-                  filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-                  filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-                )}
-                onClick={() => setFilterOpen((o) => !o)}
-              >
-                <FilterIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {filtersActive && !filterOpen ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500"
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-              <button
-                type="button"
-                className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
-                aria-label="สร้างสำนวนแรก"
-                onClick={() => {
-                  setWizard(emptyWizard());
-                  setError(null);
-                  setModalOpen(true);
-                }}
-              >
-                <IconSpPlus className="h-4 w-4" aria-hidden />
-              </button>
-              <button
-                type="button"
-                className={cn(smartPolicePrimaryButtonClass, "hidden sm:inline-flex")}
-                aria-label="สร้างสำนวนแรก"
-                onClick={() => {
-                  setWizard(emptyWizard());
-                  setError(null);
-                  setModalOpen(true);
-                }}
-              >
-                <IconSpPlus className="h-3.5 w-3.5" aria-hidden />
-                สำนวนแรก
-              </button>
-            </div>
-          }
-        />
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+        <div className={smartPoliceCardHeaderRowClass}>
+          <div className="min-w-0">
+            <h2 className={smartPoliceCardTitleClass}>รายการคดี</h2>
+            <p className={smartPoliceCardMetaClass}>สำนวนแรก · กรองความสำคัญ / ส่งอัยการ</p>
+          </div>
+          <div className={smartPoliceHeaderActionShellClass}>
+            <button
+              type="button"
+              aria-expanded={filterOpen}
+              aria-controls="sp-cases-filter-panel"
+              aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+              title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+              className={cn(
+                smartPoliceOutlineButtonClass,
+                "relative border-transparent bg-transparent shadow-none",
+                filterOpen && "bg-white text-[#4d47b6] shadow-sm",
+                filtersActive && !filterOpen && "bg-amber-50 text-amber-800",
+              )}
+              onClick={() => setFilterOpen((o) => !o)}
+            >
+              <FilterIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+              {filtersActive && !filterOpen ? (
+                <span
+                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-500"
+                  aria-hidden
+                />
+              ) : null}
+            </button>
+            <button
+              type="button"
+              className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
+              aria-label="สร้างสำนวนแรก"
+              onClick={() => {
+                setWizard(emptyWizard());
+                setError(null);
+                setModalOpen(true);
+              }}
+            >
+              <IconSpPlus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={cn(smartPolicePrimaryButtonClass, "hidden sm:inline-flex")}
+              aria-label="สร้างสำนวนแรก"
+              onClick={() => {
+                setWizard(emptyWizard());
+                setError(null);
+                setModalOpen(true);
+              }}
+            >
+              <IconSpPlus className="h-3 w-3" aria-hidden />
+              สำนวนแรก
+            </button>
+          </div>
+        </div>
 
         <div
           id="sp-cases-filter-panel"
-          className={cn("mt-3 space-y-3", filterOpen ? "block" : "hidden")}
+          className={cn("mt-2.5 space-y-2", filterOpen ? "block" : "hidden")}
         >
           <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
             {(
@@ -365,15 +367,15 @@ export function SmartPoliceCasesClient() {
         </div>
 
         {loading ? (
-          <p className={cn("mt-4", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
+          <p className={cn("mt-2.5", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
         ) : cases.length === 0 ? (
-          <AppEmptyState className="mt-4">
+          <AppEmptyState className="mt-2.5">
             {filtersActive
               ? "ไม่พบคดีตามเงื่อนไขกรอง"
               : "ไม่พบคดี — กด «สำนวนแรก» เพื่อเริ่มวิซาร์ด"}
           </AppEmptyState>
         ) : (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-2.5 space-y-1.5">
             {cases.map((c) => (
               <li key={c.id}>
                 <Link
@@ -429,7 +431,7 @@ export function SmartPoliceCasesClient() {
             ))}
           </ul>
         )}
-      </AppDashboardSection>
+      </section>
 
       <FormModal
         open={modalOpen}

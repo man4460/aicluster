@@ -57,32 +57,29 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
   }, [headerCollapsed]);
 
   return (
-    <div className={cn("flex min-w-0 flex-col gap-4 sm:gap-6", "max-lg:pb-24 lg:pb-0")}>
+    <div className={cn("flex min-w-0 flex-col gap-3 sm:gap-4", "max-lg:pb-24 lg:pb-0")}>
       <header
         className={cn(
           smartPoliceModuleShellClass,
-          "flex flex-col px-4 py-4 sm:px-6 sm:py-5",
+          "flex flex-col px-3 py-2.5 sm:px-4 sm:py-3",
           headerCollapsed && "hidden",
         )}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0000BF] via-[#5b61ff] to-[#ec4899] text-white shadow-sm"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#0000BF] via-[#5b61ff] to-[#ec4899] text-white shadow-sm"
               aria-hidden
             >
-              <IconSpCase className="h-5 w-5" />
+              <IconSpCase className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4d47b6]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#4d47b6]">
                 กลุ่ม 2 · 1 โทเคน/วัน
               </p>
-              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
+              <h1 className="text-base font-bold tracking-tight text-[#1e1b4b] sm:text-lg">
                 {SMART_POLICE_MODULE_DISPLAY_NAME}
               </h1>
-              <p className="mt-0.5 hidden text-xs font-medium leading-relaxed text-[#66638c] md:block">
-                เมนูโมดูลอยู่แถบซ้าย · มือถือใช้แถบล่าง
-              </p>
             </div>
           </div>
           <button

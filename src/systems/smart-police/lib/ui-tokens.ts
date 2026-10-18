@@ -2,18 +2,18 @@ import { cn } from "@/lib/cn";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 
 /**
- * ปุ่ม / การ์ด / แท็บ Smart Police — ชุดเดียวกับแม่แบบซักผ้า (plain panel · h-9 · rounded-lg)
+ * ปุ่ม / การ์ด / แท็บ Smart Police — compact (h-8 · rounded-md)
  * หมายเหตุ: `cn` ในโปรเจกต์นี้ไม่ใช้ twMerge — ห้ามซ้อนคลาสชนกัน
  */
-export const smartPoliceBtnRadiusClass = "rounded-lg";
-export const smartPoliceBtnHeightClass = "box-border h-9 min-h-9 max-h-9";
-export const smartPoliceBtnPadXClass = "px-2.5";
+export const smartPoliceBtnRadiusClass = "rounded-md";
+export const smartPoliceBtnHeightClass = "box-border h-8 min-h-8 max-h-8";
+export const smartPoliceBtnPadXClass = "px-2";
 
 export const smartPoliceBtnBaseClass = cn(
-  "inline-flex shrink-0 items-center justify-center gap-1.5",
+  "inline-flex shrink-0 items-center justify-center gap-1",
   smartPoliceBtnRadiusClass,
   smartPoliceBtnHeightClass,
-  "text-[11px] font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs",
+  "text-[11px] font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50",
 );
 
 export const smartPoliceOutlineButtonClass = cn(
@@ -31,14 +31,32 @@ export const smartPolicePrimaryButtonClass = cn(
 
 export const smartPoliceIconButtonClass = cn(
   smartPoliceBtnBaseClass,
-  "w-9 min-w-9 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
+  "w-8 min-w-8 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
 export const smartPolicePrimaryIconButtonClass = cn(
   smartPoliceBtnBaseClass,
-  "w-9 min-w-9 border border-transparent px-0 text-white",
+  "w-8 min-w-8 border border-transparent px-0 text-white",
   appDashboardBrandGradientFillClass,
 );
+
+/** แถวหัวการ์ด — ชื่อซ้าย · ปุ่มขวา (ห่อเมื่อแคบ) */
+export const smartPoliceCardHeaderRowClass =
+  "flex flex-wrap items-center justify-between gap-2 gap-y-1.5";
+
+/** กลุ่มปุ่มแอ็กชันหัวการ์ด — กะทัดรัดในกล่องเดียวกัน */
+export const smartPoliceHeaderActionShellClass =
+  "inline-flex shrink-0 flex-wrap items-center gap-0.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-0.5 sm:flex-nowrap";
+
+/** แถวเครื่องมือในเนื้อหา (เช่น เอกสาร) */
+export const smartPoliceToolbarRowClass =
+  "flex flex-wrap items-center gap-1";
+
+export const smartPoliceCardTitleClass =
+  "text-sm font-black tracking-tight text-[#1e1b4b] sm:text-[15px]";
+
+export const smartPoliceCardMetaClass =
+  "mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]";
 
 export const smartPoliceRowIconButtonClass = cn(
   "box-border inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 items-center justify-center rounded-md border border-slate-200/90 bg-white text-[#4d47b6] shadow-sm touch-manipulation transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50",
@@ -65,7 +83,7 @@ export const smartPoliceLabelClass = "block text-xs font-bold text-[#4d47b6]";
 export const smartPolicePanelClass =
   "overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm";
 
-export const smartPolicePanelSectionClass = "px-4 py-4 sm:px-5 sm:py-5";
+export const smartPolicePanelSectionClass = "px-3 py-3 sm:px-4 sm:py-4";
 
 export const smartPolicePanelDividerClass = "border-t border-slate-200/80";
 
@@ -73,18 +91,18 @@ export const smartPoliceSectionHeadingClass =
   "flex items-center gap-2 text-sm font-bold text-[#1e1b4b]";
 
 export const smartPoliceSubtitleClass =
-  "mt-0.5 hidden text-xs font-medium leading-relaxed text-[#66638c] sm:block";
+  "mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]";
 
-export const smartPolicePageStackClass = "min-w-0 space-y-4";
+export const smartPolicePageStackClass = "min-w-0 space-y-3";
 
 export const smartPoliceMutedTextClass = "text-sm font-medium text-[#66638c]";
 
 export const smartPolicePrimaryTabShellClass =
-  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1";
+  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-0.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-0.5";
 
 export function smartPolicePrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-8 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
+    "inline-flex h-8 min-h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md px-2.5 text-[11px] font-bold leading-none sm:px-3",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",

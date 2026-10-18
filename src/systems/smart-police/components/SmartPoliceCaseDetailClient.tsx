@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AppDashboardSection,
-  AppSectionHeader,
   AppTime24Input,
   openPrintableHtml,
 } from "@/components/app-templates";
@@ -38,7 +36,11 @@ import type {
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
 import {
+  smartPoliceCardHeaderRowClass,
+  smartPoliceCardMetaClass,
+  smartPoliceCardTitleClass,
   smartPoliceFieldClass,
+  smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
@@ -47,15 +49,16 @@ import {
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
+  smartPolicePanelDividerClass,
   smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryTabPillClass,
   smartPolicePrimaryTabShellClass,
   smartPoliceRowIconButtonClass,
   smartPoliceRowRemoveIconButtonClass,
-  smartPoliceSubtitleClass,
   smartPoliceTextareaClass,
   smartPoliceToastSuccessClass,
+  smartPoliceToolbarRowClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import type {
   SmartPoliceCasePriority,
@@ -374,56 +377,67 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     <div className={smartPolicePageStackClass}>
       {toast ? <p className={smartPoliceToastSuccessClass}>{toast}</p> : null}
 
-      <div className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+        <div className={smartPoliceCardHeaderRowClass}>
           <div className="min-w-0 text-left">
-            <p className="text-xs font-bold text-[#4d47b6]">{data.caseNumber}</p>
-            <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">{data.title}</h2>
-            <p className="mt-1 text-sm text-[#66638c]">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#4d47b6]">
+              {data.caseNumber}
+            </p>
+            <h2 className={smartPoliceCardTitleClass}>{data.title}</h2>
+            <p className={smartPoliceCardMetaClass}>
               {data.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[data.status]}
-              {data.chargeText ? ` · ${data.chargeText.slice(0, 40)}${data.chargeText.length > 40 ? "…" : ""}` : ""}
+              {data.chargeText
+                ? ` · ${data.chargeText.slice(0, 36)}${data.chargeText.length > 36 ? "…" : ""}`
+                : ""}
             </p>
           </div>
-          <Link href="/dashboard/smart-police/cases" className="text-sm font-semibold text-[#5b61ff]">
-            ← รายการคดี
-          </Link>
-        </div>
-      </div>
-
-      <AppDashboardSection>
-        <div className="mb-3 sm:hidden">
-          <label className={smartPoliceLabelClass}>
-            ส่วนสำนวน
-            <select
-              className={cn(smartPoliceMobileSelectClass, "mt-1")}
-              value={tab}
-              onChange={(e) => setTab(e.target.value as CaseTab)}
+          <div className={smartPoliceHeaderActionShellClass}>
+            <Link
+              href="/dashboard/smart-police/cases"
+              className={cn(
+                smartPoliceOutlineButtonClass,
+                "border-transparent bg-transparent shadow-none hover:bg-white",
+              )}
             >
-              {tabs.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mb-4 hidden sm:block">
-          <nav role="tablist" className={smartPolicePrimaryTabShellClass} aria-label="ส่วนสำนวน">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.key}
-                className={smartPolicePrimaryTabPillClass(tab === t.key)}
-                onClick={() => setTab(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+              ← รายการ
+            </Link>
+          </div>
         </div>
 
+        <div className="mt-2.5 sm:hidden">
+          <select
+            className={smartPoliceMobileSelectClass}
+            value={tab}
+            aria-label="ส่วนสำนวน"
+            onChange={(e) => setTab(e.target.value as CaseTab)}
+          >
+            {tabs.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <nav
+          role="tablist"
+          className={cn(smartPolicePrimaryTabShellClass, "mt-2.5 hidden sm:inline-flex")}
+          aria-label="ส่วนสำนวน"
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              className={smartPolicePrimaryTabPillClass(tab === t.key)}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className={cn(smartPolicePanelDividerClass, "mt-2.5 pt-2.5")}>
         {tab === "info" ? (
           <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">
             <label className={smartPoliceLabelClass}>
@@ -679,17 +693,13 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         ) : null}
 
         {tab === "parties" ? (
-          <div role="tabpanel" className="space-y-3">
-            <AppSectionHeader
-              className="flex flex-row items-start justify-between gap-3"
-              actionWrapClassName="shrink-0"
-              title="บุคคลในคดี"
-              description={
-                <span className={smartPoliceSubtitleClass}>
-                  ระบุ «เกี่ยวกับคดี» ให้ถูกต้อง — ใช้สร้างคำให้การอัตโนมัติ
-                </span>
-              }
-              action={
+          <div role="tabpanel" className="space-y-2">
+            <div className={smartPoliceCardHeaderRowClass}>
+              <div className="min-w-0">
+                <h3 className={smartPoliceCardTitleClass}>บุคคลในคดี</h3>
+                <p className={smartPoliceCardMetaClass}>ระบุเกี่ยวกับคดีเพื่อสร้างคำให้การอัตโนมัติ</p>
+              </div>
+              <div className={smartPoliceHeaderActionShellClass}>
                 <button
                   type="button"
                   className={smartPolicePrimaryButtonClass}
@@ -701,9 +711,9 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 >
                   + เพิ่ม
                 </button>
-              }
-            />
-            <ul className="space-y-2">
+              </div>
+            </div>
+            <ul className="space-y-1.5">
               {data.parties.map((p) => (
                 <li
                   key={p.id}
@@ -762,12 +772,10 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         ) : null}
 
         {tab === "evidence" ? (
-          <div role="tabpanel" className="space-y-3">
-            <AppSectionHeader
-              className="flex flex-row items-start justify-between gap-3"
-              actionWrapClassName="shrink-0"
-              title="รายการทรัพย์ / ของกลาง"
-              action={
+          <div role="tabpanel" className="space-y-2">
+            <div className={smartPoliceCardHeaderRowClass}>
+              <h3 className={smartPoliceCardTitleClass}>ของกลาง</h3>
+              <div className={smartPoliceHeaderActionShellClass}>
                 <button
                   type="button"
                   className={smartPolicePrimaryButtonClass}
@@ -779,9 +787,9 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 >
                   + เพิ่ม
                 </button>
-              }
-            />
-            <ul className="space-y-2">
+              </div>
+            </div>
+            <ul className="space-y-1.5">
               {data.evidence.map((e) => (
                 <li
                   key={e.id}
@@ -865,14 +873,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 }}
               />
             </label>
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className={cn(smartPoliceToolbarRowClass, "pt-1")}>
               <button
                 type="button"
                 className={smartPolicePrimaryButtonClass}
                 disabled={genBusy}
                 onClick={() => void generateDocs(["MEMO"])}
               >
-                {genBusy ? "…" : "สร้างบันทึกพงส."}
+                {genBusy ? "…" : "บันทึกพงส."}
               </button>
               <button
                 type="button"
@@ -882,21 +890,21 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   void generateDocs(["STATEMENT_ALL", "MEMO", "INVESTIGATION_REPORT", "PROPERTY_LIST"])
                 }
               >
-                สร้างเอกสารทั้งหมด
+                สร้างทั้งหมด
               </button>
             </div>
           </div>
         ) : null}
 
         {tab === "docs" ? (
-          <div role="tabpanel" className="space-y-3">
-            <div className={cn(smartPolicePanelClass, "space-y-3 p-3 sm:p-4")}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-black text-[#1e1b4b]">Checklist พิมพ์วันแรก</h3>
-                  <p className={cn(smartPoliceSubtitleClass, "mt-0.5")}>
-                    ทำแล้ว {day1Summary.done}/{day1Summary.total}
-                    {day1Summary.pending > 0 ? ` · ค้าง ${day1Summary.pending} ฉบับ` : " · ครบแล้ว"}
+          <div role="tabpanel" className="space-y-2.5">
+            <div className="space-y-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2.5">
+              <div className={smartPoliceCardHeaderRowClass}>
+                <div className="min-w-0">
+                  <h3 className={smartPoliceCardTitleClass}>Checklist วันแรก</h3>
+                  <p className={smartPoliceCardMetaClass}>
+                    {day1Summary.done}/{day1Summary.total} ฉบับ
+                    {day1Summary.pending > 0 ? ` · ค้าง ${day1Summary.pending}` : " · ครบแล้ว"}
                   </p>
                 </div>
                 {day1Summary.pending > 0 ? (
@@ -908,26 +916,26 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                       void generateDocs(["MEMO", "STATEMENT_ALL", "PROPERTY_LIST"])
                     }
                   >
-                    {genBusy ? "…" : "สร้างที่ขาดทั้งหมด"}
+                    {genBusy ? "…" : "สร้างที่ขาด"}
                   </button>
                 ) : null}
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {day1Items.map((item) => (
                   <li
                     key={item.key}
                     className={cn(
                       smartPoliceListRowAccentClass(item.done ? "emerald" : "amber"),
-                      "flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+                      "flex-col gap-1.5 p-2 sm:flex-row sm:items-center sm:justify-between",
                     )}
                   >
                     <div className="min-w-0 text-left">
-                      <p className="text-sm font-semibold text-[#1e1b4b]">{item.label}</p>
-                      <p className="text-[11px] font-medium text-[#66638c]">
-                        {item.done ? "มีเอกสารแล้ว" : "ยังไม่มี — สร้างหรือพิมพ์เมื่อพร้อม"}
+                      <p className="text-xs font-semibold text-[#1e1b4b] sm:text-sm">{item.label}</p>
+                      <p className="text-[10px] font-medium text-[#66638c]">
+                        {item.done ? "มีแล้ว" : "ยังไม่มี"}
                       </p>
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                    <div className={cn(smartPoliceToolbarRowClass, "shrink-0")}>
                       {!item.done && item.generateKind ? (
                         <button
                           type="button"
@@ -961,58 +969,54 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               </ul>
             </div>
 
-            <AppSectionHeader
-              className="flex flex-row flex-wrap items-start justify-between gap-2"
-              actionWrapClassName="shrink-0"
-              title="เอกสารในคดี"
-              action={
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    className={smartPoliceOutlineButtonClass}
-                    disabled={genBusy}
-                    onClick={() => void generateDocs(["STATEMENT_ALL"])}
-                  >
-                    คำให้การทั้งหมด
-                  </button>
-                  <button
-                    type="button"
-                    className={smartPoliceOutlineButtonClass}
-                    disabled={genBusy}
-                    onClick={() => void generateDocs(["PROPERTY_LIST"])}
-                  >
-                    บัญชีของกลาง
-                  </button>
-                  <button
-                    type="button"
-                    className={smartPoliceOutlineButtonClass}
-                    disabled={genBusy}
-                    onClick={() => void generateDocs(["INVESTIGATION_REPORT"])}
-                  >
-                    รายงานสอบสวน
-                  </button>
-                  <button
-                    type="button"
-                    className={smartPolicePrimaryButtonClass}
-                    onClick={() => {
-                      setEditingDocId(null);
-                      setDocForm({ kind: "NARRATIVE", title: "", content: "" });
-                      setDocModal(true);
-                    }}
-                  >
-                    + เอกสาร
-                  </button>
-                </div>
-              }
-            />
+            <div className={smartPoliceCardHeaderRowClass}>
+              <h3 className={smartPoliceCardTitleClass}>เอกสารในคดี</h3>
+              <div className={smartPoliceHeaderActionShellClass}>
+                <button
+                  type="button"
+                  className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none")}
+                  disabled={genBusy}
+                  onClick={() => void generateDocs(["STATEMENT_ALL"])}
+                >
+                  คำให้การ
+                </button>
+                <button
+                  type="button"
+                  className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none")}
+                  disabled={genBusy}
+                  onClick={() => void generateDocs(["PROPERTY_LIST"])}
+                >
+                  ของกลาง
+                </button>
+                <button
+                  type="button"
+                  className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none")}
+                  disabled={genBusy}
+                  onClick={() => void generateDocs(["INVESTIGATION_REPORT"])}
+                >
+                  รายงาน
+                </button>
+                <button
+                  type="button"
+                  className={smartPolicePrimaryButtonClass}
+                  onClick={() => {
+                    setEditingDocId(null);
+                    setDocForm({ kind: "NARRATIVE", title: "", content: "" });
+                    setDocModal(true);
+                  }}
+                >
+                  + เอกสาร
+                </button>
+              </div>
+            </div>
             {templateOptions.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs font-semibold text-[#66638c]">แม่แบบ:</span>
-                {templateOptions.slice(0, 10).map((t) => (
+              <div className={smartPoliceToolbarRowClass}>
+                <span className="text-[10px] font-semibold text-[#66638c]">แม่แบบ</span>
+                {templateOptions.slice(0, 8).map((t) => (
                   <button
                     key={t.id}
                     type="button"
-                    className={cn(smartPoliceOutlineButtonClass, "px-2 text-[11px]")}
+                    className={smartPoliceOutlineButtonClass}
                     onClick={() => {
                       setDocForm({ kind: t.kind, title: t.name, content: t.content });
                       setEditingDocId(null);
@@ -1024,24 +1028,21 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 ))}
               </div>
             ) : null}
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {data.documents.map((d) => (
-                <li
-                  key={d.id}
-                  className={smartPoliceListRowClass}
-                >
+                <li key={d.id} className={smartPoliceListRowClass}>
                   <div className="min-w-0 text-left">
-                    <p className="text-xs font-bold text-[#4d47b6]">
+                    <p className="text-[10px] font-bold text-[#4d47b6]">
                       {SMART_POLICE_DOCUMENT_KIND_LABEL[d.kind]}
                     </p>
                     <Link
                       href={documentPreviewHref(caseId, d.id)}
-                      className="font-semibold text-[#1e1b4b] underline decoration-[#5b61ff]/40 underline-offset-2"
+                      className="text-sm font-semibold text-[#1e1b4b] underline decoration-[#5b61ff]/40 underline-offset-2"
                     >
                       {d.title}
                     </Link>
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className={cn(smartPoliceToolbarRowClass, "shrink-0")}>
                     <Link
                       href={documentPreviewHref(caseId, d.id)}
                       className={cn(smartPolicePrimaryButtonClass, "inline-flex")}
@@ -1070,12 +1071,15 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </li>
               ))}
               {data.documents.length === 0 ? (
-                <p className={smartPoliceMutedTextClass}>ยังไม่มีเอกสาร — กดสร้างจากแท็บพฤติการณ์หรือ checklist ด้านบน</p>
+                <p className={smartPoliceMutedTextClass}>
+                  ยังไม่มีเอกสาร — ใช้ checklist หรือปุ่มสร้างด้านบน
+                </p>
               ) : null}
             </ul>
           </div>
         ) : null}
-      </AppDashboardSection>
+        </div>
+      </section>
 
       <FormModal
         open={partyModal}
