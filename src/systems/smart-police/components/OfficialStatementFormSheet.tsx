@@ -117,19 +117,6 @@ function isBlankBody(text: string): boolean {
   return !text.replace(/\u200b/g, "").trim();
 }
 
-function normalizeBodyText(el: HTMLElement): string {
-  return (el.innerText || "").replace(/\r\n/g, "\n").replace(/\u200b/g, "");
-}
-
-function readCaretOffset(el: HTMLElement): number {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) return 0;
-  const pre = sel.getRangeAt(0).cloneRange();
-  pre.selectNodeContents(el);
-  pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
-  return pre.toString().length;
-}
-
 function setTextAndCaret(el: HTMLElement, text: string, caret: number, onChange: (v: string) => void) {
   el.innerText = text;
   onChange(text);
@@ -149,82 +136,50 @@ function setTextAndCaret(el: HTMLElement, text: string, caret: number, onChange:
   sel.addRange(range);
 }
 
-function nextQuestionNo(text: string): number {
-  let max = 0;
-  for (const m of text.matchAll(/(?:^|\n)\s*ถาม\s*(\d+)/g)) {
-    max = Math.max(max, Number(m[1]) || 0);
+function insertAtCaret(el: HTMLElement, insert: string, onChange: (v: string) => void) {
+  el.focus();
+  const ok = document.execCommand("insertText", false, insert);
+  if (!ok) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const node = document.createTextNode(insert);
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   }
-  return max + 1;
+  onChange(el.innerText ?? "");
 }
 
-function lineBounds(text: string, offset: number): { start: number; end: number; line: string } {
-  const start = text.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
-  const nl = text.indexOf("\n", offset);
-  const end = nl < 0 ? text.length : nl;
-  return { start, end, line: text.slice(start, end) };
-}
-
-/** Tab = ถาม→ตอบ → ถามถัดไป · Shift+Tab = ย้อนกลับ */
-function handleQaTab(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
-  let text = normalizeBodyText(el);
-  if (isBlankBody(text)) {
-    setTextAndCaret(el, QA_STARTER, "ถาม 1. ".length, onChange);
+/**
+ * Tab แบบ Word — เยื้องย่อหน้าให้ข้อความบรรทัดถัดไปตรงคอลัมน์เนื้อหา (หลังป้าย ถาม/ตอบ)
+ * Shift+Tab — ลดการเยื้องต้นบรรทัด
+ */
+function handleWordTab(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
+  if (!shift) {
+    // แท็บเยื้อง ≈ ความกว้างป้าย «ถาม 1. » ให้ข้อความต่อแถวตรงกัน
+    insertAtCaret(el, "\t", onChange);
     return;
   }
 
-  const offset = Math.min(readCaretOffset(el), text.length);
-  text = normalizeBodyText(el);
-  const off = Math.min(offset, text.length);
-  const { start, end, line } = lineBounds(text, off);
-
-  if (shift) {
-    const before = text.slice(0, Math.max(start, 1));
-    const matches = [...before.matchAll(/(^|\n)(ถาม\s*\d*\.?\s*|ตอบ\s*)/g)];
-    const prev = matches.length >= 2 ? matches[matches.length - 2] : matches[0];
-    if (prev && prev.index != null) {
-      const pStart = prev.index + (prev[1] === "\n" ? 1 : 0);
-      setTextAndCaret(el, text, pStart + prev[2].length, onChange);
-    }
-    return;
-  }
-
-  if (/^\s*ถาม/.test(line)) {
-    const restStart = end < text.length ? end + 1 : text.length;
-    const rest = text.slice(restStart);
-    const ans = rest.match(/^ตอบ\s*/);
-    if (ans) {
-      setTextAndCaret(el, text, restStart + ans[0].length, onChange);
-      return;
-    }
-    const newText = `${text.slice(0, end)}\nตอบ ${text.slice(end)}`;
-    setTextAndCaret(el, newText, end + 1 + "ตอบ ".length, onChange);
-    return;
-  }
-
-  if (/^\s*ตอบ/.test(line)) {
-    const n = nextQuestionNo(text);
-    const block = `\n\nถาม ${n}. \nตอบ `;
-    const trimmed = text.replace(/\s*$/, "");
-    const newText = trimmed + block;
-    const caret = trimmed.length + `\n\nถาม ${n}. `.length;
-    setTextAndCaret(el, newText, caret, onChange);
-    return;
-  }
-
-  const ansIdx = text.search(/(?:^|\n)ตอบ\s*/);
-  if (ansIdx >= 0) {
-    const at = text[ansIdx] === "\n" ? ansIdx + 1 : ansIdx;
-    const m = text.slice(at).match(/^ตอบ\s*/);
-    setTextAndCaret(el, text, at + (m?.[0].length ?? 0), onChange);
-    return;
-  }
-
-  const qIdx = text.search(/(?:^|\n)ถาม\s*/);
-  if (qIdx >= 0) {
-    const at = text[qIdx] === "\n" ? qIdx + 1 : qIdx;
-    const m = text.slice(at).match(/^ถาม\s*\d*\.?\s*/);
-    setTextAndCaret(el, text, at + (m?.[0].length ?? 0), onChange);
-  }
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const text = (el.innerText || "").replace(/\r\n/g, "\n");
+  const pre = sel.getRangeAt(0).cloneRange();
+  pre.selectNodeContents(el);
+  pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+  const offset = pre.toString().length;
+  const lineStart = text.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
+  const line = text.slice(lineStart, offset);
+  const m = line.match(/^(\t| {2,4})/);
+  if (!m) return;
+  const remove = m[1].length;
+  const newText = text.slice(0, lineStart) + text.slice(lineStart + remove);
+  setTextAndCaret(el, newText, offset - remove, onChange);
 }
 
 function LinedBody({
@@ -314,7 +269,8 @@ function LinedBody({
           touchAction: "manipulation",
           WebkitUserSelect: "text",
           userSelect: "text",
-          // แตะง่ายบนมือถือ / ไอแพด
+          // แท็บเยื้องแบบ Word — กว้างใกล้ป้าย «ถาม 1. »
+          tabSize: 7,
           minHeight: "44px",
         }}
         onPointerDown={(e) => {
@@ -330,7 +286,7 @@ function LinedBody({
           if (!el) return;
           e.preventDefault();
           e.stopPropagation();
-          handleQaTab(el, e.shiftKey, onChange);
+          handleWordTab(el, e.shiftKey, onChange);
         }}
         onFocus={() => {
           focused.current = true;

@@ -262,11 +262,13 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/* คำให้การ — placeholder ถาม / ตอบ + แตะพิมพ์บนเส้น */
+/* คำให้การ — placeholder ถาม / ตอบ + Tab เยื้องแบบ Word */
 .sp-stmt-lined-body {
   margin: 0;
   padding: 0;
   -webkit-touch-callout: default;
+  tab-size: 7;
+  -moz-tab-size: 7;
 }
 .sp-stmt-lined-body:empty::before,
 .sp-stmt-lined-body:has(> br:only-child)::before {
