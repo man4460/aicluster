@@ -262,10 +262,11 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/* คำให้การ — ข้อความบนเส้น (เส้นจริงวาดด้วย border-bottom dotted เหมือน sp-word-field) */
+/* คำให้การ — placeholder ถาม / ตอบ + แตะพิมพ์บนเส้น */
 .sp-stmt-lined-body {
   margin: 0;
   padding: 0;
+  -webkit-touch-callout: default;
 }
 .sp-stmt-lined-body:empty::before,
 .sp-stmt-lined-body:has(> br:only-child)::before {
@@ -277,6 +278,7 @@ textarea.sp-word-field:focus-visible {
   line-height: inherit;
   color: #9ca3af;
   pointer-events: none;
+  font-weight: 600;
 }
 
 /* A4 จริงตอนพิมพ์ */
