@@ -46,10 +46,9 @@ export function SmartPoliceTemplatesClient() {
 
         <div className={cn(smartPoliceMutedTextClass, "mt-2 shrink-0 space-y-1")}>
           <p>
-            ใช้<strong className="text-[#1e1b4b]">แบบฟอร์มราชการ</strong> (ครุฑ · สำนักงานตำรวจแห่งชาติ · จุดไข่ปลา)
-            ตามแบบคำให้การจริง: ในคดีกด{" "}
-            <strong className="text-[#1e1b4b]">คำให้การ</strong> ที่บุคคล → กรอก/พิมพ์ถาม–ตอบบนฟอร์ม →{" "}
-            <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน</strong> · พิมพ์ลงลายเซ็น · ลิงก์ไฟล์ Word ต้นฉบับได้
+            แม่แบบ = <strong className="text-[#1e1b4b]">ภาพฟอร์มราชการจริง</strong> แล้ววางช่องพิมพ์ทับจุดว่าง —
+            ในคดีกด <strong className="text-[#1e1b4b]">คำให้การ</strong> → พิมพ์บนฟอร์มเหมือน Word →{" "}
+            <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน</strong> (สร้าง .docx ให้ด้วย)
           </p>
           <p>
             คลังไฟล์เปล่าทั้งหมดอยู่ที่{" "}
