@@ -10,6 +10,7 @@ export {
   ensureStatementPagesDoc,
   fillStatementDocumentSync,
   isStatementJsonContent,
+  normalizeStatementHeader,
   parseStatementDocumentContent,
   serializeStatementDocument,
   statementContentBodyTextForWord,
@@ -17,6 +18,10 @@ export {
   statementDocumentToPlainText,
   type FillStatementInput,
 } from "@/lib/smart-police/form-templates/fill-statement";
+export {
+  buildOfficialStatementFormHtml,
+  wrapOfficialStatementPrintHtml,
+} from "@/lib/smart-police/form-templates/official-statement-form-html";
 export type {
   StatementDocumentContent,
   StatementDocumentContentV1,

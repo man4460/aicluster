@@ -41,6 +41,17 @@ export async function createStatementForParty(opts: {
   );
   const vars = buildSmartPolicePrintVars(profile, caseDetail, { investigator });
 
+  const complainantLine = row.parties
+    .filter((p) => p.role === "COMPLAINANT")
+    .map((p) => p.fullName)
+    .filter(Boolean)
+    .join(", ");
+  const suspectLine = row.parties
+    .filter((p) => p.role === "SUSPECT")
+    .map((p) => p.fullName)
+    .filter(Boolean)
+    .join(", ");
+
   const statementDoc = await fillStatementDocument({
     role: party.role,
     stationName: profile.stationName,
@@ -66,6 +77,9 @@ export async function createStatementForParty(opts: {
     partyCaseRelation: party.caseRelation,
     partyPleaStatus: party.pleaStatus,
     behaviorHint: caseDetail.behaviorText ?? caseDetail.summary,
+    complainantLine,
+    suspectLine,
+    interviewPlace: profile.stationName,
   });
 
   const content = serializeStatementDocument(statementDoc);

@@ -1,0 +1,119 @@
+import { OFFICIAL_STATEMENT_FORM_CSS } from "@/lib/smart-police/form-templates/official-statement-form-css";
+import type {
+  StatementHeaderFields,
+  StatementPage,
+} from "@/lib/smart-police/form-templates/statement-types";
+
+function esc(s: string): string {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function dot(value: string): string {
+  const v = value.trim();
+  return v ? esc(v) : "………………";
+}
+
+/** HTML แบบฟอร์มราชการสำหรับพรีวิว/พิมพ์ */
+export function buildOfficialStatementFormHtml(opts: {
+  header: StatementHeaderFields;
+  pages: StatementPage[];
+  formTitle: string;
+}): string {
+  const h = opts.header;
+  let qNo = 1;
+  const qaHtml = opts.pages
+    .flatMap((p) => p.qa)
+    .map((qa) => {
+      const no = qNo++;
+      return `<div class="sp-off-qa-block">
+<div class="sp-off-qa-q"><strong>ถาม ${no}.</strong> ${esc(qa.question.trim() || "…")}</div>
+<div class="sp-off-qa-a"><strong>ตอบ</strong> ${esc(qa.answer.trim() || "…")}</div>
+</div>`;
+    })
+    .join("");
+
+  return `<div class="sp-off">
+<style>${OFFICIAL_STATEMENT_FORM_CSS}</style>
+<div class="sp-off-head">
+<img class="sp-off-garuda" src="/smart-police/garuda.svg" alt="" width="52" height="60"/>
+<p class="sp-off-org">สำนักงานตำรวจแห่งชาติ</p>
+<p class="sp-off-title">${esc(opts.formTitle)}</p>
+</div>
+<div class="sp-off-grid">
+<aside class="sp-off-side">
+<div class="sp-off-field"><span class="sp-off-label">คำให้การของ</span><div class="sp-off-dot">${dot(h.partyName)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">เป็น</span><div class="sp-off-dot">${dot(h.partyRoleLabel)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">หมายเลขโทรศัพท์</span><div class="sp-off-dot">${dot(h.partyPhone)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">บัตรประจำตัวประชาชน</span><div class="sp-off-dot">${dot(h.partyIdCard)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">ออกเมื่อ</span><div class="sp-off-dot">${dot(h.idIssuedOn)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">หมดอายุ</span><div class="sp-off-dot">${dot(h.idExpiresOn)}</div></div>
+<div class="sp-off-field"><span class="sp-off-label">ออกให้ ณ</span><div class="sp-off-dot">${dot(h.idIssuedAt)}</div></div>
+<div class="sp-off-field" style="text-align:center;margin-top:1.5rem"><span class="sp-off-label">ลงชื่อ</span> ……… <span class="sp-off-label">บันทึก</span></div>
+</aside>
+<div class="sp-off-main">
+<div class="sp-off-row"><span class="sp-off-label">สถานีตำรวจ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.stationName)}</span>
+<span class="sp-off-label">เขต/อำเภอ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.district)}</span>
+<span class="sp-off-label">จังหวัด</span> <span class="sp-off-dot sp-off-flex1">${dot(h.province)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">วันที่</span> <span class="sp-off-dot">${dot(h.dayThai)}</span>
+<span class="sp-off-label">เดือน</span> <span class="sp-off-dot sp-off-flex1">${dot(h.monthThai)}</span>
+<span class="sp-off-label">พ.ศ.</span> <span class="sp-off-dot">${dot(h.yearThai)}</span></div>
+<div class="sp-off-case">
+<div class="sp-off-case-label">คดีระหว่าง</div>
+<div class="sp-off-brace">{</div>
+<div class="sp-off-case-lines">
+<div class="sp-off-case-line"><span class="sp-off-dot sp-off-flex1">${dot(h.complainantLine)}</span><strong>ผู้กล่าวหา</strong></div>
+<div class="sp-off-case-line"><span class="sp-off-dot sp-off-flex1">${dot(h.suspectLine)}</span><strong>ผู้ต้องหา</strong></div>
+</div>
+</div>
+<div class="sp-off-row"><span class="sp-off-label">ต่อหน้า</span> <span class="sp-off-dot sp-off-flex1">${dot(h.investigator)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">สอบสวนที่</span> <span class="sp-off-dot sp-off-flex1">${dot(h.interviewPlace)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">ชื่อ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.partyName)}</span>
+<span class="sp-off-label">อายุ</span> <span class="sp-off-dot">${dot(h.partyAge)}</span> ปี</div>
+<div class="sp-off-row"><span class="sp-off-label">เชื้อชาติ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.ethnicity)}</span>
+<span class="sp-off-label">สัญชาติ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.partyNationality)}</span>
+<span class="sp-off-label">ศาสนา</span> <span class="sp-off-dot sp-off-flex1">${dot(h.religion)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">อาชีพ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.partyOccupation)}</span></div>
+<p class="sp-off-hint">(ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ หรือไม่ ให้ลงตามประเภทที่รับ)</p>
+<div class="sp-off-row"><span class="sp-off-label">อยู่บ้านเลขที่</span> <span class="sp-off-dot">${dot(h.houseNo)}</span>
+<span class="sp-off-label">หมู่ที่</span> <span class="sp-off-dot">${dot(h.moo)}</span>
+<span class="sp-off-label">แขวง/ตำบล</span> <span class="sp-off-dot sp-off-flex1">${dot(h.tambon)}</span></div>
+<div class="sp-off-row"><span class="sp-off-label">เขต/อำเภอ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.amphoe || h.district)}</span>
+<span class="sp-off-label">จังหวัด</span> <span class="sp-off-dot sp-off-flex1">${dot(h.province)}</span></div>
+<div class="sp-off-qa">
+<div class="sp-off-qa-title">บันทึกคำให้การ (ถาม / ตอบ)</div>
+${qaHtml}
+</div>
+<div class="sp-off-sign">
+<div><div>ลงชื่อผู้ให้การ</div><div class="sp-off-sign-line"></div><div>(${esc(h.partyName || "………………")})</div></div>
+<div><div>ลงชื่อพนักงานสอบสวน</div><div class="sp-off-sign-line"></div><div>(${esc(h.investigator || "………………")})</div></div>
+</div>
+</div>
+</div>
+</div>`;
+}
+
+export function wrapOfficialStatementPrintHtml(opts: {
+  title: string;
+  bodyHtml: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<title>${esc(opts.title)}</title>
+<style>
+@page { size: A4; margin: 8mm 10mm; }
+body { margin: 0; background: #fff; }
+${OFFICIAL_STATEMENT_FORM_CSS}
+</style>
+</head>
+<body>
+${opts.bodyHtml}
+<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},200)})</script>
+</body>
+</html>`;
+}

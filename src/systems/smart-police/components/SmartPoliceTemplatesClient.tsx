@@ -46,11 +46,10 @@ export function SmartPoliceTemplatesClient() {
 
         <div className={cn(smartPoliceMutedTextClass, "mt-2 shrink-0 space-y-1")}>
           <p>
-            ใช้<strong className="text-[#1e1b4b]">ฟอร์ม Word จริง</strong> (เช่น คำให้การผู้กล่าวหา.docx)
-            ทำงานร่วมกับระบบ: ในคดีกด{" "}
-            <strong className="text-[#1e1b4b]">คำให้การ</strong> ที่บุคคล → เห็นพรีวิวฟอร์ม + พิมพ์ถาม–ตอบ →{" "}
-            <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน + Word</strong> · เปิด Word ต้นฉบับหรืออัปโหลดไฟล์ที่พิมพ์ใน Word
-            กลับเข้าสำนวนได้
+            ใช้<strong className="text-[#1e1b4b]">แบบฟอร์มราชการ</strong> (ครุฑ · สำนักงานตำรวจแห่งชาติ · จุดไข่ปลา)
+            ตามแบบคำให้การจริง: ในคดีกด{" "}
+            <strong className="text-[#1e1b4b]">คำให้การ</strong> ที่บุคคล → กรอก/พิมพ์ถาม–ตอบบนฟอร์ม →{" "}
+            <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน</strong> · พิมพ์ลงลายเซ็น · ลิงก์ไฟล์ Word ต้นฉบับได้
           </p>
           <p>
             คลังไฟล์เปล่าทั้งหมดอยู่ที่{" "}

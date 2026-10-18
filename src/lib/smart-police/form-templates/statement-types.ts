@@ -39,6 +39,23 @@ export type StatementHeaderFields = {
   partyWorkplace: string;
   partyCaseRelation: string;
   partyPleaStatus: string;
+  /** แบบฟอร์มราชการ — ช่องเพิ่ม */
+  district: string;
+  dayThai: string;
+  monthThai: string;
+  yearThai: string;
+  complainantLine: string;
+  suspectLine: string;
+  interviewPlace: string;
+  ethnicity: string;
+  religion: string;
+  idIssuedOn: string;
+  idExpiresOn: string;
+  idIssuedAt: string;
+  houseNo: string;
+  moo: string;
+  tambon: string;
+  amphoe: string;
 };
 
 /** v1 — ถาม/ตอบอย่างเดียว (legacy) */

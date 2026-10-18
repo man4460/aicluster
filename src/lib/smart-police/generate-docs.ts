@@ -348,6 +348,16 @@ export async function generateSmartPoliceDocs(opts: {
   }
 
   if (opts.kinds.includes("STATEMENT_ALL")) {
+    const complainantLine = caseDetail.parties
+      .filter((p) => p.role === "COMPLAINANT")
+      .map((p) => p.fullName)
+      .filter(Boolean)
+      .join(", ");
+    const suspectLine = caseDetail.parties
+      .filter((p) => p.role === "SUSPECT")
+      .map((p) => p.fullName)
+      .filter(Boolean)
+      .join(", ");
     for (const party of caseDetail.parties) {
       const statementDoc = await fillStatementDocument({
         role: party.role,
@@ -374,6 +384,9 @@ export async function generateSmartPoliceDocs(opts: {
         partyCaseRelation: party.caseRelation,
         partyPleaStatus: party.pleaStatus,
         behaviorHint: caseDetail.behaviorText ?? caseDetail.summary,
+        complainantLine,
+        suspectLine,
+        interviewPlace: profile.stationName,
       });
       const content = serializeStatementDocument(statementDoc);
       const title = statementDocumentTitle(statementDoc, party.role);

@@ -17,8 +17,80 @@ import {
   isStatementDocumentV3,
   statementDocumentHasPages,
 } from "@/lib/smart-police/form-templates/statement-types";
+import { splitThaiOfficialDate } from "@/lib/smart-police/form-templates/official-form-date";
 import { SMART_POLICE_PARTY_ROLE_LABEL } from "@/lib/smart-police/types";
 import { statementTitleForRole } from "@/lib/smart-police/statement-form";
+
+const EMPTY_HEADER_EXTRAS: Pick<
+  StatementHeaderFields,
+  | "district"
+  | "dayThai"
+  | "monthThai"
+  | "yearThai"
+  | "complainantLine"
+  | "suspectLine"
+  | "interviewPlace"
+  | "ethnicity"
+  | "religion"
+  | "idIssuedOn"
+  | "idExpiresOn"
+  | "idIssuedAt"
+  | "houseNo"
+  | "moo"
+  | "tambon"
+  | "amphoe"
+> = {
+  district: "",
+  dayThai: "",
+  monthThai: "",
+  yearThai: "",
+  complainantLine: "",
+  suspectLine: "",
+  interviewPlace: "",
+  ethnicity: "",
+  religion: "",
+  idIssuedOn: "",
+  idExpiresOn: "",
+  idIssuedAt: "",
+  houseNo: "",
+  moo: "",
+  tambon: "",
+  amphoe: "",
+};
+
+export function normalizeStatementHeader(
+  partial: Partial<StatementHeaderFields> & {
+    stationName?: string;
+    partyName?: string;
+  },
+): StatementHeaderFields {
+  return {
+    stationName: "",
+    stationAddress: "",
+    province: "",
+    commanderLine: "",
+    caseNumber: "",
+    caseTitle: "",
+    caseType: "",
+    chargeText: "",
+    lawRefs: "",
+    investigator: "",
+    todayThai: "",
+    partyName: "",
+    partyRoleLabel: "",
+    partyAge: "",
+    partyNationality: "",
+    partyIdCard: "",
+    partyAddress: "",
+    partyPhone: "",
+    partyOccupation: "",
+    partyWorkplace: "",
+    partyCaseRelation: "",
+    partyPleaStatus: "",
+    ...EMPTY_HEADER_EXTRAS,
+    ...partial,
+  };
+}
 
 function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -44,6 +116,7 @@ export type FillStatementInput = {
   stationName: string;
   stationAddress?: string | null;
   province?: string | null;
+  district?: string | null;
   commanderRank?: string | null;
   commanderName?: string | null;
   caseNumber: string;
@@ -64,6 +137,11 @@ export type FillStatementInput = {
   partyCaseRelation?: string | null;
   partyPleaStatus?: string | null;
   behaviorHint?: string | null;
+  complainantLine?: string | null;
+  suspectLine?: string | null;
+  interviewPlace?: string | null;
+  ethnicity?: string | null;
+  religion?: string | null;
 };
 
 export function buildHeader(input: FillStatementInput): StatementHeaderFields {
@@ -71,10 +149,12 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
     input.commanderRank && input.commanderName
       ? `${input.commanderRank} ${input.commanderName}`
       : "";
-  return {
+  const dates = splitThaiOfficialDate();
+  const province = (input.province ?? "").trim();
+  return normalizeStatementHeader({
     stationName: input.stationName.trim() || "สถานีตำรวจ",
     stationAddress: (input.stationAddress ?? "").trim(),
-    province: (input.province ?? "").trim(),
+    province,
     commanderLine,
     caseNumber: input.caseNumber,
     caseTitle: input.caseTitle,
@@ -82,11 +162,11 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
     chargeText: (input.chargeText ?? "").trim(),
     lawRefs: (input.lawRefs ?? "").trim(),
     investigator: input.investigator.trim(),
-    todayThai: input.todayThai,
+    todayThai: input.todayThai || dates.todayThai,
     partyName: input.partyName.trim(),
     partyRoleLabel: SMART_POLICE_PARTY_ROLE_LABEL[input.role],
     partyAge: (input.partyAge ?? "").trim(),
-    partyNationality: (input.partyNationality ?? "").trim(),
+    partyNationality: (input.partyNationality ?? "").trim() || "ไทย",
     partyIdCard: (input.partyIdCard ?? "").trim(),
     partyAddress: (input.partyAddress ?? "").trim(),
     partyPhone: (input.partyPhone ?? "").trim(),
@@ -94,7 +174,19 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
     partyWorkplace: (input.partyWorkplace ?? "").trim(),
     partyCaseRelation: (input.partyCaseRelation ?? "").trim(),
     partyPleaStatus: (input.partyPleaStatus ?? "").trim(),
-  };
+    district: (input.district ?? "").trim(),
+    dayThai: dates.dayThai,
+    monthThai: dates.monthThai,
+    yearThai: dates.yearThai,
+    complainantLine: (input.complainantLine ?? "").trim(),
+    suspectLine: (input.suspectLine ?? "").trim(),
+    interviewPlace:
+      (input.interviewPlace ?? "").trim() ||
+      input.stationName.trim() ||
+      "สถานีตำรวจ",
+    ethnicity: (input.ethnicity ?? "").trim() || "ไทย",
+    religion: (input.religion ?? "").trim() || "พุทธ",
+  });
 }
 
 /** คำถามเริ่มต้นตามบทบาท — พงส. แก้/พิมพ์ต่อได้ */
@@ -152,6 +244,7 @@ export function parseStatementDocumentContent(raw: string): StatementDocumentCon
   try {
     const parsed = JSON.parse(t) as StatementDocumentContent;
     if (!parsed?.templateSlug || !parsed.header) return null;
+    parsed.header = normalizeStatementHeader(parsed.header);
     if (parsed.version === 3 && isStatementDocumentV3(parsed)) return parsed;
     if (parsed.version === 2 && "bodyHtml" in parsed) return parsed;
     if (parsed.version === 1 && Array.isArray((parsed as StatementDocumentContentV1).pages)) {

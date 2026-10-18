@@ -468,12 +468,13 @@ export function buildSmartPoliceA4PreviewFromCase(opts: {
           pages: json.pages,
         },
       });
+      // พิมพ์เป็นแบบฟอร์มราชการเต็มแผ่น (ครุฑ · แถบซ้าย · จุดไข่ปลา · ถาม/ตอบ)
       model.formBodyHtml = json.formHtml;
       const bodyText = statementDocumentToPlainText(json);
       return {
         model,
         bodyText,
-        printHtml: buildSmartPoliceStatementA4PrintHtml(model, bodyText),
+        printHtml: buildSmartPoliceFormHtmlPrintHtml(model),
       };
     }
     const model = buildModelFromStatementJson({
