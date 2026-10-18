@@ -343,10 +343,11 @@ export function OfficialStatementFormSheet({
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                columnGap: "2mm",
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
                 alignItems: "baseline",
+                gap: "0 4mm",
                 minHeight: LINE,
                 margin: "0 0 0.8mm",
                 lineHeight: LINE,
@@ -354,17 +355,17 @@ export function OfficialStatementFormSheet({
                 width: "100%",
               }}
             >
-              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+              <div style={{ display: "inline-flex", alignItems: "baseline", gap: "1.2mm" }}>
                 <L>วันที่</L>
-                <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} flex minCh={2} />
+                <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} minCh={3} />
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+              <div style={{ display: "inline-flex", alignItems: "baseline", gap: "1.2mm" }}>
                 <L>เดือน</L>
-                <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} flex minCh={3} />
+                <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} minCh={6} />
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+              <div style={{ display: "inline-flex", alignItems: "baseline", gap: "1.2mm" }}>
                 <L>พ.ศ.</L>
-                <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} flex minCh={3} />
+                <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} minCh={4} />
               </div>
             </div>
 
