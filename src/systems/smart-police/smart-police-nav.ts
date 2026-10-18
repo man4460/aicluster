@@ -1,4 +1,10 @@
-export type SmartPoliceMainKey = "overview" | "cases" | "templates" | "reports" | "settings";
+export type SmartPoliceMainKey =
+  | "overview"
+  | "cases"
+  | "forms"
+  | "templates"
+  | "reports"
+  | "settings";
 
 export const SMART_POLICE_BASE = "/dashboard/smart-police";
 
@@ -23,6 +29,7 @@ export const smartPoliceMainMenuItems: {
     shortLabel: "คดี",
     includes: [`${SMART_POLICE_BASE}/cases`],
   },
+  { key: "forms", href: `${SMART_POLICE_BASE}/forms`, label: "แบบฟอร์ม", shortLabel: "ฟอร์ม" },
   { key: "templates", href: `${SMART_POLICE_BASE}/templates`, label: "แม่แบบ", shortLabel: "แม่แบบ" },
   { key: "reports", href: `${SMART_POLICE_BASE}/reports`, label: "รายงาน", shortLabel: "รายงาน" },
   {
@@ -40,6 +47,7 @@ export function isSmartPoliceModulePath(pathname: string): boolean {
 
 export function smartPoliceMainKeyFromPathname(pathname: string): SmartPoliceMainKey {
   if (pathname.startsWith(`${SMART_POLICE_BASE}/cases`)) return "cases";
+  if (pathname.startsWith(`${SMART_POLICE_BASE}/forms`)) return "forms";
   if (pathname.startsWith(`${SMART_POLICE_BASE}/templates`)) return "templates";
   if (pathname.startsWith(`${SMART_POLICE_BASE}/reports`)) return "reports";
   if (pathname.startsWith(`${SMART_POLICE_BASE}/settings`)) return "settings";

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   IconSpCase,
+  IconSpForm,
   IconSpHome,
   IconSpReport,
   IconSpSettings,
@@ -24,6 +25,7 @@ export function ModuleWorkspaceNavIcon({
   if (moduleId === "smart-police") {
     if (itemKey === "overview") return <IconSpHome className={className} />;
     if (itemKey === "cases") return <IconSpCase className={className} />;
+    if (itemKey === "forms") return <IconSpForm className={className} />;
     if (itemKey === "templates") return <IconSpTemplate className={className} />;
     if (itemKey === "reports") return <IconSpReport className={className} />;
     return <IconSpSettings className={className} />;

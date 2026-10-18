@@ -23,6 +23,16 @@ export function IconSpTemplate({ className }: { className?: string }) {
   );
 }
 
+/** แบบฟอร์มเปล่า / ดาวน์โหลด */
+export function IconSpForm({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+      <path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8l-5-5z" strokeLinejoin="round" />
+      <path d="M14 3v5h5M8 13h8M8 17h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconSpReport({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>

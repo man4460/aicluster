@@ -61,8 +61,14 @@ globs:
 - ลืม `prisma generate` หลังแก้ schema priority
 - หัวโมดูล / ปุ่มเมนูซ้ำกับ sidebar
 
+## แบบฟอร์มเปล่า
+
+- เมนู **แบบฟอร์ม** → `/dashboard/smart-police/forms`
+- แคตตาล็อก: `src/lib/smart-police/blank-forms-catalog.ts`
+- ไฟล์: `public/smart-police/forms/` (ดาวน์โหลดจาก [สอบสวน.com/form](https://xn--q3cb3bkbq.com/form))
+- UI: กรองหมวดข้อความ + ค้นหา + ลิงก์ดาวน์โหลด Word/PDF
+
 ## นอกขอบเขต (รอบนี้)
 
 - อ่านบัตรประชาชน / offline desktop
-- คลังแบบฟอร์ม 50+ ครบ
 - พอร์ทัลประชาชน
