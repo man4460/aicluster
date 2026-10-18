@@ -417,6 +417,7 @@ model User {
   smartPoliceProfile                 SmartPoliceProfile?
   smartPoliceCases                   SmartPoliceCase[]
   smartPoliceTemplates               SmartPoliceTemplate[]
+  smartPoliceFormTemplates           SmartPoliceFormTemplate[]
   smartPoliceOfficers                SmartPoliceOfficer[]
   smartPoliceCharges                 SmartPoliceCharge[]
 
@@ -7144,6 +7145,24 @@ model SmartPoliceTemplate {
 
   @@index([ownerUserId, kind, isActive], map: "sptpl_owner_kind_idx")
   @@map("smart_police_templates")
+}
+
+/** แม่แบบจากแบบฟอร์มเปล่า — สถานีแก้เนื้อหา HTML / หมายเหตุต่อฟอร์ม */
+model SmartPoliceFormTemplate {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  blankFormId String   @map("blank_form_id") @db.VarChar(64)
+  title       String?  @db.VarChar(200)
+  contentHtml String?  @map("content_html") @db.MediumText
+  notes       String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, blankFormId], map: "spftpl_owner_form_uidx")
+  @@index([ownerUserId, isActive], map: "spftpl_owner_active_idx")
+  @@map("smart_police_form_templates")
 }
 
 model FootballTurfShopProfile {

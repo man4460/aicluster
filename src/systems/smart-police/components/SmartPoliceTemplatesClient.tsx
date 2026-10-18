@@ -1,18 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppEmptyState } from "@/components/app-templates";
-import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { SMART_POLICE_DOCUMENT_KIND_LABEL } from "@/lib/smart-police/types";
-import type { SmartPoliceTemplateDto } from "@/lib/smart-police/types";
-import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
+import { SMART_POLICE_BLANK_FORM_CATEGORY_ORDER } from "@/lib/smart-police/blank-forms-catalog";
 import {
-  IconRowEdit,
-  IconRowRemove,
-} from "@/systems/asset/components/AssetRowActionIcons";
-import {
-  SMART_POLICE_ENTRY_MODAL_SIZE,
   smartPoliceCardHeaderRowClass,
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
@@ -20,10 +13,7 @@ import {
   smartPoliceFilterGroupDividerClass,
   smartPoliceFilterTextClass,
   smartPoliceFilterTextRowClass,
-  smartPoliceModalFormClass,
-  smartPoliceSelectClass,
   smartPoliceHeaderActionShellClass,
-  smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
   smartPoliceFillPanelClass,
@@ -32,62 +22,55 @@ import {
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
-  smartPolicePrimaryButtonClass,
-  smartPoliceRowIconButtonClass,
-  smartPoliceRowRemoveIconButtonClass,
+  smartPolicePrimaryIconButtonClass,
   smartPoliceScrollListClass,
-  smartPoliceTextareaClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
-type AccentTone = "indigo" | "violet" | "amber" | "sky" | "emerald" | "rose";
+type FileKindFilter = "" | "pdf" | "docx";
 
-function templateTone(kind: SmartPoliceDocumentKind, isActive: boolean): AccentTone {
-  if (!isActive) return "amber";
-  switch (kind) {
-    case "NARRATIVE":
-      return "indigo";
-    case "STATEMENT":
-      return "violet";
-    case "WARRANT":
-      return "rose";
-    case "REPORT":
-    case "INVESTIGATION_REPORT":
-      return "amber";
-    case "MEMO":
-      return "sky";
-    case "PROPERTY_LIST":
-      return "emerald";
-    default:
-      return "indigo";
-  }
-}
+type FormTemplateListItem = {
+  id: string;
+  category: string;
+  title: string;
+  originalTitle: string;
+  fileName: string;
+  fileKind: "pdf" | "docx" | "other";
+  sortOrder: number;
+  hasOverride: boolean;
+  isActive: boolean;
+  updatedAt: string | null;
+};
 
-function IconPlus({ className }: { className?: string }) {
+function FilterIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+      <path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconOpen({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M9 5h10v10" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 5L9 15" strokeLinecap="round" />
+      <path d="M5 9v10h10" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 export function SmartPoliceTemplatesClient() {
-  const [templates, setTemplates] = useState<SmartPoliceTemplateDto[]>([]);
+  const [templates, setTemplates] = useState<FormTemplateListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kindFilter, setKindFilter] = useState("");
   const [filterOpen, setFilterOpen] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    kind: "NARRATIVE" as SmartPoliceDocumentKind,
-    name: "",
-    content: "",
-  });
+  const [category, setCategory] = useState("");
+  const [fileKind, setFileKind] = useState<FileKindFilter>("");
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/smart-police/templates", { cache: "no-store" });
+    const res = await fetch("/api/smart-police/form-templates", { cache: "no-store" });
     if (!res.ok) return;
-    const data = (await res.json()) as { templates: SmartPoliceTemplateDto[] };
+    const data = (await res.json()) as { templates: FormTemplateListItem[] };
     setTemplates(data.templates);
   }, []);
 
@@ -99,56 +82,34 @@ export function SmartPoliceTemplatesClient() {
     })();
   }, [load]);
 
-  const kindsInList = useMemo(() => {
-    const set = new Set(templates.map((t) => t.kind));
-    return (Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).filter((k) =>
-      set.has(k),
-    );
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of templates) {
+      map.set(t.category, (map.get(t.category) ?? 0) + 1);
+    }
+    return map;
   }, [templates]);
 
   const filtered = useMemo(() => {
-    if (!kindFilter) return templates;
-    return templates.filter((t) => t.kind === kindFilter);
-  }, [templates, kindFilter]);
-
-  const filtersActive = Boolean(kindFilter);
-
-  async function save() {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    const url = editingId ? `/api/smart-police/templates/${editingId}` : "/api/smart-police/templates";
-    await fetch(url, {
-      method: editingId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+    const needle = q.trim().toLowerCase();
+    return templates.filter((item) => {
+      if (category && item.category !== category) return false;
+      if (fileKind && item.fileKind !== fileKind) return false;
+      if (!needle) return true;
+      return (
+        item.title.toLowerCase().includes(needle) ||
+        item.category.toLowerCase().includes(needle) ||
+        item.fileName.toLowerCase().includes(needle)
+      );
     });
-    setSaving(false);
-    setModalOpen(false);
-    setEditingId(null);
-    await load();
-  }
+  }, [templates, category, fileKind, q]);
 
-  async function toggleActive(t: SmartPoliceTemplateDto) {
-    await fetch(`/api/smart-police/templates/${t.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !t.isActive }),
-    });
-    await load();
-  }
+  const filtersActive = Boolean(category || fileKind || q.trim());
 
-  async function remove(t: SmartPoliceTemplateDto) {
-    if (t.isBuiltin) return;
-    if (!window.confirm(`ลบแม่แบบ «${t.name}»?`)) return;
-    const res = await fetch(`/api/smart-police/templates/${t.id}`, { method: "DELETE" });
-    if (!res.ok) return;
-    await load();
-  }
-
-  function openAdd() {
-    setEditingId(null);
-    setForm({ kind: "NARRATIVE", name: "", content: "" });
-    setModalOpen(true);
+  function clearFilters() {
+    setCategory("");
+    setFileKind("");
+    setQ("");
   }
 
   return (
@@ -165,8 +126,7 @@ export function SmartPoliceTemplatesClient() {
             <h2 className={smartPoliceCardTitleClass}>แม่แบบ</h2>
             {!loading ? (
               <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
-                {filtered.length}
-                {filtersActive ? `/${templates.length}` : ""}
+                {filtered.length}/{templates.length}
               </span>
             ) : null}
           </div>
@@ -194,47 +154,81 @@ export function SmartPoliceTemplatesClient() {
                 />
               ) : null}
             </button>
-            <button
-              type="button"
-              className={cn(smartPolicePrimaryButtonClass, "min-w-[40px] sm:min-w-0")}
-              aria-label="เพิ่มแม่แบบ"
-              onClick={openAdd}
-            >
-              <IconPlus className="h-4 w-4 sm:hidden" />
-              <span className="hidden sm:inline">+ แม่แบบ</span>
-            </button>
           </div>
         </div>
 
         <div
           id="sp-templates-filter-panel"
-          className={cn("mt-2 shrink-0", filterOpen ? "block" : "hidden")}
+          className={cn("mt-2 shrink-0 space-y-1.5", filterOpen ? "block" : "hidden")}
         >
-          <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองประเภทแม่แบบ">
+          <input
+            className={smartPoliceFieldClass}
+            placeholder="ค้นหาชื่อแม่แบบ / ไฟล์"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="ค้นหาแม่แบบ"
+          />
+          <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองหมวด">
             <button
               type="button"
               role="tab"
-              aria-selected={!kindFilter}
-              className={smartPoliceFilterTextClass(!kindFilter)}
-              onClick={() => setKindFilter("")}
+              aria-selected={!category}
+              className={smartPoliceFilterTextClass(!category)}
+              onClick={() => setCategory("")}
             >
               ทั้งหมด
             </button>
-            {kindsInList.map((k) => (
-              <span key={k} className="inline-flex items-center gap-x-2">
-                <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            {SMART_POLICE_BLANK_FORM_CATEGORY_ORDER.filter((c) => (categoryCounts.get(c) ?? 0) > 0).map(
+              (c) => (
+                <span key={c} className="inline-flex items-center gap-x-2">
+                  <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={category === c}
+                    className={smartPoliceFilterTextClass(category === c)}
+                    onClick={() => setCategory(c)}
+                  >
+                    {c}
+                    <span className="ml-1 tabular-nums opacity-70">{categoryCounts.get(c)}</span>
+                  </button>
+                </span>
+              ),
+            )}
+          </div>
+          <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="ชนิดไฟล์">
+            {(
+              [
+                { key: "" as const, label: "ทุกชนิด" },
+                { key: "docx" as const, label: "Word" },
+                { key: "pdf" as const, label: "PDF" },
+              ] as const
+            ).map((opt, idx) => (
+              <span key={opt.key || "all"} className="inline-flex items-center gap-x-2">
+                {idx > 0 ? <span className={smartPoliceFilterGroupDividerClass} aria-hidden /> : null}
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={kindFilter === k}
-                  className={smartPoliceFilterTextClass(kindFilter === k)}
-                  onClick={() => setKindFilter(k)}
+                  aria-selected={fileKind === opt.key}
+                  className={smartPoliceFilterTextClass(fileKind === opt.key)}
+                  onClick={() => setFileKind(opt.key)}
                 >
-                  {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
+                  {opt.label}
                 </button>
               </span>
             ))}
+            {filtersActive ? (
+              <>
+                <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+                <button type="button" className={smartPoliceFilterTextClass(false)} onClick={clearFilters}>
+                  ล้างกรอง
+                </button>
+              </>
+            ) : null}
           </div>
+          <p className={smartPoliceMutedTextClass}>
+            แม่แบบมาจากแบบฟอร์มเปล่า — คลิกเปิดดู แล้วแก้เนื้อหา/หมายเหตุของสถานีได้
+          </p>
         </div>
 
         <div className={cn(smartPoliceFillScrollBodyClass, "mt-2")}>
@@ -242,133 +236,55 @@ export function SmartPoliceTemplatesClient() {
             <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
           ) : filtered.length === 0 ? (
             <AppEmptyState tone="violet">
-              {filtersActive ? "ไม่พบแม่แบบที่ตรงเงื่อนไข" : "ไม่มีแม่แบบ"}
+              {filtersActive ? "ไม่พบแม่แบบที่ตรงเงื่อนไข" : "ยังไม่มีแม่แบบ"}
             </AppEmptyState>
           ) : (
             <ul className={cn(smartPoliceScrollListClass, "space-y-2")}>
-              {filtered.map((t) => (
-                <li key={t.id} className={smartPoliceListRowAccentClass(templateTone(t.kind, t.isActive))}>
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-[10px] font-bold text-[#4d47b6]">
-                      {SMART_POLICE_DOCUMENT_KIND_LABEL[t.kind]}
-                      {t.isBuiltin ? " · ระบบ" : " · สถานี"}
-                      {!t.isActive ? " · ปิด" : ""}
-                    </p>
-                    <p className="text-[13px] font-semibold text-[#1e1b4b]">{t.name}</p>
-                    {t.content.trim() ? (
-                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#66638c]">
-                        {t.content.trim()}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      type="button"
+              {filtered.map((t) => {
+                const tone =
+                  t.fileKind === "pdf" ? "rose" : t.hasOverride ? "violet" : "emerald";
+                return (
+                  <li key={t.id}>
+                    <Link
+                      href={`/dashboard/smart-police/templates/${t.id}`}
                       className={cn(
-                        smartPoliceOutlineButtonClass,
-                        "px-2 text-[10px]",
-                        t.isActive ? "text-emerald-700" : "text-amber-800",
+                        smartPoliceListRowAccentClass(tone),
+                        "no-underline transition hover:brightness-[0.98]",
                       )}
-                      aria-label={t.isActive ? `ปิดใช้งาน ${t.name}` : `เปิดใช้งาน ${t.name}`}
-                      title={t.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                      onClick={() => void toggleActive(t)}
                     >
-                      {t.isActive ? "เปิด" : "ปิด"}
-                    </button>
-                    <button
-                      type="button"
-                      className={smartPoliceRowIconButtonClass}
-                      aria-label={`แก้ไข ${t.name}`}
-                      title="แก้ไข"
-                      onClick={() => {
-                        setEditingId(t.id);
-                        setForm({ kind: t.kind, name: t.name, content: t.content });
-                        setModalOpen(true);
-                      }}
-                    >
-                      <IconRowEdit className="h-4 w-4" aria-hidden />
-                    </button>
-                    {!t.isBuiltin ? (
-                      <button
-                        type="button"
-                        className={smartPoliceRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${t.name}`}
-                        title="ลบ"
-                        onClick={() => void remove(t)}
-                      >
-                        <IconRowRemove className="h-4 w-4" aria-hidden />
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="text-[10px] font-bold text-[#4d47b6]">
+                            {t.category}
+                            {t.hasOverride ? " · แก้แล้ว" : ""}
+                            {!t.isActive ? " · ปิด" : ""}
+                          </p>
+                          <p className="text-[13px] font-semibold text-[#1e1b4b]">{t.title}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 text-[11px] font-bold",
+                            t.fileKind === "pdf" ? "text-rose-600" : "text-emerald-600",
+                          )}
+                        >
+                          {t.fileKind === "pdf" ? "PDF" : "Word"}
+                        </span>
+                        <span
+                          className={smartPolicePrimaryIconButtonClass}
+                          aria-hidden
+                          title="เปิดดู"
+                        >
+                          <IconOpen className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
       </section>
-
-      <FormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingId ? "แก้แม่แบบ" : "แม่แบบใหม่"}
-        size={SMART_POLICE_ENTRY_MODAL_SIZE}
-        footer={
-          <FormModalFooterActions
-            onCancel={() => setModalOpen(false)}
-            onSubmit={() => void save()}
-            loading={saving}
-            submitLabel="บันทึก"
-            submitDisabled={!form.name.trim()}
-          />
-        }
-      >
-        <div className={smartPoliceModalFormClass}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={smartPoliceLabelClass}>
-              ประเภท
-              <select
-                className={cn(smartPoliceSelectClass, "mt-1")}
-                value={form.kind}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
-                }
-              >
-                {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map(
-                  (k) => (
-                    <option key={k} value={k}>
-                      {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ชื่อ *
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              เนื้อหา
-              <textarea
-                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[13.75rem] font-mono text-sm")}
-                value={form.content}
-                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-              />
-            </label>
-          </div>
-        </div>
-      </FormModal>
     </div>
-  );
-}
-
-function FilterIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
-    </svg>
   );
 }
