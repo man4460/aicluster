@@ -262,12 +262,10 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/* คำให้การ — Tab เยื้อง + บรรทัดสอง (ขึ้นบรรทัดอัตโนมัติ) ตรงกับตำแหน่ง tab */
+/* คำให้การ — Enter ชิดซ้ายสำหรับถาม/ตอบ · Tab เยื้องเองเมื่อต้องการ */
 .sp-stmt-lined-body {
-  --sp-stmt-indent: 8ch;
   margin: 0;
-  padding: 0 0 0 var(--sp-stmt-indent);
-  text-indent: calc(-1 * var(--sp-stmt-indent));
+  padding: 0;
   -webkit-touch-callout: default;
   tab-size: 8;
   -moz-tab-size: 8;
@@ -283,8 +281,6 @@ textarea.sp-word-field:focus-visible {
   color: #9ca3af;
   pointer-events: none;
   font-weight: 600;
-  /* ให้ placeholder ใช้ hanging indent ชุดเดียวกับข้อความ */
-  text-indent: calc(-1 * var(--sp-stmt-indent));
 }
 
 /* A4 จริงตอนพิมพ์ */

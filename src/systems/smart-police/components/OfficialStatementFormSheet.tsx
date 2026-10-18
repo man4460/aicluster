@@ -28,8 +28,11 @@ const TITLE = "15pt";
 const LINE = "6.2mm";
 /** ระยะบรรทัดโซนถาม–ตอบ — กว้างกว่าแถวด้านบนเล็กน้อย อ่าน/แตะง่าย */
 const STMT_LINE = "7.8mm";
-const QA_STARTER = "ถาม 1. \nตอบ ";
+const QA_STARTER = "ถาม 1. ";
 const QA_PLACEHOLDER = "ถาม 1. …\nตอบ …";
+/** Enter วน: ถาม → ตอบ (ชิดซ้าย) → ถามถัดไป → … */
+const QA_ASK_PREFIX = /^(\s*)ถาม\s*\d*\.?\s*/;
+const QA_ANS_PREFIX = /^(\s*)ตอบ\s*/;
 
 function Dot({
   value,
@@ -156,12 +159,11 @@ function insertAtCaret(el: HTMLElement, insert: string, onChange: (v: string) =>
 }
 
 /**
- * Tab แบบ Word — เยื้องย่อหน้าให้ข้อความบรรทัดถัดไปตรงคอลัมน์เนื้อหา (หลังป้าย ถาม/ตอบ)
+ * Tab แบบ Word — เยื้องย่อหน้า
  * Shift+Tab — ลดการเยื้องต้นบรรทัด
  */
 function handleWordTab(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
   if (!shift) {
-    // แท็บเยื้อง ≈ ความกว้างป้าย «ถาม 1. » ให้ข้อความต่อแถวตรงกัน
     insertAtCaret(el, "\t", onChange);
     return;
   }
@@ -180,6 +182,62 @@ function handleWordTab(el: HTMLElement, shift: boolean, onChange: (v: string) =>
   const remove = m[1].length;
   const newText = text.slice(0, lineStart) + text.slice(lineStart + remove);
   setTextAndCaret(el, newText, offset - remove, onChange);
+}
+
+function nextQuestionNo(text: string): number {
+  let max = 0;
+  for (const m of text.matchAll(/(?:^|\n)\s*ถาม\s*(\d+)/g)) {
+    max = Math.max(max, Number(m[1]) || 0);
+  }
+  return max + 1;
+}
+
+function readCaretOffset(el: HTMLElement): number {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) return 0;
+  const pre = sel.getRangeAt(0).cloneRange();
+  pre.selectNodeContents(el);
+  pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+  return pre.toString().length;
+}
+
+/**
+ * Enter — จบถามแล้วขึ้นบรรทัดใหม่ชิดซ้ายพิมพ์ตอบ · จากตอบขึ้นถามถัดไป · วนไปเรื่อยๆ
+ * Shift+Enter — ขึ้นบรรทัดว่างชิดซ้ายเฉยๆ (ไม่ใส่ป้าย)
+ */
+function handleQaEnter(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
+  let text = (el.innerText || "").replace(/\r\n/g, "\n");
+  if (isBlankBody(text)) {
+    setTextAndCaret(el, QA_STARTER, QA_STARTER.length, onChange);
+    return;
+  }
+
+  const offset = Math.min(readCaretOffset(el), text.length);
+  text = (el.innerText || "").replace(/\r\n/g, "\n");
+  const off = Math.min(offset, text.length);
+  const before = text.slice(0, off);
+  const after = text.slice(off);
+  const lineStart = before.lastIndexOf("\n") + 1;
+  const lineBeforeCaret = before.slice(lineStart);
+
+  if (shift) {
+    const newText = `${before}\n${after}`;
+    setTextAndCaret(el, newText, before.length + 1, onChange);
+    return;
+  }
+
+  // อยู่บรรทัดตอบ → ถามถัดไปชิดซ้าย · นอกนั้น (ถาม/ทั่วไป) → ตอบ ชิดซ้าย
+  if (QA_ANS_PREFIX.test(lineBeforeCaret)) {
+    const n = nextQuestionNo(text);
+    const prefix = `ถาม ${n}. `;
+    const newText = `${before}\n${prefix}${after}`;
+    setTextAndCaret(el, newText, before.length + 1 + prefix.length, onChange);
+    return;
+  }
+
+  const prefix = "ตอบ ";
+  const newText = `${before}\n${prefix}${after}`;
+  setTextAndCaret(el, newText, before.length + 1 + prefix.length, onChange);
 }
 
 function LinedBody({
@@ -281,12 +339,19 @@ function LinedBody({
           }
         }}
         onKeyDown={(e) => {
-          if (e.key !== "Tab") return;
           const el = ref.current;
           if (!el) return;
-          e.preventDefault();
-          e.stopPropagation();
-          handleWordTab(el, e.shiftKey, onChange);
+          if (e.key === "Tab") {
+            e.preventDefault();
+            e.stopPropagation();
+            handleWordTab(el, e.shiftKey, onChange);
+            return;
+          }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            handleQaEnter(el, e.shiftKey, onChange);
+          }
         }}
         onFocus={() => {
           focused.current = true;
