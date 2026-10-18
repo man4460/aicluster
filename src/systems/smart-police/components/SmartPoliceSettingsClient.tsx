@@ -19,6 +19,7 @@ import {
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
+  smartPoliceFillPanelClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
@@ -142,8 +143,14 @@ export function SmartPoliceSettingsClient() {
     <div className={smartPolicePageStackClass}>
       {toast ? <p className={smartPoliceToastSuccessClass}>{toast}</p> : null}
 
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>ตั้งค่า</h2>
           </div>
@@ -195,9 +202,9 @@ export function SmartPoliceSettingsClient() {
           </div>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
           {tab === "charges" ? (
-            <div role="tabpanel" aria-label="คลังข้อหา">
+            <div role="tabpanel" aria-label="คลังข้อหา" className="flex min-h-0 flex-1 flex-col">
               <SmartPoliceChargesPanel
                 onToast={showToast}
                 hideAddButton

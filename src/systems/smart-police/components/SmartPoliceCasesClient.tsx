@@ -31,11 +31,14 @@ import {
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
+  smartPoliceFillPanelClass,
   smartPoliceOutlineButtonClass,
+  smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryIconButtonClass,
+  smartPoliceScrollListClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import type { SmartPoliceCasePriority, SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
@@ -219,9 +222,15 @@ export function SmartPoliceCasesClient() {
   }
 
   return (
-    <>
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+    <div className={smartPolicePageStackClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>รายการคดี</h2>
             {!loading ? (
@@ -282,7 +291,7 @@ export function SmartPoliceCasesClient() {
 
         <div
           id="sp-cases-filter-panel"
-          className={cn("mt-2 space-y-1.5", filterOpen ? "block" : "hidden")}
+          className={cn("mt-2 shrink-0 space-y-1.5", filterOpen ? "block" : "hidden")}
         >
           <input
             className={smartPoliceFieldClass}
@@ -376,16 +385,17 @@ export function SmartPoliceCasesClient() {
           </div>
         </div>
 
+        <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
         {loading ? (
-          <p className={cn("mt-1.5", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
+          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
         ) : cases.length === 0 ? (
-          <AppEmptyState className="mt-1.5">
+          <AppEmptyState>
             {filtersActive
               ? "ไม่พบคดีตามเงื่อนไขกรอง"
               : "ไม่พบคดี — กด «สำนวนแรก» เพื่อเริ่มวิซาร์ด"}
           </AppEmptyState>
         ) : (
-          <ul className="mt-1.5 space-y-1">
+          <ul className={cn(smartPoliceScrollListClass, "space-y-1")}>
             {cases.map((c) => (
               <li key={c.id}>
                 <Link
@@ -441,6 +451,7 @@ export function SmartPoliceCasesClient() {
             ))}
           </ul>
         )}
+        </div>
       </section>
 
       <FormModal
@@ -718,6 +729,6 @@ export function SmartPoliceCasesClient() {
           }));
         }}
       />
-    </>
+    </div>
   );
 }

@@ -12,7 +12,8 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         "flex min-h-0 w-full min-w-0 flex-1 flex-col",
-        "max-lg:pb-24 lg:pb-0",
+        /** dock มือถือเท่านั้น — เดสก์ท็อป (md+) มี sidebar แล้ว ห้ามเหลือ pb-24 ว่างล่าง */
+        "max-md:pb-24 md:pb-0",
       )}
     >
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">{children}</div>

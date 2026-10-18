@@ -124,7 +124,7 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {!hideAddButton ? (
         <div className="flex shrink-0 justify-end">
           <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>

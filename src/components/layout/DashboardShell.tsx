@@ -2346,10 +2346,11 @@ export function DashboardShell({
           /** ขอบนอกเดียวกับ wrapper แถบ header ม่วง (px-3 sm:px-4) — ห้าม px-2 แยกโมดูล */
           "px-3 sm:px-4",
           /**
-           * โมเดลเมนูโมดูล — ระยะซ้าย·ขวา·ช่องกลางเท่ากัน · ขอบล่างเท่า padding การ์ดขวา
-           * (คู่กับ PageContainer smart-police: md:!pt-1 md:!pb-2)
+           * โมเดลเมนูโมดูล — ระยะรอบด้านเท่ากัน (ซ้าย=ขวา=บน=ล่าง=ช่องกลาง)
+           * ห้ามเหลือ pb ใหญ่ของ dock มือถือบนเดสก์ท็อป
            */
-          useModuleWorkspaceSidebarNav && "md:!gap-2 md:!px-2 md:!pb-2 md:!pt-2 lg:!gap-2 lg:!px-2",
+          useModuleWorkspaceSidebarNav &&
+            "md:!gap-2 md:!px-2 md:!pb-2 md:!pt-2 lg:!gap-2 lg:!px-2 lg:!pb-2 lg:!pt-2",
           moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",
         )}
       >
@@ -2473,11 +2474,11 @@ export function DashboardShell({
               "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[1.15rem]",
               onPosOrderPage && "lg:overflow-hidden",
               /**
-               * เนื้อหาโมดูล — เลื่อนในคอลัมน์ขวา · ความมนเท่า sidebar/การ์ด (rounded-lg)
-               * ไม่ซ้อนมุมใหญ่ทับการ์ดย่อย
+               * เนื้อหาโมดูล — ความมนเท่า sidebar · ล็อกสูงให้การ์ดขยายเต็ม
+               * (เลื่อนรายการในแผง ไม่เลื่อนทั้ง main — กันช่องว่างม่วงใต้การ์ด)
                */
               useModuleWorkspaceSidebarNav &&
-                "md:overflow-y-auto md:overscroll-y-contain md:rounded-lg",
+                "md:overflow-hidden md:rounded-lg",
               systemFocusLayout && "md:rounded-none",
               moduleStaffKiosk && "!rounded-none !overflow-hidden",
             )}

@@ -20,6 +20,7 @@ import {
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
   smartPoliceOutlineButtonClass,
+  smartPoliceFillPanelClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
@@ -100,8 +101,14 @@ export function SmartPoliceFormsClient() {
 
   return (
     <div className={smartPolicePageStackClass}>
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>แบบฟอร์ม</h2>
             <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
@@ -137,7 +144,7 @@ export function SmartPoliceFormsClient() {
 
         <div
           id="sp-forms-filter-panel"
-          className={cn("mt-2 space-y-1.5", filterOpen ? "block" : "hidden")}
+          className={cn("mt-2 shrink-0 space-y-1.5", filterOpen ? "block" : "hidden")}
         >
           <input
             className={smartPoliceFieldClass}
@@ -207,7 +214,7 @@ export function SmartPoliceFormsClient() {
           </div>
         </div>
 
-        <div className="mt-1.5">
+        <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
           {filtered.length === 0 ? (
             <AppEmptyState tone="violet">
               {filtersActive ? "ไม่พบแบบฟอร์มที่ตรงเงื่อนไข" : "ยังไม่มีแบบฟอร์ม"}
