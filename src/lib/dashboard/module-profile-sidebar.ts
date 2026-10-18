@@ -1,6 +1,6 @@
 /**
- * เมนูโมดูลในป๊อปอัปรูปโปรไฟล์ (เดสก์ท็อป) — แทน sidebar ซ้าย
- * เริ่มต้นเฉพาะ Smart Police เป็นโมเดลใหม่ ขยายโมดูลอื่นทีหลัง
+ * เมนูโมดูลใน sidebar ซ้าย (แทนเมนูหลัก) เมื่ออยู่ในโมดูลนั้น
+ * เริ่มต้นเฉพาะ Smart Police เป็นโมเดลใหม่ — ขยายโมดูลอื่นทีหลัง
  */
 import {
   SMART_POLICE_MODULE_DISPLAY_NAME,
@@ -23,7 +23,7 @@ export type ModuleProfileSidebarConfig = {
   activeKey: string;
 };
 
-/** โมดูลที่ใช้เมนูในป๊อปอัปโปรไฟล์แทน sidebar ซ้าย */
+/** โมดูลที่ใช้ sidebar ซ้ายเป็นเมนูของระบบนั้น */
 export function getModuleProfileSidebar(pathname: string): ModuleProfileSidebarConfig | null {
   if (!isSmartPoliceModulePath(pathname)) return null;
 
@@ -40,6 +40,11 @@ export function getModuleProfileSidebar(pathname: string): ModuleProfileSidebarC
   };
 }
 
+/** @deprecated ใช้ usesModuleWorkspaceSidebar */
 export function usesProfileModuleSidebar(pathname: string): boolean {
+  return usesModuleWorkspaceSidebar(pathname);
+}
+
+export function usesModuleWorkspaceSidebar(pathname: string): boolean {
   return getModuleProfileSidebar(pathname) != null;
 }

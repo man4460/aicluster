@@ -11,7 +11,7 @@ import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons
 import { MawellLogo } from "@/components/layout/MawellLogo";
 import {
   getModuleProfileSidebar,
-  usesProfileModuleSidebar,
+  usesModuleWorkspaceSidebar,
 } from "@/lib/dashboard/module-profile-sidebar";
 import {
   AppBrowserFullscreenButton,
@@ -822,9 +822,9 @@ export function DashboardShell({
   const showMediaRegistryHeaderBar = onMediaRegistryModule && mediaRegistryHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
-  /** โมเดลใหม่: เมนูโมดูลในป๊อปอัปโปรไฟล์ · ซ่อน sidebar ซ้าย (เริ่ม Smart Police) */
-  const profileModuleSidebar = getModuleProfileSidebar(pathname);
-  const useProfileModuleSidebarNav = usesProfileModuleSidebar(pathname);
+  /** โมเดลใหม่: sidebar ซ้าย = เมนูของโมดูลนั้น (เริ่ม Smart Police) */
+  const moduleWorkspaceSidebar = getModuleProfileSidebar(pathname);
+  const useModuleWorkspaceSidebarNav = usesModuleWorkspaceSidebar(pathname);
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
   const mobileNavCandidates = mainMenuItems
@@ -905,7 +905,12 @@ export function DashboardShell({
       }
       return;
     }
-    /** เข้าโมดูล — ย่อ sidebar หลักไว้ก่อน (ยังกดปุ่มเปิดได้อยู่) */
+    /** โมเดลใหม่: แสดง sidebar เป็นเมนูโมดูล */
+    if (usesModuleWorkspaceSidebar(pathname)) {
+      setSidebarCollapsed(false);
+      return;
+    }
+    /** เข้าโมดูลอื่น — ย่อ sidebar หลักไว้ก่อน (ยังกดปุ่มเปิดได้อยู่) */
     if (isModuleWorkspacePath(pathname)) {
       setSidebarCollapsed(true);
       return;
@@ -1512,8 +1517,6 @@ export function DashboardShell({
               appDashboardHeaderIconButtonClass,
               systemFocusLayout && "hidden",
               moduleStaffKiosk && "hidden",
-              /** โมเดลโปรไฟล์-เมนู: เดสก์ท็อปไม่ใช้แฮมเบอร์เกอร์ sidebar — ใช้คลิกรูปโปรไฟล์ */
-              useProfileModuleSidebarNav && "md:hidden",
             )}
             aria-expanded={isMdUp ? !sidebarCollapsed : drawerOpen}
             aria-controls={isMdUp ? undefined : menuId}
@@ -2148,141 +2151,67 @@ export function DashboardShell({
             )}
           </div>
 
-          {/* ขวา: รูปโปรไฟล์ → ป๊อปอัป (โมดูลเมนูบนเดสก์ท็อปเมื่อ useProfileModuleSidebar) · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
+          {/* ขวา: มือถือเหลือโปรไฟล์ · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
           <div className="flex shrink-0 flex-nowrap items-center gap-0.5 border-l border-white/20 pl-1.5 sm:gap-1.5 sm:pl-2.5 md:gap-2 md:pl-3.5">
-            <div
-              className={cn(
-                "relative shrink-0",
-                /** โหมดปกติ: ป๊อปอัปบัญชีเฉพาะมือถือ · โหมดโปรไฟล์-เมนู: ป๊อปอัปทุกขนาด */
-                !useProfileModuleSidebarNav && "md:contents",
-              )}
-              ref={accountWrapRef}
-            >
-              {useProfileModuleSidebarNav ? (
-                <button
-                  type="button"
-                  suppressHydrationWarning
-                  className={cn(
-                    appDashboardHeaderIconButtonClass,
-                    "relative overflow-visible",
-                    accountOpen && "bg-white/20 ring-2 ring-white/50",
-                  )}
-                  aria-expanded={accountOpen}
-                  aria-haspopup="menu"
-                  aria-label={
-                    demoSession
-                      ? "เมนูโมดูลและบัญชี — บัญชีทดลอง"
-                      : profileModuleSidebar
-                        ? `เมนู ${profileModuleSidebar.moduleTitle}`
-                        : "เมนูบัญชี"
-                  }
-                  title={
-                    profileModuleSidebar
-                      ? `เมนู ${profileModuleSidebar.moduleTitle}`
-                      : "เมนูบัญชี"
-                  }
-                  onClick={() => setAccountOpen((o) => !o)}
-                >
-                  {avatarUrl ? (
-                    <Image
-                      src={avatarUrl}
-                      alt=""
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 shrink-0 rounded-full border-2 border-white/60 object-cover shadow-md"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
-                      {username.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  {demoSession ? (
-                    <span
-                      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
-                      title="บัญชีทดลอง"
-                      aria-hidden
-                    >
-                      ทด
-                    </span>
-                  ) : null}
-                </button>
+            <div className="hidden shrink-0 md:block">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  width={36}
+                  height={32}
+                  className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
+                  unoptimized
+                />
               ) : (
-                <>
-                  <div className="hidden shrink-0 md:block">
-                    {avatarUrl ? (
-                      <Image
-                        src={avatarUrl}
-                        alt=""
-                        width={36}
-                        height={32}
-                        className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
-                        {username.slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    suppressHydrationWarning
-                    className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible md:hidden")}
-                    aria-expanded={accountOpen}
-                    aria-label={
-                      demoSession
-                        ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
-                        : "เมนูบัญชี"
-                    }
-                    onClick={() => setAccountOpen((o) => !o)}
-                  >
-                    {avatarUrl ? (
-                      <Image
-                        src={avatarUrl}
-                        alt=""
-                        width={28}
-                        height={28}
-                        className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
-                        {username.slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                    {demoSession ? (
-                      <span
-                        className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
-                        title="บัญชีทดลอง"
-                        aria-hidden
-                      >
-                        ทด
-                      </span>
-                    ) : null}
-                  </button>
-                </>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
+                  {username.slice(0, 1).toUpperCase()}
+                </div>
               )}
+            </div>
 
+            <div className="relative shrink-0 md:hidden" ref={accountWrapRef}>
+              <button
+                type="button"
+                suppressHydrationWarning
+                className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible")}
+                aria-expanded={accountOpen}
+                aria-label={
+                  demoSession
+                    ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
+                    : "เมนูบัญชี"
+                }
+                onClick={() => setAccountOpen((o) => !o)}
+              >
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
+                    {username.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                {demoSession ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[8px] font-black leading-none text-white ring-2 ring-[#5b3ac2]"
+                    title="บัญชีทดลอง"
+                    aria-hidden
+                  >
+                    ทด
+                  </span>
+                ) : null}
+              </button>
               {accountOpen ? (
                 <div
-                  className={cn(
-                    "absolute right-0 z-40 mt-2 overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl backdrop-blur-xl",
-                    useProfileModuleSidebarNav
-                      ? "w-[min(20rem,calc(100vw-1.25rem))]"
-                      : "w-[min(18rem,calc(100vw-1.25rem))] p-1.5 md:hidden",
-                    useProfileModuleSidebarNav && "p-1.5",
-                  )}
+                  className="absolute right-0 z-40 mt-2 w-[min(18rem,calc(100vw-1.25rem))] rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
                   role="menu"
                 >
-                  {useProfileModuleSidebarNav && profileModuleSidebar ? (
-                    <div className="hidden md:block">
-                      <DashboardProfileModuleMenu
-                        config={profileModuleSidebar}
-                        onNavigate={() => setAccountOpen(false)}
-                      />
-                    </div>
-                  ) : null}
                   {demoSession ? (
                     <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
                   ) : null}
@@ -2292,21 +2221,8 @@ export function DashboardShell({
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
-                    <span className="text-lg" aria-hidden>
-                      👤
-                    </span>
+                    <span className="text-lg">👤</span>
                     โปรไฟล์ของคุณ
-                  </Link>
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
-                    role="menuitem"
-                    onClick={() => setAccountOpen(false)}
-                  >
-                    <span className="text-lg" aria-hidden>
-                      🏠
-                    </span>
-                    หน้าแรกแดชบอร์ด
                   </Link>
                   <LogoutButton
                     className="mt-0.5 flex w-full items-center justify-start gap-2.5 rounded-xl border-0 bg-transparent px-3.5 py-2.5 text-left text-sm font-bold text-rose-600 shadow-none hover:bg-rose-50"
@@ -2318,7 +2234,7 @@ export function DashboardShell({
             <span className="hidden sm:contents">
               <AppBrowserFullscreenButton className="h-10 w-10" />
             </span>
-            <span className={cn("hidden sm:contents", useProfileModuleSidebarNav && "md:hidden")}>
+            <span className="hidden sm:contents">
               <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
             </span>
           </div>
@@ -2339,27 +2255,44 @@ export function DashboardShell({
           className={cn(
             "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
             sidebarCollapsed && "md:!hidden",
-            (systemFocusLayout || moduleStaffKiosk || useProfileModuleSidebarNav) && "md:hidden",
+            (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
             moduleStaffKiosk && "!hidden !my-0",
           )}
-          aria-label="เมนูหลัก"
+          aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
         >
           <div className="p-3">
             <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-black tracking-tight text-[#2e2a58]">เมนูหลัก</p>
-              <span className="inline-flex h-6 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-2 text-[11px] font-black text-[#2e2a58]">
-                {mainMenuItems.length}
+              <p className="min-w-0 truncate text-[11px] font-black tracking-tight text-[#2e2a58]">
+                {moduleWorkspaceSidebar?.moduleTitle ?? "เมนูหลัก"}
+              </p>
+              <span className="inline-flex h-6 shrink-0 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-2 text-[11px] font-black text-[#2e2a58]">
+                {moduleWorkspaceSidebar?.items.length ?? mainMenuItems.length}
               </span>
             </div>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3" aria-label="เมนูหลัก">
-            {mainMenuItems.map((item) => (
-              <SidebarNavLink key={item.href} href={item.href} pathname={pathname} label={item.label} />
-            ))}
+          <nav
+            className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3"
+            aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
+          >
+            {moduleWorkspaceSidebar ? (
+              <DashboardProfileModuleMenu config={moduleWorkspaceSidebar} variant="sidebar" />
+            ) : (
+              mainMenuItems.map((item) => (
+                <SidebarNavLink key={item.href} href={item.href} pathname={pathname} label={item.label} />
+              ))
+            )}
           </nav>
           <div className="border-t border-slate-200/70 bg-white/70 p-3">
+            {useModuleWorkspaceSidebarNav ? (
+              <Link
+                href="/dashboard"
+                className="mb-2 flex w-full items-center justify-center rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-bold text-[#4d47b6] transition hover:bg-slate-50"
+              >
+                ← หน้าแรกแดชบอร์ด
+              </Link>
+            ) : null}
             <p className="truncate text-xs text-slate-500" title={username}>
               {username}
             </p>
@@ -2395,17 +2328,37 @@ export function DashboardShell({
                   </button>
                 </div>
                 <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2.5" aria-label="เมนู">
-                  {mainNavGroups.map((group) => (
-                    <NavCollapsibleGroup
-                      key={group.id}
-                      group={group}
-                      open={groupOpen[group.id] ?? true}
-                      onToggle={() => toggleGroup(group.id)}
-                      pathname={pathname}
-                      variant="drawer"
-                      onDrawerNavigate={closeDrawer}
-                    />
-                  ))}
+                  {moduleWorkspaceSidebar ? (
+                    <>
+                      <p className="px-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/70">
+                        {moduleWorkspaceSidebar.moduleTitle}
+                      </p>
+                      <DashboardProfileModuleMenu
+                        config={moduleWorkspaceSidebar}
+                        variant="drawer"
+                        onNavigate={closeDrawer}
+                      />
+                      <Link
+                        href="/dashboard"
+                        onClick={closeDrawer}
+                        className="mx-1 rounded-xl bg-white/15 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-white/25"
+                      >
+                        ← หน้าแรกแดชบอร์ด
+                      </Link>
+                    </>
+                  ) : (
+                    mainNavGroups.map((group) => (
+                      <NavCollapsibleGroup
+                        key={group.id}
+                        group={group}
+                        open={groupOpen[group.id] ?? true}
+                        onToggle={() => toggleGroup(group.id)}
+                        pathname={pathname}
+                        variant="drawer"
+                        onDrawerNavigate={closeDrawer}
+                      />
+                    ))
+                  )}
                 </nav>
                 <div className="border-t border-white/25 bg-black/10 p-3">
                   <p className="mb-2 truncate text-xs text-white/80">{username}</p>

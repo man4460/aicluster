@@ -81,7 +81,7 @@ export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
                 {SMART_POLICE_MODULE_DISPLAY_NAME}
               </h1>
               <p className="mt-0.5 hidden text-xs font-medium leading-relaxed text-[#66638c] md:block">
-                คลิกรูปโปรไฟล์มุมขวาบนเพื่อเปิดเมนูโมดูล
+                เมนูโมดูลอยู่แถบซ้าย · มือถือใช้แถบล่าง
               </p>
             </div>
           </div>
