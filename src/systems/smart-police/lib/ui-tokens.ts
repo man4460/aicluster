@@ -81,9 +81,9 @@ export const smartPoliceTextareaClass = cn(
 export const smartPoliceLabelClass = "block text-xs font-bold text-[#4d47b6]";
 
 export const smartPolicePanelClass =
-  "overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm";
+  "w-full min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm";
 
-export const smartPolicePanelSectionClass = "px-3 py-3 sm:px-4 sm:py-4";
+export const smartPolicePanelSectionClass = "px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5";
 
 export const smartPolicePanelDividerClass = "border-t border-slate-200/80";
 
@@ -93,7 +93,11 @@ export const smartPoliceSectionHeadingClass =
 export const smartPoliceSubtitleClass =
   "mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]";
 
-export const smartPolicePageStackClass = "min-w-0 space-y-3";
+/** เนื้อหาทุกหน้า — กว้างเต็มคอลัมน์ขวา */
+export const smartPolicePageStackClass = "flex min-h-0 w-full min-w-0 flex-1 flex-col space-y-3";
+
+/** แผงหลักยืดเต็มความกว้าง */
+export const smartPoliceContentBleedClass = "w-full min-w-0 max-w-none";
 
 export const smartPoliceMutedTextClass = "text-sm font-medium text-[#66638c]";
 

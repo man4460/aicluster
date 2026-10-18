@@ -170,7 +170,7 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
       ) : charges.length === 0 ? (
         <AppEmptyState tone="violet">ไม่พบข้อหา</AppEmptyState>
       ) : (
-        <ul className="max-h-[55vh] space-y-2 overflow-y-auto">
+        <ul className="min-h-0 space-y-2 md:max-h-none">
           {charges.map((c) => (
             <li key={c.id} className={smartPoliceListRowAccentClass("sky")}>
               <div className="min-w-0 flex-1 text-left text-sm">

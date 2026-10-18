@@ -117,6 +117,8 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
   const buildingPosOrderPage =
     pathname === "/dashboard/building-pos/order" || pathname.startsWith("/dashboard/building-pos/order/");
   const posOrderDesktopFill = drinkPosOrderPage || buildingPosOrderPage;
+  const smartPoliceModule =
+    pathname === "/dashboard/smart-police" || pathname.startsWith("/dashboard/smart-police/");
 
   return (
     <PageContainer
@@ -135,6 +137,8 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
          */
         wideModule && "max-w-none !px-0",
         dockedModule && "!px-0",
+        /** Smart Police — ลด gutter แนวตั้ง · เนื้อหาขวาใช้พื้นที่เต็ม */
+        smartPoliceModule && "md:!pt-1 md:!pb-2",
         posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!pt-2 lg:!pb-3",
         (dashboardModules || dashboardHome) && "max-w-[1680px]",
       )}

@@ -214,8 +214,12 @@ export function SmartPoliceSettingsClient() {
           ) : null}
 
           {tab === "agency" ? (
-            <div role="tabpanel" aria-label="หน่วยงาน" className="grid gap-3 text-left sm:grid-cols-2">
-              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+            <div
+              role="tabpanel"
+              aria-label="หน่วยงาน"
+              className="grid gap-3 text-left sm:grid-cols-2 xl:grid-cols-3"
+            >
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2 xl:col-span-3")}>
                 ชื่อสถานี *
                 <input
                   className={cn(smartPoliceFieldClass, "mt-1")}
@@ -223,7 +227,7 @@ export function SmartPoliceSettingsClient() {
                   onChange={(e) => setProfile((p) => (p ? { ...p, stationName: e.target.value } : p))}
                 />
               </label>
-              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2 xl:col-span-3")}>
                 ที่อยู่สถานี
                 <textarea
                   className={cn(smartPoliceTextareaClass, "mt-1")}
@@ -301,7 +305,7 @@ export function SmartPoliceSettingsClient() {
                   }
                 />
               </label>
-              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2 xl:col-span-3")}>
                 พนักงานสอบสวน (ค่าเริ่มต้นในเอกสาร — ซิงก์จากพงส.ที่ตั้งเป็นค่าเริ่มได้)
                 <input
                   className={cn(smartPoliceFieldClass, "mt-1")}
@@ -311,7 +315,7 @@ export function SmartPoliceSettingsClient() {
                   }
                 />
               </label>
-              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2 xl:col-span-3")}>
                 ท้ายกระดาษพิมพ์
                 <textarea
                   className={cn(smartPoliceTextareaClass, "mt-1")}

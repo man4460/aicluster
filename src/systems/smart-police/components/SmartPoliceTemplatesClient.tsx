@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AppDashboardSection, AppEmptyState, AppSectionHeader } from "@/components/app-templates";
+import { AppEmptyState } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
@@ -10,13 +10,19 @@ import {
 import type { SmartPoliceTemplateDto } from "@/lib/smart-police/types";
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
+  smartPoliceCardHeaderRowClass,
+  smartPoliceCardMetaClass,
+  smartPoliceCardTitleClass,
   smartPoliceFieldClass,
+  smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowClass,
   smartPoliceMutedTextClass,
   smartPoliceOutlineButtonClass,
+  smartPolicePageStackClass,
+  smartPolicePanelClass,
+  smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
-  smartPoliceSubtitleClass,
   smartPoliceTextareaClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
@@ -72,18 +78,16 @@ export function SmartPoliceTemplatesClient() {
   }
 
   return (
-    <>
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          title="แม่แบบเอกสาร"
-          description={
-            <span className={smartPoliceSubtitleClass}>
-              สำนวน คำให้การ หมายเรียก — มีแม่แบบระบบให้แล้ว · ใช้ตัวแปร {"{{caseNumber}}"} {"{{partyName}}"}
-            </span>
-          }
-          action={
+    <div className={smartPolicePageStackClass}>
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+        <div className={smartPoliceCardHeaderRowClass}>
+          <div className="min-w-0">
+            <h2 className={smartPoliceCardTitleClass}>แม่แบบเอกสาร</h2>
+            <p className={smartPoliceCardMetaClass}>
+              สำนวน คำให้การ หมายเรียก — ใช้ตัวแปร {"{{caseNumber}}"} {"{{partyName}}"}
+            </p>
+          </div>
+          <div className={smartPoliceHeaderActionShellClass}>
             <button
               type="button"
               className={smartPolicePrimaryButtonClass}
@@ -95,55 +99,58 @@ export function SmartPoliceTemplatesClient() {
             >
               + แม่แบบ
             </button>
-          }
-        />
-        {loading ? (
-          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
-        ) : templates.length === 0 ? (
-          <AppEmptyState>ไม่มีแม่แบบ</AppEmptyState>
-        ) : (
-          <ul className="space-y-2">
-            {templates.map((t) => (
-              <li key={t.id} className={smartPoliceListRowClass}>
-                <div className="min-w-0">
-                  <p className="font-semibold text-[#1e1b4b]">
-                    {t.name}
-                    {t.isBuiltin ? (
-                      <span className="ml-2 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
-                        ระบบ
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-[#66638c]">
-                    {SMART_POLICE_DOCUMENT_KIND_LABEL[t.kind]}
-                    {!t.isActive ? " · ปิดใช้งาน" : ""}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className={smartPoliceOutlineButtonClass}
-                    onClick={() => void toggleActive(t)}
-                  >
-                    {t.isActive ? "ปิด" : "เปิด"}
-                  </button>
-                  <button
-                    type="button"
-                    className={smartPolicePrimaryButtonClass}
-                    onClick={() => {
-                      setEditingId(t.id);
-                      setForm({ kind: t.kind, name: t.name, content: t.content });
-                      setModalOpen(true);
-                    }}
-                  >
-                    แก้ไข
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AppDashboardSection>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          {loading ? (
+            <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
+          ) : templates.length === 0 ? (
+            <AppEmptyState>ไม่มีแม่แบบ</AppEmptyState>
+          ) : (
+            <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+              {templates.map((t) => (
+                <li key={t.id} className={smartPoliceListRowClass}>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[#1e1b4b]">
+                      {t.name}
+                      {t.isBuiltin ? (
+                        <span className="ml-2 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
+                          ระบบ
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-xs text-[#66638c]">
+                      {SMART_POLICE_DOCUMENT_KIND_LABEL[t.kind]}
+                      {!t.isActive ? " · ปิดใช้งาน" : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      className={smartPoliceOutlineButtonClass}
+                      onClick={() => void toggleActive(t)}
+                    >
+                      {t.isActive ? "ปิด" : "เปิด"}
+                    </button>
+                    <button
+                      type="button"
+                      className={smartPolicePrimaryButtonClass}
+                      onClick={() => {
+                        setEditingId(t.id);
+                        setForm({ kind: t.kind, name: t.name, content: t.content });
+                        setModalOpen(true);
+                      }}
+                    >
+                      แก้ไข
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
 
       <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "แก้แม่แบบ" : "แม่แบบใหม่"}>
         <div className="space-y-3 text-left">
@@ -180,6 +187,6 @@ export function SmartPoliceTemplatesClient() {
         </div>
         <FormModalFooterActions onCancel={() => setModalOpen(false)} onSubmit={() => void save()} loading={saving} submitLabel="บันทึก" />
       </FormModal>
-    </>
+    </div>
   );
 }

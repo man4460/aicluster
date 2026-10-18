@@ -109,9 +109,9 @@ export function SmartPoliceFormsClient() {
             filtered.map((g) => (
               <div key={g.category}>
                 <h3 className={cn(smartPoliceSectionHeadingClass, "mb-2")}>{g.category}</h3>
-                <ul className="flex flex-wrap gap-2">
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {g.items.map((item) => (
-                    <li key={item.id}>
+                    <li key={item.id} className="min-w-0">
                       <FormDownloadLink item={item} />
                     </li>
                   ))}
@@ -132,12 +132,12 @@ function FormDownloadLink({ item }: { item: SmartPoliceBlankFormItem }) {
       href={href}
       download={item.fileName}
       className={cn(
-        "inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-300/80 bg-white px-3 py-1.5",
+        "flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-emerald-300/80 bg-white px-3 py-2",
         "text-[12px] font-semibold text-[#1e1b4b] shadow-sm transition",
         "hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-900",
       )}
     >
-      <span className="max-w-[14rem] truncate sm:max-w-none">{item.title}</span>
+      <span className="min-w-0 flex-1 truncate">{item.title}</span>
       <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
         {extLabel(item.fileName)}
       </span>

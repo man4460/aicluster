@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AppCompareBarList, AppDashboardSection, AppSectionHeader } from "@/components/app-templates";
+import { AppCompareBarList } from "@/components/app-templates";
 import { SMART_POLICE_CASE_STATUS_LABEL, SMART_POLICE_DOCUMENT_KIND_LABEL } from "@/lib/smart-police/types";
 import { cn } from "@/lib/cn";
 import type { SmartPoliceCaseStatus, SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
+  smartPoliceCardHeaderRowClass,
+  smartPoliceCardMetaClass,
+  smartPoliceCardTitleClass,
+  smartPoliceHeaderActionShellClass,
   smartPoliceIconButtonClass,
   smartPoliceListRowClass,
   smartPoliceMutedTextClass,
   smartPolicePageStackClass,
+  smartPolicePanelClass,
+  smartPolicePanelSectionClass,
+  smartPoliceSectionHeadingClass,
   smartPoliceStatInlineClass,
   smartPoliceStatsGridClass,
-  smartPoliceSubtitleClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
 type Overview = {
@@ -73,15 +79,13 @@ export function SmartPoliceReportsClient() {
 
   return (
     <div className={smartPolicePageStackClass}>
-      <AppDashboardSection>
-        <AppSectionHeader
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          title="รายงานสรุป"
-          description={
-            <span className={smartPoliceSubtitleClass}>ภาพรวมคดี เอกสาร และการพิมพ์</span>
-          }
-          action={
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+        <div className={smartPoliceCardHeaderRowClass}>
+          <div className="min-w-0">
+            <h2 className={smartPoliceCardTitleClass}>รายงานสรุป</h2>
+            <p className={smartPoliceCardMetaClass}>ภาพรวมคดี เอกสาร และการพิมพ์</p>
+          </div>
+          <div className={smartPoliceHeaderActionShellClass}>
             <button
               type="button"
               className={cn(smartPoliceIconButtonClass, "sm:min-w-0 sm:px-3")}
@@ -93,70 +97,68 @@ export function SmartPoliceReportsClient() {
               <span className={cn(loading && "inline-block animate-spin")}>↻</span>
               <span className="hidden sm:inline">รีเฟรช</span>
             </button>
-          }
-        />
-        <div className={cn("mt-4", smartPoliceStatsGridClass)}>
+          </div>
+        </div>
+
+        <div className={cn("mt-3", smartPoliceStatsGridClass)}>
           {[
             { label: "คดีทั้งหมด", value: s?.totalCases ?? 0 },
+            { label: "เปิดอยู่", value: s?.openCases ?? 0 },
+            { label: "กำลังสอบสวน", value: s?.inProgress ?? 0 },
             { label: "ปิดคดี", value: s?.closed ?? 0 },
-            { label: "พิมพ์สะสม", value: s?.totalPrints ?? 0, span: true },
-          ].map((c, i, arr) => (
-            <div
-              key={c.label}
-              className={cn(
-                smartPoliceStatInlineClass,
-                arr.length % 2 === 1 && i === arr.length - 1 && "col-span-2 sm:col-span-1",
-                "span" in c && c.span && "col-span-2 sm:col-span-1",
-              )}
-            >
+            { label: "พิมพ์สะสม", value: s?.totalPrints ?? 0 },
+          ].map((c) => (
+            <div key={c.label} className={cn(smartPoliceStatInlineClass, smartPoliceStatCellGrow)}>
               <p className="text-[10px] font-bold uppercase text-[#8b87b8]">{c.label}</p>
               <p className="mt-1 text-2xl font-black text-[#1e1b4b]">{c.value}</p>
             </div>
           ))}
         </div>
-      </AppDashboardSection>
+      </section>
 
-      {statusRows.length > 0 && (
-        <AppDashboardSection>
-          <AppSectionHeader title="คดีตามสถานะ" />
-          <AppCompareBarList
-            title="จำนวนคดี"
-            emptyText="ไม่มีข้อมูล"
-            rows={statusRows}
-          />
-        </AppDashboardSection>
-      )}
+      <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">
+        {statusRows.length > 0 ? (
+          <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+            <h3 className={smartPoliceSectionHeadingClass}>คดีตามสถานะ</h3>
+            <div className="mt-2">
+              <AppCompareBarList title="จำนวนคดี" emptyText="ไม่มีข้อมูล" rows={statusRows} />
+            </div>
+          </section>
+        ) : null}
 
-      {barRows.length > 0 && (
-        <AppDashboardSection>
-          <AppSectionHeader title="เอกสารตามประเภท" />
-          <AppCompareBarList
-            title="จำนวนเอกสาร"
-            emptyText="ไม่มีเอกสาร"
-            rows={barRows}
-          />
-        </AppDashboardSection>
-      )}
+        {barRows.length > 0 ? (
+          <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+            <h3 className={smartPoliceSectionHeadingClass}>เอกสารตามประเภท</h3>
+            <div className="mt-2">
+              <AppCompareBarList title="จำนวนเอกสาร" emptyText="ไม่มีเอกสาร" rows={barRows} />
+            </div>
+          </section>
+        ) : null}
+      </div>
 
-      <AppDashboardSection>
-        <AppSectionHeader title="คดีล่าสุดในรายงาน" />
-        {loading && !data ? (
-          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
-        ) : (
-          <ul className="space-y-2">
-            {(data?.recentCases ?? []).map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/dashboard/smart-police/cases/${c.id}`}
-                  className={cn(smartPoliceListRowClass, "block text-sm")}
-                >
-                  {c.caseNumber} — {c.title} ({c.documentCount} เอกสาร)
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AppDashboardSection>
+      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
+        <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุดในรายงาน</h3>
+        <div className="mt-2">
+          {loading && !data ? (
+            <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
+          ) : (
+            <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+              {(data?.recentCases ?? []).map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/dashboard/smart-police/cases/${c.id}`}
+                    className={cn(smartPoliceListRowClass, "block text-sm")}
+                  >
+                    {c.caseNumber} — {c.title} ({c.documentCount} เอกสาร)
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
+
+const smartPoliceStatCellGrow = "min-w-[5rem] shrink-0 sm:min-w-0 sm:flex-1";

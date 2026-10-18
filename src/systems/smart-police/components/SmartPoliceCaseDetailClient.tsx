@@ -439,7 +439,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
         <div className={cn(smartPolicePanelDividerClass, "mt-2.5 pt-2.5")}>
         {tab === "info" ? (
-          <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">
+          <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2 xl:grid-cols-3">
             <label className={smartPoliceLabelClass}>
               สถานะ
               <select
