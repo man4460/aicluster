@@ -35,13 +35,13 @@ export const STATEMENT_COMPLAINANT_OVERLAY_FIELDS: OverlayField[] = [
   { key: "idExpiresOn", left: 7, top: 135.0, width: 37, height: OVERLAY_FIELD_H },
   { key: "idIssuedAt", left: 7, top: 143.2, width: 37, height: OVERLAY_FIELD_H },
 
-  // —— สถานี / วันที่ ——
-  { key: "stationName", left: 80, top: 54.5, width: 36, height: OVERLAY_FIELD_H },
-  { key: "district", left: 130, top: 54.5, width: 26, height: OVERLAY_FIELD_H },
-  { key: "province", left: 170, top: 54.5, width: 26, height: OVERLAY_FIELD_H },
-  { key: "dayThai", left: 70, top: 62.2, width: 20, height: OVERLAY_FIELD_H },
-  { key: "monthThai", left: 108, top: 62.2, width: 34, height: OVERLAY_FIELD_H },
-  { key: "yearThai", left: 160, top: 62.2, width: 26, height: OVERLAY_FIELD_H },
+  // —— สถานี / วันที่ (ขยับลงให้ชิดจุดไข่ปลาแถวจังหวัด) ——
+  { key: "stationName", left: 80, top: 58.8, width: 36, height: OVERLAY_FIELD_H },
+  { key: "district", left: 130, top: 58.8, width: 26, height: OVERLAY_FIELD_H },
+  { key: "province", left: 170, top: 58.8, width: 26, height: OVERLAY_FIELD_H },
+  { key: "dayThai", left: 70, top: 66.2, width: 20, height: OVERLAY_FIELD_H },
+  { key: "monthThai", left: 108, top: 66.2, width: 34, height: OVERLAY_FIELD_H },
+  { key: "yearThai", left: 160, top: 66.2, width: 26, height: OVERLAY_FIELD_H },
 
   // —— คดีระหว่าง ——
   { key: "complainantLine", left: 80, top: 72.8, width: 84, height: OVERLAY_FIELD_H },
