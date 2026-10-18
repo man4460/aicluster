@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, Suspense } from "react";
 import { DemoSessionAccountMenuItem, DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
-import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
+import { LogoutButton } from "@/components/layout/LogoutButton";
 import { DashboardProfileModuleMenu } from "@/components/layout/DashboardProfileModuleMenu";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
@@ -2151,31 +2151,19 @@ export function DashboardShell({
             )}
           </div>
 
-          {/* ขวา: มือถือเหลือโปรไฟล์ · ออกจากระบบ/เต็มจอตั้งแต่ sm */}
+          {/* ขวา: รูปโปรไฟล์คลิกเปิดเมนู · เต็มจอตั้งแต่ sm */}
           <div className="flex shrink-0 flex-nowrap items-center gap-0.5 border-l border-white/20 pl-1.5 sm:gap-1.5 sm:pl-2.5 md:gap-2 md:pl-3.5">
-            <div className="hidden shrink-0 md:block">
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
-                  alt=""
-                  width={36}
-                  height={32}
-                  className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
-                  {username.slice(0, 1).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className="relative shrink-0 md:hidden" ref={accountWrapRef}>
+            <div className="relative shrink-0" ref={accountWrapRef}>
               <button
                 type="button"
                 suppressHydrationWarning
-                className={cn(appDashboardHeaderIconButtonClass, "relative overflow-visible")}
+                className={cn(
+                  appDashboardHeaderIconButtonClass,
+                  "relative overflow-visible",
+                  "h-9 w-9 sm:h-10 sm:w-10",
+                )}
                 aria-expanded={accountOpen}
+                aria-haspopup="menu"
                 aria-label={
                   demoSession
                     ? "เมนูบัญชี — บัญชีทดลอง ไม่ใช่บัญชีจริง"
@@ -2187,13 +2175,13 @@ export function DashboardShell({
                   <Image
                     src={avatarUrl}
                     alt=""
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
+                    width={36}
+                    height={36}
+                    className="h-7 w-7 shrink-0 rounded-full border-2 border-white/60 object-cover shadow-sm sm:h-8 sm:w-8"
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white/40 bg-white/25 text-[10px] font-black text-white shadow-sm sm:h-8 sm:w-8 sm:text-xs">
                     {username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -2209,19 +2197,50 @@ export function DashboardShell({
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-[min(18rem,calc(100vw-1.25rem))] rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  className="absolute right-0 z-50 mt-2 max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-1.25rem))] overflow-y-auto rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
                   role="menu"
                 >
                   {demoSession ? (
                     <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
                   ) : null}
+                  {moduleWorkspaceSidebar ? (
+                    <DashboardProfileModuleMenu
+                      config={moduleWorkspaceSidebar}
+                      variant="popup"
+                      onNavigate={() => setAccountOpen(false)}
+                    />
+                  ) : null}
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
+                    role="menuitem"
+                    onClick={() => setAccountOpen(false)}
+                  >
+                    <span className="text-base" aria-hidden>
+                      ⌂
+                    </span>
+                    หน้าแรกแดชบอร์ด
+                  </Link>
+                  <Link
+                    href="/dashboard/modules"
+                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
+                    role="menuitem"
+                    onClick={() => setAccountOpen(false)}
+                  >
+                    <span className="text-base" aria-hidden>
+                      ▦
+                    </span>
+                    ระบบทั้งหมด
+                  </Link>
                   <Link
                     href="/dashboard/profile"
                     className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
-                    <span className="text-lg">👤</span>
+                    <span className="text-lg" aria-hidden>
+                      👤
+                    </span>
                     โปรไฟล์ของคุณ
                   </Link>
                   <LogoutButton
@@ -2233,9 +2252,6 @@ export function DashboardShell({
 
             <span className="hidden sm:contents">
               <AppBrowserFullscreenButton className="h-10 w-10" />
-            </span>
-            <span className="hidden sm:contents">
-              <LogoutIconButton className="h-10 w-10 transition-all hover:rotate-12" />
             </span>
           </div>
         </div>
