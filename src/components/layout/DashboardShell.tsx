@@ -412,21 +412,24 @@ function HeaderAccountSummary({
   packageLabel,
   displayName,
   className,
+  onOpenMenu,
 }: {
   tokens: number;
   packageLabel: string | null;
   displayName: string;
   className?: string;
+  /** คลิกชื่อ / สรุปบัญชี → เปิด popup เมนูหลัก */
+  onOpenMenu?: () => void;
 }) {
   const title = [`${tokens.toLocaleString()} โทเคน`, packageLabel, displayName]
     .filter(Boolean)
     .join(" · ");
-  return (
-    <p className={cn("min-w-0 truncate", className)} title={title}>
+  const body = (
+    <>
       <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>
       {/* มือถือแคบ: เหลือตัวเลข — คำว่าโทเคนกินพื้นที่จน truncate หาย */}
       <span className="hidden font-medium text-white/70 min-[380px]:inline"> โทเคน</span>
-      <span className="hidden lg:inline">
+      <span className="hidden min-[420px]:inline">
         {packageLabel ? (
           <>
             <span className="mx-1.5 text-white/30" aria-hidden>
@@ -438,8 +441,40 @@ function HeaderAccountSummary({
         <span className="mx-1.5 text-white/30" aria-hidden>
           |
         </span>
-        <span className="font-medium text-white/90">{displayName}</span>
+        <span
+          className={cn(
+            "font-medium text-white/90",
+            onOpenMenu && "underline-offset-2 hover:text-white hover:underline",
+          )}
+        >
+          {displayName}
+        </span>
       </span>
+    </>
+  );
+
+  if (onOpenMenu) {
+    return (
+      <button
+        type="button"
+        data-account-menu-trigger
+        suppressHydrationWarning
+        title={title}
+        aria-label={`เปิดเมนูหลัก — ${displayName}`}
+        onClick={onOpenMenu}
+        className={cn(
+          "min-w-0 truncate text-left transition-colors hover:text-white",
+          className,
+        )}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <p className={cn("min-w-0 truncate", className)} title={title}>
+      {body}
     </p>
   );
 }
@@ -1468,7 +1503,11 @@ export function DashboardShell({
   useEffect(() => {
     if (!accountOpen) return;
     function onDoc(e: MouseEvent) {
-      if (!accountWrapRef.current?.contains(e.target as Node)) setAccountOpen(false);
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (accountWrapRef.current?.contains(t)) return;
+      if (t instanceof Element && t.closest("[data-account-menu-trigger]")) return;
+      setAccountOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setAccountOpen(false);
@@ -1628,6 +1667,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DrinkPosHeaderExpandButton onExpand={() => writeDrinkPosHeaderCollapsed(false)} />
@@ -1643,6 +1683,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
@@ -1658,6 +1699,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
@@ -1675,6 +1717,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
@@ -1690,6 +1733,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
@@ -1705,6 +1749,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AttendanceHeaderExpandButton onExpand={() => writeAttendanceHeaderCollapsed(false)} />
@@ -1720,6 +1765,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <CarWashHeaderExpandButton onExpand={() => writeCarWashHeaderCollapsed(false)} />
@@ -1735,6 +1781,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
@@ -1750,6 +1797,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
@@ -1765,6 +1813,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <VaultHeaderExpandButton onExpand={() => writeVaultHeaderCollapsed(false)} />
@@ -1780,6 +1829,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AssetHeaderExpandButton onExpand={() => writeAssetHeaderCollapsed(false)} />
@@ -1795,6 +1845,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <GeneralStorePosHeaderExpandButton onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
@@ -1810,6 +1861,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <EducareHeaderExpandButton onExpand={() => writeEducareHeaderCollapsed(false)} />
@@ -1825,6 +1877,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <CommunityCoopHeaderExpandButton onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
@@ -1840,6 +1893,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <HomeFinanceHeaderExpandButton onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
@@ -1855,6 +1909,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <EcommerceStoreHeaderExpandButton onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
@@ -1870,6 +1925,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AppointmentQueueHeaderExpandButton onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
@@ -1885,6 +1941,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <SchoolBankHeaderExpandButton onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
@@ -1900,6 +1957,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <WaitQueueHeaderExpandButton onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
@@ -1915,6 +1973,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ActivityLogsHeaderExpandButton onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
@@ -1930,6 +1989,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <PromptLibraryHeaderExpandButton onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
@@ -1945,6 +2005,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <DocTransmissionHeaderExpandButton onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
@@ -1960,6 +2021,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
@@ -1975,6 +2037,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <VillageHeaderExpandButton onExpand={() => writeVillageHeaderCollapsed(false)} />
@@ -1990,6 +2053,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
@@ -2005,6 +2069,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
@@ -2020,6 +2085,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <UsedCarShowroomHeaderExpandButton onExpand={() => writeUsedCarShowroomHeaderCollapsed(false)} />
@@ -2035,6 +2101,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <SmartGuardTourHeaderExpandButton onExpand={() => writeSmartGuardTourHeaderCollapsed(false)} />
@@ -2050,6 +2117,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ProResumeHeaderExpandButton onExpand={() => writeProResumeHeaderCollapsed(false)} />
@@ -2065,6 +2133,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <LmsHeaderExpandButton onExpand={() => writeLmsHeaderCollapsed(false)} />
@@ -2080,6 +2149,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <ParkingHeaderExpandButton onExpand={() => writeParkingHeaderCollapsed(false)} />
@@ -2095,6 +2165,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <InventoryHeaderExpandButton onExpand={() => writeInventoryHeaderCollapsed(false)} />
@@ -2110,6 +2181,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <SmartPoliceHeaderExpandButton onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
@@ -2125,6 +2197,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <MediaRegistryHeaderExpandButton onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
@@ -2140,6 +2213,7 @@ export function DashboardShell({
                     tokens={tokens}
                     packageLabel={packageLabel}
                     displayName={displayName}
+                    onOpenMenu={() => setAccountOpen((o) => !o)}
                     className="min-w-0 flex-1 truncate text-right text-[11px] leading-snug text-white/95"
                   />
                   <AdminHubHeaderExpandButton onExpand={() => writeAdminHubHeaderCollapsed(false)} />
@@ -2150,6 +2224,7 @@ export function DashboardShell({
                 tokens={tokens}
                 packageLabel={packageLabel}
                 displayName={displayName}
+                onOpenMenu={() => setAccountOpen((o) => !o)}
                 className="truncate text-right text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal"
               />
             )}
@@ -2160,6 +2235,7 @@ export function DashboardShell({
             <div className="relative shrink-0" ref={accountWrapRef}>
               <button
                 type="button"
+                data-account-menu-trigger
                 suppressHydrationWarning
                 className={cn(
                   appDashboardHeaderIconButtonClass,
