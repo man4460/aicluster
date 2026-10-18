@@ -155,13 +155,13 @@ export const SMART_POLICE_MODULE_GROUP_ID = 2 as const;
  * โมดูลที่ซ่อนจากแคตตาล็อก/แดชบอร์ด (รวม ADMIN) — ยังพัฒนาไม่สมบูรณ์
  * เอา slug ออกเมื่อพร้อมเปิด แล้วใส่ใน `UI_VISIBLE_GROUP2_MODULE_SLUGS` ถ้าต้องการ early access
  */
-export const UI_HIDDEN_MODULE_SLUGS: ReadonlySet<string> = new Set([SMART_POLICE_MODULE_SLUG]);
+export const UI_HIDDEN_MODULE_SLUGS: ReadonlySet<string> = new Set([]);
 
 /**
  * โมดูลกลุ่ม 2 ที่แสดงในแคตตาล็อก/แดชบอร์ดแม้ `UI_VISIBLE_MAX_MODULE_GROUP` ยังเป็น 1
  * — ไม่รวม placeholder อื่นในกลุ่ม 2 จนกว่าจะพร้อมเปิด
  */
-export const UI_VISIBLE_GROUP2_MODULE_SLUGS: ReadonlySet<string> = new Set([]);
+export const UI_VISIBLE_GROUP2_MODULE_SLUGS: ReadonlySet<string> = new Set([SMART_POLICE_MODULE_SLUG]);
 
 export function isModuleHiddenFromDashboardUi(slug: string | undefined): boolean {
   return Boolean(slug && UI_HIDDEN_MODULE_SLUGS.has(slug));
