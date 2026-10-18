@@ -36,7 +36,7 @@ alwaysApply: true
 |-----|-----|
 | ความกว้าง | `w-64` |
 | เปลือก sidebar (โมดูล) | `rounded-lg` · `border-slate-200/90` · `shadow-sm` — **เท่าการ์ดขวา** (ไม่ใช้ `rounded-[1.15rem]`) |
-| ระยะแถวเนื้อหา | `gap-2` · `px-2` · `pt-2` · `pb-2` (ซ้าย = ขวา) |
+| ระยะแถวเนื้อหา | `p-2` · `gap-2` — บน=ล่าง=ซ้าย=ขวา=ช่องกลาง เท่ากัน · สูงกล่องซ้าย=ขวา (`items-stretch` · `h-full`) |
 | หัวแถบ | `px-3 pb-2 pt-3` · ชื่อ `text-[10px] uppercase tracking` · badge `h-5 text-[10px]` |
 | โซนรายการ | `gap-1` · `px-2.5 pb-2 pt-1` |
 | รายการเมนู | `px-2.5 py-1.5` · `gap-2` · `text-xs font-black` · `rounded-xl` |

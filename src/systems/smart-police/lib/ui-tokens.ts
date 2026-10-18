@@ -116,8 +116,8 @@ export const smartPoliceFillBodyClass = "mt-1.5 flex min-h-0 flex-1 flex-col";
 export const smartPoliceFillScrollBodyClass =
   "mt-1.5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain";
 
-/** padding การ์ด — ย่อความสูง */
-export const smartPolicePanelSectionClass = "px-2.5 py-2 sm:px-3 sm:py-2.5";
+/** padding การ์ด — ระยะในกล่องเท่ากันทุกด้าน */
+export const smartPolicePanelSectionClass = "p-2.5 sm:p-3";
 
 export const smartPolicePanelDividerClass = "border-t border-slate-200/80";
 
@@ -127,8 +127,9 @@ export const smartPoliceSectionHeadingClass =
 export const smartPoliceSubtitleClass =
   "text-[11px] font-medium leading-snug text-[#66638c]";
 
-/** เนื้อหาทุกหน้า — กว้างเต็มคอลัมน์ขวา · ช่องว่างการ์ดแน่น */
-export const smartPolicePageStackClass = "flex min-h-0 w-full min-w-0 flex-1 flex-col space-y-2";
+/** เนื้อหาทุกหน้า — กว้าง·สูงเต็มคอลัมน์ขวา · ช่องว่างการ์ดแน่น */
+export const smartPolicePageStackClass =
+  "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col space-y-2";
 
 /** แผงหลักยืดเต็มความกว้าง */
 export const smartPoliceContentBleedClass = "w-full min-w-0 max-w-none";

@@ -2346,11 +2346,11 @@ export function DashboardShell({
           /** ขอบนอกเดียวกับ wrapper แถบ header ม่วง (px-3 sm:px-4) — ห้าม px-2 แยกโมดูล */
           "px-3 sm:px-4",
           /**
-           * โมเดลเมนูโมดูล — ระยะรอบด้านเท่ากัน (ซ้าย=ขวา=บน=ล่าง=ช่องกลาง)
-           * ห้ามเหลือ pb ใหญ่ของ dock มือถือบนเดสก์ท็อป
+           * โมเดลเมนูโมดูล — ระยะรอบกล่องเท่ากันทุกด้าน (บน=ล่าง=ซ้าย=ขวา=ช่องกลาง = 0.5rem)
+           * ใช้ p-2 แทนแยก px/pt/pb · items-stretch ให้สูงกล่องซ้าย=ขวา
            */
           useModuleWorkspaceSidebarNav &&
-            "md:!gap-2 md:!px-2 md:!pb-2 md:!pt-2 lg:!gap-2 lg:!px-2 lg:!pb-2 lg:!pt-2",
+            "md:!items-stretch md:!gap-2 md:!p-2 lg:!gap-2 lg:!p-2",
           moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",
         )}
       >
@@ -2360,18 +2360,22 @@ export function DashboardShell({
             /** ความกว้าง / padding อ้างอิง BOTProject Shell (`w-64 p-3`) */
             "hidden w-64 shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
             /**
-             * เมนูโมดูล — ความมน·เงา·ขอบ เท่าการ์ดเนื้อหาขวา (rounded-lg / border-slate)
-             * ยืดสูงเท่า main · ไม่เว้น my
+             * เมนูโมดูล — ความมน·เงา·ขอบ·สูง เท่าการ์ดขวา
              */
             useModuleWorkspaceSidebarNav &&
-              "md:!my-0 md:self-stretch md:rounded-lg md:border-slate-200/90 md:bg-white md:shadow-sm md:ring-0 md:backdrop-blur-none",
+              "md:!my-0 md:h-full md:min-h-0 md:self-stretch md:rounded-lg md:border-slate-200/90 md:bg-white md:shadow-sm md:ring-0 md:backdrop-blur-none",
             sidebarCollapsed && "md:!hidden",
             (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
             moduleStaffKiosk && "!hidden !my-0",
           )}
           aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
         >
-          <div className="px-3 pb-2 pt-3">
+          <div
+            className={cn(
+              "px-3 pb-2 pt-3",
+              useModuleWorkspaceSidebarNav && "px-2.5 pb-2.5 pt-2.5",
+            )}
+          >
             <div className={cn("h-1 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.12em] text-[#0000BF]/80">
@@ -2384,7 +2388,10 @@ export function DashboardShell({
           </div>
 
           <nav
-            className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1"
+            className={cn(
+              "flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1",
+              useModuleWorkspaceSidebarNav && "px-2.5 pb-2.5 pt-0",
+            )}
             aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
           >
             {moduleWorkspaceSidebar ? (
@@ -2395,7 +2402,12 @@ export function DashboardShell({
               ))
             )}
           </nav>
-          <div className="border-t border-slate-200/70 bg-white/70 px-2.5 py-2">
+          <div
+            className={cn(
+              "border-t border-slate-200/70 bg-white/70 px-2.5 py-2",
+              useModuleWorkspaceSidebarNav && "px-2.5 py-2.5",
+            )}
+          >
             <p className="truncate text-[11px] text-slate-500" title={username}>
               {username}
             </p>
@@ -2406,7 +2418,7 @@ export function DashboardShell({
         <div
           className={cn(
             "flex min-h-0 min-w-0 flex-1 flex-col",
-            useModuleWorkspaceSidebarNav && "md:min-h-0",
+            useModuleWorkspaceSidebarNav && "md:h-full md:min-h-0",
           )}
         >
           {/* Drawer มือถือ — เริ่มใต้แถบ header */}
@@ -2474,11 +2486,11 @@ export function DashboardShell({
               "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[1.15rem]",
               onPosOrderPage && "lg:overflow-hidden",
               /**
-               * เนื้อหาโมดูล — ความมนเท่า sidebar · ล็อกสูงให้การ์ดขยายเต็ม
-               * (เลื่อนรายการในแผง ไม่เลื่อนทั้ง main — กันช่องว่างม่วงใต้การ์ด)
+               * เนื้อหาโมดูล — สูงเต็มเท่า sidebar · ความมนเท่ากัน
+               * เลื่อนรายการในแผง ไม่เลื่อนทั้ง main
                */
               useModuleWorkspaceSidebarNav &&
-                "md:overflow-hidden md:rounded-lg",
+                "md:h-full md:min-h-0 md:overflow-hidden md:rounded-lg",
               systemFocusLayout && "md:rounded-none",
               moduleStaffKiosk && "!rounded-none !overflow-hidden",
             )}
