@@ -262,44 +262,10 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/*
- * คำให้การแบบ Word:
- * ถาม[tab]ข้อความ……
- *     บรรทัดต่อตรงตำแหน่งแท็บ
- * ตอบ[tab]ข้อความ……
- */
-.sp-stmt-lined-body {
-  /* กว้าง ≈ ป้าย «ถาม»/«ตอบ» + แท็บ — ไม่กินทั้งคำว่า «ถาม 1.» */
-  --sp-qa-hang: 4ch;
-  margin: 0;
-  padding: 0;
-  -webkit-touch-callout: default;
-  tab-size: 4;
-  -moz-tab-size: 4;
-}
-.sp-stmt-lined-body:empty::before {
+.sp-qa-cell[data-empty="true"]::before {
   content: attr(data-placeholder);
-  display: block;
-  margin: 0;
-  padding: 0 0 0 var(--sp-qa-hang);
-  text-indent: calc(-1 * var(--sp-qa-hang));
-  white-space: pre-wrap;
-  line-height: inherit;
   color: #9ca3af;
   pointer-events: none;
-  font-weight: 600;
-}
-.sp-stmt-qa-block {
-  margin: 0;
-  padding: 0 0 0 var(--sp-qa-hang);
-  text-indent: calc(-1 * var(--sp-qa-hang));
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: normal;
-  min-height: 1em;
-}
-.sp-stmt-qa-block:focus {
-  outline: none;
 }
 
 /* A4 จริงตอนพิมพ์ */
