@@ -110,14 +110,43 @@ export function createEmptyQa(question = ""): StatementQaItem {
   return { id: newId("qa"), question, answer: "" };
 }
 
+export function qaListToBodyText(qa: StatementQaItem[]): string {
+  const lines: string[] = [];
+  let n = 1;
+  for (const item of qa) {
+    const q = item.question.trim();
+    const a = item.answer.trim();
+    if (!q && !a) continue;
+    if (q) lines.push(`ถาม ${n}. ${q}`);
+    if (a) lines.push(`ตอบ ${a}`);
+    else if (q) lines.push("ตอบ ");
+    lines.push("");
+    n += 1;
+  }
+  return lines.join("\n").trimEnd();
+}
+
 export function createEmptyPage(seedQuestions?: string[]): StatementPage {
   const qs =
     seedQuestions && seedQuestions.length > 0
       ? seedQuestions
-      : ["", ""];
+      : [];
+  const qa = qs.length > 0 ? qs.map((q) => createEmptyQa(q)) : [];
   return {
     id: newId("page"),
-    qa: qs.map((q) => createEmptyQa(q)),
+    text: qaListToBodyText(qa),
+    qa,
+  };
+}
+
+export function normalizeStatementPage(page: Partial<StatementPage> & { id?: string }): StatementPage {
+  const qa = Array.isArray(page.qa) ? page.qa : [];
+  let text = typeof page.text === "string" ? page.text : "";
+  if (!text.trim() && qa.length > 0) text = qaListToBodyText(qa);
+  return {
+    id: page.id || newId("page"),
+    text,
+    qa,
   };
 }
 
@@ -255,9 +284,15 @@ export function parseStatementDocumentContent(raw: string): StatementDocumentCon
     const parsed = JSON.parse(t) as StatementDocumentContent;
     if (!parsed?.templateSlug || !parsed.header) return null;
     parsed.header = normalizeStatementHeader(parsed.header);
-    if (parsed.version === 3 && isStatementDocumentV3(parsed)) return parsed;
+    if (parsed.version === 3 && isStatementDocumentV3(parsed)) {
+      parsed.pages = parsed.pages.map((p) => normalizeStatementPage(p));
+      return parsed;
+    }
     if (parsed.version === 2 && "bodyHtml" in parsed) return parsed;
     if (parsed.version === 1 && Array.isArray((parsed as StatementDocumentContentV1).pages)) {
+      (parsed as StatementDocumentContentV1).pages = (
+        parsed as StatementDocumentContentV1
+      ).pages.map((p) => normalizeStatementPage(p));
       return parsed;
     }
     return null;
@@ -294,13 +329,11 @@ function pagesToPlainText(
     "",
   ].filter((x, i, a) => x !== "" || (i > 0 && a[i - 1] !== ""));
 
-  let qNo = 1;
   for (const page of pages) {
-    for (const qa of page.qa) {
-      lines.push(`ถาม ${qNo}. ${qa.question.trim() || "…"}`);
-      lines.push(`ตอบ ${qa.answer.trim() || "…"}`);
+    const body = (page.text || "").trim() || qaListToBodyText(page.qa);
+    if (body) {
+      lines.push(body);
       lines.push("");
-      qNo += 1;
     }
   }
   return lines.join("\n");

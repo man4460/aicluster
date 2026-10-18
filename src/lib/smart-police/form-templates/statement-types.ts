@@ -13,6 +13,9 @@ export type StatementQaItem = {
 
 export type StatementPage = {
   id: string;
+  /** ข้อความคำให้การแบบพิมพ์บนบรรทัด (เหมือน Word) */
+  text: string;
+  /** legacy — แปลงเป็น text ตอนเปิดถ้า text ว่าง */
   qa: StatementQaItem[];
 };
 

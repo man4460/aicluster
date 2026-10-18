@@ -310,7 +310,7 @@ function buildModelFromStatementJson(opts: {
 
   let qNo = 1;
   const statementPages: SmartPoliceA4StatementPage[] = json.pages.map((page, idx) => {
-    const qa = page.qa.map((item) => {
+    let qa = (page.qa ?? []).map((item) => {
       const row = {
         no: qNo,
         question: item.question.trim(),
@@ -319,6 +319,10 @@ function buildModelFromStatementJson(opts: {
       qNo += 1;
       return row;
     });
+    if (qa.length === 0 && (page.text ?? "").trim()) {
+      qa = [{ no: qNo, question: "", answer: page.text.trim() }];
+      qNo += 1;
+    }
     return {
       pageNo: idx + 1,
       pageTotal: json.pages.length,

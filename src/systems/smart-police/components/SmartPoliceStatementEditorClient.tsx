@@ -6,7 +6,6 @@ import { openPrintableHtml } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   createEmptyPage,
-  createEmptyQa,
   ensureStatementPagesDoc,
   getStatementTemplateMeta,
   isStatementDocumentV3,
@@ -16,7 +15,6 @@ import {
   type StatementDocumentContentV1,
   type StatementDocumentContentV3,
   type StatementHeaderFields,
-  type StatementQaItem,
 } from "@/lib/smart-police/form-templates";
 import type { SmartPoliceCaseDetail, SmartPoliceDocumentDto } from "@/lib/smart-police/types";
 import { OfficialStatementFormSheet } from "@/systems/smart-police/components/OfficialStatementFormSheet";
@@ -106,40 +104,10 @@ export function SmartPoliceStatementEditorClient({
     setDirty(true);
   }
 
-  function updateQa(pageIdx: number, qaIdx: number, field: keyof StatementQaItem, value: string) {
+  function updatePageText(pageIdx: number, text: string) {
     setContent((c) => {
       if (!c || !statementDocumentHasPages(c)) return c;
-      const pages = c.pages.map((p, pi) => {
-        if (pi !== pageIdx) return p;
-        return {
-          ...p,
-          qa: p.qa.map((q, qi) => (qi === qaIdx ? { ...q, [field]: value } : q)),
-        };
-      });
-      return { ...c, pages };
-    });
-    setDirty(true);
-  }
-
-  function addQa() {
-    setContent((c) => {
-      if (!c || !statementDocumentHasPages(c)) return c;
-      const pages = c.pages.map((p, pi) =>
-        pi === pageIndex ? { ...p, qa: [...p.qa, createEmptyQa()] } : p,
-      );
-      return { ...c, pages };
-    });
-    setDirty(true);
-  }
-
-  function removeQa(qaIdx: number) {
-    setContent((c) => {
-      if (!c || !statementDocumentHasPages(c)) return c;
-      const pages = c.pages.map((p, pi) => {
-        if (pi !== pageIndex) return p;
-        if (p.qa.length <= 1) return p;
-        return { ...p, qa: p.qa.filter((_, i) => i !== qaIdx) };
-      });
+      const pages = c.pages.map((p, pi) => (pi === pageIdx ? { ...p, text, qa: [] } : p));
       return { ...c, pages };
     });
     setDirty(true);
@@ -148,7 +116,7 @@ export function SmartPoliceStatementEditorClient({
   function addPage() {
     setContent((c) => {
       if (!c || !statementDocumentHasPages(c)) return c;
-      return { ...c, pages: [...c.pages, createEmptyPage([""])] };
+      return { ...c, pages: [...c.pages, createEmptyPage()] };
     });
     setPageIndex((i) => i + 1);
     setDirty(true);
@@ -377,7 +345,7 @@ export function SmartPoliceStatementEditorClient({
           </button>
         ) : null}
         <p className="ml-auto hidden text-[11px] text-slate-300 sm:block">
-          กรอกช่องจุดไข่ปลาและถาม–ตอบบนแบบฟอร์ม · บันทึกเข้าสำนวน · พิมพ์ลงลายเซ็น
+          คลิกบนฟอร์มแล้วพิมพ์เหมือน Word · เพิ่มหน้า = ใบต่อ · บันทึกเข้าสำนวน
         </p>
       </div>
 
@@ -386,11 +354,8 @@ export function SmartPoliceStatementEditorClient({
           header={content.header}
           pages={content.pages}
           pageIndex={pageIndex}
-          formTitle={formTitleForSlug(content.templateSlug)}
           onHeaderChange={patchHeader}
-          onQaChange={updateQa}
-          onAddQa={addQa}
-          onRemoveQa={removeQa}
+          onPageTextChange={updatePageText}
           className="mb-8"
         />
         <p className="mx-auto mb-6 max-w-[210mm] text-center text-[12px] text-slate-100">

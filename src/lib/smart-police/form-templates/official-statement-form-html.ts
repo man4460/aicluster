@@ -24,17 +24,26 @@ export function buildOfficialStatementFormHtml(opts: {
   formTitle: string;
 }): string {
   const h = opts.header;
-  let qNo = 1;
-  const qaHtml = opts.pages
-    .flatMap((p) => p.qa)
-    .map((qa) => {
-      const no = qNo++;
-      return `<div class="sp-off-qa-block">
-<div class="sp-off-qa-q"><strong>ถาม ${no}.</strong> ${esc(qa.question.trim() || "…")}</div>
-<div class="sp-off-qa-a"><strong>ตอบ</strong> ${esc(qa.answer.trim() || "…")}</div>
-</div>`;
+  const bodyPages = opts.pages
+    .map((p, i) => {
+      const raw = (p.text || "").trim();
+      if (!raw && (!p.qa || p.qa.length === 0)) return "";
+      let body = raw;
+      if (!body && p.qa?.length) {
+        body = p.qa
+          .map((qa, n) => {
+            const lines = [];
+            if (qa.question.trim()) lines.push(`ถาม ${n + 1}. ${qa.question.trim()}`);
+            lines.push(`ตอบ ${qa.answer.trim() || "…"}`);
+            return lines.join("\n");
+          })
+          .join("\n\n");
+      }
+      const title = i === 0 ? "" : `<p style="text-align:center;font-weight:700">ใบต่อ — แผ่น ${i + 1}</p>`;
+      return `${title}<div class="sp-off-qa-a" style="white-space:pre-wrap;min-height:8em;border:1px solid #333;padding:8px;margin:8px 0">${esc(body)}</div>`;
     })
     .join("");
+  const qaHtml = bodyPages;
 
   return `<div class="sp-off">
 <style>${OFFICIAL_STATEMENT_FORM_CSS}</style>

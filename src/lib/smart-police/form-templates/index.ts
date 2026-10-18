@@ -8,6 +8,8 @@ export {
   createEmptyPage,
   createEmptyQa,
   ensureStatementPagesDoc,
+  normalizeStatementPage,
+  qaListToBodyText,
   fillStatementDocumentSync,
   isStatementJsonContent,
   normalizeStatementHeader,
