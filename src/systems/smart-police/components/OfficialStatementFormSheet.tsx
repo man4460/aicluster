@@ -381,12 +381,12 @@ export function OfficialStatementFormSheet({
               <L>คดีระหว่าง</L>
               <span
                 style={{
-                  fontSize: "42pt",
-                  lineHeight: 0.85,
+                  fontSize: "56pt",
+                  lineHeight: 0.8,
                   fontWeight: 400,
-                  transform: "scaleY(1.15)",
+                  transform: "scaleY(1.35)",
                   display: "inline-block",
-                  padding: "0 1mm",
+                  padding: "0 1.5mm",
                 }}
                 aria-hidden
               >
