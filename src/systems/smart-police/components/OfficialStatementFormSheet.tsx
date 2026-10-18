@@ -30,9 +30,8 @@ const LINE = "6.2mm";
 const STMT_LINE = "7.8mm";
 const QA_STARTER = "ถาม 1. ";
 const QA_PLACEHOLDER = "ถาม 1. …\nตอบ …";
-/** Enter วน: ถาม → ตอบ (ชิดซ้าย) → ถามถัดไป → … */
-const QA_ASK_PREFIX = /^(\s*)ถาม\s*\d*\.?\s*/;
-const QA_ANS_PREFIX = /^(\s*)ตอบ\s*/;
+const QA_BLOCK_CLASS = "sp-stmt-qa-block";
+const QA_ANS_PREFIX = /^\s*ตอบ\b/;
 
 function Dot({
   value,
@@ -120,126 +119,77 @@ function isBlankBody(text: string): boolean {
   return !text.replace(/\u200b/g, "").trim();
 }
 
-function setTextAndCaret(el: HTMLElement, text: string, caret: number, onChange: (v: string) => void) {
-  el.innerText = text;
-  onChange(text);
-  const node = el.firstChild;
+function nextQuestionNoFromRoot(root: HTMLElement): number {
+  let max = 0;
+  for (const block of root.querySelectorAll(`.${QA_BLOCK_CLASS}`)) {
+    const m = (block.textContent || "").match(/^\s*ถาม\s*(\d+)/);
+    if (m) max = Math.max(max, Number(m[1]) || 0);
+  }
+  return max + 1;
+}
+
+function serializeQaBlocks(root: HTMLElement): string {
+  const blocks = [...root.querySelectorAll(`.${QA_BLOCK_CLASS}`)];
+  if (blocks.length === 0) return (root.innerText || "").replace(/\u200b/g, "");
+  return blocks
+    .map((b) => (b.textContent || "").replace(/\u200b/g, ""))
+    .join("\n");
+}
+
+function placeCaretInBlock(block: HTMLElement, offset: number) {
   const sel = window.getSelection();
   if (!sel) return;
+  let node: Node = block;
+  if (!block.firstChild) {
+    block.appendChild(document.createTextNode(""));
+  }
+  node = block.firstChild!;
   const range = document.createRange();
-  if (node && node.nodeType === Node.TEXT_NODE) {
-    const o = Math.max(0, Math.min(caret, node.textContent?.length ?? 0));
+  if (node.nodeType === Node.TEXT_NODE) {
+    const o = Math.max(0, Math.min(offset, node.textContent?.length ?? 0));
     range.setStart(node, o);
     range.collapse(true);
   } else {
-    range.selectNodeContents(el);
+    range.selectNodeContents(block);
     range.collapse(true);
   }
   sel.removeAllRanges();
   sel.addRange(range);
 }
 
-function insertAtCaret(el: HTMLElement, insert: string, onChange: (v: string) => void) {
-  el.focus();
-  const ok = document.execCommand("insertText", false, insert);
-  if (!ok) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      const node = document.createTextNode(insert);
-      range.insertNode(node);
-      range.setStartAfter(node);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
+function createQaBlock(text: string): HTMLDivElement {
+  const div = document.createElement("div");
+  div.className = QA_BLOCK_CLASS;
+  div.textContent = text.length > 0 ? text : "\u200b";
+  return div;
+}
+
+function renderQaBlocks(root: HTMLElement, value: string) {
+  root.innerHTML = "";
+  if (isBlankBody(value)) return;
+  const lines = value.replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    root.appendChild(createQaBlock(line));
   }
-  onChange(el.innerText ?? "");
+}
+
+function currentQaBlock(root: HTMLElement): HTMLElement | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  let node: Node | null = sel.anchorNode;
+  while (node && node !== root) {
+    if (node instanceof HTMLElement && node.classList.contains(QA_BLOCK_CLASS)) return node;
+    node = node.parentNode;
+  }
+  return root.querySelector(`.${QA_BLOCK_CLASS}:last-child`);
 }
 
 /**
- * Tab แบบ Word — เยื้องย่อหน้า
- * Shift+Tab — ลดการเยื้องต้นบรรทัด
+ * โซนถาม–ตอบแบบ Word:
+ * - แต่ละ ถาม/ตอบ เป็นบล็อกแยก → ป้ายชิดซ้าย
+ * - ข้อความยาวขึ้นบรรทัดใหม่เยื้องตรงคอลัมน์เนื้อหา (hanging indent)
+ * - Enter วน ถาม→ตอบ→ถาม ชิดซ้าย
  */
-function handleWordTab(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
-  if (!shift) {
-    insertAtCaret(el, "\t", onChange);
-    return;
-  }
-
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return;
-  const text = (el.innerText || "").replace(/\r\n/g, "\n");
-  const pre = sel.getRangeAt(0).cloneRange();
-  pre.selectNodeContents(el);
-  pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
-  const offset = pre.toString().length;
-  const lineStart = text.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
-  const line = text.slice(lineStart, offset);
-  const m = line.match(/^(\t| {2,4})/);
-  if (!m) return;
-  const remove = m[1].length;
-  const newText = text.slice(0, lineStart) + text.slice(lineStart + remove);
-  setTextAndCaret(el, newText, offset - remove, onChange);
-}
-
-function nextQuestionNo(text: string): number {
-  let max = 0;
-  for (const m of text.matchAll(/(?:^|\n)\s*ถาม\s*(\d+)/g)) {
-    max = Math.max(max, Number(m[1]) || 0);
-  }
-  return max + 1;
-}
-
-function readCaretOffset(el: HTMLElement): number {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) return 0;
-  const pre = sel.getRangeAt(0).cloneRange();
-  pre.selectNodeContents(el);
-  pre.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
-  return pre.toString().length;
-}
-
-/**
- * Enter — จบถามแล้วขึ้นบรรทัดใหม่ชิดซ้ายพิมพ์ตอบ · จากตอบขึ้นถามถัดไป · วนไปเรื่อยๆ
- * Shift+Enter — ขึ้นบรรทัดว่างชิดซ้ายเฉยๆ (ไม่ใส่ป้าย)
- */
-function handleQaEnter(el: HTMLElement, shift: boolean, onChange: (v: string) => void) {
-  let text = (el.innerText || "").replace(/\r\n/g, "\n");
-  if (isBlankBody(text)) {
-    setTextAndCaret(el, QA_STARTER, QA_STARTER.length, onChange);
-    return;
-  }
-
-  const offset = Math.min(readCaretOffset(el), text.length);
-  text = (el.innerText || "").replace(/\r\n/g, "\n");
-  const off = Math.min(offset, text.length);
-  const before = text.slice(0, off);
-  const after = text.slice(off);
-  const lineStart = before.lastIndexOf("\n") + 1;
-  const lineBeforeCaret = before.slice(lineStart);
-
-  if (shift) {
-    const newText = `${before}\n${after}`;
-    setTextAndCaret(el, newText, before.length + 1, onChange);
-    return;
-  }
-
-  // อยู่บรรทัดตอบ → ถามถัดไปชิดซ้าย · นอกนั้น (ถาม/ทั่วไป) → ตอบ ชิดซ้าย
-  if (QA_ANS_PREFIX.test(lineBeforeCaret)) {
-    const n = nextQuestionNo(text);
-    const prefix = `ถาม ${n}. `;
-    const newText = `${before}\n${prefix}${after}`;
-    setTextAndCaret(el, newText, before.length + 1 + prefix.length, onChange);
-    return;
-  }
-
-  const prefix = "ตอบ ";
-  const newText = `${before}\n${prefix}${after}`;
-  setTextAndCaret(el, newText, before.length + 1 + prefix.length, onChange);
-}
-
 function LinedBody({
   value,
   onChange,
@@ -251,27 +201,74 @@ function LinedBody({
   onChange: (v: string) => void;
   ariaLabel: string;
   minHeight: string;
-  /** ยืดเต็มพื้นที่ที่เหลือของคอลัมน์ */
   fill?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
 
   useEffect(() => {
-    if (!ref.current || focused.current) return;
-    if (ref.current.innerText !== value) ref.current.innerText = value;
+    const root = ref.current;
+    if (!root || focused.current) return;
+    if (serializeQaBlocks(root) !== value) renderQaBlocks(root, value);
   }, [value]);
 
-  /** tap / คลิกช่องว่าง → ใส่ placeholder ถาม–ตอบ แล้ววางเคอร์เซอร์หลัง «ถาม 1. » */
-  function activateQaSlot(e?: PointerEvent) {
-    const el = ref.current;
-    if (!el) return;
-    el.focus({ preventScroll: true });
-    if (isBlankBody(el.innerText ?? "")) {
-      e?.preventDefault();
-      setTextAndCaret(el, QA_STARTER, "ถาม 1. ".length, onChange);
+  function emit() {
+    const root = ref.current;
+    if (!root) return;
+    onChange(serializeQaBlocks(root));
+  }
+
+  function ensureStarter(e?: PointerEvent) {
+    const root = ref.current;
+    if (!root) return;
+    root.focus({ preventScroll: true });
+    if (!isBlankBody(serializeQaBlocks(root))) return;
+    e?.preventDefault();
+    root.innerHTML = "";
+    const block = createQaBlock(QA_STARTER);
+    root.appendChild(block);
+    placeCaretInBlock(block, QA_STARTER.length);
+    emit();
+  }
+
+  function onEnter(shift: boolean) {
+    const root = ref.current;
+    if (!root) return;
+    if (isBlankBody(serializeQaBlocks(root))) {
+      ensureStarter();
       return;
     }
+    const cur = currentQaBlock(root);
+    if (!cur) return;
+
+    if (shift) {
+      const blank = createQaBlock("");
+      cur.after(blank);
+      placeCaretInBlock(blank, 0);
+      emit();
+      return;
+    }
+
+    const curText = (cur.textContent || "").replace(/\u200b/g, "");
+    const prefix = QA_ANS_PREFIX.test(curText)
+      ? `ถาม ${nextQuestionNoFromRoot(root)}. `
+      : "ตอบ ";
+    const next = createQaBlock(prefix);
+    cur.after(next);
+    placeCaretInBlock(next, prefix.length);
+    emit();
+  }
+
+  function onTab(shift: boolean) {
+    const root = ref.current;
+    if (!root) return;
+    if (shift) {
+      document.execCommand("outdent");
+      emit();
+      return;
+    }
+    document.execCommand("insertText", false, "\t");
+    emit();
   }
 
   return (
@@ -286,7 +283,6 @@ function LinedBody({
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      {/* จุดไข่ปลา — ระยะ STMT_LINE กว้างกว่าแถวด้านบน */}
       <div
         data-stmt-lines
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -314,7 +310,7 @@ function LinedBody({
         inputMode="text"
         enterKeyHint="enter"
         data-placeholder={QA_PLACEHOLDER}
-        className="sp-stmt-lined-body absolute inset-0 z-[1] w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words outline-none"
+        className="sp-stmt-lined-body absolute inset-0 z-[1] w-full overflow-y-auto overflow-x-hidden outline-none"
         style={{
           boxSizing: "border-box",
           margin: 0,
@@ -327,30 +323,25 @@ function LinedBody({
           touchAction: "manipulation",
           WebkitUserSelect: "text",
           userSelect: "text",
-          // แท็บ + บรรทัดต่อ (soft wrap) เยื้องเท่ากัน
           tabSize: 8,
           minHeight: "44px",
         }}
         onPointerDown={(e) => {
-          const el = ref.current;
-          if (!el) return;
-          if (isBlankBody(el.innerText ?? "")) {
-            activateQaSlot(e);
-          }
+          const root = ref.current;
+          if (!root) return;
+          if (isBlankBody(serializeQaBlocks(root))) ensureStarter(e);
         }}
         onKeyDown={(e) => {
-          const el = ref.current;
-          if (!el) return;
           if (e.key === "Tab") {
             e.preventDefault();
             e.stopPropagation();
-            handleWordTab(el, e.shiftKey, onChange);
+            onTab(e.shiftKey);
             return;
           }
           if (e.key === "Enter") {
             e.preventDefault();
             e.stopPropagation();
-            handleQaEnter(el, e.shiftKey, onChange);
+            onEnter(e.shiftKey);
           }
         }}
         onFocus={() => {
@@ -358,9 +349,9 @@ function LinedBody({
         }}
         onBlur={() => {
           focused.current = false;
-          onChange(ref.current?.innerText ?? "");
+          emit();
         }}
-        onInput={() => onChange(ref.current?.innerText ?? "")}
+        onInput={() => emit()}
       />
     </div>
   );
