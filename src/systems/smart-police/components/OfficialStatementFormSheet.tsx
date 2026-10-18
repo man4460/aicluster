@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import type { StatementHeaderFields, StatementPage } from "@/lib/smart-police/form-templates";
+import {
+  statementPageSlot,
+  type StatementHeaderFields,
+  type StatementPage,
+} from "@/lib/smart-police/form-templates";
 
 /**
  * แม่แบบคำให้การ ส ๕๖-๔ — ออกแบบใหม่เป็นเอกสาร HTML (ไม่ทับพิกัด PNG)
@@ -97,6 +101,9 @@ function L({ children }: { children: ReactNode }) {
   return <span style={{ fontWeight: 700, flexShrink: 0 }}>{children}</span>;
 }
 
+/** จำนวนแถวจุดไข่ปลาพื้นหลัง — ครอบคลุมพื้นที่หน้าต่อด้วย */
+const STMT_DOT_ROWS = 48;
+
 function LinedBody({
   value,
   onChange,
@@ -121,38 +128,63 @@ function LinedBody({
 
   return (
     <div
-      ref={ref}
-      role="textbox"
-      aria-multiline
-      aria-label={ariaLabel}
-      contentEditable
-      suppressContentEditableWarning
-      spellCheck={false}
-      data-placeholder={"ถาม 1. …\nตอบ …"}
-      className="sp-stmt-lined-body w-full whitespace-pre-wrap break-words outline-none"
-      style={
-        {
+      className="relative w-full"
+      style={{
+        minHeight,
+        flex: fill ? "1 1 auto" : undefined,
+        marginTop: 0,
+        marginBottom: "2mm",
+      }}
+    >
+      {/* เส้นเดียวกับ input.sp-word-field — border-bottom 0.5pt dotted */}
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden
+      >
+        {Array.from({ length: STMT_DOT_ROWS }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              height: STMT_LINE,
+              boxSizing: "border-box",
+              borderBottom: "0.5pt dotted #111",
+            }}
+          />
+        ))}
+      </div>
+      <div
+        ref={ref}
+        role="textbox"
+        aria-multiline
+        aria-label={ariaLabel}
+        contentEditable
+        suppressContentEditableWarning
+        spellCheck={false}
+        data-placeholder={"ถาม 1. …\nตอบ …"}
+        className="sp-stmt-lined-body relative z-[1] w-full whitespace-pre-wrap break-words outline-none"
+        style={{
           minHeight,
-          flex: fill ? "1 1 auto" : undefined,
           width: "100%",
           boxSizing: "border-box",
+          margin: 0,
+          padding: 0,
           fontSize: BODY,
           lineHeight: STMT_LINE,
-          padding: "0 0 2mm",
-          marginBottom: "2mm",
+          /* จัด baseline ให้ถามแรกนั่งบนเส้นจุดไข่ปลาแถวแรก (ช่องบน) */
+          paddingTop: 0,
           color: "#111",
-          ["--sp-stmt-line" as string]: STMT_LINE,
-        } as CSSProperties
-      }
-      onFocus={() => {
-        focused.current = true;
-      }}
-      onBlur={() => {
-        focused.current = false;
-        onChange(ref.current?.innerText ?? "");
-      }}
-      onInput={() => onChange(ref.current?.innerText ?? "")}
-    />
+          background: "transparent",
+        }}
+        onFocus={() => {
+          focused.current = true;
+        }}
+        onBlur={() => {
+          focused.current = false;
+          onChange(ref.current?.innerText ?? "");
+        }}
+        onInput={() => onChange(ref.current?.innerText ?? "")}
+      />
+    </div>
   );
 }
 
@@ -178,7 +210,8 @@ export function OfficialStatementFormSheet({
   const h = header;
   const set = onHeaderChange;
   const page = pages[pageIndex];
-  const isCont = pageIndex > 0;
+  const slot = statementPageSlot(pageIndex);
+  const isLinedOnly = slot.kind === "main" || slot.kind === "cont";
 
   return (
     <article
@@ -194,30 +227,80 @@ export function OfficialStatementFormSheet({
         overflow: "hidden",
       }}
     >
-      {isCont ? (
+      {isLinedOnly ? (
         <div className="flex h-full flex-col">
           <Row style={{ marginBottom: "3mm" }}>
-            <L>ใบต่อคำให้การ ของ</L>
-            <Dot aria-label="ใบต่อของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={12} />
-            <span style={{ marginLeft: "auto" }}>
-              แผ่น <Dot value={String(pageIndex + 1)} onChange={() => {}} minCh={2} />
-            </span>
+            {slot.kind === "main" ? (
+              <>
+                <L>บันทึกคำให้การ (หน้าหลัก) ของ</L>
+                <Dot aria-label="หน้าหลักของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={10} />
+                <span style={{ marginLeft: "auto", flexShrink: 0 }}>ด้านหลังแผ่น 1</span>
+              </>
+            ) : (
+              <>
+                <L>ใบต่อคำให้การ ของ</L>
+                <Dot aria-label="ใบต่อของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={10} />
+                <span style={{ marginLeft: "auto", flexShrink: 0 }}>
+                  แผ่น {slot.sheetNo} · {slot.side}
+                </span>
+              </>
+            )}
           </Row>
           <LinedBody
-            ariaLabel="ข้อความคำให้การหน้าต่อ — พิมพ์ถาม ตอบ บนเส้น"
+            ariaLabel={`${slot.label} — พิมพ์ถาม ตอบ บนเส้น`}
             minHeight="250mm"
             fill
             value={page?.text ?? ""}
             onChange={(t) => onPageTextChange(pageIndex, t)}
           />
-          <p style={{ fontSize: "9pt", marginTop: "2mm", color: "#444" }}>(ส ๕๖ - ๖)</p>
+          <p style={{ fontSize: "9pt", marginTop: "2mm", color: "#444" }}>({slot.formCode})</p>
         </div>
       ) : (
         <div
           className="grid h-full"
-          style={{ gridTemplateColumns: "40mm 1fr", columnGap: "0" }}
+          style={{
+            gridTemplateColumns: "40mm 1fr",
+            gridTemplateRows: "auto 1fr",
+            columnGap: "0",
+          }}
         >
-          {/* แถบซ้าย */}
+          {/* แถวบนซ้ายว่าง — ให้คำให้การของ เริ่มแนวเดียวกับสถานีตำรวจ */}
+          <div
+            aria-hidden
+            style={{
+              borderRight: "0.55pt solid #111",
+              paddingRight: "2.5mm",
+            }}
+          />
+
+          {/* หัวครุฑ + ชื่อแบบฟอร์ม */}
+          <header style={{ textAlign: "center", marginBottom: "2.5mm", paddingLeft: "3.5mm" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/smart-police/garuda.png"
+              alt=""
+              width={84}
+              height={96}
+              style={{ display: "block", margin: "0 auto 1.2mm", height: "24mm", width: "auto" }}
+            />
+            <p style={{ margin: 0, fontSize: "20pt", fontWeight: 700, lineHeight: 1.15 }}>
+              สำนักงานตำรวจแห่งชาติ
+            </p>
+            <h1
+              style={{
+                margin: "0.6mm 0 0",
+                fontSize: TITLE,
+                fontWeight: 700,
+                lineHeight: 1.2,
+                textDecoration: "underline",
+                textUnderlineOffset: "1mm",
+              }}
+            >
+              บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
+            </h1>
+          </header>
+
+          {/* แถบซ้าย — เริ่มที่แถวสถานีตำรวจ */}
           <aside
             style={{
               borderRight: "0.55pt solid #111",
@@ -227,6 +310,7 @@ export function OfficialStatementFormSheet({
               display: "flex",
               flexDirection: "column",
               gap: "2.5mm",
+              minHeight: 0,
             }}
           >
             <div>
@@ -277,7 +361,7 @@ export function OfficialStatementFormSheet({
             <p style={{ marginTop: "auto", fontSize: "9pt", color: "#444" }}>(ส ๕๖ - ๔)</p>
           </aside>
 
-          {/* เนื้อหาหลัก — คอลัมน์ยืดเต็มสูง ให้โซนเส้นถาม–ตอบกินพื้นที่ล่าง */}
+          {/* เนื้อหาหลัก — สถานีตำรวจ อยู่แนวเดียวกับคำให้การของ */}
           <div
             style={{
               paddingLeft: "3.5mm",
@@ -288,32 +372,6 @@ export function OfficialStatementFormSheet({
               height: "100%",
             }}
           >
-            <header style={{ textAlign: "center", marginBottom: "2.5mm" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/smart-police/garuda.png"
-                alt=""
-                width={84}
-                height={96}
-                style={{ display: "block", margin: "0 auto 1.2mm", height: "24mm", width: "auto" }}
-              />
-              <p style={{ margin: 0, fontSize: "20pt", fontWeight: 700, lineHeight: 1.15 }}>
-                สำนักงานตำรวจแห่งชาติ
-              </p>
-              <h1
-                style={{
-                  margin: "0.6mm 0 0",
-                  fontSize: TITLE,
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "1mm",
-                }}
-              >
-                บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
-              </h1>
-            </header>
-
             {/* แถวแรก: ชิดขอบซ้าย–ขวาของคอลัมน์เนื้อหา */}
             <div
               style={{
@@ -713,7 +771,7 @@ export function OfficialStatementFormSheet({
                 minCh={8}
               />
             </div>
-            <p style={{ margin: "0.5mm 0 1mm", fontWeight: 700, fontSize: BODY, flexShrink: 0 }}>
+            <p style={{ margin: "0.3mm 0 0", fontWeight: 700, fontSize: BODY, flexShrink: 0, lineHeight: LINE }}>
               ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
             </p>
 
