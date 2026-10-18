@@ -178,7 +178,7 @@ export async function POST(req: Request) {
     data: {
       ownerUserId: gate.ctx.ownerUserId,
       caseNumber,
-      title: chargeText || title,
+      title,
       caseType: typeof body.caseType === "string" ? body.caseType.trim() || "คดีอาญา" : "คดีอาญา",
       status: "OPEN",
       priority,

@@ -453,18 +453,31 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
                   ชื่อเรื่อง
+                  <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                    ชื่อย่อคดีสำหรับรายการ/หัวสำนวน — ไม่ใช่ข้อความข้อหาเต็ม
+                  </span>
                   <input
                     className={cn(smartPoliceFieldClass, "mt-1")}
                     defaultValue={data.title}
                     key={`title-${data.updatedAt}`}
+                    placeholder="เช่น ลักทรัพย์ / ยาเสพติด"
                     onBlur={(e) => {
                       const next = e.target.value.trim();
                       if (next && next !== data.title) void patchCase({ title: next });
                     }}
                   />
+                  {data.chargeText?.trim() &&
+                  data.title.trim() === data.chargeText.trim() ? (
+                    <span className="mt-1 block text-[11px] font-semibold text-amber-700">
+                      ชื่อเรื่องซ้ำกับข้อหา — แก้เป็นชื่อย่อคดีให้ต่างจากช่องข้อหาด้านล่าง
+                    </span>
+                  ) : null}
                 </label>
                 <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
                   ข้อหา
+                  <span className="mt-0.5 block text-[11px] font-medium text-[#66638c]">
+                    ข้อความข้อหาตามกฎหมาย (เลือกจากคลังหรือพิมพ์เอง)
+                  </span>
                   <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input
                       className={cn(smartPoliceFieldClass, "min-w-0 flex-1")}
@@ -1416,8 +1429,6 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           void patchCase({
             chargeText: c.chargeText,
             lawRefs: c.lawRefs ?? "",
-            /** ไม่ทับชื่อเรื่องถ้ามีอยู่แล้ว — กันข้อความซ้ำหัวการ์ดกับช่องข้อหา */
-            ...(data.title.trim() ? {} : { title: c.chargeText }),
           });
           showToast("ใส่ข้อหาจากคลังแล้ว");
         }}

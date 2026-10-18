@@ -174,7 +174,7 @@ export function SmartPoliceCasesClient() {
   }, [searchParams]);
 
   const canNext = useMemo(() => {
-    if (wizard.step === 0) return Boolean(wizard.title.trim() || wizard.chargeText.trim());
+    if (wizard.step === 0) return Boolean(wizard.title.trim());
     if (wizard.step === 1) return Boolean(wizard.chargeText.trim());
     if (wizard.step === 2) {
       return Boolean(wizard.complainant.fullName.trim() && wizard.suspect.fullName.trim());
@@ -189,9 +189,14 @@ export function SmartPoliceCasesClient() {
   }
 
   async function submitWizard() {
-    const title = wizard.chargeText.trim() || wizard.title.trim();
+    const title = wizard.title.trim();
+    const chargeText = wizard.chargeText.trim();
     if (!title) {
-      setError("กรุณาระบุชื่อเรื่องหรือข้อหา");
+      setError("กรุณาระบุชื่อเรื่องคดี");
+      return;
+    }
+    if (!chargeText) {
+      setError("กรุณาระบุข้อหา");
       return;
     }
     setSaving(true);
@@ -217,7 +222,7 @@ export function SmartPoliceCasesClient() {
         title,
         caseType: wizard.caseType,
         incidentPlace: wizard.incidentPlace,
-        chargeText: wizard.chargeText.trim() || title,
+        chargeText,
         lawRefs: wizard.lawRefs.trim() || null,
         receivedAt: wizard.receivedDate,
         receivedTimeHm: wizard.receivedTimeHm,
@@ -450,13 +455,7 @@ export function SmartPoliceCasesClient() {
                   : () => setWizard((w) => ({ ...w, step: Math.max(0, w.step - 1) }))
               }
               cancelLabel={wizard.step === 0 ? "ยกเลิก" : "ย้อนกลับ"}
-              onSubmit={() => {
-                if (wizard.step === 0 && !wizard.title.trim() && wizard.chargeText.trim()) {
-                  setWizard((w) => ({ ...w, title: w.chargeText.trim(), step: 1 }));
-                } else {
-                  setWizard((w) => ({ ...w, step: w.step + 1 }));
-                }
-              }}
+              onSubmit={() => setWizard((w) => ({ ...w, step: w.step + 1 }))}
               submitLabel="ถัดไป"
               submitDisabled={!canNext}
             />
@@ -532,7 +531,7 @@ export function SmartPoliceCasesClient() {
                     className={cn(smartPoliceFieldClass, "mt-1")}
                     value={wizard.title}
                     onChange={(e) => setWizard((w) => ({ ...w, title: e.target.value }))}
-                    placeholder="เช่น คดียาเสพติด / ลักทรัพย์"
+                    placeholder="ชื่อย่อคดี เช่น ลักทรัพย์ / ยาเสพติด (ไม่ใช่ข้อความข้อหาเต็ม)"
                   />
                 </label>
                 <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
@@ -708,7 +707,6 @@ export function SmartPoliceCasesClient() {
             ...w,
             chargeText: c.chargeText,
             lawRefs: c.lawRefs ?? w.lawRefs,
-            title: w.title.trim() || c.chargeText,
           }));
         }}
       />
