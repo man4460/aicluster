@@ -10,14 +10,15 @@ import {
 } from "react";
 import { cn } from "@/lib/cn";
 
-type QaKind = "ask" | "ans";
+type QaKind = "ask" | "ans" | "cont";
 type QaRow = { id: string; kind: QaKind; text: string };
 type CaretTarget = "start" | "end" | number;
 export type QaFocus = { row: number; offset: number };
 export type QaFocusRequest = QaFocus & { nonce: number };
 
-const LABEL: Record<QaKind, string> = { ask: "ถาม", ans: "ตอบ" };
-const PLACEHOLDER: Record<QaKind, string> = { ask: "พิมพ์คำถาม…", ans: "พิมพ์คำตอบ…" };
+/** cont = ย่อหน้าที่ต่อมาจากหน้าก่อน (ไม่มีป้าย) */
+const LABEL: Record<QaKind, string> = { ask: "ถาม", ans: "ตอบ", cont: "" };
+const PLACEHOLDER: Record<QaKind, string> = { ask: "พิมพ์คำถาม…", ans: "พิมพ์คำตอบ…", cont: "" };
 /** ไม่ใช้ \b — ภาษาไทยไม่นับเป็น word char */
 const PREFIX_RE = /^\s*(ถาม|ตอบ)\s*(?:\d+\s*[.)]?)?[ \t]?/;
 const DOT_ROWS = 48;
@@ -39,14 +40,57 @@ function parseQaText(value: string): QaRow[] {
     if (!line.trim()) continue;
     const last = rows[rows.length - 1];
     if (last) last.text = last.text ? `${last.text}\n${line}` : line;
-    else rows.push({ id: newRowId(), kind: "ask", text: line });
+    else rows.push({ id: newRowId(), kind: "cont", text: line });
   }
   return rows.length > 0 ? rows : [{ id: newRowId(), kind: "ask", text: "" }];
 }
 
 function serializeQaRows(rows: QaRow[]): string {
   if (rows.length === 1 && rows[0].kind === "ask" && !rows[0].text.trim()) return "";
-  return rows.map((r) => `${LABEL[r.kind]} ${r.text}`).join("\n");
+  return rows.map((r) => (r.kind === "cont" ? r.text : `${LABEL[r.kind]} ${r.text}`)).join("\n");
+}
+
+/** ป้ายสุดท้ายของข้อความหน้า (ถาม/ตอบ) — ใช้ต่อ Enter หลังย่อหน้าที่ไหลมาจากหน้าก่อน */
+export function lastQaKind(text: string): "ask" | "ans" | null {
+  const rows = parseQaText(text);
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const k = rows[i].kind;
+    if (k !== "cont" && (rows.length > 1 || rows[i].text.trim())) return k;
+  }
+  return null;
+}
+
+function textPosition(el: HTMLElement, offset: number): { node: Text; offset: number } | null {
+  let left = offset;
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
+    const len = n.data.length;
+    if (left < len) return { node: n, offset: left };
+    left -= len;
+  }
+  return null;
+}
+
+/** จำนวนตัวอักษรต้นช่องที่ยังอยู่เหนือขอบล่าง limit (ตัดตรงจุดขึ้นบรรทัดจริง) */
+function fitTextLength(el: HTMLElement, limit: number): number {
+  const total = (el.textContent ?? "").length;
+  const range = document.createRange();
+  const charBottom = (i: number): number => {
+    const pos = textPosition(el, i);
+    if (!pos) return Number.NEGATIVE_INFINITY;
+    range.setStart(pos.node, pos.offset);
+    range.setEnd(pos.node, pos.offset + 1);
+    const rects = range.getClientRects();
+    return rects.length > 0 ? rects[0].bottom : Number.NEGATIVE_INFINITY;
+  };
+  let lo = 0;
+  let hi = total;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (charBottom(mid - 1) <= limit) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 function caretOffset(el: HTMLElement): number {
@@ -119,6 +163,7 @@ export function StatementQaEditor({
   fontSize,
   onOverflow,
   focusRequest,
+  continuesKind,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -130,6 +175,8 @@ export function StatementQaEditor({
   /** แถวที่ล้นกรอบหน้า → ส่งต่อหน้าถัดไป (focus = แถว/ตำแหน่งเคอร์เซอร์ในข้อความที่ส่งต่อ) */
   onOverflow?: (text: string, focus: QaFocus | null) => void;
   focusRequest?: QaFocusRequest | null;
+  /** ป้ายของย่อหน้าที่ไหลมาจากหน้าก่อน — Enter ต่อจากย่อหน้านั้นจะสลับเป็นอีกป้าย */
+  continuesKind?: "ask" | "ans" | null;
 }) {
   const [state, setState] = useState(() => ({ rows: parseQaText(value), source: value }));
   if (value !== state.source) {
@@ -180,20 +227,51 @@ export function StatementQaEditor({
     const box = boxRef.current;
     const group = groupRef.current;
     if (!box || !group) return;
+    // เบราว์เซอร์เลื่อนกล่อง overflow-hidden ตามเคอร์เซอร์ได้ — ต้องอยู่ที่ 0 ก่อนวัด
+    box.scrollTop = 0;
     const limit = box.getBoundingClientRect().top + box.clientHeight + 1;
     const rowEls = [...group.children];
     const cut = rowEls.findIndex((el) => el.getBoundingClientRect().bottom > limit);
-    // cut 0 = แถวเดียวสูงเกินหน้า — ปล่อยไว้ ไม่ย้ายวน
-    if (cut <= 0) return;
+    if (cut < 0) return;
     const list = rowsRef.current;
-    const moved = list.slice(cut);
-    if (moved.length === 0) return;
+    const cur = list[cut];
+    const cell = cur ? cellRefs.current.get(cur.id) : undefined;
+    if (!cur || !cell) return;
+
+    // ตัดย่อหน้าตรงบรรทัดสุดท้ายที่ยังพอดีหน้า — ส่วนที่เหลือต่อหน้าถัดไป (ไม่มีป้าย)
+    const fit = fitTextLength(cell, limit);
+    const active = document.activeElement;
+    let kept: QaRow[];
+    let moved: QaRow[];
     let focus: QaFocus | null = null;
+    if (fit > 0 && fit < cur.text.length) {
+      const head = cur.text.slice(0, fit);
+      const tail = cur.text.slice(fit);
+      const lead = tail.length - tail.replace(/^[ \t]+/, "").length;
+      kept = [...list.slice(0, cut), { ...cur, text: head }];
+      moved = [{ id: newRowId(), kind: "cont", text: tail.slice(lead) }, ...list.slice(cut + 1)];
+      if (active === cell) {
+        const off = caretOffset(cell);
+        if (off >= fit) focus = { row: 0, offset: Math.max(0, off - fit - lead) };
+      }
+      cell.textContent = head;
+    } else if (fit >= cur.text.length && cur.text.length > 0) {
+      kept = list.slice(0, cut + 1);
+      moved = list.slice(cut + 1);
+    } else if (cut > 0) {
+      kept = list.slice(0, cut);
+      moved = list.slice(cut);
+    } else {
+      return;
+    }
+    if (moved.length === 0) return;
     moved.forEach((r, j) => {
       const el = cellRefs.current.get(r.id);
-      if (el && el === document.activeElement) focus = { row: j, offset: caretOffset(el) };
+      if (el && el === active) focus = { row: j, offset: caretOffset(el) };
     });
-    commit(list.slice(0, cut));
+    // ต้องวัด layout จริงก่อนจึงรู้ว่าล้น — อัปเดตใน layout effect โดยตั้งใจ (ไม่วน: แถวที่เหลือพอดีหน้าแล้ว)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    commit(kept);
     onOverflow(serializeQaRows(moved), focus);
   });
 
@@ -210,7 +288,8 @@ export function StatementQaEditor({
     const before = full.slice(0, off);
     const after = full.slice(off).replace(/^[ \t]+/, "");
     el.textContent = before;
-    const added: QaRow = { id: newRowId(), kind: cur.kind === "ask" ? "ans" : "ask", text: after };
+    const baseKind = cur.kind === "cont" ? (continuesKind ?? "ask") : cur.kind;
+    const added: QaRow = { id: newRowId(), kind: baseKind === "ask" ? "ans" : "ask", text: after };
     const next = [...list];
     next[idx] = { ...cur, text: before };
     next.splice(idx + 1, 0, added);
@@ -307,6 +386,9 @@ export function StatementQaEditor({
       <div
         ref={boxRef}
         className={cn("absolute inset-0 overflow-x-hidden", onOverflow ? "overflow-y-hidden" : "overflow-y-auto")}
+        onScroll={(e) => {
+          if (onOverflow && e.currentTarget.scrollTop !== 0) e.currentTarget.scrollTop = 0;
+        }}
       >
         <div
           className="relative"

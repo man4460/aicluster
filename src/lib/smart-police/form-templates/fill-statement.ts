@@ -170,7 +170,15 @@ export function flowStatementOverflow(
   if (pageIdx + 1 >= list.length) list = appendContinuationSheetPair(list);
   const target = list[pageIdx + 1];
   const existing = target.text ?? "";
-  const merged = !text.trim() ? existing : existing.trim() ? `${text}\n${existing}` : text;
+  // หน้าถัดไปขึ้นต้นด้วยย่อหน้าต่อ (ไม่มีป้าย) = ส่วนท้ายของย่อหน้าสุดท้ายที่ล้นมา → ต่อกันตรง ๆ
+  const startsWithContinuation = existing.trim() !== "" && !/^\s*(ถาม|ตอบ)/.test(existing);
+  const merged = !text.trim()
+    ? existing
+    : !existing.trim()
+      ? text
+      : startsWithContinuation
+        ? `${text}${existing.replace(/^\s+/, "")}`
+        : `${text}\n${existing}`;
   return list.map((p, i) => (i === pageIdx + 1 ? { ...p, text: merged, qa: [] } : p));
 }
 

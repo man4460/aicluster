@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
+  lastQaKind,
   StatementQaEditor,
   type QaFocus,
   type QaFocusRequest,
@@ -115,8 +116,17 @@ function LinedBody(props: {
   fill?: boolean;
   onOverflow?: (text: string, focus: QaFocus | null) => void;
   focusRequest?: QaFocusRequest | null;
+  continuesKind?: "ask" | "ans" | null;
 }) {
   return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={BODY} />;
+}
+
+function continuesKindBefore(pages: StatementPage[], pageIndex: number): "ask" | "ans" | null {
+  for (let j = pageIndex - 1; j >= 0; j--) {
+    const k = lastQaKind(pages[j]?.text ?? "");
+    if (k) return k;
+  }
+  return null;
 }
 
 /** กรอบเส้นหน้าหลัง/ใบต่อ — ด้านเย็บเล่มเว้นกว้าง · เส้นตั้งชิดด้านเย็บ */
@@ -233,6 +243,7 @@ export function OfficialStatementFormSheet({
               onChange={(t) => onPageTextChange(pageIndex, t)}
               onOverflow={onOverflow}
               focusRequest={focusRequest}
+              continuesKind={continuesKindBefore(pages, pageIndex)}
             />
           </div>
         </>
