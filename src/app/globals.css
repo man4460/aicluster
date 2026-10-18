@@ -232,6 +232,34 @@ select:focus {
   ring-color: var(--ring-soft);
 }
 
+/* แบบฟอร์มราชการ Smart Police — พิมพ์บนจุดไข่ปลา ไม่มีกล่อง (override input กลาง) */
+input.sp-word-field,
+textarea.sp-word-field {
+  border: none !important;
+  border-bottom: 1px dotted #111 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #111 !important;
+  outline: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  transition: none !important;
+}
+input.sp-word-field:focus,
+input.sp-word-field:focus-visible,
+textarea.sp-word-field:focus,
+textarea.sp-word-field:focus-visible {
+  border: none !important;
+  border-bottom: 1px dotted #111 !important;
+  border-color: #111 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
 .app-surface {
   border: 1px solid rgba(255, 255, 255, 0.4);
   background: var(--mawell-card-gradient);

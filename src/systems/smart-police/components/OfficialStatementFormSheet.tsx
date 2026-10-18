@@ -24,12 +24,7 @@ function Dot({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       spellCheck={false}
-      className={cn(
-        "m-0 inline border-0 border-b border-dotted border-[#111] bg-transparent p-0 align-baseline",
-        "font-[inherit] text-[inherit] leading-[inherit] text-[#111] outline-none shadow-none ring-0",
-        "rounded-none appearance-none focus:border-[#111] focus:outline-none focus:ring-0",
-        className,
-      )}
+      className={cn("sp-word-field inline align-baseline font-[inherit] text-[inherit] leading-[inherit]", className)}
       style={{ minWidth: `${minCh}ch`, width: `${Math.max(minCh, (value || "").length + 1)}ch` }}
     />
   );
@@ -52,12 +47,7 @@ function LineFill({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       spellCheck={false}
-      className={cn(
-        "m-0 w-full min-w-0 border-0 border-b border-dotted border-[#111] bg-transparent p-0",
-        "font-[inherit] text-[inherit] leading-[inherit] text-[#111] outline-none shadow-none ring-0",
-        "rounded-none appearance-none focus:outline-none focus:ring-0",
-        className,
-      )}
+      className={cn("sp-word-field w-full min-w-0 font-[inherit] text-[inherit] leading-[inherit]", className)}
     />
   );
 }
@@ -91,10 +81,10 @@ function BodyEditor({
       suppressContentEditableWarning
       spellCheck={false}
       className={cn(
-        "min-h-[9rem] w-full whitespace-pre-wrap break-words outline-none",
-        "bg-[repeating-linear-gradient(transparent_0,transparent_21px,#111_21px,#111_22px)] bg-local",
-        "font-[inherit] text-[15px] leading-[22px] text-[#111]",
-        "rounded-none border-0 shadow-none focus:outline-none",
+        "min-h-[8rem] w-full whitespace-pre-wrap break-words outline-none",
+        "bg-[repeating-linear-gradient(transparent_0,transparent_17px,#111_17px,#111_18px)] bg-local",
+        "font-[inherit] text-[12.5px] leading-[18px] text-[#111]",
+        "rounded-none border-0 shadow-none focus:outline-none focus:shadow-none",
         className,
       )}
       onFocus={() => {
@@ -140,8 +130,8 @@ export function OfficialStatementFormSheet({
   return (
     <article
       className={cn(
-        "mx-auto w-full max-w-[210mm] bg-white px-[12mm] py-[10mm] text-[#111] shadow-xl",
-        "font-['TH_Sarabun_New','Sarabun','Cordia_New',Tahoma,sans-serif] text-[15px] leading-[1.45]",
+        "mx-auto w-full max-w-[210mm] bg-white px-[11mm] py-[8mm] text-[#111] shadow-xl",
+        "font-['TH_Sarabun_New','Sarabun','Cordia_New',Tahoma,sans-serif] text-[12.5px] leading-[1.4]",
         className,
       )}
     >
@@ -160,9 +150,9 @@ export function OfficialStatementFormSheet({
           <p className="mt-4 text-[11px] text-[#444]">(ส ๕๖ - ๔)</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-0 sm:grid-cols-[48mm_1fr]">
+        <div className="grid grid-cols-1 gap-0 sm:grid-cols-[42mm_1fr]">
           {/* แถบซ้าย */}
-          <aside className="relative space-y-3 border-[#111] pr-2 text-[13.5px] leading-snug sm:border-r sm:pr-3">
+          <aside className="relative space-y-2 border-[#111] pr-2 text-[12px] leading-snug sm:border-r sm:pr-2.5">
             <div>
               <div className="font-bold">คำให้การของ</div>
               <LineFill aria-label="คำให้การของ" value={h.partyName} onChange={(v) => set("partyName", v)} />
@@ -215,12 +205,12 @@ export function OfficialStatementFormSheet({
               <img
                 src="/smart-police/garuda.png"
                 alt=""
-                width={58}
-                height={66}
-                className="mx-auto mb-0.5 h-[58px] w-auto object-contain"
+                width={48}
+                height={54}
+                className="mx-auto mb-0.5 h-[48px] w-auto object-contain"
               />
-              <p className="m-0 text-[15px] font-bold">สำนักงานตำรวจแห่งชาติ</p>
-              <h1 className="mt-0.5 text-[16px] font-bold underline decoration-1 underline-offset-2">
+              <p className="m-0 text-[13px] font-bold">สำนักงานตำรวจแห่งชาติ</p>
+              <h1 className="mt-0.5 text-[13.5px] font-bold underline decoration-1 underline-offset-2">
                 บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
               </h1>
             </header>
@@ -327,7 +317,7 @@ export function OfficialStatementFormSheet({
                 onChange={(v) => set("partyOccupation", v)}
               />
             </p>
-            <p className="mb-2 text-[11px] leading-snug">
+            <p className="mb-1.5 text-[10px] leading-snug">
               (ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ
               หรือไม่ ให้ลงตามประเภทที่รับ)
             </p>
