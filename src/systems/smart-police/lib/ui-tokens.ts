@@ -94,6 +94,12 @@ export const smartPoliceSelectClass = cn(
 /** โครงฟอร์มใน FormModal */
 export const smartPoliceModalFormClass = "space-y-4 text-left";
 
+/** กริดฟิลด์มาตรฐานใน popup เพิ่มข้อมูล (บุคคล · ของกลาง) */
+export const smartPoliceModalFieldGridClass = "grid gap-3 sm:grid-cols-2";
+
+/** ขนาด FormModal ที่ใช้ร่วมกันสำหรับเพิ่มบุคคล / ของกลาง */
+export const SMART_POLICE_ENTRY_MODAL_SIZE = "lg" as const;
+
 export const smartPoliceTextareaClass = cn(
   "app-input box-border w-full min-h-[5.5rem] resize-y px-3 py-2.5 text-sm font-semibold leading-snug text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
   smartPoliceBtnRadiusClass,

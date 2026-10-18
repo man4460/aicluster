@@ -44,6 +44,8 @@ import {
   smartPoliceFormSectionTitleClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
+  SMART_POLICE_ENTRY_MODAL_SIZE,
+  smartPoliceModalFieldGridClass,
   smartPoliceModalFormClass,
   smartPoliceSelectClass,
   smartPoliceListRowAccentClass,
@@ -1133,7 +1135,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         open={partyModal}
         onClose={() => setPartyModal(false)}
         title={editingPartyId ? "แก้ไขบุคคล" : "เพิ่มบุคคล"}
-        size="lg"
+        size={SMART_POLICE_ENTRY_MODAL_SIZE}
         footer={
           <FormModalFooterActions
             onCancel={() => setPartyModal(false)}
@@ -1147,7 +1149,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         <div className={smartPoliceModalFormClass}>
           <div className="space-y-2">
             <p className={smartPoliceFormSectionTitleClass}>บทบาทในคดี</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={smartPoliceModalFieldGridClass}>
               <label className={smartPoliceLabelClass}>
                 บทบาท
                 <select
@@ -1220,7 +1222,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
           <div className="space-y-2">
             <p className={smartPoliceFormSectionTitleClass}>ข้อมูลบุคคล</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={smartPoliceModalFieldGridClass}>
               <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
                 ชื่อ *
                 <input
@@ -1278,7 +1280,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         open={evidenceModal}
         onClose={() => setEvidenceModal(false)}
         title={editingEvidenceId ? "แก้ไขของกลาง" : "เพิ่มของกลาง"}
-        size="md"
+        size={SMART_POLICE_ENTRY_MODAL_SIZE}
         footer={
           <FormModalFooterActions
             onCancel={() => setEvidenceModal(false)}
@@ -1290,55 +1292,64 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         }
       >
         <div className={smartPoliceModalFormClass}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              รายการ *
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={evidenceForm.name}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              จำนวน (เช่น 10 เม็ด)
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={evidenceForm.quantityLabel}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              เลขยึด
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={evidenceForm.seizureNo}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ยึด/ได้จาก
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={evidenceForm.seizedFrom}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ผู้ถือกรรมสิทธิ์
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={evidenceForm.ownerName}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
-              />
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              เหตุที่ไปอยู่ที่ผู้ต้องหา
-              <textarea
-                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4.5rem]")}
-                value={evidenceForm.ownerNote}
-                onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
-              />
-            </label>
+          <div className="space-y-2">
+            <p className={smartPoliceFormSectionTitleClass}>รายการของกลาง</p>
+            <div className={smartPoliceModalFieldGridClass}>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                รายการ *
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={evidenceForm.name}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                จำนวน (เช่น 10 เม็ด)
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={evidenceForm.quantityLabel}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                เลขยึด
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={evidenceForm.seizureNo}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className={smartPoliceFormSectionTitleClass}>รายละเอียด</p>
+            <div className={smartPoliceModalFieldGridClass}>
+              <label className={smartPoliceLabelClass}>
+                ยึด/ได้จาก
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={evidenceForm.seizedFrom}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                ผู้ถือกรรมสิทธิ์
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={evidenceForm.ownerName}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
+                />
+              </label>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                เหตุที่ไปอยู่ที่ผู้ต้องหา
+                <textarea
+                  className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4.5rem]")}
+                  value={evidenceForm.ownerNote}
+                  onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
+                />
+              </label>
+            </div>
           </div>
         </div>
       </FormModal>
