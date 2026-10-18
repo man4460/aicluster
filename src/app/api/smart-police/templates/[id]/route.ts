@@ -22,7 +22,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (typeof body.content === "string") data.content = body.content;
   if (typeof body.kind === "string") {
     const kind = body.kind as SmartPoliceDocumentKind;
-    if (["NARRATIVE", "STATEMENT", "WARRANT", "REPORT", "MEMO", "OTHER"].includes(kind)) {
+    if (
+      [
+        "NARRATIVE",
+        "STATEMENT",
+        "WARRANT",
+        "REPORT",
+        "MEMO",
+        "PROPERTY_LIST",
+        "INVESTIGATION_REPORT",
+        "OTHER",
+      ].includes(kind)
+    ) {
       data.kind = kind;
     }
   }
