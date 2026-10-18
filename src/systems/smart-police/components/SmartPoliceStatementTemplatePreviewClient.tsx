@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import {
-  appendContinuationSheetPair,
   createDefaultStatementPages,
   flowStatementOverflow,
   getStatementTemplateMeta,
@@ -16,16 +15,14 @@ import {
   type StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates";
 import { OfficialStatementFormDocument } from "@/systems/smart-police/components/OfficialStatementFormSheet";
-import {
-  smartPoliceOutlineButtonClass,
-  smartPolicePrimaryButtonClass,
-} from "@/systems/smart-police/lib/ui-tokens";
+import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
 
-const toolbarBtnClass =
-  "inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-500 bg-slate-700 px-3 text-sm font-semibold text-white hover:bg-slate-600";
+const barBtnClass =
+  "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
 /**
- * ดู/ทดลองพิมพ์บนแม่แบบราชการ (PNG + ช่องทับ) — จากหน้า /templates
+ * ดู/ทดลองพิมพ์บนแม่แบบคำให้การ — จากหน้า /templates
+ * พิมพ์ล้นหน้าแล้วไหลไปหน้าถัดไป / ต่อใบต่อให้อัตโนมัติ
  */
 export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: StatementTemplateSlug }) {
   const meta = getStatementTemplateMeta(slug);
@@ -40,11 +37,6 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
   const [pages, setPages] = useState<StatementPage[]>(() => createDefaultStatementPages());
   const [pageIndex, setPageIndex] = useState(0);
   const [scrollRequest, setScrollRequest] = useState<{ page: number; nonce: number } | null>(null);
-
-  const blankHref = useMemo(() => {
-    if (meta.blankFormId) return `/dashboard/smart-police/templates/${meta.blankFormId}`;
-    return null;
-  }, [meta.blankFormId]);
 
   function patchHeader<K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) {
     setHeader((h) => ({ ...h, [key]: value }));
@@ -64,12 +56,6 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
     setScrollRequest((r) => ({ page: i, nonce: (r?.nonce ?? 0) + 1 }));
   }
 
-  function addContinuationSheet() {
-    const jumpTo = Math.max(pages.length, 2);
-    setPages((ps) => appendContinuationSheetPair(ps));
-    goToPage(jumpTo);
-  }
-
   function removeContinuation() {
     if (pageIndex < 2) return;
     setPages((ps) => {
@@ -82,61 +68,52 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
 
   return (
     <div className="fixed inset-0 z-[110] flex flex-col bg-[#6b7280] text-white">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-600/80 bg-slate-800 px-3 py-3 sm:px-5">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold sm:text-base">ดูแม่แบบ · {meta.title}</p>
-          <p className="truncate text-xs text-slate-400">
-            พิมพ์ทดลองบนฟอร์มได้เลย (ยังไม่บันทึกเข้าคดี) · กลับรายการแล้วค่อยใช้ในคดีจริง
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/dashboard/smart-police/templates" className={toolbarBtnClass}>
-            ← กลับรายการแม่แบบ
-          </Link>
-          {blankHref ? (
-            <Link href={blankHref} className={toolbarBtnClass}>
-              ไฟล์ต้นฉบับในคลัง
-            </Link>
-          ) : null}
-          <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "min-h-[40px]")}>
-            ไปใช้ในคดี
-          </Link>
-        </div>
-      </header>
-
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-600/60 bg-slate-900/40 px-3 py-2 sm:px-5">
-        <span className="text-[11px] font-semibold text-slate-400">ชุดหน้า</span>
-        {pages.map((p, i) => (
-          <button
-            key={p.id}
-            type="button"
-            className={cn(
-              "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
-              i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
-            )}
-            onClick={() => goToPage(i)}
-            title={statementPageTabLabel(i)}
-          >
-            {statementPageTabLabel(i)}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700 text-white")}
-          onClick={addContinuationSheet}
+      <header className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-slate-600/80 bg-slate-800 px-2 py-1.5 sm:px-3">
+        <Link
+          href="/dashboard/smart-police/templates"
+          className={cn(barBtnClass, "w-8 px-0")}
+          aria-label="กลับรายการแม่แบบ"
+          title="กลับรายการแม่แบบ"
         >
-          + ใบต่อคำให้การ (หน้า+หลัง)
-        </button>
-        {pageIndex >= 2 ? (
-          <button
-            type="button"
-            className={cn(smartPoliceOutlineButtonClass, "border-rose-400/70 bg-rose-950/80 text-rose-50")}
-            onClick={removeContinuation}
-          >
-            ลบใบต่อนี้
-          </button>
-        ) : null}
-      </div>
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+        <p className="mr-1 min-w-0 truncate text-xs font-bold sm:text-sm" title={meta.title}>
+          {meta.title}
+        </p>
+        <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="หน้าเอกสาร">
+          {pages.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              className={cn(
+                "h-8 shrink-0 rounded-md px-2 text-[11px] font-bold",
+                i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200 hover:bg-slate-600",
+              )}
+              aria-current={i === pageIndex ? "page" : undefined}
+              onClick={() => goToPage(i)}
+            >
+              {statementPageTabLabel(i)}
+            </button>
+          ))}
+          {pageIndex >= 2 ? (
+            <button
+              type="button"
+              className="h-8 shrink-0 rounded-md border border-rose-400/70 bg-rose-950/80 px-2 text-[11px] font-semibold text-rose-50 hover:bg-rose-900"
+              onClick={removeContinuation}
+            >
+              ลบใบต่อนี้
+            </button>
+          ) : null}
+        </nav>
+        <Link
+          href="/dashboard/smart-police/cases"
+          className={cn(smartPolicePrimaryButtonClass, "ml-auto")}
+        >
+          ไปใช้ในคดี
+        </Link>
+      </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">
         <OfficialStatementFormDocument
