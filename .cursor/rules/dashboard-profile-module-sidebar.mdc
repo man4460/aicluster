@@ -35,6 +35,8 @@ alwaysApply: true
 | ชิ้น | ค่า |
 |-----|-----|
 | ความกว้าง | `w-64` |
+| เปลือก sidebar (โมดูล) | `rounded-lg` · `border-slate-200/90` · `shadow-sm` — **เท่าการ์ดขวา** (ไม่ใช้ `rounded-[1.15rem]`) |
+| ระยะแถวเนื้อหา | `gap-2` · `px-2` · `pt-2` · `pb-2` (ซ้าย = ขวา) |
 | หัวแถบ | `px-3 pb-2 pt-3` · ชื่อ `text-[10px] uppercase tracking` · badge `h-5 text-[10px]` |
 | โซนรายการ | `gap-1` · `px-2.5 pb-2 pt-1` |
 | รายการเมนู | `px-2.5 py-1.5` · `gap-2` · `text-xs font-black` · `rounded-xl` |
@@ -56,6 +58,7 @@ alwaysApply: true
 - เหลือ **dock มือถือ** ตามเดิม
 - ไม่ต้องพึ่งยุบหัว + `*HeaderBarNav` สำหรับโมดูลนี้
 - **เนื้อหาคอลัมน์ขวา:** ยืดเต็มความกว้าง·สูงที่เหลือ (`max-w-none` · ลด gutter) — ใช้พื้นที่จอให้คุ้ม · เลื่อนใน `main` บนเดสก์ท็อป
+- **ความมน·ระยะห่าง:** sidebar ซ้าย = การ์ดขวา — `rounded-lg` · `border-slate-200/90` · `shadow-sm` · ช่องกลาง/ขอบนอก `gap-2` · `px-2` เท่ากัน (อย่าใช้ `rounded-[1.15rem]` คนละชั้นกับแผงโมดูล)
 
 ---
 

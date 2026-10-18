@@ -137,8 +137,11 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
          */
         wideModule && "max-w-none !px-0",
         dockedModule && "!px-0",
-        /** Smart Police — ลด gutter แนวตั้ง · เนื้อหาขวาใช้พื้นที่เต็ม */
-        smartPoliceModule && "md:!pt-1 md:!pb-2",
+        /**
+         * Smart Police — gutter แนวตั้งแน่น · เหลือระยะให้เท่า sidebar
+         * (Shell ใส่ md:pt-2/pb-2 นอกแล้ว — ในนี้ไม่ซ้อน pt)
+         */
+        smartPoliceModule && "md:!pt-0 md:!pb-0",
         posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!pt-2 lg:!pb-3",
         (dashboardModules || dashboardHome) && "max-w-[1680px]",
       )}
