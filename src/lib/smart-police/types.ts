@@ -92,6 +92,10 @@ export type SmartPoliceCaseListItem = {
   investigationResult: SmartPoliceInvestigationResult;
   daysSinceReceived: number | null;
   overdue: boolean;
+  /** ชื่อผู้กล่าวหาหลัก (+ และอีก N ถ้ามีหลายคน) */
+  complainantName: string | null;
+  /** ชื่อผู้ต้องหาหลัก (+ และอีก N ถ้ามีหลายคน) */
+  suspectName: string | null;
   documentCount: number;
   partyCount: number;
   printCount: number;

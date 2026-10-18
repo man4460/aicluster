@@ -15,7 +15,10 @@ import type {
   SmartPolicePartyRole,
 } from "@/generated/prisma/enums";
 
-const CASE_LIST_INCLUDE = { _count: { select: { parties: true, documents: true } } } as const;
+const CASE_LIST_INCLUDE = {
+  parties: { select: { role: true, fullName: true, sortOrder: true } },
+  _count: { select: { parties: true, documents: true } },
+} as const;
 const CASE_DETAIL_INCLUDE = { parties: true, documents: true, evidence: true } as const;
 
 const PRIORITIES: SmartPoliceCasePriority[] = ["LOW", "NORMAL", "HIGH", "URGENT"];

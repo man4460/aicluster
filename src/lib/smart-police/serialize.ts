@@ -11,6 +11,12 @@ import type {
   SmartPolicePartyDto,
 } from "@/lib/smart-police/types";
 
+type CasePartyNameRow = {
+  role: SmartPolicePartyDto["role"];
+  fullName: string;
+  sortOrder: number;
+};
+
 type CaseWithCounts = {
   id: string;
   caseNumber: string;
@@ -26,8 +32,24 @@ type CaseWithCounts = {
   summary: string | null;
   printCount: number;
   updatedAt: Date;
+  parties?: CasePartyNameRow[];
   _count?: { parties: number; documents: number };
 };
+
+/** สรุปชื่อตามบทบาท — คนแรก + และอีก N */
+export function summarizePartyNamesByRole(
+  parties: CasePartyNameRow[] | undefined,
+  role: SmartPolicePartyDto["role"],
+): string | null {
+  if (!parties?.length) return null;
+  const list = parties
+    .filter((p) => p.role === role && p.fullName.trim())
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.fullName.localeCompare(b.fullName, "th"));
+  if (!list.length) return null;
+  if (list.length === 1) return list[0]!.fullName.trim();
+  return `${list[0]!.fullName.trim()} และอีก ${list.length - 1}`;
+}
 
 export function mapSmartPoliceOfficer(row: {
   id: string;
@@ -111,6 +133,7 @@ export function mapSmartPoliceEvidence(e: {
 
 export function mapSmartPoliceCaseListItem(row: CaseWithCounts): SmartPoliceCaseListItem {
   const daysSinceReceived = smartPoliceDaysSinceReceived(row.receivedAt);
+  const parties = row.parties;
   return {
     id: row.id,
     caseNumber: row.caseNumber,
@@ -124,8 +147,10 @@ export function mapSmartPoliceCaseListItem(row: CaseWithCounts): SmartPoliceCase
     investigationResult: row.investigationResult ?? "INVESTIGATING",
     daysSinceReceived,
     overdue: smartPoliceIsOverdue(row.priority ?? "NORMAL", daysSinceReceived),
+    complainantName: summarizePartyNamesByRole(parties, "COMPLAINANT"),
+    suspectName: summarizePartyNamesByRole(parties, "SUSPECT"),
     documentCount: row._count?.documents ?? 0,
-    partyCount: row._count?.parties ?? 0,
+    partyCount: row._count?.parties ?? parties?.length ?? 0,
     printCount: row.printCount,
     updatedAt: row.updatedAt.toISOString(),
   };

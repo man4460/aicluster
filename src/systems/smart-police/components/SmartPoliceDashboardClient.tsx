@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { SMART_POLICE_CASE_PRIORITY_LABEL, SMART_POLICE_CASE_STATUS_LABEL } from "@/lib/smart-police/types";
 import { IconSpPlus, IconSpPrint } from "@/systems/smart-police/components/SmartPoliceIcons";
+import {
+  SmartPoliceCaseListCard,
+  type SmartPoliceCaseListCardData,
+} from "@/systems/smart-police/components/SmartPoliceCaseListCard";
 import {
   smartPoliceCardHeaderRowClass,
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceHeaderActionShellClass,
-  smartPoliceListRowAccentClass,
-  smartPoliceListRowClass,
   smartPoliceMutedTextClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
@@ -25,7 +26,6 @@ import {
   smartPoliceStatInlineClass,
   smartPoliceStatsGridClass,
 } from "@/systems/smart-police/lib/ui-tokens";
-import type { SmartPoliceCasePriority, SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
 type Overview = {
   summary: {
@@ -38,18 +38,7 @@ type Overview = {
     urgentCount: number;
     notSentToProsecutor: number;
   };
-  recentCases: {
-    id: string;
-    caseNumber: string;
-    title: string;
-    status: SmartPoliceCaseStatus;
-    priority: SmartPoliceCasePriority;
-    daysSinceReceived: number | null;
-    overdue: boolean;
-    sentToProsecutorAt: string | null;
-    documentCount: number;
-    updatedAt: string;
-  }[];
+  recentCases: SmartPoliceCaseListCardData[];
 };
 
 export function SmartPoliceDashboardClient() {
@@ -186,28 +175,7 @@ export function SmartPoliceDashboardClient() {
             <ul className="space-y-1">
               {data.recentCases.map((c) => (
                 <li key={c.id}>
-                  <Link
-                    href={`/dashboard/smart-police/cases/${c.id}`}
-                    className={
-                      c.overdue ? smartPoliceListRowAccentClass("rose") : smartPoliceListRowClass
-                    }
-                  >
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-[13px] font-bold text-[#1e1b4b]">
-                        <span className="text-[#4d47b6]">{c.caseNumber}</span>
-                        <span className="mx-1 text-slate-300" aria-hidden>
-                          ·
-                        </span>
-                        {c.title}
-                      </p>
-                      <p className="truncate text-[10px] font-medium text-[#66638c]">
-                        {SMART_POLICE_CASE_STATUS_LABEL[c.status]} ·{" "}
-                        {SMART_POLICE_CASE_PRIORITY_LABEL[c.priority]}
-                        {c.daysSinceReceived != null ? ` · ${c.daysSinceReceived} วัน` : ""}
-                        {c.sentToProsecutorAt ? " · ส่งอัยการ" : ""} · {c.documentCount} เอกสาร
-                      </p>
-                    </div>
-                  </Link>
+                  <SmartPoliceCaseListCard caseItem={c} />
                 </li>
               ))}
             </ul>

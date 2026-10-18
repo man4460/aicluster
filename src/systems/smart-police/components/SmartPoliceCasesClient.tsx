@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -29,7 +28,6 @@ import {
   smartPoliceFilterTextRowClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
-  smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
   smartPoliceFillPanelClass,
   smartPoliceOutlineButtonClass,
@@ -40,6 +38,7 @@ import {
   smartPolicePrimaryIconButtonClass,
   smartPoliceScrollListClass,
 } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseListCard } from "@/systems/smart-police/components/SmartPoliceCaseListCard";
 import type { SmartPoliceCasePriority, SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
 function FilterIcon({ className }: { className?: string }) {
@@ -98,13 +97,6 @@ const WIZARD_TITLES = [
   "ขั้น 3 · บุคคลหลัก",
   "ขั้น 4 · ยืนยัน",
 ];
-
-function priorityBadgeClass(p: SmartPoliceCasePriority): string {
-  if (p === "URGENT") return "bg-rose-100 text-rose-700 ring-rose-200";
-  if (p === "HIGH") return "bg-amber-100 text-amber-800 ring-amber-200";
-  if (p === "LOW") return "bg-slate-100 text-slate-600 ring-slate-200";
-  return "bg-indigo-50 text-indigo-700 ring-indigo-200";
-}
 
 export function SmartPoliceCasesClient() {
   const router = useRouter();
@@ -398,55 +390,7 @@ export function SmartPoliceCasesClient() {
           <ul className={cn(smartPoliceScrollListClass, "space-y-1")}>
             {cases.map((c) => (
               <li key={c.id}>
-                <Link
-                  href={`/dashboard/smart-police/cases/${c.id}`}
-                  className={cn(
-                    smartPoliceListRowAccentClass(c.overdue ? "rose" : "indigo"),
-                    "flex-col sm:flex-row sm:items-center",
-                  )}
-                >
-                  <div className="min-w-0 text-left">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1",
-                          priorityBadgeClass(c.priority),
-                        )}
-                      >
-                        {SMART_POLICE_CASE_PRIORITY_LABEL[c.priority]}
-                      </span>
-                      {c.daysSinceReceived != null ? (
-                        <span
-                          className={cn(
-                            "inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1",
-                            c.overdue
-                              ? "bg-rose-50 text-rose-700 ring-rose-200"
-                              : "bg-white/80 text-[#5f5a8a] ring-slate-200",
-                          )}
-                        >
-                          รับคดี {c.daysSinceReceived} วัน
-                        </span>
-                      ) : null}
-                      {c.sentToProsecutorAt ? (
-                        <span className="inline-flex rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
-                          ส่งอัยการแล้ว
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 truncate text-sm font-bold text-[#1e1b4b]">
-                      <span className="text-[#4d47b6]">{c.caseNumber}</span>
-                      <span className="mx-1.5 text-slate-300" aria-hidden>
-                        —
-                      </span>
-                      {c.title}
-                    </p>
-                    <p className="mt-0.5 text-xs font-medium text-[#66638c]">
-                      {c.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[c.status]} · {c.documentCount}{" "}
-                      เอกสาร · {c.partyCount} บุคคล
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิดคดี →</span>
-                </Link>
+                <SmartPoliceCaseListCard caseItem={c} />
               </li>
             ))}
           </ul>

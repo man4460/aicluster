@@ -7,6 +7,7 @@ import {
   smartPoliceDaysSinceReceived,
   smartPoliceIsOverdue,
 } from "@/lib/smart-police/case-ops";
+import { summarizePartyNamesByRole } from "@/lib/smart-police/serialize";
 
 export async function GET() {
   const gate = await withSmartPoliceOwner();
@@ -42,6 +43,7 @@ export async function GET() {
           receivedAt: true,
           sentToProsecutorAt: true,
           updatedAt: true,
+          parties: { select: { role: true, fullName: true, sortOrder: true } },
           _count: { select: { documents: true } },
         },
       }),
@@ -90,6 +92,8 @@ export async function GET() {
         priority: c.priority,
         daysSinceReceived,
         overdue: smartPoliceIsOverdue(c.priority, daysSinceReceived),
+        complainantName: summarizePartyNamesByRole(c.parties, "COMPLAINANT"),
+        suspectName: summarizePartyNamesByRole(c.parties, "SUSPECT"),
         sentToProsecutorAt: c.sentToProsecutorAt?.toISOString() ?? null,
         documentCount: c._count.documents,
         updatedAt: c.updatedAt.toISOString(),
