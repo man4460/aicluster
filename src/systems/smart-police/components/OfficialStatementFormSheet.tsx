@@ -1,101 +1,111 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { StatementHeaderFields, StatementPage } from "@/lib/smart-police/form-templates";
-import {
-  OVERLAY_FONT_PT,
-  OVERLAY_STMT_FONT_PT,
-  OVERLAY_STMT_LINE_H,
-  STATEMENT_COMPLAINANT_BG,
-  STATEMENT_COMPLAINANT_OVERLAY_FIELDS,
-  STATEMENT_CONTINUATION_BG,
-  STATEMENT_CONTINUATION_OVERLAY_FIELDS,
-  STATEMENT_PAGE_H_MM,
-  STATEMENT_PAGE_W_MM,
-  mmBox,
-  type OverlayField,
-} from "@/lib/smart-police/form-templates/statement-overlay-template";
 
 /**
- * แม่แบบราชการจริง (PNG) + ช่องพิมพ์โปร่งใสทับจุดไข่ปลา
- * ตัวอักษรชิดเส้นจุด · ไม่คร่อมแถว
+ * แม่แบบคำให้การ ส ๕๖-๔ — ออกแบบใหม่เป็นเอกสาร HTML (ไม่ทับพิกัด PNG)
+ * พิมพ์บนจุดไข่ปลาในช่องจริง · ระยะแถวคงที่
  */
 
-function OverlayInput({
-  field,
+const PAGE = { w: "210mm", h: "297mm" };
+const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
+const BODY = "13pt";
+const SMALL = "11pt";
+const TITLE = "15pt";
+const LINE = "6.2mm";
+const STMT_LINE = "7mm";
+
+function Dot({
   value,
   onChange,
+  "aria-label": ariaLabel,
+  minCh = 4,
+  flex,
+  className,
 }: {
-  field: OverlayField;
   value: string;
   onChange: (v: string) => void;
+  "aria-label"?: string;
+  minCh?: number;
+  flex?: boolean;
+  className?: string;
 }) {
-  const box = mmBox(field);
-
-  if (field.multiline) {
-    return (
-      <LinedOverlay
-        ariaLabel={String(field.key)}
-        value={value}
-        onChange={onChange}
-        style={{
-          position: "absolute",
-          ...box,
-          margin: 0,
-          padding: `0.6mm 1.2mm 0`,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          boxShadow: "none",
-          fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
-          fontSize: OVERLAY_STMT_FONT_PT,
-          lineHeight: `${OVERLAY_STMT_LINE_H}mm`,
-          color: "#111",
-          caretColor: "#111",
-        }}
-      />
-    );
-  }
-
   return (
     <input
-      aria-label={String(field.key)}
+      aria-label={ariaLabel}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       spellCheck={false}
-      className="sp-word-field"
+      className={cn("sp-word-field align-baseline", flex ? "min-w-0 flex-1" : "inline", className)}
       style={{
-        position: "absolute",
-        ...box,
-        margin: 0,
-        padding: "0 0.4mm",
-        border: "none",
-        outline: "none",
-        background: "transparent",
-        boxShadow: "none",
-        fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
-        fontSize: OVERLAY_FONT_PT,
-        lineHeight: box.height,
-        height: box.height,
-        color: "#111",
-        caretColor: "#111",
-        verticalAlign: "bottom",
+        minWidth: flex ? 0 : `${minCh}ch`,
+        width: flex ? "100%" : `${Math.max(minCh, (value || "").length + 1)}ch`,
+        fontSize: "inherit",
+        lineHeight: "inherit",
+        height: "auto",
+        paddingBottom: "1px",
       }}
     />
   );
 }
 
-function LinedOverlay({
+function Line({
+  value,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  "aria-label"?: string;
+}) {
+  return (
+    <input
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      spellCheck={false}
+      className="sp-word-field w-full min-w-0"
+      style={{ fontSize: "inherit", lineHeight: "inherit", height: "auto", paddingBottom: "1px" }}
+    />
+  );
+}
+
+function Row({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "baseline",
+        gap: "0 1.5mm",
+        minHeight: LINE,
+        margin: "0 0 0.8mm",
+        lineHeight: LINE,
+        fontSize: BODY,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function L({ children }: { children: ReactNode }) {
+  return <span style={{ fontWeight: 700, flexShrink: 0 }}>{children}</span>;
+}
+
+function LinedBody({
   value,
   onChange,
   ariaLabel,
-  style,
+  minHeight,
 }: {
   value: string;
   onChange: (v: string) => void;
   ariaLabel: string;
-  style: CSSProperties;
+  minHeight: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
@@ -114,8 +124,17 @@ function LinedOverlay({
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
-      className="overflow-hidden whitespace-pre-wrap break-words"
-      style={style}
+      className="w-full whitespace-pre-wrap break-words outline-none"
+      style={{
+        minHeight,
+        fontSize: BODY,
+        lineHeight: STMT_LINE,
+        padding: "0 2mm",
+        borderLeft: "0.5pt solid #111",
+        borderRight: "0.5pt solid #111",
+        color: "#111",
+        backgroundImage: `repeating-linear-gradient(transparent 0, transparent calc(${STMT_LINE} - 0.35pt), #666 calc(${STMT_LINE} - 0.35pt), #666 ${STMT_LINE})`,
+      }}
       onFocus={() => {
         focused.current = true;
       }}
@@ -126,12 +145,6 @@ function LinedOverlay({
       onInput={() => onChange(ref.current?.innerText ?? "")}
     />
   );
-}
-
-function fieldValue(field: OverlayField, header: StatementHeaderFields, pageText: string): string {
-  if (field.key === "statementBody") return pageText;
-  if (field.key === "amphoe") return header.amphoe || header.district;
-  return String(header[field.key as keyof StatementHeaderFields] ?? "");
 }
 
 export function OfficialStatementFormSheet({
@@ -153,55 +166,303 @@ export function OfficialStatementFormSheet({
   onRemoveQa?: unknown;
   className?: string;
 }) {
-  const isCont = pageIndex > 0;
+  const h = header;
+  const set = onHeaderChange;
   const page = pages[pageIndex];
-  const pageText = page?.text ?? "";
-  const bg = isCont ? STATEMENT_CONTINUATION_BG : STATEMENT_COMPLAINANT_BG;
-  const fields = isCont ? STATEMENT_CONTINUATION_OVERLAY_FIELDS : STATEMENT_COMPLAINANT_OVERLAY_FIELDS;
-
-  function onFieldChange(field: OverlayField, value: string) {
-    if (field.key === "statementBody") {
-      onPageTextChange(pageIndex, value);
-      return;
-    }
-    onHeaderChange(field.key as keyof StatementHeaderFields, value as never);
-  }
+  const isCont = pageIndex > 0;
 
   return (
     <article
-      className={cn("sp-a4-sheet relative mx-auto overflow-hidden bg-white shadow-xl print:shadow-none", className)}
+      className={cn("sp-a4-sheet mx-auto bg-white text-[#111] shadow-xl print:shadow-none", className)}
       style={{
-        width: `${STATEMENT_PAGE_W_MM}mm`,
-        height: `${STATEMENT_PAGE_H_MM}mm`,
+        width: PAGE.w,
+        height: PAGE.h,
         boxSizing: "border-box",
+        padding: "11mm 12mm 8mm 6mm",
+        fontFamily: FONT,
+        fontSize: BODY,
+        lineHeight: 1.25,
+        overflow: "hidden",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={bg}
-        alt=""
-        draggable={false}
-        className="pointer-events-none absolute inset-0 h-full w-full select-none object-fill"
-      />
-
-      {fields.map((field, i) => (
-        <OverlayInput
-          key={`${field.key}-${i}-${pageIndex}`}
-          field={field}
-          value={fieldValue(field, header, pageText)}
-          onChange={(v) => onFieldChange(field, v)}
-        />
-      ))}
-
       {isCont ? (
-        <span
-          className="pointer-events-none absolute text-[10pt] text-[#111]"
-          style={{ right: "24mm", top: "18mm" }}
-          aria-hidden
+        <div className="flex h-full flex-col">
+          <Row style={{ marginBottom: "3mm" }}>
+            <L>ใบต่อคำให้การ ของ</L>
+            <Dot aria-label="ใบต่อของ" value={h.partyName} onChange={(v) => set("partyName", v)} flex minCh={12} />
+            <span style={{ marginLeft: "auto" }}>
+              แผ่น <Dot value={String(pageIndex + 1)} onChange={() => {}} minCh={2} />
+            </span>
+          </Row>
+          <LinedBody
+            ariaLabel="ข้อความคำให้การหน้าต่อ"
+            minHeight="250mm"
+            value={page?.text ?? ""}
+            onChange={(t) => onPageTextChange(pageIndex, t)}
+          />
+          <p style={{ fontSize: "9pt", marginTop: "2mm", color: "#444" }}>(ส ๕๖ - ๖)</p>
+        </div>
+      ) : (
+        <div
+          className="grid h-full"
+          style={{ gridTemplateColumns: "40mm 1fr", columnGap: "0" }}
         >
-          {pageIndex + 1}
-        </span>
-      ) : null}
+          {/* แถบซ้าย */}
+          <aside
+            style={{
+              borderRight: "0.55pt solid #111",
+              paddingRight: "2.5mm",
+              fontSize: SMALL,
+              lineHeight: 1.25,
+              display: "flex",
+              flexDirection: "column",
+              gap: "2.5mm",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700 }}>คำให้การของ</div>
+              <Line aria-label="คำให้การของ" value={h.partyName} onChange={(v) => set("partyName", v)} />
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "1mm" }}>
+              <span style={{ fontWeight: 700 }}>เป็น</span>
+              <Dot
+                aria-label="เป็น"
+                value={h.partyRoleLabel}
+                onChange={(v) => set("partyRoleLabel", v)}
+                minCh={8}
+              />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>หมายเลขโทรศัพท์</div>
+              <Line aria-label="โทรศัพท์" value={h.partyPhone} onChange={(v) => set("partyPhone", v)} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>บัตรประจำตัวประชาชน</div>
+              <Line aria-label="บัตรประชาชน" value={h.partyIdCard} onChange={(v) => set("partyIdCard", v)} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>ออกเมื่อ</div>
+              <Line aria-label="ออกเมื่อ" value={h.idIssuedOn} onChange={(v) => set("idIssuedOn", v)} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>หมดอายุ</div>
+              <Line aria-label="หมดอายุ" value={h.idExpiresOn} onChange={(v) => set("idExpiresOn", v)} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>ออกให้ ณ</div>
+              <Line aria-label="ออกให้ ณ" value={h.idIssuedAt} onChange={(v) => set("idIssuedAt", v)} />
+            </div>
+            <p style={{ textAlign: "center", marginTop: "8mm", fontSize: SMALL }}>
+              <b>ลงชื่อ</b>
+              <span
+                style={{
+                  display: "inline-block",
+                  minWidth: "12mm",
+                  borderBottom: "0.5pt dotted #111",
+                  margin: "0 1mm",
+                }}
+              />
+              <b>บันทึก</b>
+            </p>
+            <p style={{ marginTop: "auto", fontSize: "9pt", color: "#444" }}>(ส ๕๖ - ๔)</p>
+          </aside>
+
+          {/* เนื้อหาหลัก */}
+          <div style={{ paddingLeft: "3.5mm", display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <header style={{ textAlign: "center", marginBottom: "2.5mm" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/smart-police/garuda.png"
+                alt=""
+                width={44}
+                height={50}
+                style={{ display: "block", margin: "0 auto 0.8mm", height: "12mm", width: "auto" }}
+              />
+              <p style={{ margin: 0, fontSize: TITLE, fontWeight: 700, lineHeight: 1.15 }}>
+                สำนักงานตำรวจแห่งชาติ
+              </p>
+              <h1
+                style={{
+                  margin: "0.6mm 0 0",
+                  fontSize: TITLE,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "1mm",
+                }}
+              >
+                บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
+              </h1>
+            </header>
+
+            {/* แถวแรก: สถานี — จังหวัด (อยู่ใต้หัวข้อชัดเจน) */}
+            <Row>
+              <L>สถานีตำรวจ</L>
+              <Dot aria-label="สถานีตำรวจ" value={h.stationName} onChange={(v) => set("stationName", v)} minCh={8} />
+              <L>เขต/อำเภอ</L>
+              <Dot aria-label="เขตอำเภอสถานี" value={h.district} onChange={(v) => set("district", v)} minCh={5} />
+              <L>จังหวัด</L>
+              <Dot aria-label="จังหวัด" value={h.province} onChange={(v) => set("province", v)} minCh={8} />
+            </Row>
+
+            <Row>
+              <L>วันที่</L>
+              <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} minCh={2} />
+              <L>เดือน</L>
+              <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} minCh={5} />
+              <L>พ.ศ.</L>
+              <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} minCh={4} />
+            </Row>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto auto 1fr",
+                alignItems: "center",
+                columnGap: "2mm",
+                margin: "1mm 0 1.5mm",
+              }}
+            >
+              <L>คดีระหว่าง</L>
+              <span style={{ fontSize: "26pt", lineHeight: 0.8 }} aria-hidden>
+                {"{"}
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6mm" }}>
+                <Row style={{ margin: 0 }}>
+                  <Dot
+                    aria-label="ผู้กล่าวหาในคดี"
+                    value={h.complainantLine}
+                    onChange={(v) => set("complainantLine", v)}
+                    flex
+                    minCh={10}
+                  />
+                  <L>ผู้กล่าวหา</L>
+                </Row>
+                <Row style={{ margin: 0 }}>
+                  <Dot
+                    aria-label="ผู้ต้องหาในคดี"
+                    value={h.suspectLine}
+                    onChange={(v) => set("suspectLine", v)}
+                    flex
+                    minCh={10}
+                  />
+                  <L>ผู้ต้องหา</L>
+                </Row>
+              </div>
+            </div>
+
+            <Row>
+              <L>ต่อหน้า</L>
+              <Dot
+                aria-label="ต่อหน้า"
+                value={h.investigator}
+                onChange={(v) => set("investigator", v)}
+                flex
+                minCh={12}
+              />
+            </Row>
+            <Row>
+              <Line aria-label="ต่อหน้าบรรทัด2" value={h.commanderLine} onChange={(v) => set("commanderLine", v)} />
+            </Row>
+            <Row>
+              <L>สอบสวนที่</L>
+              <Dot
+                aria-label="สอบสวนที่"
+                value={h.interviewPlace}
+                onChange={(v) => set("interviewPlace", v)}
+                flex
+                minCh={10}
+              />
+            </Row>
+
+            <Row>
+              <L>ชื่อ</L>
+              <Dot aria-label="ชื่อ" value={h.partyName} onChange={(v) => set("partyName", v)} minCh={14} />
+              <L>อายุ</L>
+              <Dot aria-label="อายุ" value={h.partyAge} onChange={(v) => set("partyAge", v)} minCh={2} />
+              <span>ปี</span>
+            </Row>
+            <Row>
+              <L>เชื้อชาติ</L>
+              <Dot aria-label="เชื้อชาติ" value={h.ethnicity} onChange={(v) => set("ethnicity", v)} minCh={4} />
+              <L>สัญชาติ</L>
+              <Dot
+                aria-label="สัญชาติ"
+                value={h.partyNationality}
+                onChange={(v) => set("partyNationality", v)}
+                minCh={4}
+              />
+              <L>ศาสนา</L>
+              <Dot aria-label="ศาสนา" value={h.religion} onChange={(v) => set("religion", v)} minCh={4} />
+            </Row>
+            <Row>
+              <L>อาชีพ</L>
+              <Dot
+                aria-label="อาชีพ"
+                value={h.partyOccupation}
+                onChange={(v) => set("partyOccupation", v)}
+                flex
+                minCh={8}
+              />
+            </Row>
+            <p style={{ margin: "0 0 1.2mm", fontSize: "9.5pt", lineHeight: 1.25, color: "#222" }}>
+              (ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ
+              หรือไม่ ให้ลงตามประเภทที่รับ)
+            </p>
+
+            <Row>
+              <L>อยู่บ้านเลขที่</L>
+              <Dot aria-label="บ้านเลขที่" value={h.houseNo} onChange={(v) => set("houseNo", v)} minCh={3} />
+              <L>หมู่ที่</L>
+              <Dot aria-label="หมู่ที่" value={h.moo} onChange={(v) => set("moo", v)} minCh={2} />
+              <L>แขวง/ตำบล</L>
+              <Dot aria-label="แขวงตำบล" value={h.tambon} onChange={(v) => set("tambon", v)} minCh={5} />
+            </Row>
+            <Row>
+              <L>เขต/อำเภอ</L>
+              <Dot
+                aria-label="เขตอำเภอที่อยู่"
+                value={h.amphoe || h.district}
+                onChange={(v) => set("amphoe", v)}
+                minCh={5}
+              />
+              <L>จังหวัด</L>
+              <Dot aria-label="จังหวัดที่อยู่" value={h.province} onChange={(v) => set("province", v)} minCh={6} />
+            </Row>
+            <Row>
+              <L>ชื่อผู้ใหญ่บ้าน</L>
+              <Dot aria-label="ผู้ใหญ่บ้าน" value={h.villageHead} onChange={(v) => set("villageHead", v)} minCh={6} />
+              <L>ชื่อกำนัน</L>
+              <Dot aria-label="กำนัน" value={h.kamnan} onChange={(v) => set("kamnan", v)} minCh={6} />
+            </Row>
+            <Row>
+              <L>ชื่อบิดา</L>
+              <Dot aria-label="บิดา" value={h.fatherName} onChange={(v) => set("fatherName", v)} minCh={6} />
+              <L>ชื่อมารดา</L>
+              <Dot aria-label="มารดา" value={h.motherName} onChange={(v) => set("motherName", v)} minCh={6} />
+            </Row>
+            <Row>
+              <L>เกี่ยวข้องเป็นอะไรกับคู่กรณี</L>
+              <Dot
+                aria-label="เกี่ยวข้อง"
+                value={h.relationshipNote}
+                onChange={(v) => set("relationshipNote", v)}
+                minCh={14}
+              />
+            </Row>
+            <p style={{ margin: "0.5mm 0 1.5mm", fontWeight: 700, fontSize: BODY }}>
+              ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
+            </p>
+
+            <LinedBody
+              ariaLabel="ข้อความคำให้การ"
+              minHeight="62mm"
+              value={page?.text ?? ""}
+              onChange={(t) => onPageTextChange(0, t)}
+            />
+          </div>
+        </div>
+      )}
     </article>
   );
 }
