@@ -374,8 +374,8 @@ export function OfficialStatementFormSheet({
                 display: "flex",
                 alignItems: "stretch",
                 columnGap: "2mm",
-                margin: "1.5mm 0 2mm",
-                minHeight: "18mm",
+                margin: "1mm 0 1.5mm",
+                minHeight: "14mm",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
@@ -386,7 +386,7 @@ export function OfficialStatementFormSheet({
                 aria-hidden
                 style={{
                   flexShrink: 0,
-                  width: "7mm",
+                  width: "5mm",
                   alignSelf: "stretch",
                   display: "flex",
                 }}
@@ -400,7 +400,7 @@ export function OfficialStatementFormSheet({
                     d="M18 2 C8 2 6 12 6 22 L6 38 C6 46 2 50 2 50 C2 50 6 54 6 62 L6 78 C6 88 8 98 18 98"
                     fill="none"
                     stroke="#111"
-                    strokeWidth="2.2"
+                    strokeWidth="2.4"
                     strokeLinecap="round"
                   />
                 </svg>
@@ -412,7 +412,7 @@ export function OfficialStatementFormSheet({
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  gap: "2mm",
+                  gap: "1.2mm",
                 }}
               >
                 <Row style={{ margin: 0, minHeight: LINE }}>
