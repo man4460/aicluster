@@ -23,7 +23,6 @@ import {
   smartPolicePrimaryButtonClass,
   smartPoliceRowIconButtonClass,
   smartPoliceRowRemoveIconButtonClass,
-  smartPoliceSubtitleClass,
   smartPoliceTextareaClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
@@ -34,7 +33,14 @@ const emptyForm = {
   keywords: "",
 };
 
-export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) => void }) {
+type Props = {
+  onToast?: (msg: string) => void;
+  /** ซ่อนปุ่มเพิ่มในแผง — ให้หัวหน้าตั้งค่าเรียกแทน */
+  hideAddButton?: boolean;
+  registerOpenAdd?: (open: () => void) => void;
+};
+
+export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAdd }: Props) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [charges, setCharges] = useState<SmartPoliceChargeDto[]>([]);
@@ -65,11 +71,15 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
     void load();
   }, [load]);
 
-  function openAdd() {
+  const openAdd = useCallback(() => {
     setEditingId(null);
     setForm(emptyForm);
     setModalOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    registerOpenAdd?.(openAdd);
+  }, [openAdd, registerOpenAdd]);
 
   function openEdit(c: SmartPoliceChargeDto) {
     if (!c.isOwnerCustom) return;
@@ -113,14 +123,13 @@ export function SmartPoliceChargesPanel({ onToast }: { onToast?: (msg: string) =
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className={smartPoliceSubtitleClass}>
-          คลังข้อหาระบบ + ข้อหาที่สถานีเพิ่มเอง · ใช้เลือกตอนกรอกข้อมูลคดี
-        </p>
-        <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>
-          + เพิ่มข้อหาสถานี
-        </button>
-      </div>
+      {!hideAddButton ? (
+        <div className="flex justify-end">
+          <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>
+            + เพิ่มข้อหาสถานี
+          </button>
+        </div>
+      ) : null}
 
       <input
         className={smartPoliceFieldClass}
