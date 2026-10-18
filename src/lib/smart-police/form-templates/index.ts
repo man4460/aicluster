@@ -7,7 +7,6 @@ export {
 export {
   createEmptyPage,
   createEmptyQa,
-  fillStatementDocument,
   fillStatementDocumentSync,
   isStatementJsonContent,
   parseStatementDocumentContent,
@@ -28,3 +27,5 @@ export type {
   StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates/statement-types";
 export { isStatementDocumentV2 } from "@/lib/smart-police/form-templates/statement-types";
+
+/** สร้างเอกสารจากแบบฟอร์ม Word — ใช้เฉพาะ server: `@/lib/smart-police/form-templates/fill-statement-server` */

@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
 import {
-  fillStatementDocument,
   serializeStatementDocument,
   statementDocumentTitle,
   statementDocumentToPlainText,
 } from "@/lib/smart-police/form-templates";
+import { fillStatementDocument } from "@/lib/smart-police/form-templates/fill-statement-server";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail, type SmartPoliceCaseDetailRow } from "@/lib/smart-police/serialize";
