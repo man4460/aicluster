@@ -130,23 +130,20 @@ function LinedBody({
       spellCheck={false}
       data-placeholder={"ถาม 1. …\nตอบ …"}
       className="sp-stmt-lined-body w-full whitespace-pre-wrap break-words outline-none"
-      style={{
-        minHeight,
-        flex: fill ? "1 1 auto" : undefined,
-        width: "100%",
-        boxSizing: "border-box",
-        fontSize: BODY,
-        lineHeight: STMT_LINE,
-        padding: "0 0 2mm",
-        marginBottom: "2mm",
-        color: "#111",
-        /* จุดไข่ปลาแนวนอน — โทนเดียวกับ sp-word-field ด้านบน */
-        backgroundImage: "radial-gradient(circle, #111 0.55pt, transparent 0.65pt)",
-        backgroundSize: `2.1mm ${STMT_LINE}`,
-        backgroundPosition: `0 calc(${STMT_LINE} - 1.1pt)`,
-        backgroundRepeat: "repeat",
-        backgroundAttachment: "local",
-      }}
+      style={
+        {
+          minHeight,
+          flex: fill ? "1 1 auto" : undefined,
+          width: "100%",
+          boxSizing: "border-box",
+          fontSize: BODY,
+          lineHeight: STMT_LINE,
+          padding: "0 0 2mm",
+          marginBottom: "2mm",
+          color: "#111",
+          ["--sp-stmt-line" as string]: STMT_LINE,
+        } as CSSProperties
+      }
       onFocus={() => {
         focused.current = true;
       }}
