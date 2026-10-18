@@ -448,7 +448,7 @@ export function OfficialStatementFormSheet({
               </div>
             </div>
 
-            <Row>
+            <Row style={{ marginTop: "3mm" }}>
               <L>ต่อหน้า</L>
               <Dot
                 aria-label="ต่อหน้า"
