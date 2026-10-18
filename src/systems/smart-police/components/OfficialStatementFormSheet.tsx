@@ -853,7 +853,15 @@ export function OfficialStatementFormSheet({
                 minCh={8}
               />
             </div>
-            <p style={{ margin: "0.3mm 0 0", fontWeight: 700, fontSize: BODY, flexShrink: 0, lineHeight: LINE }}>
+            <p
+              style={{
+                margin: "0.3mm 0 3.5mm",
+                fontWeight: 700,
+                fontSize: BODY,
+                flexShrink: 0,
+                lineHeight: LINE,
+              }}
+            >
               ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
             </p>
 
