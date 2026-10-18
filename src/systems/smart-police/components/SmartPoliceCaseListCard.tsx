@@ -25,15 +25,6 @@ export type SmartPoliceCaseListCardData = {
   sentToProsecutorAt: string | null;
 };
 
-function IconUser({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M20 21a8 8 0 0 0-16 0" strokeLinecap="round" />
-      <circle cx="12" cy="8" r="3.5" />
-    </svg>
-  );
-}
-
 function IconClock({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -83,20 +74,10 @@ function statusTextClass(s: SmartPoliceCaseStatus): string {
   return "text-emerald-600";
 }
 
-function elapsedLabel(days: number | null, overdue: boolean): { text: string; className: string } {
-  if (days == null) {
-    return { text: "ยังไม่ระบุวันรับ", className: "text-[#66638c]" };
-  }
-  if (days === 0) {
-    return {
-      text: "รับวันนี้",
-      className: overdue ? "text-rose-600" : "text-[#5f5a8a]",
-    };
-  }
-  return {
-    text: `ผ่านไป ${days} วัน`,
-    className: overdue ? "font-bold text-rose-600" : "text-[#5f5a8a]",
-  };
+function elapsedText(days: number | null): string {
+  if (days == null) return "ยังไม่ระบุวันรับ";
+  if (days === 0) return "รับวันนี้";
+  return `ผ่านไป ${days} วัน`;
 }
 
 type Props = {
@@ -105,71 +86,79 @@ type Props = {
 };
 
 export function SmartPoliceCaseListCard({ caseItem: c, className }: Props) {
-  const elapsed = elapsedLabel(c.daysSinceReceived, c.overdue);
+  const complainant = c.complainantName?.trim() || "—";
+  const suspect = c.suspectName?.trim() || "—";
 
   return (
     <Link
       href={`/dashboard/smart-police/cases/${c.id}`}
       className={cn(
         c.overdue ? smartPoliceListRowAccentClass("rose") : smartPoliceListRowClass,
-        "items-start gap-3 sm:items-center",
+        "items-center gap-2 sm:gap-3",
         className,
       )}
     >
       <div className="min-w-0 flex-1 space-y-0.5 text-left">
-        <p className="truncate text-[13px] font-bold text-[#1e1b4b] sm:text-sm">
+        <p className="truncate text-[13px] font-bold leading-snug text-[#1e1b4b] sm:text-sm">
           <span className="text-[#4d47b6]">{c.caseNumber}</span>
           <span className="mx-1.5 text-slate-300" aria-hidden>
             —
           </span>
           {c.title}
         </p>
-        <p className="flex min-w-0 items-center gap-1 text-[11px] font-medium text-[#4d47b6]">
-          <IconUser className="h-3 w-3 shrink-0 opacity-80" />
-          <span className="shrink-0">ผู้กล่าวหา</span>
-          <span className="truncate font-semibold text-[#1e1b4b]">
-            {c.complainantName?.trim() || "—"}
+        <p className="flex min-w-0 items-center gap-x-1.5 truncate text-[11px] font-medium leading-snug text-[#66638c]">
+          <span className="min-w-0 truncate">
+            <span className="text-[#4d47b6]">ผู้กล่าวหา</span>{" "}
+            <span className="font-semibold text-[#1e1b4b]">{complainant}</span>
+            <span className="mx-1 text-slate-300" aria-hidden>
+              ·
+            </span>
+            <span className="text-[#4d47b6]">ผู้ต้องหา</span>{" "}
+            <span className="font-semibold text-[#1e1b4b]">{suspect}</span>
           </span>
-        </p>
-        <p className="flex min-w-0 items-center gap-1 text-[11px] font-medium text-[#4d47b6]">
-          <IconUser className="h-3 w-3 shrink-0 opacity-80" />
-          <span className="shrink-0">ผู้ต้องหา</span>
-          <span className="truncate font-semibold text-[#1e1b4b]">
-            {c.suspectName?.trim() || "—"}
+          <span className="text-slate-300" aria-hidden>
+            ·
           </span>
-        </p>
-        <p className={cn("flex items-center gap-1 text-[11px] font-semibold", elapsed.className)}>
-          <IconClock className="h-3 w-3 shrink-0" />
-          <span>{elapsed.text}</span>
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-0.5 font-semibold",
+              c.overdue ? "text-rose-600" : "text-[#5f5a8a]",
+            )}
+          >
+            <IconClock className="h-3 w-3" />
+            {elapsedText(c.daysSinceReceived)}
+          </span>
         </p>
       </div>
 
       <div
-        className="flex shrink-0 flex-col items-end gap-1 self-center text-right"
+        className="flex shrink-0 flex-col items-end justify-center gap-0.5 text-right"
         aria-label="สถานะคดี"
       >
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 text-[11px] font-bold",
-            priorityTextClass(c.priority),
-          )}
-        >
-          <IconFlag className="h-3 w-3 shrink-0" />
-          {SMART_POLICE_CASE_PRIORITY_LABEL[c.priority]}
-        </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 text-[11px] font-bold",
-            statusTextClass(c.status),
-          )}
-        >
-          <IconStatus className="h-3 w-3 shrink-0" />
-          {SMART_POLICE_CASE_STATUS_LABEL[c.status]}
+        <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5">
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 text-[11px] font-bold",
+              priorityTextClass(c.priority),
+            )}
+          >
+            <IconFlag className="h-3 w-3 shrink-0" />
+            {SMART_POLICE_CASE_PRIORITY_LABEL[c.priority]}
+          </span>
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 text-[11px] font-bold",
+              statusTextClass(c.status),
+            )}
+          >
+            <IconStatus className="h-3 w-3 shrink-0" />
+            {SMART_POLICE_CASE_STATUS_LABEL[c.status]}
+          </span>
         </span>
         {c.sentToProsecutorAt ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600">
             <IconSent className="h-3 w-3 shrink-0" />
-            ส่งอัยการแล้ว
+            ส่งอัยการ
           </span>
         ) : null}
       </div>
