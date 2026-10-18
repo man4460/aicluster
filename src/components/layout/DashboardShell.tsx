@@ -2201,11 +2201,17 @@ export function DashboardShell({
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-50 mt-2 max-h-[min(70vh,28rem)] w-[min(17.5rem,calc(100vw-1.25rem))] overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/95 text-[#2e2a58] shadow-2xl backdrop-blur-xl"
+                  className={cn(
+                    "fixed right-3 z-[60] flex w-[min(17.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden",
+                    "max-h-[min(calc(100dvh-4.75rem),32rem)]",
+                    "rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white text-[#2e2a58] shadow-2xl",
+                    "top-[calc(var(--mawell-safe-top,env(safe-area-inset-top,0px))+3.25rem)]",
+                    "sm:top-[calc(var(--mawell-safe-top,env(safe-area-inset-top,0px))+3.75rem)]",
+                  )}
                   role="menu"
                   aria-label="เมนูหลัก"
                 >
-                  <div className="px-3 pb-1.5 pt-3">
+                  <div className="shrink-0 px-3 pb-1.5 pt-3">
                     <div
                       className={cn("h-1 w-full rounded-full", appDashboardBrandGradientBarClass)}
                       aria-hidden
@@ -2220,12 +2226,12 @@ export function DashboardShell({
                     </div>
                   </div>
                   {demoSession ? (
-                    <div className="px-1.5 pb-1">
+                    <div className="shrink-0 px-1.5 pb-1">
                       <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
                     </div>
                   ) : null}
                   <nav
-                    className="flex max-h-[min(50vh,22rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1"
+                    className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1"
                     aria-label="เมนูหลัก"
                   >
                     {mainMenuItems.map((item) => (
@@ -2238,7 +2244,7 @@ export function DashboardShell({
                       />
                     ))}
                   </nav>
-                  <div className="border-t border-slate-200/70 bg-white/70 px-2.5 py-2">
+                  <div className="shrink-0 border-t border-slate-200/70 bg-slate-50/90 px-2.5 py-2">
                     <p className="truncate text-[11px] text-slate-500" title={username}>
                       {username}
                     </p>
