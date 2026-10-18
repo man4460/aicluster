@@ -1,8 +1,11 @@
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
+  isStatementDocumentV2,
   parseStatementDocumentContent,
   statementDocumentToPlainText,
+  statementFormDocumentCss,
   type StatementDocumentContent,
+  type StatementDocumentContentV1,
 } from "@/lib/smart-police/form-templates";
 import {
   applySmartPoliceTemplate,
@@ -69,6 +72,8 @@ export type SmartPoliceA4PreviewModel = {
   wordFileUrl: string | null;
   wordFileName: string | null;
   editHref: string | null;
+  /** v2 แบบฟอร์ม Word HTML */
+  formBodyHtml: string | null;
 };
 
 function escapeHtml(s: string): string {
@@ -190,6 +195,7 @@ export function buildSmartPoliceA4PreviewModel(opts: {
       wordFileUrl: document.wordFileUrl,
       wordFileName: document.wordFileName,
       editHref: null,
+      formBodyHtml: null,
     };
   }
 
@@ -283,6 +289,7 @@ export function buildSmartPoliceA4PreviewModel(opts: {
     wordFileUrl: document.wordFileUrl,
     wordFileName: document.wordFileName,
     editHref: `/dashboard/smart-police/cases/${caseDetail.id}/documents/${document.id}/edit`,
+    formBodyHtml: null,
   };
 }
 
@@ -291,7 +298,7 @@ function buildModelFromStatementJson(opts: {
   caseDetail: SmartPoliceCaseDetail;
   document: SmartPoliceDocumentDto;
   party: SmartPolicePartyDto | null;
-  json: StatementDocumentContent;
+  json: StatementDocumentContentV1;
 }): SmartPoliceA4PreviewModel {
   const { profile, caseDetail, document, party, json } = opts;
   const h = json.header;
@@ -365,6 +372,58 @@ function buildModelFromStatementJson(opts: {
     wordFileUrl: document.wordFileUrl,
     wordFileName: document.wordFileName,
     editHref: `/dashboard/smart-police/cases/${caseDetail.id}/documents/${document.id}/edit`,
+    formBodyHtml: null,
+  };
+}
+
+function buildModelFromStatementFormHtml(opts: {
+  profile: SmartPoliceProfileDto;
+  caseDetail: SmartPoliceCaseDetail;
+  document: SmartPoliceDocumentDto;
+  party: SmartPolicePartyDto | null;
+  json: Extract<StatementDocumentContent, { version: 2 }>;
+}): SmartPoliceA4PreviewModel {
+  const { profile, caseDetail, document, party, json } = opts;
+  const h = json.header;
+  const title =
+    party != null
+      ? statementTitleForRole(party.role)
+      : document.title.split("—")[0]?.trim() || document.title;
+
+  return {
+    caseId: caseDetail.id,
+    documentId: document.id,
+    kind: document.kind,
+    isStatementForm: true,
+    isStatementJson: true,
+    docRef: docRef(h.caseNumber || caseDetail.caseNumber, document.id),
+    documentTitle: title,
+    subtitle: `เลขที่คดี ${h.caseNumber || caseDetail.caseNumber} · ${h.caseType || caseDetail.caseType}`,
+    stationName: h.stationName || profile.stationName,
+    stationAddress: h.stationAddress || profile.stationAddress,
+    province: h.province || profile.province,
+    commanderLine: h.commanderLine || null,
+    caseNumber: h.caseNumber || caseDetail.caseNumber,
+    caseTitle: h.caseTitle || caseDetail.title,
+    caseType: h.caseType || caseDetail.caseType,
+    kindLabel: SMART_POLICE_DOCUMENT_KIND_LABEL.STATEMENT,
+    metaRows: [
+      { label: "ชื่อ-สกุล", value: dottedValue(h.partyName) },
+      { label: "บทบาท", value: h.partyRoleLabel || "—" },
+      { label: "ข้อหา", value: dottedValue(h.chargeText, "—") },
+      { label: "พนักงานสอบสวน", value: dottedValue(h.investigator) },
+    ],
+    preamble: [],
+    statementItems: [],
+    statementPages: [],
+    bodyParagraphs: [],
+    signatures: [],
+    dateLine: h.todayThai || formatThaiDate(new Date()),
+    footer: profile.printFooter,
+    wordFileUrl: document.wordFileUrl,
+    wordFileName: document.wordFileName,
+    editHref: `/dashboard/smart-police/cases/${caseDetail.id}/documents/${document.id}/edit`,
+    formBodyHtml: json.bodyHtml,
   };
 }
 
@@ -381,6 +440,21 @@ export function buildSmartPoliceA4PreviewFromCase(opts: {
   const json = parseStatementDocumentContent(opts.document.content);
 
   if (opts.document.kind === "STATEMENT" && json) {
+    if (isStatementDocumentV2(json)) {
+      const model = buildModelFromStatementFormHtml({
+        profile: opts.profile,
+        caseDetail: opts.caseDetail,
+        document: opts.document,
+        party,
+        json,
+      });
+      const bodyText = statementDocumentToPlainText(json);
+      return {
+        model,
+        bodyText,
+        printHtml: buildSmartPoliceFormHtmlPrintHtml(model),
+      };
+    }
     const model = buildModelFromStatementJson({
       profile: opts.profile,
       caseDetail: opts.caseDetail,
@@ -591,6 +665,32 @@ export function buildSmartPoliceStatementA4PrintHtml(
 <div class="spa4">
 ${statementSheetInnerHtml(model)}
 </div>
+<script>
+window.addEventListener("load", function () {
+  setTimeout(function () { window.focus(); window.print(); }, 200);
+});
+</script>
+</body>
+</html>`;
+}
+
+/** พิมพ์แบบฟอร์ม Word HTML (v2) — ให้ลงลายเซ็นเก็บในสำนวน */
+export function buildSmartPoliceFormHtmlPrintHtml(model: SmartPoliceA4PreviewModel): string {
+  const body = model.formBodyHtml || "<p>—</p>";
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(model.documentTitle)} — ${escapeHtml(model.caseNumber)}</title>
+<style>
+@page { size: A4; margin: 12mm 10mm; }
+${statementFormDocumentCss()}
+body { margin: 0; background: #fff; }
+.sheet { max-width: 210mm; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="sheet">${body}</div>
 <script>
 window.addEventListener("load", function () {
   setTimeout(function () { window.focus(); window.print(); }, 200);

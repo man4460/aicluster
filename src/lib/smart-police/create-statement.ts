@@ -41,7 +41,7 @@ export async function createStatementForParty(opts: {
   );
   const vars = buildSmartPolicePrintVars(profile, caseDetail, { investigator });
 
-  const statementDoc = fillStatementDocument({
+  const statementDoc = await fillStatementDocument({
     role: party.role,
     stationName: profile.stationName,
     stationAddress: profile.stationAddress,

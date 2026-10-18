@@ -55,8 +55,9 @@ export function SmartPoliceA4PreviewClient({
     };
   }, []);
 
-  const backHref = `/dashboard/smart-police/cases/${caseId}`;
+  const backHref = `/dashboard/smart-police/cases/${caseId}?tab=parties`;
   const Sheet = model.isStatementForm ? SmartPoliceStatementA4Sheet : SmartPoliceGenericA4Sheet;
+  const formHtml = model.formBodyHtml;
 
   return (
     <div className="fixed inset-0 z-[110] flex flex-col bg-slate-800 text-white">
@@ -109,7 +110,15 @@ export function SmartPoliceA4PreviewClient({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-600/90 p-3 sm:p-6">
-        <Sheet model={model} printRootId="smart-police-a4-sheet" className="mb-6" />
+        {formHtml ? (
+          <div
+            id="smart-police-a4-sheet"
+            className="mx-auto mb-6 min-h-[297mm] max-w-[210mm] bg-white px-[12mm] py-[14mm] text-[#111] shadow-md"
+            dangerouslySetInnerHTML={{ __html: formHtml }}
+          />
+        ) : (
+          <Sheet model={model} printRootId="smart-police-a4-sheet" className="mb-6" />
+        )}
         {model.wordFileUrl ? (
           <p className="no-print mx-auto mb-4 max-w-[210mm] text-center text-xs text-slate-200">
             มีไฟล์ Word แนบ —{" "}

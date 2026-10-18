@@ -74,12 +74,11 @@ globs:
 - ไฟล์: `public/smart-police/forms/` (ดาวน์โหลดจาก [สอบสวน.com/form](https://xn--q3cb3bkbq.com/form))
 - UI: รายการแถว + กรองหมวด/ชนิดไฟล์ + ค้นหา
 
-## แม่แบบ HTML คำให้การ (ใช้ในคดี)
+## แม่แบบคำให้การ = แบบฟอร์ม Word จริง (ใช้ในคดี)
 
-- Catalog: `src/lib/smart-police/form-templates/` — `statement-complainant` · `statement-suspect` · `statement-witness`
-- กด **คำให้การ** ที่บุคคล → สร้าง `SmartPoliceDocument` เนื้อหา JSON (header + pages[].qa) → เปิด `/documents/[docId]/edit`
-- Editor: เติมข้อมูลคดี/บุคคล · ถาม–ตอบ · เพิ่มหน้า · บันทึก · พิมพ์ A4 หลายหน้า
-- หน้า **แม่แบบ**: แสดง 3 แม่แบบ HTML · ไฟล์เปล่าอยู่เมนู **แบบฟอร์ม**
+- กด **คำให้การ** ที่บุคคล → โหลดไฟล์แบบฟอร์ม (เช่น `คำให้การผู้กล่าวหา.docx`) เป็น HTML · เติมช่องจากคดี · เปิด editor เหมือนพิมพ์บน Word
+- เนื้อหา JSON v2: `bodyHtml` + `header` + `blankFormId` (`src/lib/smart-police/form-templates/`)
+- บันทึกเข้าสำนวน · พิมพ์ให้ลงลายเซ็น · ไฟล์เปล่าอื่นอยู่เมนู **แบบฟอร์ม**
 
 ## คลังข้อหา
 

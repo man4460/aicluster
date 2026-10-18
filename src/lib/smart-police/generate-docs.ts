@@ -349,7 +349,7 @@ export async function generateSmartPoliceDocs(opts: {
 
   if (opts.kinds.includes("STATEMENT_ALL")) {
     for (const party of caseDetail.parties) {
-      const statementDoc = fillStatementDocument({
+      const statementDoc = await fillStatementDocument({
         role: party.role,
         stationName: profile.stationName,
         stationAddress: profile.stationAddress,

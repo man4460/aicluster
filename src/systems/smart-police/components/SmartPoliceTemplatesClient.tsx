@@ -44,13 +44,21 @@ export function SmartPoliceTemplatesClient() {
           </div>
         </div>
 
-        <p className={cn(smartPoliceMutedTextClass, "mt-2 shrink-0")}>
-          แม่แบบ HTML ใช้ในคดีจริง — กด «คำให้การ» ที่บุคคลในคดี ระบบจะเติมข้อมูลที่มีอยู่ แล้วให้ถาม–ตอบ
-          และเพิ่มหน้าต่อได้เมื่อสอบสวนยาว · แบบฟอร์มไฟล์เปล่าอยู่ที่เมนู{" "}
-          <Link href="/dashboard/smart-police/forms" className="font-semibold text-[#5b61ff] underline">
-            แบบฟอร์ม
-          </Link>
-        </p>
+        <div className={cn(smartPoliceMutedTextClass, "mt-2 shrink-0 space-y-1")}>
+          <p>
+            เมื่อสอบปากคำในคดี — ไปที่ <strong className="text-[#1e1b4b]">บุคคล</strong> แล้วกด{" "}
+            <strong className="text-[#1e1b4b]">คำให้การ</strong> ระบบจะเปิดแบบฟอร์ม Word จริง
+            (ผู้กล่าวหา / ผู้ต้องหา / พยาน) เติมข้อมูลคดีที่มีอยู่ แล้วให้พิมพ์ต่อเหมือนบน Word
+            จากนั้น <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน</strong> และ{" "}
+            <strong className="text-[#1e1b4b]">พิมพ์ให้ลงลายเซ็น</strong>
+          </p>
+          <p>
+            ดาวน์โหลดไฟล์เปล่าอื่น ๆ อยู่ที่เมนู{" "}
+            <Link href="/dashboard/smart-police/forms" className="font-semibold text-[#5b61ff] underline">
+              แบบฟอร์ม
+            </Link>
+          </p>
+        </div>
 
         <div className={cn(smartPoliceFillScrollBodyClass, "mt-3")}>
           {SMART_POLICE_STATEMENT_TEMPLATES.length === 0 ? (
@@ -60,7 +68,7 @@ export function SmartPoliceTemplatesClient() {
               {SMART_POLICE_STATEMENT_TEMPLATES.map((t) => (
                 <li key={t.slug} className={smartPoliceListRowAccentClass(TONE_BY_SLUG[t.slug])}>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-[10px] font-bold text-[#4d47b6]">HTML · คำให้การ</p>
+                    <p className="text-[10px] font-bold text-[#4d47b6]">แบบฟอร์ม Word · ใช้ในคดี</p>
                     <p className="text-[13px] font-semibold text-[#1e1b4b]">{t.title}</p>
                     <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">{t.description}</p>
                   </div>
@@ -68,7 +76,7 @@ export function SmartPoliceTemplatesClient() {
                     href="/dashboard/smart-police/cases"
                     className={cn(smartPoliceOutlineButtonClass, "shrink-0")}
                   >
-                    ใช้ในคดี
+                    ไปที่คดี
                   </Link>
                 </li>
               ))}
