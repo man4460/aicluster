@@ -39,6 +39,8 @@ export type StatementHeaderFields = {
   partyAddress: string;
   partyPhone: string;
   partyOccupation: string;
+  /** บรรทัดที่ 2 ของอาชีพ (จุดไข่ปลาต่อ) */
+  partyOccupationLine2: string;
   partyWorkplace: string;
   partyCaseRelation: string;
   partyPleaStatus: string;

@@ -94,6 +94,7 @@ export function normalizeStatementHeader(
     partyAddress: "",
     partyPhone: "",
     partyOccupation: "",
+    partyOccupationLine2: "",
     partyWorkplace: "",
     partyCaseRelation: "",
     partyPleaStatus: "",

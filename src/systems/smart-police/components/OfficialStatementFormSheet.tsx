@@ -530,7 +530,7 @@ export function OfficialStatementFormSheet({
                 gap: "1.5mm",
                 width: "100%",
                 minHeight: LINE,
-                margin: "0 0 0.5mm",
+                margin: "0 0 0.8mm",
                 lineHeight: LINE,
                 fontSize: BODY,
               }}
@@ -544,18 +544,23 @@ export function OfficialStatementFormSheet({
                 minCh={8}
               />
             </div>
-            <p
+            <div
               style={{
-                margin: "0 0 1.2mm",
+                display: "flex",
+                alignItems: "baseline",
                 width: "100%",
-                fontSize: "9.5pt",
-                lineHeight: 1.3,
-                color: "#222",
+                minHeight: LINE,
+                margin: "0 0 1.2mm",
+                lineHeight: LINE,
+                fontSize: BODY,
               }}
             >
-              (ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ
-              หรือไม่ ให้ลงตามประเภทที่รับ)
-            </p>
+              <Line
+                aria-label="อาชีพบรรทัด2"
+                value={h.partyOccupationLine2 ?? ""}
+                onChange={(v) => set("partyOccupationLine2", v)}
+              />
+            </div>
 
             <Row>
               <L>อยู่บ้านเลขที่</L>
