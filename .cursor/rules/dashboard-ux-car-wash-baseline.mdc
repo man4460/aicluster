@@ -70,3 +70,4 @@ alwaysApply: true
 - **ศูนย์แอดมิน (การ์ดรายการ · ตัดคำอธิบาย · Export Excel):** `.cursor/rules/admin-hub-dashboard-template.mdc`
 - **ความกว้าง / gutter ซ้าย–ขวา (ทุกชั้น):** `.cursor/rules/dashboard-page-width.mdc`
 - **ซ่อน/แสดงกลุ่มเมนู · ซ่อนเมนูหลักล่าง · ย่อ sidebar:** `.cursor/rules/dashboard-nav-menu-groups.mdc`
+- **โมเดลใหม่ — sidebar = เมนูโมดูล (Smart Police ก่อน · ขนาด BOTProject):** `.cursor/rules/dashboard-profile-module-sidebar.mdc`

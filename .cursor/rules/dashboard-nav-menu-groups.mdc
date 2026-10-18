@@ -1,21 +1,23 @@
 ---
-description: เมนูแดชบอร์ด — sidebar เมนูหลักแบบรายการเดียว · ซ่อนเมนูหลักล่างเมื่อเข้าโมดูล/แอดมิน · ย่อ sidebar เมื่อเข้าโมดูล
+description: เมนูแดชบอร์ด — sidebar เมนูหลักแบบรายการเดียว · โมเดลเมนูโมดูลใน sidebar · ซ่อนเมนูหลักล่างเมื่อเข้าโมดูล/แอดมิน · ย่อ sidebar เมื่อเข้าโมดูล
 alwaysApply: true
 ---
 
 # เมนูแดชบอร์ด — sidebar / ซ่อนแถบนำทาง
 
-## 1) Sidebar ซ้าย (เดสก์ท็อป) — แบบเดิม
+## 1) Sidebar ซ้าย (เดสก์ท็อป)
 
 | สิ่ง | รายละเอียด |
 |-----|------------|
-| เนื้อหา | **เฉพาะกลุ่ม `basic` (เมนูหลัก)** เป็นรายการลิงก์แบน (`SidebarNavLink`) |
+| หน้าแกนระบบ | **เฉพาะกลุ่ม `basic` (เมนูหลัก)** เป็นรายการลิงก์แบน (`SidebarNavLink`) |
 | **ห้าม** | ใส่กลุ่มย่อยพับได้ (finance / services / property / admin) ใน sidebar ซ้าย |
-| โมดูลที่สมัคร | เข้าผ่านหน้า «ระบบทั้งหมด» / ลิงก์อื่น — ไม่โชว์เป็นกลุ่มใน sidebar |
+| โมดูลที่สมัคร | เข้าผ่านหน้า «ระบบทั้งหมด» / ลิงก์อื่น — ไม่โชว์เป็นกลุ่มใน sidebar แบบเก่า |
+| **โมเดลใหม่ (เมนูโมดูล)** | เมื่อ `usesModuleWorkspaceSidebar(pathname)` — sidebar แสดง **เมนูของโมดูลนั้น** แทนเมนูหลัก · ขนาดอ้างอิง BOTProject — ดูกฎ **`dashboard-profile-module-sidebar.mdc`** (เริ่ม Smart Police) |
 
 ## 2) Drawer มือถือ
 
-- ใช้ `NavCollapsibleGroup` กับ **`mainNavGroups` (basic)** เท่านั้น — สอดคล้อง sidebar
+- หน้าแกน: ใช้ `NavCollapsibleGroup` กับ **`mainNavGroups` (basic)** — สอดคล้อง sidebar
+- โมดูลใน registry เมนูโมดูล: drawer แสดงเมนูโมดูลชุดเดียวกับ sidebar (`DashboardProfileModuleMenu` variant `drawer`)
 - โทนแก้วม่วงของ drawer
 
 ## 3) ซ่อน / แสดงแถบเมนูซ้ายทั้งแท่ง
@@ -24,7 +26,8 @@ alwaysApply: true
 |--------|----------|
 | ปุ่มใน header | สลับ `sidebarCollapsed` · จำ `mawell-dashboard-sidebar-collapsed` |
 | เข้า `/dashboard` | **บังคับแสดง** sidebar |
-| เข้าโมดูลงาน (`isModuleWorkspacePath`) | **ย่อ sidebar** อัตโนมัติ (ยังกดเปิดได้) |
+| เข้าโมดูลใน registry (`usesModuleWorkspaceSidebar`) | **บังคับแสดง** sidebar เป็นเมนูโมดูล (ไม่ย่อ) |
+| เข้าโมดูลงานอื่น (`isModuleWorkspacePath` แต่ไม่อยู่ registry) | **ย่อ sidebar** อัตโนมัติ (ยังกดเปิดได้) |
 
 `isModuleWorkspacePath` ไม่รวม: หน้าบ้าน · chat-ai · profile · plans · chat · modules · **admin**
 
@@ -54,7 +57,8 @@ alwaysApply: true
 
 ## อ้างอิง
 
-- `DashboardShell.tsx` — `mainMenuItems` · `hideMainMobileBottomNav` · `showAdminHubHeaderBar`
+- `DashboardShell.tsx` — `mainMenuItems` · `moduleWorkspaceSidebar` · `hideMainMobileBottomNav` · `showAdminHubHeaderBar`
+- เมนูโมดูลใน sidebar: **`dashboard-profile-module-sidebar.mdc`** · `src/lib/dashboard/module-profile-sidebar.ts`
 - `AdminHubChrome.tsx` · `AdminHubHeaderBarNav.tsx` · `src/lib/admin-hub-nav.ts`
 - ขอบซ้าย–ขวา: `dashboard-page-width.mdc`
 - เทมเพลตรายการแอดมิน: `admin-hub-dashboard-template.mdc`

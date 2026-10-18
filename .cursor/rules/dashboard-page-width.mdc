@@ -35,7 +35,7 @@ alwaysApply: true
 - **ห้าม** ใส่ `max-w-6xl mx-auto` ซ้ำใน layout/shell โมดูลย่อย (ยกเว้นหน้าเต็มจอที่ไม่อยู่ใต้ PageContainer)
 - **ห้าม** ห่อ `children` ทั้งหน้าด้วยการ์ดใหญ่ `rounded-3xl border` + `px-*` อีกชั้น — เนื้อหาไหลต่อใต้ PageContainer · การ์ดย่อยใช้ `app-surface` ตามจุด
 - โมดูลหลายหน้า: แบบรายรับ–รายจ่าย / Building POS / **สนามฟุตบอล** — Shell = หัว+เมนู · เนื้อหาไม่ซ้ำขอบ
-- เข้าโมดูลงาน → ย่อ sidebar (`isModuleWorkspacePath`) — **แอดมิน / โปรไฟล์ / modules ไม่ถือเป็นโมดูลงาน** (อยู่ใน basicPrefixes)
+- เข้าโมดูลงาน → ย่อ sidebar (`isModuleWorkspacePath`) — **ยกเว้น** โมดูลใน registry เมนูโมดูล (`usesModuleWorkspaceSidebar` เช่น Smart Police) → **แสดง** sidebar เป็นเมนูโมดูล — ดูกฎ `dashboard-profile-module-sidebar.mdc` · **แอดมิน / โปรไฟล์ / modules ไม่ถือเป็นโมดูลงาน** (อยู่ใน basicPrefixes)
 
 ## ตัวอย่างสนามฟุตบอล (ครบชั้น)
 

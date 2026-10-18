@@ -1,43 +1,80 @@
+---
+description: โมเดลใหม่ — sidebar ซ้ายแสดงเมนูของโมดูลนั้น (เริ่ม Smart Police) · ขนาดอ้างอิง BOTProject
+alwaysApply: true
+---
+
 # Sidebar ซ้าย = เมนูโมดูล (แทนเมนูหลัก)
 
-โมเดลใหม่สำหรับโมดูลงานบน **เดสก์ท็อป**: sidebar ซ้ายยังมีโครงเดิม แต่เนื้อหาเป็น **เมนูของระบบนั้น** ไม่ใช่เมนูหลักแดชบอร์ด
+โมเดลใหม่สำหรับโมดูลงาน: **โครง sidebar ซ้ายเหมือนเดิม** แต่เนื้อหาเป็น **เมนูของระบบนั้น** ไม่ใช่เมนูหลักแดชบอร์ด (`basic`)
 
-**เริ่มใช้แล้ว:** Smart Police เท่านั้น — ขยายโมดูลอื่นทีหลังผ่าน registry
+**เริ่มใช้แล้ว:** Smart Police เท่านั้น — ขยายโมดูลอื่นผ่าน registry  
+**อ้างอิงขนาด:** `D:\BOTProject\frontend\src\layout\Shell.tsx` (`w-64` · `h-8` · `text-xs` · `py-1.5`)
+
+คู่กับ: `dashboard-nav-menu-groups.mdc` (ข้อยกเว้นย่อ sidebar)
 
 ---
 
-## พฤติกรรม
+## 1) พฤติกรรม
 
 | จอ | พฤติกรรม |
 |----|----|
-| **เดสก์ท็อป `md+`** | Sidebar ซ้ายแสดงเมนูโมดูล (ภาพรวม · คดี · …) · ปุ่มกลับหน้าแรกแดชบอร์ดท้ายแถบ · **บังคับแสดง** sidebar ตอนเข้าโมดูล (ไม่ย่ออัตโนมัติ) |
-| **มือถือ** | Dock ล่างของโมดูลตามเดิม · เปิด drawer (แฮมเบอร์เกอร์) ก็ได้เมนูโมดูลชุดเดียวกัน |
+| **เดสก์ท็อป `md+`** | Sidebar ซ้าย = เมนูโมดูล · ปุ่ม «← หน้าแรกแดชบอร์ด» ท้ายแถบ · **บังคับแสดง** sidebar ตอนเข้า (ไม่ย่ออัตโนมัติ) |
+| **มือถือ** | Dock ล่างของโมดูลตามเดิม · drawer (แฮมเบอร์เกอร์) = เมนูโมดูลชุดเดียวกัน + ลิงก์กลับหน้าแรก |
 
-## ขนาด (อ้างอิง BOTProject `Shell.tsx`)
+| สถานะ path | Sidebar ซ้าย |
+|------------|--------------|
+| หน้าแกน (`/dashboard` · profile · modules · …) | เมนูหลัก `basic` |
+| โมดูลใน registry (`usesModuleWorkspaceSidebar`) | **เมนูโมดูล** |
+| โมดูลอื่น (ยังไม่ลงทะเบียน) | ย่อ sidebar อัตโนมัติตามกฎเดิม |
+
+---
+
+## 2) ขนาดบังคับ (BOTProject)
 
 | ชิ้น | ค่า |
 |-----|-----|
-| ความกว้าง sidebar | `w-64` · padding ใน `p-3` / `px-2.5` |
-| รายการเมนู | `gap-1` · `px-2.5 py-1.5` · `text-xs font-black` |
-| ไอคอน | กล่อง `h-8 w-8 rounded-lg` · glyph `h-4 w-4` |
+| ความกว้าง | `w-64` |
+| หัวแถบ | `px-3 pb-2 pt-3` · ชื่อ `text-[10px] uppercase tracking` · badge `h-5 text-[10px]` |
+| โซนรายการ | `gap-1` · `px-2.5 pb-2 pt-1` |
+| รายการเมนู | `px-2.5 py-1.5` · `gap-2` · `text-xs font-black` · `rounded-xl` |
+| ไอคอน | กล่อง `h-8 w-8 rounded-lg ring-1` · glyph `h-4 w-4` |
+| idle | `border border-[#e8e6fc]/70` + gradient ขาว/ชมพูอ่อน (แบบ BOT) |
+| active | `appDashboardBrandGradientFillClass` + ตัวอักษรขาว |
+| ท้ายแถบ | ปุ่มกลับ `text-[11px] py-1.5` · username `text-[11px]` · logout `text-xs` |
 
-## ห้าม
+**ห้าม** กลับไปใช้ขนาดเก่า (`w-[264px]` · `h-9` · `py-2.5` · `text-[13px]` · `gap-2` ระหว่างรายการ) ในโมเดลนี้
 
-- ใส่แถบเมนูเดสก์ท็อปซ้ำใน chrome โมดูล (เมื่อใช้โมเดลนี้แล้ว)
-- ย่อ sidebar อัตโนมัติตอนเข้าโมดูลที่ลงทะเบียนแล้ว
+---
 
-## ขยายโมดูลใหม่
+## 3) Chrome โมดูล
 
-1. เพิ่มเงื่อนไขใน `src/lib/dashboard/module-profile-sidebar.ts` → `getModuleProfileSidebar`
-2. เพิ่มไอคอนใน `DashboardProfileModuleMenu.tsx` (`ModuleWorkspaceNavIcon`)
-3. ลบแถบเมนูเดสก์ท็อปใน Shell ของโมดูล (เหลือหัว + dock มือถือ)
-4. `DashboardShell` ใช้ `usesModuleWorkspaceSidebar(pathname)` อยู่แล้ว
+เมื่อโมดูลใช้โมเดลนี้แล้ว:
 
-## ไฟล์หลัก
+- **ห้าม** ใส่แถบเมนูเดสก์ท็อปซ้ำใน Shell/header ของโมดูล
+- เหลือหัวโมดูล (ชื่อ · ยุบหัว) + **dock มือถือ**
+- เมื่อยุบหัว → เมนูสั้นในแถบม่วง `*HeaderBarNav` ได้ตามปกติ
+
+---
+
+## 4) ขยายโมดูลใหม่ — เช็กลิสต์
+
+1. [ ] เพิ่มใน `getModuleProfileSidebar()` — `src/lib/dashboard/module-profile-sidebar.ts`
+2. [ ] ไอคอนใน `ModuleWorkspaceNavIcon` — `DashboardProfileModuleMenu.tsx`
+3. [ ] ลบแถบเมนูเดสก์ท็อปใน Shell โมดูล
+4. [ ] ตรวจ `usesModuleWorkspaceSidebar` → sidebar **เปิด** อัตโนมัติ · ไม่ย่อ
+5. [ ] ขนาดรายการตรงตาราง §2
+6. [ ] มือถือ: dock + drawer เป็นเมนูโมดูล
+
+`DashboardShell` อ่าน registry อยู่แล้ว — ไม่ต้อง hardcode path ซ้ำถ้า registry ครบ
+
+---
+
+## 5) ไฟล์หลัก
 
 | บทบาท | พาธ |
 |-----|-----|
 | Registry | `src/lib/dashboard/module-profile-sidebar.ts` |
-| รายการเมนู (sidebar / drawer) | `src/components/layout/DashboardProfileModuleMenu.tsx` |
+| รายการเมนู (sidebar / drawer / popup) | `src/components/layout/DashboardProfileModuleMenu.tsx` |
 | Shell หลัก | `src/components/layout/DashboardShell.tsx` |
-| ต้นแบบ | `src/systems/smart-police/` |
+| ต้นแบบโมดูล | `src/systems/smart-police/` · `smart-police-nav.ts` · `SmartPoliceShell.tsx` |
+| อ้างอิงขนาดภายนอก | `D:\BOTProject\frontend\src\layout\Shell.tsx` |
