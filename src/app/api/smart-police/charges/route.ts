@@ -7,7 +7,15 @@ import {
   ensureSmartPoliceBuiltinCharges,
   getOrCreateSmartPoliceProfile,
 } from "@/lib/smart-police/api-owner";
-import type { SmartPoliceChargeDto } from "@/lib/smart-police/types";
+import {
+  SMART_POLICE_CHARGE_CATEGORIES,
+  type SmartPoliceChargeDto,
+} from "@/lib/smart-police/types";
+
+function categoryRank(cat: string): number {
+  const i = (SMART_POLICE_CHARGE_CATEGORIES as readonly string[]).indexOf(cat);
+  return i < 0 ? 999 : i;
+}
 
 function mapCharge(
   row: {
@@ -69,9 +77,16 @@ export async function GET(req: Request) {
     });
   }
 
-  const categories = Array.from(new Set(list.map((c) => c.category))).sort((a, b) =>
-    a.localeCompare(b, "th"),
-  );
+  const categories = Array.from(new Set(list.map((c) => c.category))).sort((a, b) => {
+    const d = categoryRank(a) - categoryRank(b);
+    return d !== 0 ? d : a.localeCompare(b, "th");
+  });
+  list = list.slice().sort((a, b) => {
+    const d = categoryRank(a.category) - categoryRank(b.category);
+    if (d !== 0) return d;
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return a.chargeText.localeCompare(b.chargeText, "th");
+  });
 
   return NextResponse.json({ charges: list, categories, total: list.length });
 }

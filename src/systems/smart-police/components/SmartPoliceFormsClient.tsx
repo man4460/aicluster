@@ -25,6 +25,7 @@ import {
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
+  smartPoliceScrollListClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
 type FileKind = "" | "pdf" | "docx";
@@ -213,7 +214,7 @@ export function SmartPoliceFormsClient() {
               {filtersActive ? "ไม่พบแบบฟอร์มที่ตรงเงื่อนไข" : "ยังไม่มีแบบฟอร์ม"}
             </AppEmptyState>
           ) : (
-            <ul className="space-y-2">
+            <ul className={cn(smartPoliceScrollListClass, "space-y-2")}>
               {filtered.map((item) => (
                 <FormRow key={item.id} item={item} />
               ))}

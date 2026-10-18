@@ -91,27 +91,64 @@ export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
   await dedupeBuiltinTemplates(ownerUserId);
 }
 
-/** เติมคลังข้อหาระบบ (ownerUserId = null) — ไม่สร้างซ้ำตาม chargeText */
+/**
+ * ซิงก์คลังข้อหาระบบ (ownerUserId = null)
+ * — แทนที่ builtin ทั้งชุดให้ตรง catalog ปัจจุบัน (ตัวบทกฎหมายมาตรฐาน)
+ * — ไม่แตะข้อหาที่สถานีเพิ่มเอง (isBuiltin=false)
+ */
 export async function ensureSmartPoliceBuiltinCharges() {
+  const wanted = new Set(SMART_POLICE_BUILTIN_CHARGES.map((c) => c.chargeText.trim()));
+
   const existing = await prisma.smartPoliceCharge.findMany({
     where: { isBuiltin: true, ownerUserId: null },
-    select: { chargeText: true },
+    select: { id: true, chargeText: true, category: true, lawRefs: true, keywords: true, sortOrder: true },
   });
-  const have = new Set(existing.map((r) => r.chargeText.trim()));
-  const missing = SMART_POLICE_BUILTIN_CHARGES.filter((c) => !have.has(c.chargeText.trim()));
-  if (missing.length === 0) return;
-  await prisma.smartPoliceCharge.createMany({
-    data: missing.map((c) => ({
-      ownerUserId: null,
-      category: c.category,
-      chargeText: c.chargeText,
-      lawRefs: c.lawRefs,
-      keywords: c.keywords,
-      isBuiltin: true,
-      isActive: true,
-      sortOrder: c.sortOrder,
-    })),
-  });
+
+  const obsoleteIds = existing
+    .filter((r) => !wanted.has(r.chargeText.trim()))
+    .map((r) => r.id);
+  if (obsoleteIds.length > 0) {
+    await prisma.smartPoliceCharge.deleteMany({ where: { id: { in: obsoleteIds } } });
+  }
+
+  const byText = new Map(existing.map((r) => [r.chargeText.trim(), r]));
+
+  for (const c of SMART_POLICE_BUILTIN_CHARGES) {
+    const key = c.chargeText.trim();
+    const row = byText.get(key);
+    if (!row) {
+      await prisma.smartPoliceCharge.create({
+        data: {
+          ownerUserId: null,
+          category: c.category,
+          chargeText: c.chargeText,
+          lawRefs: c.lawRefs,
+          keywords: c.keywords,
+          isBuiltin: true,
+          isActive: true,
+          sortOrder: c.sortOrder,
+        },
+      });
+      continue;
+    }
+    const needUpdate =
+      row.category !== c.category ||
+      (row.lawRefs ?? "") !== c.lawRefs ||
+      (row.keywords ?? "") !== c.keywords ||
+      row.sortOrder !== c.sortOrder;
+    if (needUpdate) {
+      await prisma.smartPoliceCharge.update({
+        where: { id: row.id },
+        data: {
+          category: c.category,
+          lawRefs: c.lawRefs,
+          keywords: c.keywords,
+          sortOrder: c.sortOrder,
+          isActive: true,
+        },
+      });
+    }
+  }
 }
 
 export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {

@@ -45,7 +45,7 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
 const TAB_META: Record<SettingsTab, string> = {
   agency: "ชื่อสถานี · ที่อยู่ · หัวหน้าหน่วย · ท้ายกระดาษพิมพ์",
   officers: "รายชื่อพงส. · ตั้งค่าเริ่มต้นในเอกสาร",
-  charges: "คลังข้อหาระบบ + ข้อหาที่สถานีเพิ่มเอง",
+  charges: "ข้อหา + ตัวบทกฎหมายมาตรฐาน · สถานีเพิ่มเองได้",
 };
 
 const emptyOfficer = { fullName: "", rankTitle: "", position: "", isDefault: false };

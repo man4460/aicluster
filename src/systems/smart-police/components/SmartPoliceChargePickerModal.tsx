@@ -6,9 +6,11 @@ import { cn } from "@/lib/cn";
 import type { SmartPoliceChargeDto } from "@/lib/smart-police/types";
 import {
   smartPoliceFieldClass,
-  smartPoliceFilterChipClass,
-  smartPoliceFilterChipShellClass,
+  smartPoliceFilterGroupDividerClass,
+  smartPoliceFilterTextClass,
+  smartPoliceFilterTextRowClass,
   smartPoliceMutedTextClass,
+  smartPoliceScrollListClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
 type Props = {
@@ -54,7 +56,7 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
       open={open}
       onClose={onClose}
       title="เลือกข้อหาจากคลัง"
-      description="ค้นหาแล้วเลือก — จะใส่ข้อหาและกฎหมายที่อ้างให้อัตโนมัติ"
+      description="ค้นหาแล้วเลือก — จะใส่ข้อหาและตัวบทกฎหมายให้อัตโนมัติ"
       size="lg"
       footer={
         <FormModalFooterActions
@@ -69,31 +71,37 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
         />
       }
     >
-      <div className="space-y-3 text-left">
+      <div className="flex min-h-0 flex-col gap-3 text-left">
         <input
           className={smartPoliceFieldClass}
-          placeholder="ค้นหา เช่น ยาบ้า · ลักทรัพย์ · เมาแล้วขับ"
+          placeholder="ค้นหา เช่น ลักทรัพย์ · ม.334 · ยาบ้า · เมาแล้วขับ"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           aria-label="ค้นหาข้อหา"
         />
-        <div className={smartPoliceFilterChipShellClass}>
+        <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองหมวดข้อหา">
           <button
             type="button"
-            className={smartPoliceFilterChipClass(!category)}
+            role="tab"
+            aria-selected={!category}
+            className={smartPoliceFilterTextClass(!category)}
             onClick={() => setCategory("")}
           >
             ทั้งหมด
           </button>
           {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={smartPoliceFilterChipClass(category === c)}
-              onClick={() => setCategory(c)}
-            >
-              {c}
-            </button>
+            <span key={c} className="inline-flex items-center gap-x-2">
+              <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={category === c}
+                className={smartPoliceFilterTextClass(category === c)}
+                onClick={() => setCategory(c)}
+              >
+                {c}
+              </button>
+            </span>
           ))}
         </div>
         {loading ? (
@@ -103,7 +111,7 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
             ไม่พบข้อหา — ลองเปลี่ยนคำค้น หรือเพิ่มในตั้งค่า → คลังข้อหา
           </p>
         ) : (
-          <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto pr-1">
+          <ul className={cn(smartPoliceScrollListClass, "max-h-[min(48vh,28rem)] space-y-1.5")}>
             {charges.map((c) => {
               const active = selectedId === c.id;
               return (
@@ -128,7 +136,7 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
                     </p>
                     <p className="text-sm font-semibold text-[#1e1b4b]">{c.chargeText}</p>
                     {c.lawRefs ? (
-                      <p className="mt-0.5 text-xs text-[#66638c] line-clamp-2">{c.lawRefs}</p>
+                      <p className="mt-0.5 text-xs leading-snug text-[#66638c]">{c.lawRefs}</p>
                     ) : null}
                   </button>
                 </li>
@@ -136,7 +144,9 @@ export function SmartPoliceChargePickerModal({ open, onClose, onSelect }: Props)
             })}
           </ul>
         )}
-        <p className="text-[11px] text-[#66638c]">ดับเบิลคลิกเลือกได้ทันที · แสดง {charges.length} รายการ</p>
+        <p className="shrink-0 text-[11px] text-[#66638c]">
+          ดับเบิลคลิกเลือกได้ทันที · แสดง {charges.length} รายการ
+        </p>
       </div>
     </FormModal>
   );

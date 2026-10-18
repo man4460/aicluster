@@ -24,11 +24,12 @@ import {
   smartPolicePrimaryButtonClass,
   smartPoliceRowIconButtonClass,
   smartPoliceRowRemoveIconButtonClass,
+  smartPoliceScrollListClass,
   smartPoliceTextareaClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 
 const emptyForm = {
-  category: "ทั่วไป",
+  category: "ทรัพย์",
   chargeText: "",
   lawRefs: "",
   keywords: "",
@@ -123,23 +124,33 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-col gap-3">
       {!hideAddButton ? (
-        <div className="flex justify-end">
+        <div className="flex shrink-0 justify-end">
           <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>
             + เพิ่มข้อหาสถานี
           </button>
         </div>
       ) : null}
 
+      <p className={cn(smartPoliceMutedTextClass, "shrink-0 text-[11px] leading-snug")}>
+        คลังมาตรฐาน: ชื่อข้อหา + ตัวบท (ป.อาญา · ประมวลยาเสพติด 2564 · พ.ร.บ.เฉพาะ) ·
+        สถานีเพิ่มเองได้ · แสดง {charges.length} ข้อหา
+      </p>
+
       <input
-        className={smartPoliceFieldClass}
-        placeholder="ค้นหาข้อหา / กฎหมาย / คำค้น"
+        className={cn(smartPoliceFieldClass, "shrink-0")}
+        placeholder="ค้นหาข้อหา / มาตรา / คำค้น"
         value={q}
         onChange={(e) => setQ(e.target.value)}
+        aria-label="ค้นหาข้อหา"
       />
 
-      <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองหมวดข้อหา">
+      <div
+        className={cn(smartPoliceFilterTextRowClass, "shrink-0")}
+        role="tablist"
+        aria-label="กรองหมวดข้อหา"
+      >
         <button
           type="button"
           role="tab"
@@ -170,7 +181,7 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
       ) : charges.length === 0 ? (
         <AppEmptyState tone="violet">ไม่พบข้อหา</AppEmptyState>
       ) : (
-        <ul className="min-h-0 space-y-2 md:max-h-none">
+        <ul className={cn(smartPoliceScrollListClass, "space-y-2")}>
           {charges.map((c) => (
             <li key={c.id} className={smartPoliceListRowAccentClass("sky")}>
               <div className="min-w-0 flex-1 text-left text-sm">
@@ -180,7 +191,7 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
                   {!c.isActive ? " · ปิด" : ""}
                 </p>
                 <p className="font-semibold text-[#1e1b4b]">{c.chargeText}</p>
-                {c.lawRefs ? <p className="text-xs text-[#66638c]">{c.lawRefs}</p> : null}
+                {c.lawRefs ? <p className="mt-0.5 text-xs leading-snug text-[#66638c]">{c.lawRefs}</p> : null}
               </div>
               {c.isOwnerCustom ? (
                 <div className="flex shrink-0 gap-1">
@@ -215,7 +226,6 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
           ))}
         </ul>
       )}
-      <p className="text-[11px] text-[#66638c]">แสดง {charges.length} ข้อหา</p>
 
       <FormModal
         open={modalOpen}

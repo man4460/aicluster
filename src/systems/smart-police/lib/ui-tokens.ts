@@ -148,6 +148,13 @@ export const smartPoliceFilterGroupDividerClass =
 export const smartPoliceFilterTextRowClass =
   "flex w-full flex-wrap items-center gap-x-2 gap-y-1.5";
 
+/**
+ * รายการที่อาจล้นกรอบ — เลื่อนในกล่อง (คลังข้อหา · แบบฟอร์ม · picker)
+ * ความสูงอิง viewport เหลือที่ให้หัว+กรอง
+ */
+export const smartPoliceScrollListClass =
+  "min-h-0 max-h-[min(58vh,36rem)] overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]";
+
 export const smartPoliceStatInlineClass =
   "flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0 rounded-md bg-slate-50/90 px-1.5 py-1.5 sm:px-2 sm:py-2";
 

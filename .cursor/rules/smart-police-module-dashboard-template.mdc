@@ -66,7 +66,13 @@ globs:
 - เมนู **แบบฟอร์ม** → `/dashboard/smart-police/forms`
 - แคตตาล็อก: `src/lib/smart-police/blank-forms-catalog.ts`
 - ไฟล์: `public/smart-police/forms/` (ดาวน์โหลดจาก [สอบสวน.com/form](https://xn--q3cb3bkbq.com/form))
-- UI: กรองหมวดข้อความ + ค้นหา + ลิงก์ดาวน์โหลด Word/PDF
+- UI: รายการแถว + กรองหมวด/ชนิดไฟล์ + ค้นหา
+
+## คลังข้อหา
+
+- Seed: `src/lib/smart-police/charge-catalog-seed.ts` — ชื่อข้อหา + `lawRefs` (ป.อาญา · ประมวลยาเสพติด 2564 · พ.ร.บ.)
+- Sync: `ensureSmartPoliceBuiltinCharges` แทนที่ builtin ให้ตรง catalog (ไม่ลบข้อหาสถานี)
+- รายการล้นกรอบ: `smartPoliceScrollListClass`
 
 ## นอกขอบเขต (รอบนี้)
 
