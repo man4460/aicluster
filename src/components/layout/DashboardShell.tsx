@@ -485,16 +485,20 @@ function SidebarNavLink({
   href,
   pathname,
   label,
+  onNavigate,
 }: {
   href: string;
   pathname: string;
   label: string;
+  onNavigate?: () => void;
 }) {
   const resolvedHref = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(href));
   const active = isNavActive(resolvedHref, pathname);
   return (
     <Link
       href={resolvedHref}
+      role="menuitem"
+      onClick={onNavigate}
       className={cn(
         "flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-black leading-tight transition-all",
         active
@@ -2197,55 +2201,49 @@ export function DashboardShell({
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-50 mt-2 max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-1.25rem))] overflow-y-auto rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  className="absolute right-0 z-50 mt-2 max-h-[min(70vh,28rem)] w-[min(17.5rem,calc(100vw-1.25rem))] overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/95 text-[#2e2a58] shadow-2xl backdrop-blur-xl"
                   role="menu"
+                  aria-label="เมนูหลัก"
                 >
-                  {demoSession ? (
-                    <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
-                  ) : null}
-                  {moduleWorkspaceSidebar ? (
-                    <DashboardProfileModuleMenu
-                      config={moduleWorkspaceSidebar}
-                      variant="popup"
-                      onNavigate={() => setAccountOpen(false)}
+                  <div className="px-3 pb-1.5 pt-3">
+                    <div
+                      className={cn("h-1 w-full rounded-full", appDashboardBrandGradientBarClass)}
+                      aria-hidden
                     />
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.12em] text-[#0000BF]/80">
+                        เมนูหลัก
+                      </p>
+                      <span className="inline-flex h-5 shrink-0 items-center rounded-md border border-[#0000BF]/15 bg-[#0000BF]/10 px-1.5 text-[10px] font-black text-[#2e2a58]">
+                        {mainMenuItems.length}
+                      </span>
+                    </div>
+                  </div>
+                  {demoSession ? (
+                    <div className="px-1.5 pb-1">
+                      <DemoSessionAccountMenuItem onNavigate={() => setAccountOpen(false)} />
+                    </div>
                   ) : null}
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
-                    role="menuitem"
-                    onClick={() => setAccountOpen(false)}
+                  <nav
+                    className="flex max-h-[min(50vh,22rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1"
+                    aria-label="เมนูหลัก"
                   >
-                    <span className="text-base" aria-hidden>
-                      ⌂
-                    </span>
-                    หน้าแรกแดชบอร์ด
-                  </Link>
-                  <Link
-                    href="/dashboard/modules"
-                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
-                    role="menuitem"
-                    onClick={() => setAccountOpen(false)}
-                  >
-                    <span className="text-base" aria-hidden>
-                      ▦
-                    </span>
-                    ระบบทั้งหมด
-                  </Link>
-                  <Link
-                    href="/dashboard/profile"
-                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
-                    role="menuitem"
-                    onClick={() => setAccountOpen(false)}
-                  >
-                    <span className="text-lg" aria-hidden>
-                      👤
-                    </span>
-                    โปรไฟล์ของคุณ
-                  </Link>
-                  <LogoutButton
-                    className="mt-0.5 flex w-full items-center justify-start gap-2.5 rounded-xl border-0 bg-transparent px-3.5 py-2.5 text-left text-sm font-bold text-rose-600 shadow-none hover:bg-rose-50"
-                  />
+                    {mainMenuItems.map((item) => (
+                      <SidebarNavLink
+                        key={item.href}
+                        href={item.href}
+                        pathname={pathname}
+                        label={item.label}
+                        onNavigate={() => setAccountOpen(false)}
+                      />
+                    ))}
+                  </nav>
+                  <div className="border-t border-slate-200/70 bg-white/70 px-2.5 py-2">
+                    <p className="truncate text-[11px] text-slate-500" title={username}>
+                      {username}
+                    </p>
+                    <LogoutButton className="mt-1.5 w-full justify-center text-xs" />
+                  </div>
                 </div>
               ) : null}
             </div>
