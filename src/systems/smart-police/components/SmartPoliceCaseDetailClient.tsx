@@ -79,7 +79,20 @@ import type {
 } from "@/generated/prisma/enums";
 import { IconRowEdit, IconRowRemove } from "@/systems/asset/components/AssetRowActionIcons";
 
-type CaseTab = "info" | "parties" | "evidence" | "behavior" | "docs";
+type CaseTab = "info" | "parties" | "evidence" | "behavior" | "memo" | "docs";
+
+const CASE_TABS: { key: CaseTab; label: string }[] = [
+  { key: "info", label: "ข้อมูลคดี" },
+  { key: "parties", label: "บุคคล" },
+  { key: "evidence", label: "ของกลาง" },
+  { key: "behavior", label: "พฤติการณ์" },
+  { key: "memo", label: "บันทึกพงส." },
+  { key: "docs", label: "เอกสาร" },
+];
+
+function isCaseTab(value: string | null): value is CaseTab {
+  return CASE_TABS.some((t) => t.key === value);
+}
 
 function documentPreviewHref(caseId: string, docId: string) {
   return `/dashboard/smart-police/cases/${caseId}/documents/${docId}`;
@@ -118,14 +131,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab");
-  const [tab, setTab] = useState<CaseTab>(
-    initialTab === "docs" ||
-      initialTab === "parties" ||
-      initialTab === "evidence" ||
-      initialTab === "behavior"
-      ? initialTab
-      : "info",
-  );
+  const [tab, setTab] = useState<CaseTab>(isCaseTab(initialTab) ? initialTab : "info");
   const [data, setData] = useState<SmartPoliceCaseDetail | null>(null);
   const [officers, setOfficers] = useState<SmartPoliceOfficerDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,6 +218,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
   async function generateDocs(
     kinds: ("STATEMENT_ALL" | "MEMO" | "INVESTIGATION_REPORT" | "PROPERTY_LIST")[],
+    options?: { preferTab?: CaseTab },
   ) {
     setGenBusy(true);
     const res = await fetch(`/api/smart-police/cases/${caseId}/generate`, {
@@ -229,7 +236,23 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     if (json.case) setData(json.case);
     else await load();
     showToast("สร้างเอกสารแล้ว");
-    setTab("docs");
+    setTab(options?.preferTab ?? "docs");
+  }
+
+  async function saveMemoContent(docId: string, content: string) {
+    setSaving(true);
+    const res = await fetch(`/api/smart-police/cases/${caseId}/documents/${docId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      showToast("บันทึกไม่สำเร็จ");
+      return;
+    }
+    await load();
+    showToast("บันทึกเนื้อหาแล้ว");
   }
 
   async function saveParty() {
@@ -373,13 +396,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     );
   }
 
-  const tabs: { key: CaseTab; label: string }[] = [
-    { key: "info", label: "ข้อมูลคดี" },
-    { key: "parties", label: "บุคคล" },
-    { key: "evidence", label: "ของกลาง" },
-    { key: "behavior", label: "พฤติการณ์" },
-    { key: "docs", label: "เอกสาร" },
-  ];
+  const memoDoc = data.documents.find((d) => d.kind === "MEMO") ?? null;
 
   return (
     <div className={smartPolicePageStackClass}>
@@ -419,9 +436,9 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             aria-label="ส่วนสำนวน"
             onChange={(e) => setTab(e.target.value as CaseTab)}
           >
-            {tabs.map((t) => (
+            {CASE_TABS.map((t) => (
               <option key={t.key} value={t.key}>
-                {t.label}
+                {t.label === "บันทึกพงส." ? "บันทึกพนักงานสอบสวน" : t.label}
               </option>
             ))}
           </select>
@@ -431,12 +448,13 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           className={cn(smartPolicePrimaryTabShellClass, "mt-2.5 hidden shrink-0 sm:inline-flex")}
           aria-label="ส่วนสำนวน"
         >
-          {tabs.map((t) => (
+          {CASE_TABS.map((t) => (
             <button
               key={t.key}
               type="button"
               role="tab"
               aria-selected={tab === t.key}
+              aria-label={t.key === "memo" ? "บันทึกพนักงานสอบสวน" : t.label}
               className={smartPolicePrimaryTabPillClass(tab === t.key)}
               onClick={() => setTab(t.key)}
             >
@@ -939,9 +957,16 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 type="button"
                 className={smartPolicePrimaryButtonClass}
                 disabled={genBusy}
-                onClick={() => void generateDocs(["MEMO"])}
+                onClick={() => void generateDocs(["MEMO"], { preferTab: "memo" })}
               >
-                {genBusy ? "…" : "บันทึกพงส."}
+                {genBusy ? "…" : "สร้าง/อัปเดตบันทึกพงส."}
+              </button>
+              <button
+                type="button"
+                className={smartPoliceOutlineButtonClass}
+                onClick={() => setTab("memo")}
+              >
+                ไปแท็บบันทึกพงส.
               </button>
               <button
                 type="button"
@@ -954,6 +979,80 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 สร้างทั้งหมด
               </button>
             </div>
+          </div>
+        ) : null}
+
+        {tab === "memo" ? (
+          <div role="tabpanel" aria-label="บันทึกพนักงานสอบสวน" className="space-y-3 text-left">
+            <div className="space-y-1">
+              <p className={smartPoliceFormSectionTitleClass}>บันทึกพนักงานสอบสวน</p>
+              <p className={smartPoliceMutedTextClass}>
+                สร้างจากข้อมูลคดี · พฤติการณ์ · บุคคล · ของกลาง แล้วแก้เนื้อหาก่อนพิมพ์ได้
+              </p>
+            </div>
+
+            {!memoDoc ? (
+              <div className="space-y-3 rounded-xl border border-dashed border-slate-200/90 bg-slate-50/60 p-4">
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีบันทึกพนักงานสอบสวนในคดีนี้</p>
+                <button
+                  type="button"
+                  className={smartPolicePrimaryButtonClass}
+                  disabled={genBusy}
+                  onClick={() => void generateDocs(["MEMO"], { preferTab: "memo" })}
+                >
+                  {genBusy ? "กำลังสร้าง…" : "+ สร้างบันทึกพงส."}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className={smartPoliceToolbarRowClass}>
+                  <button
+                    type="button"
+                    className={smartPolicePrimaryButtonClass}
+                    disabled={genBusy}
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          "อัปเดตจากข้อมูลคดีจะแทนที่เนื้อหาปัจจุบัน — ดำเนินการต่อ?",
+                        )
+                      ) {
+                        return;
+                      }
+                      void generateDocs(["MEMO"], { preferTab: "memo" });
+                    }}
+                  >
+                    {genBusy ? "…" : "อัปเดตจากข้อมูลคดี"}
+                  </button>
+                  <Link
+                    href={documentPreviewHref(caseId, memoDoc.id)}
+                    className={cn(smartPoliceOutlineButtonClass, "inline-flex")}
+                  >
+                    ดู A4
+                  </Link>
+                  <button
+                    type="button"
+                    className={smartPoliceOutlineButtonClass}
+                    onClick={() => void printDoc(memoDoc.id)}
+                  >
+                    พิมพ์
+                  </button>
+                </div>
+                <label className={smartPoliceLabelClass}>
+                  เนื้อหาบันทึก
+                  <textarea
+                    className={cn(smartPoliceTextareaClass, "mt-1 min-h-[18rem] font-mono text-[13px] leading-relaxed")}
+                    defaultValue={memoDoc.content}
+                    key={`memo-${memoDoc.id}-${data.updatedAt}`}
+                    disabled={saving || genBusy}
+                    onBlur={(e) => {
+                      if (e.target.value !== memoDoc.content) {
+                        void saveMemoContent(memoDoc.id, e.target.value);
+                      }
+                    }}
+                  />
+                </label>
+              </>
+            )}
           </div>
         ) : null}
 
@@ -1035,6 +1134,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </span>
               </div>
               <div className={smartPoliceHeaderActionShellClass}>
+                <button
+                  type="button"
+                  className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none")}
+                  disabled={genBusy}
+                  onClick={() => void generateDocs(["MEMO"], { preferTab: "memo" })}
+                >
+                  บันทึกพงส.
+                </button>
                 <button
                   type="button"
                   className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none")}
