@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
-  createEmptyPage,
+  appendContinuationSheetPair,
+  createDefaultStatementPages,
   getStatementTemplateMeta,
   normalizeStatementHeader,
+  removeStatementPageAt,
+  statementPageTabLabel,
   type StatementHeaderFields,
   type StatementPage,
   type StatementTemplateSlug,
@@ -33,7 +36,7 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
       province: "กรุงเทพมหานคร",
     }),
   );
-  const [pages, setPages] = useState<StatementPage[]>(() => [createEmptyPage()]);
+  const [pages, setPages] = useState<StatementPage[]>(() => createDefaultStatementPages());
   const [pageIndex, setPageIndex] = useState(0);
 
   const blankHref = useMemo(() => {
@@ -49,9 +52,22 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
     setPages((ps) => ps.map((p, i) => (i === pageIdx ? { ...p, text, qa: [] } : p)));
   }
 
-  function addPage() {
-    setPages((ps) => [...ps, createEmptyPage()]);
-    setPageIndex((i) => i + 1);
+  function addContinuationSheet() {
+    setPages((ps) => {
+      const next = appendContinuationSheetPair(ps);
+      setPageIndex(ps.length);
+      return next;
+    });
+  }
+
+  function removeContinuation() {
+    if (pageIndex < 2) return;
+    setPages((ps) => {
+      const next = removeStatementPageAt(ps, pageIndex);
+      if (!next) return ps;
+      setPageIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
+      return next;
+    });
   }
 
   return (
@@ -79,23 +95,37 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
       </header>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-600/60 bg-slate-900/40 px-3 py-2 sm:px-5">
-        <span className="text-[11px] font-semibold text-slate-400">หน้า</span>
+        <span className="text-[11px] font-semibold text-slate-400">ชุดหน้า</span>
         {pages.map((p, i) => (
           <button
             key={p.id}
             type="button"
             className={cn(
-              "min-h-8 min-w-8 rounded-lg px-2 text-xs font-bold",
+              "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
               i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
             )}
             onClick={() => setPageIndex(i)}
+            title={statementPageTabLabel(i)}
           >
-            {i + 1}
+            {statementPageTabLabel(i)}
           </button>
         ))}
-        <button type="button" className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700 text-white")} onClick={addPage}>
-          + เพิ่มหน้า
+        <button
+          type="button"
+          className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700 text-white")}
+          onClick={addContinuationSheet}
+        >
+          + ใบต่อคำให้การ (หน้า+หลัง)
         </button>
+        {pageIndex >= 2 ? (
+          <button
+            type="button"
+            className={cn(smartPoliceOutlineButtonClass, "border-rose-400/70 bg-rose-950/80 text-rose-50")}
+            onClick={removeContinuation}
+          >
+            ลบใบต่อนี้
+          </button>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">

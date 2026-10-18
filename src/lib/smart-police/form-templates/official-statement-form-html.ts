@@ -1,4 +1,5 @@
 import { OFFICIAL_STATEMENT_FORM_CSS } from "@/lib/smart-police/form-templates/official-statement-form-css";
+import { statementPageTabLabel } from "@/lib/smart-police/form-templates/fill-statement";
 import type {
   StatementHeaderFields,
   StatementPage,
@@ -39,7 +40,8 @@ export function buildOfficialStatementFormHtml(opts: {
           })
           .join("\n\n");
       }
-      const title = i === 0 ? "" : `<p style="text-align:center;font-weight:700">ใบต่อ — แผ่น ${i + 1}</p>`;
+      const title =
+        i === 0 ? "" : `<p style="text-align:center;font-weight:700">${statementPageTabLabel(i)}</p>`;
       return `${title}<div class="sp-off-qa-a" style="white-space:pre-wrap;min-height:8em;border:1px solid #333;padding:8px;margin:8px 0">${esc(body)}</div>`;
     })
     .join("");

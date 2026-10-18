@@ -4,7 +4,7 @@ import { findSmartPoliceBlankForm } from "@/lib/smart-police/form-template";
 import { blankFormPublicHref } from "@/lib/smart-police/form-template";
 import {
   buildHeader,
-  createEmptyPage,
+  createDefaultStatementPages,
   seedQuestionsForRole,
   type FillStatementInput,
 } from "@/lib/smart-police/form-templates/fill-statement";
@@ -27,7 +27,7 @@ export async function fillStatementDocument(
 
   const header = buildHeader(input);
   const hint = (input.behaviorHint ?? "").trim();
-  const pages = [createEmptyPage(seedQuestionsForRole(input.role, hint))];
+  const pages = createDefaultStatementPages(seedQuestionsForRole(input.role, hint));
 
   const formTitle =
     input.role === "SUSPECT"

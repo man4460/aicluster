@@ -5,8 +5,11 @@ export {
   statementTemplateSlugForRole,
 } from "@/lib/smart-police/form-templates/statement-catalog";
 export {
+  appendContinuationSheetPair,
+  createDefaultStatementPages,
   createEmptyPage,
   createEmptyQa,
+  ensureMinimumStatementPages,
   ensureStatementPagesDoc,
   normalizeStatementPage,
   qaListToBodyText,
@@ -14,11 +17,15 @@ export {
   isStatementJsonContent,
   normalizeStatementHeader,
   parseStatementDocumentContent,
+  removeStatementPageAt,
   serializeStatementDocument,
   statementContentBodyTextForWord,
   statementDocumentTitle,
   statementDocumentToPlainText,
+  statementPageSlot,
+  statementPageTabLabel,
   type FillStatementInput,
+  type StatementPageSlot,
 } from "@/lib/smart-police/form-templates/fill-statement";
 export {
   buildOfficialStatementFormHtml,

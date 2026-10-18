@@ -262,20 +262,19 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/* คำให้การ — จุดไข่ปลาเล็กชิด แบบ border-bottom dotted ของ sp-word-field */
+/* คำให้การ — ข้อความบนเส้น (เส้นจริงวาดด้วย border-bottom dotted เหมือน sp-word-field) */
 .sp-stmt-lined-body {
-  --sp-stmt-line: 6.5mm;
-  /* จุดสี่เหลี่ยมเล็ก ~1px เว้น ~1px — ใกล้เคียง dotted ของช่องกรอกด้านบน */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='20' viewBox='0 0 2 20'%3E%3Crect x='0.2' y='19.1' width='0.85' height='0.85' fill='%23111'/%3E%3C/svg%3E");
-  background-size: 2px var(--sp-stmt-line);
-  background-repeat: repeat;
-  background-attachment: local;
-  background-position: 0 0;
+  margin: 0;
+  padding: 0;
 }
 .sp-stmt-lined-body:empty::before,
 .sp-stmt-lined-body:has(> br:only-child)::before {
   content: attr(data-placeholder);
+  display: block;
+  margin: 0;
+  padding: 0;
   white-space: pre-wrap;
+  line-height: inherit;
   color: #9ca3af;
   pointer-events: none;
 }

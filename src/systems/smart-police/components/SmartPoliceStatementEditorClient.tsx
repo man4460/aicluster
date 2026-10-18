@@ -5,13 +5,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { openPrintableHtml } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
-  createEmptyPage,
+  appendContinuationSheetPair,
   ensureStatementPagesDoc,
   getStatementTemplateMeta,
   isStatementDocumentV3,
   parseStatementDocumentContent,
+  removeStatementPageAt,
   serializeStatementDocument,
   statementDocumentHasPages,
+  statementPageTabLabel,
   type StatementDocumentContentV1,
   type StatementDocumentContentV3,
   type StatementHeaderFields,
@@ -113,19 +115,26 @@ export function SmartPoliceStatementEditorClient({
     setDirty(true);
   }
 
-  function addPage() {
+  function addContinuationSheet() {
+    if (!content || !statementDocumentHasPages(content)) return;
+    const jumpTo = Math.max(content.pages.length, 2);
     setContent((c) => {
       if (!c || !statementDocumentHasPages(c)) return c;
-      return { ...c, pages: [...c.pages, createEmptyPage()] };
+      return { ...c, pages: appendContinuationSheetPair(c.pages) };
     });
-    setPageIndex((i) => i + 1);
+    setPageIndex(jumpTo);
     setDirty(true);
   }
 
   function removePage() {
-    if (!content || !statementDocumentHasPages(content) || content.pages.length <= 1) return;
-    if (!window.confirm("ลบหน้านี้?")) return;
-    const nextPages = content.pages.filter((_, i) => i !== pageIndex);
+    if (!content || !statementDocumentHasPages(content)) return;
+    if (pageIndex < 2) {
+      showToast("หน้าแรกและหน้าหลักลบไม่ได้");
+      return;
+    }
+    if (!window.confirm("ลบใบต่อคำให้การทั้งคู่ (หน้าและหลัง)?")) return;
+    const nextPages = removeStatementPageAt(content.pages, pageIndex);
+    if (!nextPages) return;
     setContent({ ...content, pages: nextPages });
     setPageIndex((i) => Math.max(0, Math.min(i, nextPages.length - 1)));
     setDirty(true);
@@ -322,30 +331,31 @@ export function SmartPoliceStatementEditorClient({
       </header>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-600/60 bg-slate-900/40 px-3 py-2 sm:px-5">
-        <span className="text-[11px] font-semibold text-slate-400">หน้า</span>
+        <span className="text-[11px] font-semibold text-slate-400">ชุดหน้า</span>
         {content.pages.map((p, i) => (
           <button
             key={p.id}
             type="button"
             className={cn(
-              "min-h-8 min-w-8 rounded-lg px-2 text-xs font-bold",
+              "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
               i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
             )}
             onClick={() => setPageIndex(i)}
+            title={statementPageTabLabel(i)}
           >
-            {i + 1}
+            {statementPageTabLabel(i)}
           </button>
         ))}
-        <button type="button" className={toolbarBtnClass} onClick={addPage}>
-          + เพิ่มหน้า
+        <button type="button" className={toolbarBtnClass} onClick={addContinuationSheet}>
+          + ใบต่อคำให้การ (หน้า+หลัง)
         </button>
-        {content.pages.length > 1 ? (
+        {pageIndex >= 2 ? (
           <button type="button" className={toolbarBtnRoseClass} onClick={removePage}>
-            ลบหน้านี้
+            ลบใบต่อนี้
           </button>
         ) : null}
         <p className="ml-auto hidden text-[11px] text-slate-300 sm:block">
-          คลิกช่องบนฟอร์มแล้วพิมพ์ได้เลย · บันทึกแล้วได้ไฟล์ Word ในสำนวนด้วย
+          1 ชุด = หน้าแรก + หน้าหลัก · จากนั้นเพิ่มใบต่อเป็นคู่หน้า/หลัง
         </p>
       </div>
 

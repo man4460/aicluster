@@ -140,6 +140,69 @@ export function createEmptyPage(seedQuestions?: string[]): StatementPage {
   };
 }
 
+/**
+ * ชุดเริ่มต้น 1 ชุด = หน้าแรก (ส ๕๖-๔) + หน้าหลัก (ด้านหลังแผ่นแรก)
+ * จากนั้นค่อยเพิ่มใบต่อคำให้การเป็นคู่ หน้า/หลัง
+ */
+export function createDefaultStatementPages(seedQuestions?: string[]): StatementPage[] {
+  return [createEmptyPage(seedQuestions), createEmptyPage()];
+}
+
+export function ensureMinimumStatementPages(pages: StatementPage[]): StatementPage[] {
+  const normalized = pages.map((p) => normalizeStatementPage(p));
+  if (normalized.length === 0) return createDefaultStatementPages();
+  if (normalized.length === 1) return [...normalized, createEmptyPage()];
+  return normalized;
+}
+
+/** เพิ่มใบต่อคำให้การ 1 ใบ = หน้า + หลัง */
+export function appendContinuationSheetPair(pages: StatementPage[]): StatementPage[] {
+  return [...ensureMinimumStatementPages(pages), createEmptyPage(), createEmptyPage()];
+}
+
+/**
+ * ลบใบต่อทั้งคู่ที่ครอบ index นี้ (หน้าแรก/หน้าหลัก ลบไม่ได้)
+ * คืน null ถ้าลบไม่ได้
+ */
+export function removeStatementPageAt(
+  pages: StatementPage[],
+  index: number,
+): StatementPage[] | null {
+  const list = ensureMinimumStatementPages(pages);
+  if (index < 2 || index >= list.length) return null;
+  // ใบต่อเริ่มที่ index 2 — ลบทั้งคู่ หน้า+หลัง
+  const start = 2 + Math.floor((index - 2) / 2) * 2;
+  if (start < 2 || start >= list.length) return null;
+  return list.filter((_, i) => i !== start && i !== start + 1);
+}
+
+export type StatementPageSlot =
+  | { kind: "first"; label: string; formCode: "ส ๕๖ - ๔"; sheetNo: 1; side: "หน้า" }
+  | { kind: "main"; label: string; formCode: "ส ๕๖ - ๔"; sheetNo: 1; side: "หลัง" }
+  | { kind: "cont"; label: string; formCode: "ส ๕๖ - ๖"; sheetNo: number; side: "หน้า" | "หลัง" };
+
+export function statementPageSlot(pageIndex: number): StatementPageSlot {
+  if (pageIndex <= 0) {
+    return { kind: "first", label: "หน้าแรก", formCode: "ส ๕๖ - ๔", sheetNo: 1, side: "หน้า" };
+  }
+  if (pageIndex === 1) {
+    return { kind: "main", label: "หน้าหลัก", formCode: "ส ๕๖ - ๔", sheetNo: 1, side: "หลัง" };
+  }
+  const contOrd = Math.floor((pageIndex - 2) / 2) + 1;
+  const side: "หน้า" | "หลัง" = (pageIndex - 2) % 2 === 0 ? "หน้า" : "หลัง";
+  return {
+    kind: "cont",
+    label: `ใบต่อ ${contOrd} · ${side}`,
+    formCode: "ส ๕๖ - ๖",
+    sheetNo: contOrd + 1,
+    side,
+  };
+}
+
+export function statementPageTabLabel(pageIndex: number): string {
+  return statementPageSlot(pageIndex).label;
+}
+
 export function normalizeStatementPage(page: Partial<StatementPage> & { id?: string }): StatementPage {
   const qa = Array.isArray(page.qa) ? page.qa : [];
   let text = typeof page.text === "string" ? page.text : "";
@@ -270,7 +333,7 @@ export function fillStatementDocumentSync(input: FillStatementInput): StatementD
     templateSlug: meta.slug,
     version: 1,
     header: buildHeader(input),
-    pages: [createEmptyPage(seedQuestionsForRole(input.role, hint))],
+    pages: createDefaultStatementPages(seedQuestionsForRole(input.role, hint)),
   };
 }
 
@@ -286,14 +349,14 @@ export function parseStatementDocumentContent(raw: string): StatementDocumentCon
     if (!parsed?.templateSlug || !parsed.header) return null;
     parsed.header = normalizeStatementHeader(parsed.header);
     if (parsed.version === 3 && isStatementDocumentV3(parsed)) {
-      parsed.pages = parsed.pages.map((p) => normalizeStatementPage(p));
+      parsed.pages = ensureMinimumStatementPages(parsed.pages);
       return parsed;
     }
     if (parsed.version === 2 && "bodyHtml" in parsed) return parsed;
     if (parsed.version === 1 && Array.isArray((parsed as StatementDocumentContentV1).pages)) {
-      (parsed as StatementDocumentContentV1).pages = (
-        parsed as StatementDocumentContentV1
-      ).pages.map((p) => normalizeStatementPage(p));
+      (parsed as StatementDocumentContentV1).pages = ensureMinimumStatementPages(
+        (parsed as StatementDocumentContentV1).pages,
+      );
       return parsed;
     }
     return null;
@@ -376,18 +439,18 @@ export function statementContentBodyTextForWord(raw: string): string {
 export function ensureStatementPagesDoc(
   doc: StatementDocumentContent,
 ): StatementDocumentContentV1 | StatementDocumentContentV3 {
-  if (statementDocumentHasPages(doc)) return doc;
+  if (statementDocumentHasPages(doc)) {
+    return { ...doc, pages: ensureMinimumStatementPages(doc.pages) };
+  }
   // v2 → แปลงเป็นโครงถาม–ตอบโดยเก็บ header
   return {
     templateSlug: doc.templateSlug,
     version: 1,
     header: doc.header,
-    pages: [
-      createEmptyPage([
-        "ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ",
-        "มีพยานหรือหลักฐานเกี่ยวข้องอย่างไร",
-      ]),
-    ],
+    pages: createDefaultStatementPages([
+      "ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ",
+      "มีพยานหรือหลักฐานเกี่ยวข้องอย่างไร",
+    ]),
   };
 }
 
