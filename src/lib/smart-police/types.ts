@@ -120,6 +120,32 @@ export type SmartPoliceTemplateDto = {
   sortOrder: number;
 };
 
+export type SmartPoliceChargeDto = {
+  id: string;
+  category: string;
+  chargeText: string;
+  lawRefs: string | null;
+  keywords: string | null;
+  isBuiltin: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  isOwnerCustom: boolean;
+};
+
+export const SMART_POLICE_CHARGE_CATEGORIES = [
+  "ยาเสพติด",
+  "ทรัพย์",
+  "ชีวิตและร่างกาย",
+  "เพศ",
+  "อาวุธ",
+  "จราจร",
+  "การพนัน",
+  "เอกสาร",
+  "ป่าไม้",
+  "อื่น ๆ",
+  "ทั่วไป",
+] as const;
+
 export const SMART_POLICE_CASE_STATUS_LABEL: Record<SmartPoliceCaseStatus, string> = {
   OPEN: "เปิดคดี",
   IN_PROGRESS: "สอบสวน",

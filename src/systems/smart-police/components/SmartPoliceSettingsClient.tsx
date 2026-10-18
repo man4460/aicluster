@@ -5,6 +5,7 @@ import { AppDashboardSection, AppEmptyState, AppSectionHeader } from "@/componen
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import type { SmartPoliceOfficerDto, SmartPoliceProfileDto } from "@/lib/smart-police/types";
+import { SmartPoliceChargesPanel } from "@/systems/smart-police/components/SmartPoliceChargesPanel";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -12,7 +13,7 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 
-type SettingsTab = "agency" | "officers";
+type SettingsTab = "agency" | "officers" | "charges";
 
 const emptyOfficer = { fullName: "", rankTitle: "", position: "", isDefault: false };
 
@@ -129,7 +130,7 @@ export function SmartPoliceSettingsClient() {
               >
                 {saving ? "…" : "บันทึก"}
               </button>
-            ) : (
+            ) : tab === "officers" ? (
               <button
                 type="button"
                 className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm sm:min-w-0 sm:px-4"
@@ -139,7 +140,7 @@ export function SmartPoliceSettingsClient() {
                 <span className="sm:hidden">+</span>
                 <span className="hidden sm:inline">+ เพิ่มพงส.</span>
               </button>
-            )
+            ) : null
           }
         />
 
@@ -153,6 +154,7 @@ export function SmartPoliceSettingsClient() {
             >
               <option value="agency">หน่วยงาน</option>
               <option value="officers">พนักงานสอบสวน</option>
+              <option value="charges">คลังข้อหา</option>
             </select>
           </label>
         </div>
@@ -163,6 +165,7 @@ export function SmartPoliceSettingsClient() {
               [
                 { key: "agency" as const, label: "หน่วยงาน" },
                 { key: "officers" as const, label: "พนักงานสอบสวน" },
+                { key: "charges" as const, label: "คลังข้อหา" },
               ] as const
             ).map((t) => (
               <button
@@ -183,6 +186,12 @@ export function SmartPoliceSettingsClient() {
             ))}
           </nav>
         </div>
+
+        {tab === "charges" ? (
+          <div role="tabpanel">
+            <SmartPoliceChargesPanel onToast={showToast} />
+          </div>
+        ) : null}
 
         {tab === "agency" ? (
           <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2">

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { SMART_POLICE_BUILTIN_CHARGES } from "@/lib/smart-police/charge-catalog-seed";
 import { SMART_POLICE_BUILTIN_TEMPLATES } from "@/lib/smart-police/default-templates";
 import type { SmartPoliceProfileDto } from "@/lib/smart-police/types";
 
@@ -90,12 +91,36 @@ export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
   await dedupeBuiltinTemplates(ownerUserId);
 }
 
+/** เติมคลังข้อหาระบบ (ownerUserId = null) — ไม่สร้างซ้ำตาม chargeText */
+export async function ensureSmartPoliceBuiltinCharges() {
+  const existing = await prisma.smartPoliceCharge.findMany({
+    where: { isBuiltin: true, ownerUserId: null },
+    select: { chargeText: true },
+  });
+  const have = new Set(existing.map((r) => r.chargeText.trim()));
+  const missing = SMART_POLICE_BUILTIN_CHARGES.filter((c) => !have.has(c.chargeText.trim()));
+  if (missing.length === 0) return;
+  await prisma.smartPoliceCharge.createMany({
+    data: missing.map((c) => ({
+      ownerUserId: null,
+      category: c.category,
+      chargeText: c.chargeText,
+      lawRefs: c.lawRefs,
+      keywords: c.keywords,
+      isBuiltin: true,
+      isActive: true,
+      sortOrder: c.sortOrder,
+    })),
+  });
+}
+
 export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
   const existing = await prisma.smartPoliceProfile.findUnique({
     where: { ownerUserId },
   });
   if (existing) {
     await ensureSmartPoliceBuiltinTemplates(ownerUserId);
+    await ensureSmartPoliceBuiltinCharges();
     return mapSmartPoliceProfile(existing);
   }
   const created = await prisma.smartPoliceProfile.create({
@@ -106,5 +131,6 @@ export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
     },
   });
   await ensureSmartPoliceBuiltinTemplates(ownerUserId);
+  await ensureSmartPoliceBuiltinCharges();
   return mapSmartPoliceProfile(created);
 }

@@ -51,7 +51,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 96: attendanceStaffSyncEnabled */
 /** 97: SmartGuardPost · DutyTemplate · PostDuty · WorkSpan · wage fields */
 /** 98: DutyTemplate.shiftRateBaht — อัตรากะ work-back OT */
-const PRISMA_SINGLETON_VERSION = 99;
+const PRISMA_SINGLETON_VERSION = 100;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -168,6 +168,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     smartPoliceTemplate?: { findMany?: unknown };
     smartPoliceOfficer?: { findMany?: unknown };
     smartPoliceEvidence?: { findMany?: unknown };
+    smartPoliceCharge?: { findMany?: unknown };
     massageShopProfile?: { findUnique?: unknown };
     massagePackage?: { findMany?: unknown };
     massageCustomer?: { findMany?: unknown };
@@ -321,6 +322,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.smartPoliceTemplate?.findMany === "function" &&
     typeof c.smartPoliceOfficer?.findMany === "function" &&
     typeof c.smartPoliceEvidence?.findMany === "function" &&
+    typeof c.smartPoliceCharge?.findMany === "function" &&
     typeof c.massageShopProfile?.findUnique === "function" &&
     typeof c.massagePackage?.findMany === "function" &&
     typeof c.massageCustomer?.findMany === "function" &&

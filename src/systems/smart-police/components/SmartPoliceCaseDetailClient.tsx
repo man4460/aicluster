@@ -23,7 +23,6 @@ import {
   SMART_POLICE_PARTY_ROLE_LABEL,
   SMART_POLICE_PLEA_OPTIONS,
   SMART_POLICE_SAMPLE_BEHAVIORS,
-  SMART_POLICE_SAMPLE_CHARGES,
   SMART_POLICE_WITNESS_SIDE_LABEL,
 } from "@/lib/smart-police/types";
 import type {
@@ -32,6 +31,7 @@ import type {
   SmartPoliceOfficerDto,
   SmartPolicePartyDto,
 } from "@/lib/smart-police/types";
+import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
 import { smartPoliceInnerCardClass } from "@/systems/smart-police/smart-police-tokens";
 import type {
   SmartPoliceCaseStatus,
@@ -108,6 +108,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     title: "",
     content: "",
   });
+  const [chargePickerOpen, setChargePickerOpen] = useState(false);
   const [templateOptions, setTemplateOptions] = useState<
     { id: string; name: string; kind: SmartPoliceDocumentKind; content: string }[]
   >([]);
@@ -475,19 +476,15 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 />
                 <button
                   type="button"
-                  className={cn(appTemplateOutlineButtonClass, "shrink-0 rounded-xl px-3 text-xs")}
-                  onClick={() => {
-                    const c = SMART_POLICE_SAMPLE_CHARGES[0];
-                    void patchCase({
-                      chargeText: c.chargeText,
-                      lawRefs: c.lawRefs,
-                      title: c.chargeText,
-                    });
-                  }}
+                  className="app-btn-primary shrink-0 rounded-xl px-3 text-xs font-semibold"
+                  onClick={() => setChargePickerOpen(true)}
                 >
-                  ตัวอย่างยาบ้า
+                  เลือกจากคลัง
                 </button>
               </div>
+              <p className="mt-1 text-[11px] text-[#66638c]">
+                เลือกจากคลังข้อหา หรือพิมพ์แก้ไขเองได้
+              </p>
             </label>
             <label className="text-sm text-[#2e2a58] sm:col-span-2">
               กฎหมายที่อ้าง
@@ -1182,6 +1179,19 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           </label>
         </div>
       </FormModal>
+
+      <SmartPoliceChargePickerModal
+        open={chargePickerOpen}
+        onClose={() => setChargePickerOpen(false)}
+        onSelect={(c) => {
+          void patchCase({
+            chargeText: c.chargeText,
+            lawRefs: c.lawRefs ?? "",
+            title: c.chargeText,
+          });
+          showToast("ใส่ข้อหาจากคลังแล้ว");
+        }}
+      />
     </div>
   );
 }
