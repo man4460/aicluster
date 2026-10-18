@@ -41,7 +41,18 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: "กรุณาระบุชื่อแม่แบบ" }, { status: 400 });
 
   const kind = (typeof body.kind === "string" ? body.kind : "OTHER") as SmartPoliceDocumentKind;
-  if (!["NARRATIVE", "STATEMENT", "WARRANT", "REPORT", "MEMO", "OTHER"].includes(kind)) {
+  if (
+    ![
+      "NARRATIVE",
+      "STATEMENT",
+      "WARRANT",
+      "REPORT",
+      "MEMO",
+      "PROPERTY_LIST",
+      "INVESTIGATION_REPORT",
+      "OTHER",
+    ].includes(kind)
+  ) {
     return NextResponse.json({ error: "ประเภทไม่ถูกต้อง" }, { status: 400 });
   }
 

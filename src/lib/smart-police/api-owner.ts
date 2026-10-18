@@ -39,34 +39,43 @@ export function mapSmartPoliceProfile(row: {
   };
 }
 
-export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
-  const count = await prisma.smartPoliceTemplate.count({
+/** ลบแม่แบบระบบที่ชื่อซ้ำ — เก็บแถวเก่าสุดต่อชื่อ */
+async function dedupeBuiltinTemplates(ownerUserId: string) {
+  const rows = await prisma.smartPoliceTemplate.findMany({
     where: { ownerUserId, isBuiltin: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, name: true },
   });
-  if (count > 0) {
-    // ensure new kinds exist for older installs
-    for (const t of SMART_POLICE_BUILTIN_TEMPLATES) {
-      const exists = await prisma.smartPoliceTemplate.findFirst({
-        where: { ownerUserId, isBuiltin: true, name: t.name },
-      });
-      if (!exists) {
-        await prisma.smartPoliceTemplate.create({
-          data: {
-            ownerUserId,
-            kind: t.kind,
-            name: t.name,
-            content: t.content,
-            sortOrder: t.sortOrder,
-            isBuiltin: true,
-            isActive: true,
-          },
-        });
-      }
-    }
-    return;
+  const seen = new Set<string>();
+  const duplicateIds: string[] = [];
+  for (const row of rows) {
+    const key = row.name.trim();
+    if (seen.has(key)) duplicateIds.push(row.id);
+    else seen.add(key);
   }
+  if (duplicateIds.length > 0) {
+    await prisma.smartPoliceTemplate.deleteMany({ where: { id: { in: duplicateIds } } });
+  }
+}
+
+/**
+ * เติมแม่แบบระบบที่ยังไม่มี (ตามชื่อ) — idempotent ไม่สร้างซ้ำ
+ * และล้างตัวซ้ำจาก race เดิม
+ */
+export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
+  await dedupeBuiltinTemplates(ownerUserId);
+
+  const existing = await prisma.smartPoliceTemplate.findMany({
+    where: { ownerUserId, isBuiltin: true },
+    select: { name: true },
+  });
+  const have = new Set(existing.map((r) => r.name.trim()));
+
+  const missing = SMART_POLICE_BUILTIN_TEMPLATES.filter((t) => !have.has(t.name.trim()));
+  if (missing.length === 0) return;
+
   await prisma.smartPoliceTemplate.createMany({
-    data: SMART_POLICE_BUILTIN_TEMPLATES.map((t) => ({
+    data: missing.map((t) => ({
       ownerUserId,
       kind: t.kind,
       name: t.name,
@@ -76,6 +85,9 @@ export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
       isActive: true,
     })),
   });
+
+  // กัน race สอง request พร้อมกัน: ล้างซ้ำอีกรอบหลัง create
+  await dedupeBuiltinTemplates(ownerUserId);
 }
 
 export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
