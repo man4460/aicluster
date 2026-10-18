@@ -384,17 +384,35 @@ export function OfficialStatementFormSheet({
               <div style={{ fontWeight: 700 }}>บัตรประจำตัวประชาชน</div>
               <Line aria-label="บัตรประชาชน" value={h.partyIdCard} onChange={(v) => set("partyIdCard", v)} />
             </div>
-            <div>
-              <div style={{ fontWeight: 700 }}>ออกเมื่อ</div>
-              <Line aria-label="ออกเมื่อ" value={h.idIssuedOn} onChange={(v) => set("idIssuedOn", v)} />
+            <div style={{ display: "flex", alignItems: "baseline", gap: "1mm", minWidth: 0 }}>
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>ออกเมื่อ</span>
+              <Dot
+                aria-label="ออกเมื่อ"
+                value={h.idIssuedOn}
+                onChange={(v) => set("idIssuedOn", v)}
+                flex
+                minCh={3}
+              />
             </div>
-            <div>
-              <div style={{ fontWeight: 700 }}>หมดอายุ</div>
-              <Line aria-label="หมดอายุ" value={h.idExpiresOn} onChange={(v) => set("idExpiresOn", v)} />
+            <div style={{ display: "flex", alignItems: "baseline", gap: "1mm", minWidth: 0 }}>
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>หมดอายุ</span>
+              <Dot
+                aria-label="หมดอายุ"
+                value={h.idExpiresOn}
+                onChange={(v) => set("idExpiresOn", v)}
+                flex
+                minCh={3}
+              />
             </div>
-            <div>
-              <div style={{ fontWeight: 700 }}>ออกให้ ณ</div>
-              <Line aria-label="ออกให้ ณ" value={h.idIssuedAt} onChange={(v) => set("idIssuedAt", v)} />
+            <div style={{ display: "flex", alignItems: "baseline", gap: "1mm", minWidth: 0 }}>
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>ออกให้ ณ</span>
+              <Dot
+                aria-label="ออกให้ ณ"
+                value={h.idIssuedAt}
+                onChange={(v) => set("idIssuedAt", v)}
+                flex
+                minCh={3}
+              />
             </div>
             <p style={{ textAlign: "center", marginTop: "8mm", fontSize: SMALL }}>
               <b>ลงชื่อ</b>
