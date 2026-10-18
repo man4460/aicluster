@@ -127,6 +127,23 @@ export function smartPoliceFilterChipClass(active = false): string {
   );
 }
 
+/** กรองแบบข้อความคลิก · ไม่ใช่ปุ่มชิป */
+export function smartPoliceFilterTextClass(active = false): string {
+  return cn(
+    "shrink-0 whitespace-nowrap text-[11px] font-semibold leading-none transition underline-offset-2",
+    active
+      ? "font-bold text-[#4d47b6] underline"
+      : "text-[#66638c] hover:text-[#4d47b6] hover:underline",
+  );
+}
+
+/** เส้นแบ่งกลุ่มกรองข้อความ */
+export const smartPoliceFilterGroupDividerClass =
+  "mx-1 inline-block h-3 w-px shrink-0 self-center bg-slate-300/90";
+
+export const smartPoliceFilterTextRowClass =
+  "flex w-full flex-wrap items-center gap-x-2 gap-y-1.5";
+
 export const smartPoliceStatInlineClass =
   "flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0 rounded-md bg-slate-50/90 px-1.5 py-1.5 sm:px-2 sm:py-2";
 

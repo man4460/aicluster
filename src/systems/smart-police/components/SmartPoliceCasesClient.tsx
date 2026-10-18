@@ -24,8 +24,9 @@ import {
   smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
   smartPoliceFieldClass,
-  smartPoliceFilterChipClass,
-  smartPoliceFilterChipShellClass,
+  smartPoliceFilterGroupDividerClass,
+  smartPoliceFilterTextClass,
+  smartPoliceFilterTextRowClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
@@ -288,80 +289,87 @@ export function SmartPoliceCasesClient() {
             onChange={(e) => setQ(e.target.value)}
             aria-label="ค้นหาคดี"
           />
-          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองคดี">
-            {(
-              [
-                { key: "" as const, label: "สถานะทั้งหมด", group: "status" as const },
-                ...(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
-                  (k) => ({
-                    key: k,
-                    label: SMART_POLICE_CASE_STATUS_LABEL[k],
-                    group: "status" as const,
-                  }),
-                ),
-              ] as { key: "" | SmartPoliceCaseStatus; label: string; group: "status" }[]
-            ).map((chip) => (
-              <button
-                key={`st-${chip.key || "all"}`}
-                type="button"
-                role="tab"
-                aria-selected={status === chip.key}
-                className={smartPoliceFilterChipClass(status === chip.key)}
-                onClick={() => setStatus(chip.key)}
-              >
-                {chip.label}
-              </button>
-            ))}
-            {(
-              [
-                { key: "" as const, label: "ทุกความสำคัญ" },
-                ...(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
-                  (k) => ({ key: k, label: SMART_POLICE_CASE_PRIORITY_LABEL[k] }),
-                ),
-              ] as { key: "" | SmartPoliceCasePriority; label: string }[]
-            ).map((chip) => (
-              <button
-                key={`pr-${chip.key || "all"}`}
-                type="button"
-                role="tab"
-                aria-selected={priority === chip.key}
-                className={smartPoliceFilterChipClass(priority === chip.key)}
-                onClick={() => setPriority(chip.key)}
-              >
-                {chip.label}
-              </button>
-            ))}
-            {(
-              [
-                { key: "" as const, label: "ส่งทั้งหมด" },
-                { key: "pending" as const, label: "ยังไม่ส่ง" },
-                { key: "sent" as const, label: "ส่งแล้ว" },
-              ] as { key: "" | "sent" | "pending"; label: string }[]
-            ).map((chip) => (
-              <button
-                key={`ps-${chip.key || "all"}`}
-                type="button"
-                role="tab"
-                aria-selected={prosecutor === chip.key}
-                className={smartPoliceFilterChipClass(prosecutor === chip.key)}
-                onClick={() => setProsecutor(chip.key)}
-              >
-                {chip.label}
-              </button>
-            ))}
+          <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองคดี">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1" role="presentation">
+              {(
+                [
+                  { key: "" as const, label: "สถานะทั้งหมด" },
+                  ...(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
+                    (k) => ({ key: k, label: SMART_POLICE_CASE_STATUS_LABEL[k] }),
+                  ),
+                ] as { key: "" | SmartPoliceCaseStatus; label: string }[]
+              ).map((chip) => (
+                <button
+                  key={`st-${chip.key || "all"}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={status === chip.key}
+                  className={smartPoliceFilterTextClass(status === chip.key)}
+                  onClick={() => setStatus(chip.key)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1" role="presentation">
+              {(
+                [
+                  { key: "" as const, label: "ทุกความสำคัญ" },
+                  ...(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
+                    (k) => ({ key: k, label: SMART_POLICE_CASE_PRIORITY_LABEL[k] }),
+                  ),
+                ] as { key: "" | SmartPoliceCasePriority; label: string }[]
+              ).map((chip) => (
+                <button
+                  key={`pr-${chip.key || "all"}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={priority === chip.key}
+                  className={smartPoliceFilterTextClass(priority === chip.key)}
+                  onClick={() => setPriority(chip.key)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1" role="presentation">
+              {(
+                [
+                  { key: "" as const, label: "ส่งทั้งหมด" },
+                  { key: "pending" as const, label: "ยังไม่ส่ง" },
+                  { key: "sent" as const, label: "ส่งแล้ว" },
+                ] as { key: "" | "sent" | "pending"; label: string }[]
+              ).map((chip) => (
+                <button
+                  key={`ps-${chip.key || "all"}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={prosecutor === chip.key}
+                  className={smartPoliceFilterTextClass(prosecutor === chip.key)}
+                  onClick={() => setProsecutor(chip.key)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
             {filtersActive ? (
-              <button
-                type="button"
-                className={cn(smartPoliceFilterChipClass(false), "border-dashed")}
-                onClick={() => {
-                  setQ("");
-                  setStatus("");
-                  setPriority("");
-                  setProsecutor("");
-                }}
-              >
-                ล้าง
-              </button>
+              <>
+                <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+                <button
+                  type="button"
+                  className={cn(smartPoliceFilterTextClass(false), "text-rose-600 hover:text-rose-700")}
+                  onClick={() => {
+                    setQ("");
+                    setStatus("");
+                    setPriority("");
+                    setProsecutor("");
+                  }}
+                >
+                  ล้างกรอง
+                </button>
+              </>
             ) : null}
           </div>
         </div>
