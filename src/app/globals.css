@@ -236,7 +236,7 @@ select:focus {
 input.sp-word-field,
 textarea.sp-word-field {
   border: none !important;
-  border-bottom: 1px dotted #111 !important;
+  border-bottom: 0.5pt dotted #111 !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -247,17 +247,30 @@ textarea.sp-word-field {
   appearance: none !important;
   -webkit-appearance: none !important;
   transition: none !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 input.sp-word-field:focus,
 input.sp-word-field:focus-visible,
 textarea.sp-word-field:focus,
 textarea.sp-word-field:focus-visible {
   border: none !important;
-  border-bottom: 1px dotted #111 !important;
+  border-bottom: 0.5pt dotted #111 !important;
   border-color: #111 !important;
   box-shadow: none !important;
   outline: none !important;
   background: transparent !important;
+}
+
+/* A4 จริงตอนพิมพ์ */
+@media print {
+  .sp-a4-sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always;
+  }
 }
 
 .app-surface {
