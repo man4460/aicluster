@@ -14,6 +14,8 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
   smartPoliceFieldClass,
+  smartPoliceModalFormClass,
+  smartPoliceSelectClass,
   smartPoliceFilterGroupDividerClass,
   smartPoliceFilterTextClass,
   smartPoliceFilterTextRowClass,
@@ -237,11 +239,11 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
           />
         }
       >
-        <div className="space-y-3 text-left">
+        <div className={smartPoliceModalFormClass}>
           <label className={smartPoliceLabelClass}>
             หมวด
             <select
-              className={cn(smartPoliceFieldClass, "mt-1")}
+              className={cn(smartPoliceSelectClass, "mt-1")}
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
             >

@@ -72,24 +72,27 @@ export const smartPoliceRowRemoveIconButtonClass = cn(
 
 export const smartPoliceFieldClass = cn(
   "app-input box-border w-full",
-  /** input ใช้ความสูงคงที่ · ห้ามใส่ py ซ้อนกับ globals select/input */
-  "h-9 min-h-9 max-h-9 py-0 leading-9",
+  /** ! ชน padding จาก globals.css (input/select { padding: 0.5rem }) */
+  "!h-10 !min-h-10 !max-h-10 !py-0 !leading-10",
   smartPoliceBtnRadiusClass,
   "px-3 text-sm font-semibold text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
 );
 
 /**
- * `<select>` — สูงพอให้อักษรเต็ม · py-0 กันชน padding จาก globals.css
- * (อย่าใช้ h-8 + leading-none — ตัวอักษรจะถูกตัดครึ่ง)
+ * `<select>` ในฟอร์ม/popup — บังคับสูง+leading ให้เห็นอักษรเต็ม
+ * ห้ามใช้ smartPoliceFieldClass กับ select (และห้าม h-8 / leading-none)
  */
 export const smartPoliceSelectClass = cn(
   "app-input box-border w-full appearance-none",
-  "h-9 min-h-9 max-h-9 py-0 leading-9",
+  "!h-10 !min-h-10 !max-h-10 !py-0 !leading-10",
   smartPoliceBtnRadiusClass,
   "px-3 pr-9 text-sm font-semibold text-[#1e1b4b] touch-manipulation",
-  "bg-[length:0.75rem] bg-[right_0.65rem_center] bg-no-repeat",
+  "bg-[length:0.85rem] bg-[right_0.7rem_center] bg-no-repeat",
   "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%234d47b6%22 stroke-width=%222%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E')]",
 );
+
+/** โครงฟอร์มใน FormModal */
+export const smartPoliceModalFormClass = "space-y-4 text-left";
 
 export const smartPoliceTextareaClass = cn(
   "app-input box-border w-full min-h-[5.5rem] resize-y px-3 py-2.5 text-sm font-semibold leading-snug text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
@@ -150,7 +153,7 @@ export function smartPolicePrimaryTabPillClass(active: boolean): string {
 
 export const smartPoliceMobileSelectClass = cn(
   "box-border w-full min-w-0 appearance-none border border-slate-200 bg-white px-3 pr-9 text-xs font-bold text-[#1e1b4b] shadow-sm outline-none focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15",
-  "h-9 min-h-9 max-h-9 py-0 leading-9",
+  "!h-10 !min-h-10 !max-h-10 !py-0 !leading-10",
   smartPoliceBtnRadiusClass,
 );
 

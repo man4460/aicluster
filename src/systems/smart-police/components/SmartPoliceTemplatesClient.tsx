@@ -14,6 +14,8 @@ import {
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
+  smartPoliceModalFormClass,
+  smartPoliceSelectClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowClass,
@@ -162,40 +164,59 @@ export function SmartPoliceTemplatesClient() {
         </div>
       </section>
 
-      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "แก้แม่แบบ" : "แม่แบบใหม่"}>
-        <div className="space-y-3 text-left">
-          <label className={smartPoliceLabelClass}>
-            ประเภท
-            <select
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={form.kind}
-              onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))}
-            >
-              {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map((k) => (
-                <option key={k} value={k}>
-                  {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ชื่อ *
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เนื้อหา
-            <textarea
-              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[13.75rem] font-mono text-sm")}
-              value={form.content}
-              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-            />
-          </label>
+      <FormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? "แก้แม่แบบ" : "แม่แบบใหม่"}
+        size="lg"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setModalOpen(false)}
+            onSubmit={() => void save()}
+            loading={saving}
+            submitLabel="บันทึก"
+            submitDisabled={!form.name.trim()}
+          />
+        }
+      >
+        <div className={smartPoliceModalFormClass}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={smartPoliceLabelClass}>
+              ประเภท
+              <select
+                className={cn(smartPoliceSelectClass, "mt-1")}
+                value={form.kind}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
+                }
+              >
+                {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map(
+                  (k) => (
+                    <option key={k} value={k}>
+                      {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ชื่อ *
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </label>
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              เนื้อหา
+              <textarea
+                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[13.75rem] font-mono text-sm")}
+                value={form.content}
+                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+              />
+            </label>
+          </div>
         </div>
-        <FormModalFooterActions onCancel={() => setModalOpen(false)} onSubmit={() => void save()} loading={saving} submitLabel="บันทึก" />
       </FormModal>
     </div>
   );

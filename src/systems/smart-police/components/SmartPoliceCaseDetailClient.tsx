@@ -44,6 +44,7 @@ import {
   smartPoliceFormSectionTitleClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
+  smartPoliceModalFormClass,
   smartPoliceSelectClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
@@ -1143,122 +1144,133 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           />
         }
       >
-        <div className="grid gap-3 text-left sm:grid-cols-2">
-          <label className={smartPoliceLabelClass}>
-            บทบาท
-            <select
-              className={cn(smartPoliceSelectClass, "mt-1")}
-              value={partyForm.role}
-              onChange={(e) =>
-                setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))
-              }
-            >
-              {(Object.keys(SMART_POLICE_PARTY_ROLE_LABEL) as SmartPolicePartyRole[]).map((k) => (
-                <option key={k} value={k}>
-                  {SMART_POLICE_PARTY_ROLE_LABEL[k]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เกี่ยวกับคดี *
-            <select
-              className={cn(smartPoliceSelectClass, "mt-1")}
-              value={partyForm.caseRelation}
-              onChange={(e) => setPartyForm((f) => ({ ...f, caseRelation: e.target.value }))}
-            >
-              <option value="">— เลือก —</option>
-              {SMART_POLICE_CASE_RELATIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-            ชื่อ *
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.fullName}
-              onChange={(e) => setPartyForm((f) => ({ ...f, fullName: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            อายุ
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.age}
-              onChange={(e) => setPartyForm((f) => ({ ...f, age: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เลขบัตร
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.idCard}
-              onChange={(e) => setPartyForm((f) => ({ ...f, idCard: e.target.value }))}
-            />
-          </label>
-          {partyForm.role === "WITNESS" ? (
-            <label className={smartPoliceLabelClass}>
-              พยานฝ่าย
-              <select
-                className={cn(smartPoliceSelectClass, "mt-1")}
-                value={partyForm.witnessSide}
-                onChange={(e) =>
-                  setPartyForm((f) => ({
-                    ...f,
-                    witnessSide: e.target.value as "" | SmartPoliceWitnessSide,
-                  }))
-                }
-              >
-                <option value="">—</option>
-                <option value="COMPLAINANT">{SMART_POLICE_WITNESS_SIDE_LABEL.COMPLAINANT}</option>
-                <option value="SUSPECT">{SMART_POLICE_WITNESS_SIDE_LABEL.SUSPECT}</option>
-              </select>
-            </label>
-          ) : null}
-          {partyForm.role === "SUSPECT" ? (
-            <label className={smartPoliceLabelClass}>
-              ผู้ต้องหาให้การ
-              <select
-                className={cn(smartPoliceSelectClass, "mt-1")}
-                value={partyForm.pleaStatus}
-                onChange={(e) => setPartyForm((f) => ({ ...f, pleaStatus: e.target.value }))}
-              >
-                <option value="">—</option>
-                {SMART_POLICE_PLEA_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-            ที่อยู่
-            <textarea
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.address}
-              onChange={(e) => setPartyForm((f) => ({ ...f, address: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            อาชีพ
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.occupation}
-              onChange={(e) => setPartyForm((f) => ({ ...f, occupation: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ที่ทำงาน/ตำแหน่ง
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={partyForm.workplace}
-              onChange={(e) => setPartyForm((f) => ({ ...f, workplace: e.target.value }))}
-            />
-          </label>
+        <div className={smartPoliceModalFormClass}>
+          <div className="space-y-2">
+            <p className={smartPoliceFormSectionTitleClass}>บทบาทในคดี</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={smartPoliceLabelClass}>
+                บทบาท
+                <select
+                  className={cn(smartPoliceSelectClass, "mt-1")}
+                  value={partyForm.role}
+                  onChange={(e) =>
+                    setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))
+                  }
+                >
+                  {(Object.keys(SMART_POLICE_PARTY_ROLE_LABEL) as SmartPolicePartyRole[]).map((k) => (
+                    <option key={k} value={k}>
+                      {SMART_POLICE_PARTY_ROLE_LABEL[k]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={smartPoliceLabelClass}>
+                เกี่ยวกับคดี *
+                <select
+                  className={cn(smartPoliceSelectClass, "mt-1")}
+                  value={partyForm.caseRelation}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, caseRelation: e.target.value }))}
+                >
+                  <option value="">— เลือก —</option>
+                  {SMART_POLICE_CASE_RELATIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {partyForm.role === "WITNESS" ? (
+                <label className={smartPoliceLabelClass}>
+                  พยานฝ่าย
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={partyForm.witnessSide}
+                    onChange={(e) =>
+                      setPartyForm((f) => ({
+                        ...f,
+                        witnessSide: e.target.value as "" | SmartPoliceWitnessSide,
+                      }))
+                    }
+                  >
+                    <option value="">— เลือก —</option>
+                    <option value="COMPLAINANT">{SMART_POLICE_WITNESS_SIDE_LABEL.COMPLAINANT}</option>
+                    <option value="SUSPECT">{SMART_POLICE_WITNESS_SIDE_LABEL.SUSPECT}</option>
+                  </select>
+                </label>
+              ) : null}
+              {partyForm.role === "SUSPECT" ? (
+                <label className={smartPoliceLabelClass}>
+                  ผู้ต้องหาให้การ
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={partyForm.pleaStatus}
+                    onChange={(e) => setPartyForm((f) => ({ ...f, pleaStatus: e.target.value }))}
+                  >
+                    <option value="">— เลือก —</option>
+                    {SMART_POLICE_PLEA_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className={smartPoliceFormSectionTitleClass}>ข้อมูลบุคคล</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                ชื่อ *
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={partyForm.fullName}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, fullName: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                อายุ
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={partyForm.age}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, age: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                เลขบัตร
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={partyForm.idCard}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, idCard: e.target.value }))}
+                />
+              </label>
+              <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                ที่อยู่
+                <textarea
+                  className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4.5rem]")}
+                  value={partyForm.address}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, address: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                อาชีพ
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={partyForm.occupation}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, occupation: e.target.value }))}
+                />
+              </label>
+              <label className={smartPoliceLabelClass}>
+                ที่ทำงาน/ตำแหน่ง
+                <input
+                  className={cn(smartPoliceFieldClass, "mt-1")}
+                  value={partyForm.workplace}
+                  onChange={(e) => setPartyForm((f) => ({ ...f, workplace: e.target.value }))}
+                />
+              </label>
+            </div>
+          </div>
         </div>
       </FormModal>
 
@@ -1277,55 +1289,57 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           />
         }
       >
-        <div className="space-y-3 text-left">
-          <label className={smartPoliceLabelClass}>
-            รายการ *
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.name}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            จำนวน (เช่น 10 เม็ด)
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.quantityLabel}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เลขยึด
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.seizureNo}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ยึด/ได้จาก
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.seizedFrom}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ผู้ถือกรรมสิทธิ์
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.ownerName}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เหตุที่ไปอยู่ที่ผู้ต้องหา
-            <textarea
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={evidenceForm.ownerNote}
-              onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
-            />
-          </label>
+        <div className={smartPoliceModalFormClass}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              รายการ *
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={evidenceForm.name}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              จำนวน (เช่น 10 เม็ด)
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={evidenceForm.quantityLabel}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, quantityLabel: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              เลขยึด
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={evidenceForm.seizureNo}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, seizureNo: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ยึด/ได้จาก
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={evidenceForm.seizedFrom}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, seizedFrom: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ผู้ถือกรรมสิทธิ์
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={evidenceForm.ownerName}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerName: e.target.value }))}
+              />
+            </label>
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              เหตุที่ไปอยู่ที่ผู้ต้องหา
+              <textarea
+                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4.5rem]")}
+                value={evidenceForm.ownerNote}
+                onChange={(e) => setEvidenceForm((f) => ({ ...f, ownerNote: e.target.value }))}
+              />
+            </label>
+          </div>
         </div>
       </FormModal>
 
@@ -1344,41 +1358,43 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           />
         }
       >
-        <div className="space-y-3 text-left">
-          <label className={smartPoliceLabelClass}>
-            ประเภท
-            <select
-              className={cn(smartPoliceSelectClass, "mt-1")}
-              value={docForm.kind}
-              onChange={(e) =>
-                setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
-              }
-            >
-              {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map(
-                (k) => (
-                  <option key={k} value={k}>
-                    {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ชื่อเอกสาร
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={docForm.title}
-              onChange={(e) => setDocForm((f) => ({ ...f, title: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            เนื้อหา
-            <textarea
-              className={cn(smartPoliceTextareaClass, "mt-1 min-h-[12.5rem] font-mono text-sm")}
-              value={docForm.content}
-              onChange={(e) => setDocForm((f) => ({ ...f, content: e.target.value }))}
-            />
-          </label>
+        <div className={smartPoliceModalFormClass}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={smartPoliceLabelClass}>
+              ประเภท
+              <select
+                className={cn(smartPoliceSelectClass, "mt-1")}
+                value={docForm.kind}
+                onChange={(e) =>
+                  setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
+                }
+              >
+                {(Object.keys(SMART_POLICE_DOCUMENT_KIND_LABEL) as SmartPoliceDocumentKind[]).map(
+                  (k) => (
+                    <option key={k} value={k}>
+                      {SMART_POLICE_DOCUMENT_KIND_LABEL[k]}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ชื่อเอกสาร
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={docForm.title}
+                onChange={(e) => setDocForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </label>
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              เนื้อหา
+              <textarea
+                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[12.5rem] font-mono text-sm")}
+                value={docForm.content}
+                onChange={(e) => setDocForm((f) => ({ ...f, content: e.target.value }))}
+              />
+            </label>
+          </div>
         </div>
       </FormModal>
 

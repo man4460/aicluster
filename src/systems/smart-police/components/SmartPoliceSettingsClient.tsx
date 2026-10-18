@@ -15,6 +15,7 @@ import {
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
+  smartPoliceModalFormClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
@@ -395,39 +396,41 @@ export function SmartPoliceSettingsClient() {
           />
         }
       >
-        <div className="space-y-3 text-left">
-          <label className={smartPoliceLabelClass}>
-            ชื่อ *
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={officerForm.fullName}
-              onChange={(e) => setOfficerForm((f) => ({ ...f, fullName: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ยศ
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={officerForm.rankTitle}
-              onChange={(e) => setOfficerForm((f) => ({ ...f, rankTitle: e.target.value }))}
-            />
-          </label>
-          <label className={smartPoliceLabelClass}>
-            ตำแหน่ง
-            <input
-              className={cn(smartPoliceFieldClass, "mt-1")}
-              value={officerForm.position}
-              onChange={(e) => setOfficerForm((f) => ({ ...f, position: e.target.value }))}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-[#2e2a58]">
-            <input
-              type="checkbox"
-              checked={officerForm.isDefault}
-              onChange={(e) => setOfficerForm((f) => ({ ...f, isDefault: e.target.checked }))}
-            />
-            ตั้งเป็นพงส. ค่าเริ่มต้น
-          </label>
+        <div className={smartPoliceModalFormClass}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+              ชื่อ *
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={officerForm.fullName}
+                onChange={(e) => setOfficerForm((f) => ({ ...f, fullName: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ยศ
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={officerForm.rankTitle}
+                onChange={(e) => setOfficerForm((f) => ({ ...f, rankTitle: e.target.value }))}
+              />
+            </label>
+            <label className={smartPoliceLabelClass}>
+              ตำแหน่ง
+              <input
+                className={cn(smartPoliceFieldClass, "mt-1")}
+                value={officerForm.position}
+                onChange={(e) => setOfficerForm((f) => ({ ...f, position: e.target.value }))}
+              />
+            </label>
+            <label className="flex items-center gap-2 self-end pb-1 text-sm font-medium text-[#2e2a58] sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={officerForm.isDefault}
+                onChange={(e) => setOfficerForm((f) => ({ ...f, isDefault: e.target.checked }))}
+              />
+              ตั้งเป็นพงส. ค่าเริ่มต้น
+            </label>
+          </div>
         </div>
       </FormModal>
     </div>

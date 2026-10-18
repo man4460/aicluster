@@ -23,6 +23,9 @@ import {
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
+  smartPoliceFormSectionTitleClass,
+  smartPoliceModalFormClass,
+  smartPoliceSelectClass,
   smartPoliceFilterGroupDividerClass,
   smartPoliceFilterTextClass,
   smartPoliceFilterTextRowClass,
@@ -469,7 +472,7 @@ export function SmartPoliceCasesClient() {
           )
         }
       >
-        <div className="space-y-3 text-left">
+        <div className={smartPoliceModalFormClass}>
           <div className="flex gap-1" aria-hidden>
             {[0, 1, 2, 3].map((i) => (
               <span
@@ -485,39 +488,61 @@ export function SmartPoliceCasesClient() {
           {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
 
           {wizard.step === 0 ? (
-            <>
-              <label className={smartPoliceLabelClass}>
-                ประเภทคดี
-                <select
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.caseType}
-                  onChange={(e) => setWizard((w) => ({ ...w, caseType: e.target.value }))}
-                >
-                  {SMART_POLICE_CASE_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={smartPoliceLabelClass}>
-                ชื่อเรื่องคดี *
-                <input
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.title}
-                  onChange={(e) => setWizard((w) => ({ ...w, title: e.target.value }))}
-                  placeholder="เช่น คดียาเสพติด / ลักทรัพย์"
-                />
-              </label>
-              <label className={smartPoliceLabelClass}>
-                สถานที่เกิดเหตุ
-                <input
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.incidentPlace}
-                  onChange={(e) => setWizard((w) => ({ ...w, incidentPlace: e.target.value }))}
-                />
-              </label>
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>ข้อมูลคดี</p>
               <div className="grid gap-3 sm:grid-cols-2">
+                <label className={smartPoliceLabelClass}>
+                  ประเภทคดี
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={wizard.caseType}
+                    onChange={(e) => setWizard((w) => ({ ...w, caseType: e.target.value }))}
+                  >
+                    {SMART_POLICE_CASE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  ความสำคัญ
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={wizard.priority}
+                    onChange={(e) =>
+                      setWizard((w) => ({
+                        ...w,
+                        priority: e.target.value as SmartPoliceCasePriority,
+                      }))
+                    }
+                  >
+                    {(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
+                      (k) => (
+                        <option key={k} value={k}>
+                          {SMART_POLICE_CASE_PRIORITY_LABEL[k]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  ชื่อเรื่องคดี *
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={wizard.title}
+                    onChange={(e) => setWizard((w) => ({ ...w, title: e.target.value }))}
+                    placeholder="เช่น คดียาเสพติด / ลักทรัพย์"
+                  />
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  สถานที่เกิดเหตุ
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={wizard.incidentPlace}
+                    onChange={(e) => setWizard((w) => ({ ...w, incidentPlace: e.target.value }))}
+                  />
+                </label>
                 <label className={smartPoliceLabelClass}>
                   วันที่รับคดี (ไทย)
                   <input
@@ -537,37 +562,17 @@ export function SmartPoliceCasesClient() {
                   </div>
                 </label>
               </div>
-              <label className={smartPoliceLabelClass}>
-                ความสำคัญ
-                <select
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.priority}
-                  onChange={(e) =>
-                    setWizard((w) => ({
-                      ...w,
-                      priority: e.target.value as SmartPoliceCasePriority,
-                    }))
-                  }
-                >
-                  {(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
-                    (k) => (
-                      <option key={k} value={k}>
-                        {SMART_POLICE_CASE_PRIORITY_LABEL[k]}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-            </>
+            </div>
           ) : null}
 
           {wizard.step === 1 ? (
-            <>
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>ข้อหา</p>
               <label className={smartPoliceLabelClass}>
                 ข้อหา *
-                <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
-                    className={cn(smartPoliceFieldClass, "flex-1")}
+                    className={cn(smartPoliceFieldClass, "min-w-0 flex-1")}
                     value={wizard.chargeText}
                     onChange={(e) => setWizard((w) => ({ ...w, chargeText: e.target.value }))}
                     placeholder="เลือกจากคลังหรือพิมพ์เอง"
@@ -589,91 +594,92 @@ export function SmartPoliceCasesClient() {
                   onChange={(e) => setWizard((w) => ({ ...w, lawRefs: e.target.value }))}
                 />
               </label>
-            </>
+            </div>
           ) : null}
 
           {wizard.step === 2 ? (
-            <>
+            <div className="space-y-3">
+              <p className={smartPoliceFormSectionTitleClass}>บุคคลหลัก</p>
               <p className={smartPoliceMutedTextClass}>อย่างน้อยผู้กล่าวหาและผู้ต้องหา</p>
-              <label className={smartPoliceLabelClass}>
-                ชื่อผู้กล่าวหา *
-                <input
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.complainant.fullName}
-                  onChange={(e) =>
-                    setWizard((w) => ({
-                      ...w,
-                      complainant: { ...w.complainant, fullName: e.target.value },
-                    }))
-                  }
-                />
-              </label>
-              <label className={smartPoliceLabelClass}>
-                เกี่ยวกับคดี (ผู้กล่าวหา)
-                <select
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.complainant.caseRelation}
-                  onChange={(e) =>
-                    setWizard((w) => ({
-                      ...w,
-                      complainant: { ...w.complainant, caseRelation: e.target.value },
-                    }))
-                  }
-                >
-                  {SMART_POLICE_CASE_RELATIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={smartPoliceLabelClass}>
-                ชื่อผู้ต้องหา *
-                <input
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.suspect.fullName}
-                  onChange={(e) =>
-                    setWizard((w) => ({
-                      ...w,
-                      suspect: { ...w.suspect, fullName: e.target.value },
-                    }))
-                  }
-                />
-              </label>
-              <label className={smartPoliceLabelClass}>
-                เกี่ยวกับคดี (ผู้ต้องหา)
-                <select
-                  className={cn(smartPoliceFieldClass, "mt-1")}
-                  value={wizard.suspect.caseRelation}
-                  onChange={(e) =>
-                    setWizard((w) => ({
-                      ...w,
-                      suspect: { ...w.suspect, caseRelation: e.target.value },
-                    }))
-                  }
-                >
-                  {SMART_POLICE_CASE_RELATIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={smartPoliceLabelClass}>
+                  ชื่อผู้กล่าวหา *
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={wizard.complainant.fullName}
+                    onChange={(e) =>
+                      setWizard((w) => ({
+                        ...w,
+                        complainant: { ...w.complainant, fullName: e.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  เกี่ยวกับคดี (ผู้กล่าวหา)
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={wizard.complainant.caseRelation}
+                    onChange={(e) =>
+                      setWizard((w) => ({
+                        ...w,
+                        complainant: { ...w.complainant, caseRelation: e.target.value },
+                      }))
+                    }
+                  >
+                    {SMART_POLICE_CASE_RELATIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  ชื่อผู้ต้องหา *
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={wizard.suspect.fullName}
+                    onChange={(e) =>
+                      setWizard((w) => ({
+                        ...w,
+                        suspect: { ...w.suspect, fullName: e.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  เกี่ยวกับคดี (ผู้ต้องหา)
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={wizard.suspect.caseRelation}
+                    onChange={(e) =>
+                      setWizard((w) => ({
+                        ...w,
+                        suspect: { ...w.suspect, caseRelation: e.target.value },
+                      }))
+                    }
+                  >
+                    {SMART_POLICE_CASE_RELATIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
           ) : null}
 
           {wizard.step === 3 ? (
-            <div className="space-y-2 rounded-2xl border border-white/50 bg-white/60 p-3 text-sm text-[#1e1b4b]">
+            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3 text-sm text-[#1e1b4b]">
               <p>
                 <span className="font-bold text-[#4d47b6]">ประเภท:</span> {wizard.caseType}
               </p>
               <p>
-                <span className="font-bold text-[#4d47b6]">เรื่อง:</span>{" "}
-                {wizard.chargeText.trim() || wizard.title.trim()}
+                <span className="font-bold text-[#4d47b6]">เรื่อง:</span> {wizard.title.trim() || "—"}
               </p>
               <p>
-                <span className="font-bold text-[#4d47b6]">ข้อหา:</span>{" "}
-                {wizard.chargeText || "—"}
+                <span className="font-bold text-[#4d47b6]">ข้อหา:</span> {wizard.chargeText || "—"}
               </p>
               <p>
                 <span className="font-bold text-[#4d47b6]">รับคดี:</span> {wizard.receivedDate}{" "}
