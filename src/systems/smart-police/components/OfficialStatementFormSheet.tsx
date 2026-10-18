@@ -562,46 +562,138 @@ export function OfficialStatementFormSheet({
               />
             </div>
 
-            <Row>
-              <L>อยู่บ้านเลขที่</L>
-              <Dot aria-label="บ้านเลขที่" value={h.houseNo} onChange={(v) => set("houseNo", v)} minCh={3} />
-              <L>หมู่ที่</L>
-              <Dot aria-label="หมู่ที่" value={h.moo} onChange={(v) => set("moo", v)} minCh={2} />
-              <L>แขวง/ตำบล</L>
-              <Dot aria-label="แขวงตำบล" value={h.tambon} onChange={(v) => set("tambon", v)} minCh={5} />
-            </Row>
-            <Row>
-              <L>เขต/อำเภอ</L>
-              <Dot
-                aria-label="เขตอำเภอที่อยู่"
-                value={h.amphoe || h.district}
-                onChange={(v) => set("amphoe", v)}
-                minCh={5}
-              />
-              <L>จังหวัด</L>
-              <Dot aria-label="จังหวัดที่อยู่" value={h.province} onChange={(v) => set("province", v)} minCh={6} />
-            </Row>
-            <Row>
-              <L>ชื่อผู้ใหญ่บ้าน</L>
-              <Dot aria-label="ผู้ใหญ่บ้าน" value={h.villageHead} onChange={(v) => set("villageHead", v)} minCh={6} />
-              <L>ชื่อกำนัน</L>
-              <Dot aria-label="กำนัน" value={h.kamnan} onChange={(v) => set("kamnan", v)} minCh={6} />
-            </Row>
-            <Row>
-              <L>ชื่อบิดา</L>
-              <Dot aria-label="บิดา" value={h.fatherName} onChange={(v) => set("fatherName", v)} minCh={6} />
-              <L>ชื่อมารดา</L>
-              <Dot aria-label="มารดา" value={h.motherName} onChange={(v) => set("motherName", v)} minCh={6} />
-            </Row>
-            <Row>
+            {/* ที่อยู่…เกี่ยวข้อง — ขยายชิดขอบซ้าย–ขวา */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.2fr 0.7fr 1.2fr",
+                columnGap: "2mm",
+                width: "100%",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>อยู่บ้านเลขที่</L>
+                <Dot aria-label="บ้านเลขที่" value={h.houseNo} onChange={(v) => set("houseNo", v)} flex minCh={2} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>หมู่ที่</L>
+                <Dot aria-label="หมู่ที่" value={h.moo} onChange={(v) => set("moo", v)} flex minCh={2} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>แขวง/ตำบล</L>
+                <Dot aria-label="แขวงตำบล" value={h.tambon} onChange={(v) => set("tambon", v)} flex minCh={3} />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                columnGap: "2mm",
+                width: "100%",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>เขต/อำเภอ</L>
+                <Dot
+                  aria-label="เขตอำเภอที่อยู่"
+                  value={h.amphoe || h.district}
+                  onChange={(v) => set("amphoe", v)}
+                  flex
+                  minCh={3}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>จังหวัด</L>
+                <Dot
+                  aria-label="จังหวัดที่อยู่"
+                  value={h.province}
+                  onChange={(v) => set("province", v)}
+                  flex
+                  minCh={4}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                columnGap: "2mm",
+                width: "100%",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>ชื่อผู้ใหญ่บ้าน</L>
+                <Dot
+                  aria-label="ผู้ใหญ่บ้าน"
+                  value={h.villageHead}
+                  onChange={(v) => set("villageHead", v)}
+                  flex
+                  minCh={4}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>ชื่อกำนัน</L>
+                <Dot aria-label="กำนัน" value={h.kamnan} onChange={(v) => set("kamnan", v)} flex minCh={4} />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                columnGap: "2mm",
+                width: "100%",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>ชื่อบิดา</L>
+                <Dot aria-label="บิดา" value={h.fatherName} onChange={(v) => set("fatherName", v)} flex minCh={4} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>ชื่อมารดา</L>
+                <Dot aria-label="มารดา" value={h.motherName} onChange={(v) => set("motherName", v)} flex minCh={4} />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "1.5mm",
+                width: "100%",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+              }}
+            >
               <L>เกี่ยวข้องเป็นอะไรกับคู่กรณี</L>
               <Dot
                 aria-label="เกี่ยวข้อง"
                 value={h.relationshipNote}
                 onChange={(v) => set("relationshipNote", v)}
-                minCh={14}
+                flex
+                minCh={8}
               />
-            </Row>
+            </div>
             <p style={{ margin: "0.5mm 0 1.5mm", fontWeight: 700, fontSize: BODY }}>
               ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
             </p>
