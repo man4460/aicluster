@@ -4,7 +4,21 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 import type { StatementHeaderFields, StatementPage } from "@/lib/smart-police/form-templates";
 
-/** พิมพ์บนจุดไข่ปลา — ไม่มีกล่อง (override globals ผ่าน .sp-word-field) */
+/**
+ * สัดส่วนจาก statement-complainant-template.png (1190×1683 = A4)
+ * - เส้นตั้งคั่นคอลัมน์ซ้าย ≈ 47.3 มม.
+ * - ขอบซ้ายเนื้อหา ≈ 6 มม. · ขวา ≈ 14 มม. · บน ≈ 14–21 มม. · ล่าง ≈ 9 มม.
+ * - บรรทัดจุดไข่ปลาหน้าต่อ ≈ 8.5 มม.
+ */
+const PAGE_W = "210mm";
+const PAGE_H = "297mm";
+const LEFT_COL = "47mm";
+const LINE_H = "8.5mm";
+const BODY_PT = "16pt"; /* TH Sarabun New มาตรฐานราชการ */
+const SMALL_PT = "14pt";
+const TINY_PT = "11pt";
+
+/** พิมพ์บนจุดไข่ปลา — ไม่มีกล่อง */
 function Dot({
   value,
   onChange,
@@ -64,12 +78,14 @@ function LinedBody({
   ariaLabel,
   className,
   minHeight,
+  bordered = true,
 }: {
   value: string;
   onChange: (v: string) => void;
   ariaLabel: string;
   className?: string;
   minHeight: string;
+  bordered?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
@@ -90,16 +106,16 @@ function LinedBody({
       spellCheck={false}
       className={cn(
         "w-full whitespace-pre-wrap break-words outline-none focus:outline-none",
-        "border-x border-[#111]",
-        "bg-[repeating-linear-gradient(transparent_0,transparent_7mm,#111_7mm,#111_calc(7mm+0.35pt))]",
+        bordered && "border-x border-[#111]",
         className,
       )}
       style={{
         minHeight,
-        fontSize: "11pt",
-        lineHeight: "7mm",
+        fontSize: BODY_PT,
+        lineHeight: LINE_H,
         padding: "0 2mm",
         color: "#111",
+        backgroundImage: `repeating-linear-gradient(transparent 0, transparent calc(${LINE_H} - 0.35pt), #111 calc(${LINE_H} - 0.35pt), #111 ${LINE_H})`,
       }}
       onFocus={() => {
         focused.current = true;
@@ -114,7 +130,7 @@ function LinedBody({
 }
 
 /**
- * แบบฟอร์มราชการ — สัดส่วน A4 จริง (210×297 มม.) ตาม คำให้การผู้กล่าวหา.docx
+ * แบบฟอร์มราชการ — สัดส่วน A4 จริงตามแม่แบบ PNG / Word (ส ๕๖-๔)
  */
 export function OfficialStatementFormSheet({
   header,
@@ -144,23 +160,35 @@ export function OfficialStatementFormSheet({
     <article
       className={cn("sp-a4-sheet mx-auto bg-white text-[#111] shadow-xl print:shadow-none", className)}
       style={{
-        width: "210mm",
-        height: "297mm",
+        width: PAGE_W,
+        height: PAGE_H,
         boxSizing: "border-box",
-        padding: "12mm 14mm 10mm 12mm",
-        fontFamily: '"TH Sarabun New", Sarabun, "Cordia New", Tahoma, sans-serif',
-        fontSize: "11pt",
-        lineHeight: "1.35",
+        /* วัดจาก PNG: L≈6 R≈14 T≈14–21 B≈9 */
+        padding: "14mm 14mm 8mm 6mm",
+        fontFamily: '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif',
+        fontSize: BODY_PT,
+        lineHeight: "1.25",
         overflow: "hidden",
       }}
     >
       {isCont ? (
         <div className="flex h-full flex-col">
-          <p style={{ fontSize: "11pt", marginBottom: "3mm" }}>
-            ใบต่อคำให้การ ของ{" "}
-            <Dot value={h.partyName} onChange={(v) => set("partyName", v)} minCh={20} />
-            <span style={{ float: "right" }}>
-              แผ่น <Dot value={String(pageIndex + 1)} onChange={() => {}} minCh={3} />
+          <p
+            style={{
+              fontSize: BODY_PT,
+              margin: "0 0 4mm",
+              lineHeight: LINE_H,
+              display: "flex",
+              alignItems: "baseline",
+              gap: "2mm",
+            }}
+          >
+            <span style={{ flexShrink: 0 }}>ใบต่อคำให้การ ของ</span>
+            <span className="min-w-0 flex-1">
+              <LineFill aria-label="ใบต่อของ" value={h.partyName} onChange={(v) => set("partyName", v)} />
+            </span>
+            <span style={{ flexShrink: 0, marginLeft: "4mm" }}>
+              แผ่น <Dot value={String(pageIndex + 1)} onChange={() => {}} minCh={2} />
             </span>
           </p>
           <LinedBody
@@ -170,25 +198,25 @@ export function OfficialStatementFormSheet({
             value={page?.text ?? ""}
             onChange={(t) => onPageTextChange(pageIndex, t)}
           />
-          <p style={{ fontSize: "8pt", marginTop: "2mm", color: "#444" }}>(ส ๕๖ - ๔)</p>
+          <p style={{ fontSize: TINY_PT, marginTop: "2mm", color: "#333" }}>(ส ๕๖ - ๖)</p>
         </div>
       ) : (
         <div
           className="grid h-full"
           style={{
-            gridTemplateColumns: "38mm 1fr",
+            gridTemplateColumns: `${LEFT_COL} 1fr`,
             columnGap: "0",
           }}
         >
-          {/* แถบซ้าย ~ สัดส่วนต้นฉบับ */}
+          {/* คอลัมน์ซ้าย — กว้างตามเส้นตั้งต้นฉบับ ≈ 47 มม. */}
           <aside
             className="relative flex flex-col"
             style={{
-              borderRight: "0.5pt solid #111",
+              borderRight: "0.6pt solid #111",
               paddingRight: "2.5mm",
-              fontSize: "10pt",
-              lineHeight: "1.3",
-              gap: "2.8mm",
+              fontSize: SMALL_PT,
+              lineHeight: "1.25",
+              gap: "3.2mm",
             }}
           >
             <div>
@@ -228,60 +256,63 @@ export function OfficialStatementFormSheet({
               <div style={{ fontWeight: 700 }}>ออกให้ ณ</div>
               <LineFill aria-label="ออกให้ ณ" value={h.idIssuedAt} onChange={(v) => set("idIssuedAt", v)} />
             </div>
-            <p style={{ textAlign: "center", marginTop: "8mm", fontSize: "10pt" }}>
+            <p style={{ textAlign: "center", marginTop: "10mm", fontSize: SMALL_PT }}>
               <span style={{ fontWeight: 700 }}>ลงชื่อ</span>
               <span
                 style={{
                   display: "inline-block",
-                  minWidth: "12mm",
+                  minWidth: "14mm",
                   borderBottom: "0.5pt dotted #111",
                   margin: "0 1mm",
                 }}
               />
               <span style={{ fontWeight: 700 }}>บันทึก</span>
             </p>
-            <p style={{ marginTop: "auto", fontSize: "8pt", color: "#444" }}>(ส ๕๖ - ๔)</p>
+            <p style={{ marginTop: "auto", fontSize: TINY_PT, color: "#333" }}>(ส ๕๖ - ๔)</p>
           </aside>
 
           {/* เนื้อหาหลัก */}
-          <div style={{ paddingLeft: "3mm", display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <header style={{ textAlign: "center", marginBottom: "2mm" }}>
+          <div style={{ paddingLeft: "3.5mm", display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <header style={{ textAlign: "center", marginBottom: "1.5mm" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/smart-police/garuda.png"
                 alt=""
-                width={46}
-                height={52}
-                style={{ display: "block", margin: "0 auto 0.5mm", height: "14mm", width: "auto" }}
+                width={52}
+                height={58}
+                style={{ display: "block", margin: "0 auto 1mm", height: "16mm", width: "auto" }}
               />
-              <p style={{ margin: 0, fontSize: "12pt", fontWeight: 700 }}>สำนักงานตำรวจแห่งชาติ</p>
+              <p style={{ margin: 0, fontSize: "18pt", fontWeight: 700, lineHeight: 1.15 }}>
+                สำนักงานตำรวจแห่งชาติ
+              </p>
               <h1
                 style={{
-                  margin: "0.5mm 0 0",
-                  fontSize: "12.5pt",
+                  margin: "0.8mm 0 0",
+                  fontSize: "18pt",
                   fontWeight: 700,
+                  lineHeight: 1.2,
                   textDecoration: "underline",
-                  textUnderlineOffset: "1mm",
+                  textUnderlineOffset: "1.2mm",
                 }}
               >
                 บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
               </h1>
             </header>
 
-            <div style={{ fontSize: "11pt", lineHeight: "1.4" }}>
-              <p style={{ margin: "0 0 1mm" }}>
+            <div style={{ fontSize: BODY_PT, lineHeight: "1.3" }}>
+              <p style={{ margin: "0 0 0.8mm", textAlign: "right" }}>
                 <b>สถานีตำรวจ</b>{" "}
-                <Dot aria-label="สถานีตำรวจ" value={h.stationName} onChange={(v) => set("stationName", v)} minCh={12} />{" "}
+                <Dot aria-label="สถานีตำรวจ" value={h.stationName} onChange={(v) => set("stationName", v)} minCh={10} />{" "}
                 <b>เขต/อำเภอ</b>{" "}
-                <Dot aria-label="เขตอำเภอสถานี" value={h.district} onChange={(v) => set("district", v)} minCh={7} />{" "}
+                <Dot aria-label="เขตอำเภอสถานี" value={h.district} onChange={(v) => set("district", v)} minCh={6} />{" "}
                 <b>จังหวัด</b>{" "}
-                <Dot aria-label="จังหวัด" value={h.province} onChange={(v) => set("province", v)} minCh={9} />
+                <Dot aria-label="จังหวัด" value={h.province} onChange={(v) => set("province", v)} minCh={8} />
               </p>
 
-              <p style={{ margin: "0 0 1.5mm" }}>
+              <p style={{ margin: "0 0 1.2mm", textAlign: "right" }}>
                 <b>วันที่</b> <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} minCh={2} />{" "}
                 <b>เดือน</b>{" "}
-                <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} minCh={7} />{" "}
+                <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} minCh={6} />{" "}
                 <b>พ.ศ.</b> <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} minCh={4} />
               </p>
 
@@ -291,14 +322,14 @@ export function OfficialStatementFormSheet({
                   gridTemplateColumns: "auto auto 1fr",
                   alignItems: "center",
                   columnGap: "2mm",
-                  margin: "1mm 0 2mm",
+                  margin: "0.5mm 0 1.5mm",
                 }}
               >
                 <b>คดีระหว่าง</b>
-                <span style={{ fontSize: "28pt", lineHeight: 0.85 }} aria-hidden>
+                <span style={{ fontSize: "32pt", lineHeight: 0.8, fontWeight: 400 }} aria-hidden>
                   {"{"}
                 </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.2mm" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1mm" }}>
                   <p style={{ margin: 0, display: "flex", alignItems: "baseline", gap: "2mm" }}>
                     <LineFill
                       aria-label="ผู้กล่าวหาในคดี"
@@ -320,7 +351,7 @@ export function OfficialStatementFormSheet({
                 </div>
               </div>
 
-              <p style={{ margin: "0 0 1mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
+              <p style={{ margin: "0 0 0.8mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
                 <b style={{ flexShrink: 0 }}>ต่อหน้า</b>
                 <LineFill
                   aria-label="ต่อหน้า"
@@ -329,7 +360,7 @@ export function OfficialStatementFormSheet({
                   onChange={(v) => set("investigator", v)}
                 />
               </p>
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <LineFill
                   aria-label="ต่อหน้าบรรทัด2"
                   value={h.commanderLine}
@@ -337,7 +368,7 @@ export function OfficialStatementFormSheet({
                 />
               </p>
 
-              <p style={{ margin: "0 0 1mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
+              <p style={{ margin: "0 0 0.8mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
                 <b style={{ flexShrink: 0 }}>สอบสวนที่</b>
                 <LineFill
                   aria-label="สอบสวนที่"
@@ -347,14 +378,14 @@ export function OfficialStatementFormSheet({
                 />
               </p>
 
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>ชื่อ</b>{" "}
-                <Dot aria-label="ชื่อ" value={h.partyName} onChange={(v) => set("partyName", v)} minCh={16} />{" "}
+                <Dot aria-label="ชื่อ" value={h.partyName} onChange={(v) => set("partyName", v)} minCh={14} />{" "}
                 <b>อายุ</b> <Dot aria-label="อายุ" value={h.partyAge} onChange={(v) => set("partyAge", v)} minCh={2} />{" "}
                 ปี
               </p>
 
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>เชื้อชาติ</b>{" "}
                 <Dot aria-label="เชื้อชาติ" value={h.ethnicity} onChange={(v) => set("ethnicity", v)} minCh={5} />{" "}
                 <b>สัญชาติ</b>{" "}
@@ -368,7 +399,7 @@ export function OfficialStatementFormSheet({
                 <Dot aria-label="ศาสนา" value={h.religion} onChange={(v) => set("religion", v)} minCh={5} />
               </p>
 
-              <p style={{ margin: "0 0 0.5mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
+              <p style={{ margin: "0 0 0.3mm", display: "flex", alignItems: "baseline", gap: "2mm" }}>
                 <b style={{ flexShrink: 0 }}>อาชีพ</b>
                 <LineFill
                   aria-label="อาชีพ"
@@ -377,92 +408,71 @@ export function OfficialStatementFormSheet({
                   onChange={(v) => set("partyOccupation", v)}
                 />
               </p>
-              <p style={{ margin: "0 0 1.5mm", fontSize: "8.5pt", lineHeight: 1.25 }}>
+              <p style={{ margin: "0 0 1mm", fontSize: TINY_PT, lineHeight: 1.2 }}>
                 (ลงให้ชัดเจนว่าอาชีพใด ถ้าเป็นข้าราชการ ให้ปรากฏว่าในหรือนอกราชการ มีเบี้ยหวัด หรือบำเหน็จ บำนาญ
                 หรือไม่ ให้ลงตามประเภทที่รับ)
               </p>
 
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>อยู่บ้านเลขที่</b>{" "}
                 <Dot aria-label="บ้านเลขที่" value={h.houseNo} onChange={(v) => set("houseNo", v)} minCh={4} />{" "}
                 <b>หมู่ที่</b> <Dot aria-label="หมู่ที่" value={h.moo} onChange={(v) => set("moo", v)} minCh={2} />{" "}
                 <b>แขวง/ตำบล</b>{" "}
-                <Dot aria-label="แขวงตำบล" value={h.tambon} onChange={(v) => set("tambon", v)} minCh={7} />
+                <Dot aria-label="แขวงตำบล" value={h.tambon} onChange={(v) => set("tambon", v)} minCh={6} />
               </p>
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>เขต/อำเภอ</b>{" "}
                 <Dot
                   aria-label="เขตอำเภอที่อยู่"
                   value={h.amphoe || h.district}
                   onChange={(v) => set("amphoe", v)}
-                  minCh={7}
+                  minCh={6}
                 />{" "}
                 <b>จังหวัด</b>{" "}
-                <Dot aria-label="จังหวัดที่อยู่" value={h.province} onChange={(v) => set("province", v)} minCh={7} />
+                <Dot aria-label="จังหวัดที่อยู่" value={h.province} onChange={(v) => set("province", v)} minCh={6} />
               </p>
 
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>ชื่อผู้ใหญ่บ้าน</b>{" "}
                 <Dot
                   aria-label="ชื่อผู้ใหญ่บ้าน"
                   value={h.villageHead}
                   onChange={(v) => set("villageHead", v)}
-                  minCh={8}
+                  minCh={7}
                 />{" "}
                 <b>ชื่อกำนัน</b>{" "}
-                <Dot aria-label="ชื่อกำนัน" value={h.kamnan} onChange={(v) => set("kamnan", v)} minCh={8} />
+                <Dot aria-label="ชื่อกำนัน" value={h.kamnan} onChange={(v) => set("kamnan", v)} minCh={7} />
               </p>
-              <p style={{ margin: "0 0 1mm" }}>
+              <p style={{ margin: "0 0 0.8mm" }}>
                 <b>ชื่อบิดา</b>{" "}
-                <Dot aria-label="ชื่อบิดา" value={h.fatherName} onChange={(v) => set("fatherName", v)} minCh={8} />{" "}
+                <Dot aria-label="ชื่อบิดา" value={h.fatherName} onChange={(v) => set("fatherName", v)} minCh={7} />{" "}
                 <b>ชื่อมารดา</b>{" "}
-                <Dot aria-label="ชื่อมารดา" value={h.motherName} onChange={(v) => set("motherName", v)} minCh={8} />
+                <Dot aria-label="ชื่อมารดา" value={h.motherName} onChange={(v) => set("motherName", v)} minCh={7} />
               </p>
 
-              <p style={{ margin: "0 0 1.5mm" }}>
+              <p style={{ margin: "0 0 1mm" }}>
                 <b>เกี่ยวข้องเป็นอะไรกับคู่กรณี</b>{" "}
                 <Dot
                   aria-label="เกี่ยวข้องกับคู่กรณี"
                   value={h.relationshipNote}
                   onChange={(v) => set("relationshipNote", v)}
-                  minCh={16}
+                  minCh={18}
                 />
               </p>
 
-              <p style={{ margin: "0 0 1.5mm", fontWeight: 700 }}>
+              <p style={{ margin: "0 0 1mm", fontWeight: 700 }}>
                 ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
               </p>
             </div>
 
+            {/* โซนคำให้การ — เติมพื้นที่ล่างเหมือนต้นฉบับ (ไม่มีกล่องลายเซ็นท้ายหน้า 1) */}
             <LinedBody
               ariaLabel="ข้อความคำให้การ"
-              className="mt-auto"
-              minHeight="55mm"
+              className="mt-auto flex-1"
+              minHeight="72mm"
               value={page?.text ?? ""}
               onChange={(t) => onPageTextChange(0, t)}
             />
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "8mm",
-                textAlign: "center",
-                fontSize: "10pt",
-                marginTop: "4mm",
-              }}
-            >
-              <div>
-                <p style={{ margin: 0 }}>ลงชื่อผู้ให้การ</p>
-                <div style={{ margin: "5mm 4mm 1mm", borderBottom: "0.5pt dotted #111" }} />
-                <p style={{ margin: 0 }}>({h.partyName || "………………"})</p>
-              </div>
-              <div>
-                <p style={{ margin: 0 }}>ลงชื่อพนักงานสอบสวน</p>
-                <div style={{ margin: "5mm 4mm 1mm", borderBottom: "0.5pt dotted #111" }} />
-                <p style={{ margin: 0 }}>({h.investigator || "………………"})</p>
-              </div>
-            </div>
           </div>
         </div>
       )}
