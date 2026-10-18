@@ -48,12 +48,18 @@ globs:
 - แม่แบบ builtin: หมายเรียก · รายงาน · หน้าปกส่งอัยการ (`default-templates.ts` — ensure ตามชื่อ)
 - whitelist สร้างเอกสาร manual รวม `PROPERTY_LIST` · `INVESTIGATION_REPORT`
 
+## Chrome / ภาพรวม
+
+- **ไม่มี** การ์ดหัวชื่อโมดูลใน `SmartPoliceShell` — เมนูอยู่ sidebar
+- ภาพรวม: สถิติ**แถวเดียว** · กรองด่วนเป็นชิป · ปุ่มหัวเหลือ CTA «สำนวนแรก» เท่านั้น (ห้ามซ้ำตั้งค่า/คดี)
+
 ## ห้าม
 
 - ก็อปเลย์เอาต์สอบสวน.com
 - เปิดคดีโดยไม่ผ่านวิซาร์ดเมื่อเรียกจากปุ่ม «สำนวนแรก»
 - นับวันด้วย UTC `toISOString().slice(0,10)` — ใช้ Bangkok helpers
 - ลืม `prisma generate` หลังแก้ schema priority
+- หัวโมดูล / ปุ่มเมนูซ้ำกับ sidebar
 
 ## นอกขอบเขต (รอบนี้)
 

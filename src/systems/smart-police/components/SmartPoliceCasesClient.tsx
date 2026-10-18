@@ -110,7 +110,7 @@ export function SmartPoliceCasesClient() {
   const [status, setStatus] = useState<"" | SmartPoliceCaseStatus>("");
   const [priority, setPriority] = useState<"" | SmartPoliceCasePriority>("");
   const [prosecutor, setProsecutor] = useState<"" | "sent" | "pending">("");
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -223,7 +223,7 @@ export function SmartPoliceCasesClient() {
         <div className={smartPoliceCardHeaderRowClass}>
           <div className="min-w-0">
             <h2 className={smartPoliceCardTitleClass}>รายการคดี</h2>
-            <p className={smartPoliceCardMetaClass}>สำนวนแรก · กรองความสำคัญ / ส่งอัยการ</p>
+            <p className={smartPoliceCardMetaClass}>ค้นหา · กรองสถานะ / ความสำคัญ</p>
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <button
@@ -279,19 +279,30 @@ export function SmartPoliceCasesClient() {
 
         <div
           id="sp-cases-filter-panel"
-          className={cn("mt-2.5 space-y-2", filterOpen ? "block" : "hidden")}
+          className={cn("mt-2 space-y-1.5", filterOpen ? "block" : "hidden")}
         >
-          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองสถานะ">
+          <input
+            className={smartPoliceFieldClass}
+            placeholder="ค้นหาเลขคดี / ชื่อเรื่อง / ข้อหา"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="ค้นหาคดี"
+          />
+          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองคดี">
             {(
               [
-                { key: "" as const, label: "ทั้งหมด" },
+                { key: "" as const, label: "สถานะทั้งหมด", group: "status" as const },
                 ...(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
-                  (k) => ({ key: k, label: SMART_POLICE_CASE_STATUS_LABEL[k] }),
+                  (k) => ({
+                    key: k,
+                    label: SMART_POLICE_CASE_STATUS_LABEL[k],
+                    group: "status" as const,
+                  }),
                 ),
-              ] as { key: "" | SmartPoliceCaseStatus; label: string }[]
+              ] as { key: "" | SmartPoliceCaseStatus; label: string; group: "status" }[]
             ).map((chip) => (
               <button
-                key={chip.key || "all"}
+                key={`st-${chip.key || "all"}`}
                 type="button"
                 role="tab"
                 aria-selected={status === chip.key}
@@ -301,8 +312,6 @@ export function SmartPoliceCasesClient() {
                 {chip.label}
               </button>
             ))}
-          </div>
-          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองความสำคัญ">
             {(
               [
                 { key: "" as const, label: "ทุกความสำคัญ" },
@@ -312,7 +321,7 @@ export function SmartPoliceCasesClient() {
               ] as { key: "" | SmartPoliceCasePriority; label: string }[]
             ).map((chip) => (
               <button
-                key={chip.key || "prio-all"}
+                key={`pr-${chip.key || "all"}`}
                 type="button"
                 role="tab"
                 aria-selected={priority === chip.key}
@@ -322,17 +331,15 @@ export function SmartPoliceCasesClient() {
                 {chip.label}
               </button>
             ))}
-          </div>
-          <div className={smartPoliceFilterChipShellClass} role="tablist" aria-label="กรองส่งอัยการ">
             {(
               [
-                { key: "" as const, label: "ทุกสถานะส่ง" },
-                { key: "pending" as const, label: "ยังไม่ส่งอัยการ" },
-                { key: "sent" as const, label: "ส่งอัยการแล้ว" },
+                { key: "" as const, label: "ส่งทั้งหมด" },
+                { key: "pending" as const, label: "ยังไม่ส่ง" },
+                { key: "sent" as const, label: "ส่งแล้ว" },
               ] as { key: "" | "sent" | "pending"; label: string }[]
             ).map((chip) => (
               <button
-                key={chip.key || "pros-all"}
+                key={`ps-${chip.key || "all"}`}
                 type="button"
                 role="tab"
                 aria-selected={prosecutor === chip.key}
@@ -342,28 +349,21 @@ export function SmartPoliceCasesClient() {
                 {chip.label}
               </button>
             ))}
+            {filtersActive ? (
+              <button
+                type="button"
+                className={cn(smartPoliceFilterChipClass(false), "border-dashed")}
+                onClick={() => {
+                  setQ("");
+                  setStatus("");
+                  setPriority("");
+                  setProsecutor("");
+                }}
+              >
+                ล้าง
+              </button>
+            ) : null}
           </div>
-          <input
-            className={smartPoliceFieldClass}
-            placeholder="ค้นหาเลขคดี / ชื่อเรื่อง / ข้อหา"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="ค้นหาคดี"
-          />
-          {filtersActive ? (
-            <button
-              type="button"
-              className="text-xs font-bold text-[#5b61ff] underline"
-              onClick={() => {
-                setQ("");
-                setStatus("");
-                setPriority("");
-                setProsecutor("");
-              }}
-            >
-              ล้างกรอง
-            </button>
-          ) : null}
         </div>
 
         {loading ? (

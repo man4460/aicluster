@@ -5,16 +5,17 @@ import { useCallback, useEffect, useState } from "react";
 import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { SMART_POLICE_CASE_PRIORITY_LABEL, SMART_POLICE_CASE_STATUS_LABEL } from "@/lib/smart-police/types";
-import { IconSpCase, IconSpPlus, IconSpPrint, IconSpSettings } from "@/systems/smart-police/components/SmartPoliceIcons";
+import { IconSpPlus, IconSpPrint } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
   smartPoliceCardHeaderRowClass,
   smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceFilterChipClass,
+  smartPoliceFilterChipShellClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
   smartPoliceMutedTextClass,
-  smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelDividerClass,
@@ -22,9 +23,9 @@ import {
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryIconButtonClass,
   smartPoliceSectionHeadingClass,
+  smartPoliceStatCellClass,
   smartPoliceStatInlineClass,
   smartPoliceStatsGridClass,
-  smartPoliceToolbarRowClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import type { SmartPoliceCasePriority, SmartPoliceCaseStatus } from "@/generated/prisma/enums";
 
@@ -79,25 +80,9 @@ export function SmartPoliceDashboardClient() {
         <div className={smartPoliceCardHeaderRowClass}>
           <div className="min-w-0">
             <h2 className={smartPoliceCardTitleClass}>ภาพรวม</h2>
-            <p className={smartPoliceCardMetaClass}>สถิติคดี · เกินกำหนด · ส่งอัยการ</p>
+            <p className={smartPoliceCardMetaClass}>สถิติคดี · กรองด่วน</p>
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
-            <Link
-              href="/dashboard/smart-police/settings"
-              className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none hover:bg-white")}
-              aria-label="ตั้งค่าสถานี"
-            >
-              <IconSpSettings className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">ตั้งค่า</span>
-            </Link>
-            <Link
-              href="/dashboard/smart-police/cases"
-              className={cn(smartPoliceOutlineButtonClass, "border-transparent bg-transparent shadow-none hover:bg-white")}
-              aria-label="เปิดรายการคดี"
-            >
-              <IconSpCase className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">คดี</span>
-            </Link>
             <Link
               href="/dashboard/smart-police/cases?new=1"
               className={cn(smartPolicePrimaryIconButtonClass, "sm:hidden")}
@@ -116,56 +101,74 @@ export function SmartPoliceDashboardClient() {
           </div>
         </div>
 
-        <div className={cn("mt-2.5", smartPoliceStatsGridClass)}>
+        <div className={cn("mt-2", smartPoliceStatsGridClass)}>
           {[
-            { label: "คดีทั้งหมด", value: s?.totalCases ?? "—" },
+            { label: "ทั้งหมด", value: s?.totalCases ?? "—" },
             { label: "เปิด/สอบสวน", value: (s?.openCases ?? 0) + (s?.inProgress ?? 0) },
             { label: "เกินกำหนด", value: s?.overdueCount ?? "—", warn: true },
             { label: "ด่วน/สูง", value: s?.urgentCount ?? "—", warn: true },
-            { label: "ยังไม่ส่งอัยการ", value: s?.notSentToProsecutor ?? "—" },
-            { label: "พิมพ์สะสม", value: s?.totalPrints ?? "—", icon: true },
+            { label: "ยังไม่ส่ง", value: s?.notSentToProsecutor ?? "—" },
+            { label: "พิมพ์", value: s?.totalPrints ?? "—", icon: true },
           ].map((card) => (
-            <div
-              key={card.label}
-              className={cn(
-                smartPoliceStatInlineClass,
-                "warn" in card && card.warn && (s?.overdueCount || s?.urgentCount)
-                  ? "ring-1 ring-amber-200/80"
-                  : undefined,
-              )}
-            >
-              <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#8b87b8]">
-                {"icon" in card && card.icon ? <IconSpPrint className="h-3 w-3" aria-hidden /> : null}
-                {card.label}
-              </p>
-              <p
+            <div key={card.label} className={smartPoliceStatCellClass}>
+              <div
                 className={cn(
-                  "text-lg font-black tabular-nums sm:text-xl",
-                  "warn" in card && card.warn ? "text-amber-800" : "text-[#1e1b4b]",
+                  smartPoliceStatInlineClass,
+                  "warn" in card && card.warn && (s?.overdueCount || s?.urgentCount)
+                    ? "ring-1 ring-amber-200/80"
+                    : undefined,
                 )}
               >
-                {card.value}
-              </p>
+                <p className="flex items-center gap-0.5 truncate text-[9px] font-bold uppercase tracking-wide text-[#8b87b8] sm:text-[10px]">
+                  {"icon" in card && card.icon ? (
+                    <IconSpPrint className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                  ) : null}
+                  {card.label}
+                </p>
+                <p
+                  className={cn(
+                    "text-base font-black tabular-nums sm:text-lg",
+                    "warn" in card && card.warn ? "text-amber-800" : "text-[#1e1b4b]",
+                  )}
+                >
+                  {card.value}
+                </p>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className={cn(smartPoliceToolbarRowClass, "mt-2.5")}>
+        <div className={cn(smartPoliceFilterChipShellClass, "mt-2")} role="tablist" aria-label="กรองด่วน">
           <Link
             href="/dashboard/smart-police/cases?prosecutor=pending"
-            className={smartPoliceOutlineButtonClass}
+            className={smartPoliceFilterChipClass(false)}
+            role="tab"
           >
             ยังไม่ส่งอัยการ
+            {s?.notSentToProsecutor != null ? (
+              <span className="tabular-nums text-[#5b61ff]">{s.notSentToProsecutor}</span>
+            ) : null}
           </Link>
           <Link
             href="/dashboard/smart-police/cases?priority=URGENT"
-            className={smartPoliceOutlineButtonClass}
+            className={smartPoliceFilterChipClass(false)}
+            role="tab"
           >
             คดีด่วน
+            {s?.urgentCount != null ? (
+              <span className="tabular-nums text-amber-700">{s.urgentCount}</span>
+            ) : null}
+          </Link>
+          <Link
+            href="/dashboard/smart-police/cases"
+            className={smartPoliceFilterChipClass(false)}
+            role="tab"
+          >
+            คดีทั้งหมด
           </Link>
         </div>
 
-        <div className={cn(smartPolicePanelDividerClass, "mt-3 space-y-2 pt-3")}>
+        <div className={cn(smartPolicePanelDividerClass, "mt-2.5 space-y-1.5 pt-2.5")}>
           <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
 
           {loading ? (

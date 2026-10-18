@@ -128,9 +128,14 @@ export function smartPoliceFilterChipClass(active = false): string {
 }
 
 export const smartPoliceStatInlineClass =
-  "flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center gap-0.5 rounded-lg bg-slate-50/90 px-3 py-2.5";
+  "flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0 rounded-md bg-slate-50/90 px-1.5 py-1.5 sm:px-2 sm:py-2";
 
-export const smartPoliceStatsGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3";
+/** สรุปสถิติแถวเดียว · มือถือเลื่อนแนวนอนได้ */
+export const smartPoliceStatsGridClass =
+  "flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2 sm:overflow-visible";
+
+export const smartPoliceStatCellClass =
+  "min-w-[4.75rem] shrink-0 sm:min-w-0 sm:flex-1";
 
 export const smartPoliceListRowClass =
   "flex flex-col gap-2 rounded-lg border border-slate-200/90 bg-white p-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/30 sm:flex-row sm:items-center sm:justify-between sm:p-3.5";
