@@ -262,6 +262,15 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
+/* คำให้การ — โซนเส้นบรรทัดถาม–ตอบ */
+.sp-stmt-lined-body:empty::before,
+.sp-stmt-lined-body:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  white-space: pre-wrap;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
 /* A4 จริงตอนพิมพ์ */
 @media print {
   .sp-a4-sheet {
