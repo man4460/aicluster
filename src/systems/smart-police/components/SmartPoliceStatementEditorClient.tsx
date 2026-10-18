@@ -20,10 +20,15 @@ import {
 } from "@/lib/smart-police/form-templates";
 import type { SmartPoliceCaseDetail, SmartPoliceDocumentDto } from "@/lib/smart-police/types";
 import { OfficialStatementFormSheet } from "@/systems/smart-police/components/OfficialStatementFormSheet";
-import {
-  smartPoliceOutlineButtonClass,
-  smartPolicePrimaryButtonClass,
-} from "@/systems/smart-police/lib/ui-tokens";
+import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+
+/** ปุ่มบนแถบมืด — ตัวอักษรขาวบนพื้นเข้ม (ห้ามใช้ outline ขาวพื้นขาว) */
+const toolbarBtnClass =
+  "inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-500 bg-slate-700 px-3 text-sm font-semibold text-white hover:bg-slate-600";
+const toolbarBtnEmeraldClass =
+  "inline-flex min-h-[40px] items-center justify-center rounded-xl border border-emerald-400/60 bg-emerald-900/70 px-3 text-sm font-semibold text-emerald-50 hover:bg-emerald-800/80";
+const toolbarBtnRoseClass =
+  "inline-flex min-h-[36px] items-center justify-center rounded-xl border border-rose-400/70 bg-rose-950/80 px-3 text-sm font-semibold text-rose-50 hover:bg-rose-900/80";
 
 type EditableDoc = StatementDocumentContentV1 | StatementDocumentContentV3;
 
@@ -298,19 +303,11 @@ export function SmartPoliceStatementEditorClient({
               {toast}
             </span>
           ) : null}
-          <Link
-            href={backHref}
-            className="inline-flex min-h-[40px] items-center rounded-xl border border-slate-600 bg-slate-700/60 px-3 text-sm font-semibold"
-          >
+          <Link href={backHref} className={toolbarBtnClass}>
             ✕ ปิด
           </Link>
           {blankHref ? (
-            <a
-              href={blankHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
-            >
+            <a href={blankHref} target="_blank" rel="noopener noreferrer" className={toolbarBtnClass}>
               ไฟล์ Word ต้นฉบับ
             </a>
           ) : null}
@@ -319,17 +316,13 @@ export function SmartPoliceStatementEditorClient({
               href={wordFileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(smartPoliceOutlineButtonClass, "border-emerald-500/50 bg-emerald-900/40 text-emerald-100")}
+              className={toolbarBtnEmeraldClass}
               title={wordFileName ?? "Word"}
             >
               Word ในสำนวน
             </a>
           ) : null}
-          <button
-            type="button"
-            className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
-            onClick={() => uploadRef.current?.click()}
-          >
+          <button type="button" className={toolbarBtnClass} onClick={() => uploadRef.current?.click()}>
             อัปโหลด Word
           </button>
           <input
@@ -343,17 +336,10 @@ export function SmartPoliceStatementEditorClient({
               void onUploadWord(f);
             }}
           />
-          <Link
-            href={previewHref}
-            className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
-          >
+          <Link href={previewHref} className={toolbarBtnClass}>
             ดูก่อนพิมพ์
           </Link>
-          <button
-            type="button"
-            className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
-            onClick={() => void printDoc()}
-          >
+          <button type="button" className={toolbarBtnClass} onClick={() => void printDoc()}>
             พิมพ์ลงลายเซ็น
           </button>
           <button
@@ -382,19 +368,11 @@ export function SmartPoliceStatementEditorClient({
             {i + 1}
           </button>
         ))}
-        <button
-          type="button"
-          className={cn(smartPoliceOutlineButtonClass, "border-slate-500 text-slate-100")}
-          onClick={addPage}
-        >
+        <button type="button" className={toolbarBtnClass} onClick={addPage}>
           + เพิ่มหน้า
         </button>
         {content.pages.length > 1 ? (
-          <button
-            type="button"
-            className={cn(smartPoliceOutlineButtonClass, "border-rose-400/50 text-rose-100")}
-            onClick={removePage}
-          >
+          <button type="button" className={toolbarBtnRoseClass} onClick={removePage}>
             ลบหน้านี้
           </button>
         ) : null}
