@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   statementPageSlot,
@@ -18,9 +18,8 @@ const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, 
 const BODY = "13pt";
 const SMALL = "11pt";
 const TITLE = "15pt";
+/** ระยะแถวช่องพิมพ์ — ใช้ร่วมกันทั้งแถวด้านบนและโซนถาม–ตอบ */
 const LINE = "6.2mm";
-/** ระยะบรรทัดโซนถาม–ตอบ — ใกล้เคียงแถวจุดไข่ปลาด้านบน */
-const STMT_LINE = "6.5mm";
 
 function Dot({
   value,
@@ -104,6 +103,16 @@ function L({ children }: { children: ReactNode }) {
 /** จำนวนแถวจุดไข่ปลาพื้นหลัง — ครอบคลุมพื้นที่หน้าต่อด้วย */
 const STMT_DOT_ROWS = 48;
 
+function placeCaret(el: HTMLElement, atStart: boolean) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(atStart);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 function LinedBody({
   value,
   onChange,
@@ -126,6 +135,26 @@ function LinedBody({
     if (ref.current.innerText !== value) ref.current.innerText = value;
   }, [value]);
 
+  function focusFirstSlot(e?: MouseEvent) {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    const empty = !(el.innerText ?? "").replace(/\u200b/g, "").trim();
+    if (empty) {
+      e?.preventDefault();
+      // ช่องแรกว่าง — ใส่ต้นแบบถามแรก แล้ววางเคอร์เซอร์ท้ายคำว่า «ถาม 1. »
+      const starter = "ถาม 1. ";
+      el.innerText = starter;
+      onChange(starter);
+      placeCaret(el, false);
+      return;
+    }
+    // มีข้อความแล้วแต่คลิกโซนว่างด้านล่าง — ถ้ายังไม่โฟกัส ให้โฟกัสที่ต้นข้อความ (ถามแรก)
+    if (document.activeElement !== el) {
+      placeCaret(el, true);
+    }
+  }
+
   return (
     <div
       className="relative w-full"
@@ -135,9 +164,16 @@ function LinedBody({
         marginTop: 0,
         marginBottom: "2mm",
       }}
+      onMouseDown={(e) => {
+        // คลิกพื้นหลังเส้น / ช่องแรก → โฟกัส contentEditable ทันที
+        if (e.target === e.currentTarget || (e.target as HTMLElement).closest?.("[data-stmt-lines]")) {
+          focusFirstSlot(e);
+        }
+      }}
     >
-      {/* เส้นเดียวกับ input.sp-word-field — border-bottom 0.5pt dotted */}
+      {/* เส้นเดียวกับ input.sp-word-field — ระยะสูง = LINE เท่าแถวด้านบน */}
       <div
+        data-stmt-lines
         className="pointer-events-none absolute inset-0 overflow-hidden"
         aria-hidden
       >
@@ -145,7 +181,7 @@ function LinedBody({
           <div
             key={i}
             style={{
-              height: STMT_LINE,
+              height: LINE,
               boxSizing: "border-box",
               borderBottom: "0.5pt dotted #111",
             }}
@@ -161,22 +197,36 @@ function LinedBody({
         suppressContentEditableWarning
         spellCheck={false}
         data-placeholder={"ถาม 1. …\nตอบ …"}
-        className="sp-stmt-lined-body relative z-[1] w-full whitespace-pre-wrap break-words outline-none"
+        className="sp-stmt-lined-body absolute inset-0 z-[1] w-full overflow-hidden whitespace-pre-wrap break-words outline-none"
         style={{
-          minHeight,
-          width: "100%",
           boxSizing: "border-box",
           margin: 0,
           padding: 0,
           fontSize: BODY,
-          lineHeight: STMT_LINE,
-          /* จัด baseline ให้ถามแรกนั่งบนเส้นจุดไข่ปลาแถวแรก (ช่องบน) */
-          paddingTop: 0,
+          lineHeight: LINE,
           color: "#111",
           background: "transparent",
         }}
+        onMouseDown={(e) => {
+          const el = ref.current;
+          if (!el) return;
+          const empty = !(el.innerText ?? "").replace(/\u200b/g, "").trim();
+          if (empty) {
+            e.preventDefault();
+            focusFirstSlot(e);
+          }
+        }}
         onFocus={() => {
           focused.current = true;
+          const el = ref.current;
+          if (!el) return;
+          const empty = !(el.innerText ?? "").replace(/\u200b/g, "").trim();
+          if (empty && !(el.innerText ?? "").startsWith("ถาม")) {
+            const starter = "ถาม 1. ";
+            el.innerText = starter;
+            onChange(starter);
+            requestAnimationFrame(() => placeCaret(el, false));
+          }
         }}
         onBlur={() => {
           focused.current = false;
