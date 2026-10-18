@@ -496,22 +496,22 @@ function SidebarNavLink({
     <Link
       href={resolvedHref}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-black transition-all duration-300",
+        "flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-black leading-tight transition-all",
         active
-          ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
-          : "bg-white/70 text-slate-600 ring-1 ring-slate-200/60 hover:bg-white",
+          ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_12px_24px_-18px_rgba(91,97,255,0.55)]")
+          : "border border-[#e8e6fc]/70 bg-gradient-to-br from-white/70 via-white/50 to-[#fdf2f8]/40 text-[#2e2a58] hover:border-[#0000BF]/20 hover:bg-white/80",
       )}
     >
       <span
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1",
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
           active ? "bg-white/15 ring-white/20" : "bg-slate-50 text-slate-500 ring-slate-200",
         )}
         aria-hidden
       >
         {dashboardNavIconForHref(resolvedHref)}
       </span>
-      <span className="min-w-0 flex-1 truncate leading-tight">{label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
     </Link>
   );
 }
@@ -2253,27 +2253,28 @@ export function DashboardShell({
         {/* Sidebar — แก้ว โค้งมนเทียบแถบบน / drawer */}
         <aside
           className={cn(
-            "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
+            /** ความกว้าง / padding อ้างอิง BOTProject Shell (`w-64 p-3`) */
+            "hidden w-64 shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
             sidebarCollapsed && "md:!hidden",
             (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
             moduleStaffKiosk && "!hidden !my-0",
           )}
           aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
         >
-          <div className="p-3">
-            <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-[11px] font-black tracking-tight text-[#2e2a58]">
+          <div className="px-3 pb-2 pt-3">
+            <div className={cn("h-1 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.12em] text-[#0000BF]/80">
                 {moduleWorkspaceSidebar?.moduleTitle ?? "เมนูหลัก"}
               </p>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-2 text-[11px] font-black text-[#2e2a58]">
+              <span className="inline-flex h-5 shrink-0 items-center rounded-md border border-[#0000BF]/15 bg-[#0000BF]/10 px-1.5 text-[10px] font-black text-[#2e2a58]">
                 {moduleWorkspaceSidebar?.items.length ?? mainMenuItems.length}
               </span>
             </div>
           </div>
 
           <nav
-            className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3"
+            className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2.5 pb-2 pt-1"
             aria-label={useModuleWorkspaceSidebarNav ? "เมนูโมดูล" : "เมนูหลัก"}
           >
             {moduleWorkspaceSidebar ? (
@@ -2284,19 +2285,19 @@ export function DashboardShell({
               ))
             )}
           </nav>
-          <div className="border-t border-slate-200/70 bg-white/70 p-3">
+          <div className="border-t border-slate-200/70 bg-white/70 px-2.5 py-2">
             {useModuleWorkspaceSidebarNav ? (
               <Link
                 href="/dashboard"
-                className="mb-2 flex w-full items-center justify-center rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-bold text-[#4d47b6] transition hover:bg-slate-50"
+                className="mb-1.5 flex w-full items-center justify-center rounded-lg border border-slate-200/80 bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#4d47b6] transition hover:bg-slate-50"
               >
                 ← หน้าแรกแดชบอร์ด
               </Link>
             ) : null}
-            <p className="truncate text-xs text-slate-500" title={username}>
+            <p className="truncate text-[11px] text-slate-500" title={username}>
               {username}
             </p>
-            <LogoutButton className="mt-2 w-full justify-center text-sm" />
+            <LogoutButton className="mt-1.5 w-full justify-center text-xs" />
           </div>
         </aside>
 
@@ -2341,7 +2342,7 @@ export function DashboardShell({
                       <Link
                         href="/dashboard"
                         onClick={closeDrawer}
-                        className="mx-1 rounded-xl bg-white/15 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-white/25"
+                        className="mx-0.5 rounded-xl bg-white/15 px-2.5 py-1.5 text-center text-xs font-bold text-white hover:bg-white/25"
                       >
                         ← หน้าแรกแดชบอร์ด
                       </Link>
