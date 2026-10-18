@@ -88,13 +88,15 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
               key={p.id}
               type="button"
               className={cn(
-                "h-8 shrink-0 rounded-md px-2 text-[11px] font-bold",
+                "h-8 min-w-8 shrink-0 rounded-md px-1.5 text-xs font-bold tabular-nums",
                 i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200 hover:bg-slate-600",
               )}
               aria-current={i === pageIndex ? "page" : undefined}
+              aria-label={`หน้า ${i + 1} · ${statementPageTabLabel(i)}`}
+              title={statementPageTabLabel(i)}
               onClick={() => goToPage(i)}
             >
-              {statementPageTabLabel(i)}
+              {i + 1}
             </button>
           ))}
           {pageIndex >= 2 ? (

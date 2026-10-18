@@ -347,19 +347,21 @@ export function SmartPoliceStatementEditorClient({
       </header>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-600/60 bg-slate-900/40 px-3 py-2 sm:px-5">
-        <span className="text-[11px] font-semibold text-slate-400">ชุดหน้า</span>
+        <span className="text-[11px] font-semibold text-slate-400">หน้า</span>
         {content.pages.map((p, i) => (
           <button
             key={p.id}
             type="button"
             className={cn(
-              "min-h-8 rounded-lg px-2.5 text-[11px] font-bold sm:text-xs",
+              "h-8 min-w-8 rounded-md px-1.5 text-xs font-bold tabular-nums",
               i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200",
             )}
+            aria-current={i === pageIndex ? "page" : undefined}
+            aria-label={`หน้า ${i + 1} · ${statementPageTabLabel(i)}`}
             onClick={() => goToPage(i)}
             title={statementPageTabLabel(i)}
           >
-            {statementPageTabLabel(i)}
+            {i + 1}
           </button>
         ))}
         <button type="button" className={toolbarBtnClass} onClick={addContinuationSheet}>
