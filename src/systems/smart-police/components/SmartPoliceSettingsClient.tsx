@@ -15,9 +15,7 @@ import {
   smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
   smartPoliceFieldClass,
-  smartPoliceFilterGroupDividerClass,
-  smartPoliceFilterTextClass,
-  smartPoliceFilterTextRowClass,
+  smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
@@ -25,11 +23,16 @@ import {
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
+  smartPolicePrimaryTabPillClass,
   smartPoliceRowIconButtonClass,
   smartPoliceRowRemoveIconButtonClass,
   smartPoliceTextareaClass,
   smartPoliceToastSuccessClass,
 } from "@/systems/smart-police/lib/ui-tokens";
+
+/** เส้นบางคั่นกลุ่มปุ่มในแถบหัว */
+const settingsToolbarDividerClass =
+  "mx-0.5 inline-block h-5 w-px shrink-0 self-center bg-slate-300/90";
 
 type SettingsTab = "agency" | "officers" | "charges";
 
@@ -153,56 +156,44 @@ export function SmartPoliceSettingsClient() {
           </div>
 
           <div
-            className={cn(smartPoliceFilterTextRowClass, "w-auto max-w-full justify-end")}
+            className={cn(smartPoliceHeaderActionShellClass, "max-w-full justify-end")}
             role="toolbar"
             aria-label="หมวดตั้งค่าและแอ็กชัน"
           >
-            <nav
-              className="flex flex-wrap items-center gap-x-2 gap-y-1"
-              role="tablist"
-              aria-label="หมวดตั้งค่า"
-            >
-              {SETTINGS_TABS.map((t, i) => (
-                <span key={t.key} className="inline-flex items-center gap-x-2">
-                  {i > 0 ? (
-                    <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
-                  ) : null}
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === t.key}
-                    className={smartPoliceFilterTextClass(tab === t.key)}
-                    onClick={() => setTab(t.key)}
-                  >
-                    {t.label}
-                  </button>
-                </span>
+            <nav className="inline-flex flex-wrap items-center gap-0.5" role="tablist" aria-label="หมวดตั้งค่า">
+              {SETTINGS_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.key}
+                  className={smartPolicePrimaryTabPillClass(tab === t.key)}
+                  onClick={() => setTab(t.key)}
+                >
+                  {t.label}
+                </button>
               ))}
             </nav>
 
-            <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            <span className={settingsToolbarDividerClass} aria-hidden />
 
             {tab === "agency" ? (
               <button
                 type="button"
-                className={smartPoliceFilterTextClass(false)}
+                className={smartPolicePrimaryButtonClass}
                 disabled={saving}
                 onClick={() => void saveProfile()}
               >
                 {saving ? "…" : "บันทึก"}
               </button>
             ) : tab === "officers" ? (
-              <button
-                type="button"
-                className={smartPoliceFilterTextClass(false)}
-                onClick={openAddOfficer}
-              >
+              <button type="button" className={smartPolicePrimaryButtonClass} onClick={openAddOfficer}>
                 + เพิ่มพงส.
               </button>
             ) : (
               <button
                 type="button"
-                className={smartPoliceFilterTextClass(false)}
+                className={smartPolicePrimaryButtonClass}
                 onClick={() => openAddChargeRef.current?.()}
               >
                 + เพิ่มข้อหา

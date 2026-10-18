@@ -14,8 +14,9 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
   smartPoliceFieldClass,
-  smartPoliceFilterChipClass,
-  smartPoliceFilterChipShellClass,
+  smartPoliceFilterGroupDividerClass,
+  smartPoliceFilterTextClass,
+  smartPoliceFilterTextRowClass,
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
@@ -138,23 +139,29 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
         onChange={(e) => setQ(e.target.value)}
       />
 
-      <div className={smartPoliceFilterChipShellClass}>
+      <div className={smartPoliceFilterTextRowClass} role="tablist" aria-label="กรองหมวดข้อหา">
         <button
           type="button"
-          className={smartPoliceFilterChipClass(!category)}
+          role="tab"
+          aria-selected={!category}
+          className={smartPoliceFilterTextClass(!category)}
           onClick={() => setCategory("")}
         >
           ทั้งหมด
         </button>
         {categories.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={smartPoliceFilterChipClass(category === c)}
-            onClick={() => setCategory(c)}
-          >
-            {c}
-          </button>
+          <span key={c} className="inline-flex items-center gap-x-2">
+            <span className={smartPoliceFilterGroupDividerClass} aria-hidden />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={category === c}
+              className={smartPoliceFilterTextClass(category === c)}
+              onClick={() => setCategory(c)}
+            >
+              {c}
+            </button>
+          </span>
         ))}
       </div>
 
