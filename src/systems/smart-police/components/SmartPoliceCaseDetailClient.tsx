@@ -41,8 +41,10 @@ import {
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
+  smartPoliceFormSectionTitleClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
+  smartPoliceSelectClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
   smartPoliceMobileSelectClass,
@@ -393,12 +395,6 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
               <span className="text-[11px] font-bold text-[#4d47b6]">{data.caseNumber}</span>
               <h2 className={smartPoliceCardTitleClass}>{data.title}</h2>
             </div>
-            <p className={cn(smartPoliceCardMetaClass, "mt-0.5 truncate font-medium")}>
-              {SMART_POLICE_CASE_STATUS_LABEL[data.status]}
-              {data.chargeText
-                ? ` · ${data.chargeText.slice(0, 40)}${data.chargeText.length > 40 ? "…" : ""}`
-                : ""}
-            </p>
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <Link
@@ -448,256 +444,294 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
         <div className={cn(smartPolicePanelDividerClass, smartPoliceFillScrollBodyClass, "mt-2.5 pt-2.5")}>
         {tab === "info" ? (
-          <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2 xl:grid-cols-3">
-            <label className={smartPoliceLabelClass}>
-              สถานะ
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.status}
-                onChange={(e) => void patchCase({ status: e.target.value })}
-              >
-                {(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map((k) => (
-                  <option key={k} value={k}>
-                    {SMART_POLICE_CASE_STATUS_LABEL[k]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ความสำคัญ
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.priority ?? "NORMAL"}
-                onChange={(e) => void patchCase({ priority: e.target.value })}
-              >
-                {(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
-                  (k) => (
-                    <option key={k} value={k}>
-                      {SMART_POLICE_CASE_PRIORITY_LABEL[k]}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ประเภทคดี
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.caseType}
-                onChange={(e) => void patchCase({ caseType: e.target.value })}
-              >
-                {SMART_POLICE_CASE_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              อำนาจศาล
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.courtType ?? "จังหวัด"}
-                onChange={(e) => void patchCase({ courtType: e.target.value })}
-              >
-                {SMART_POLICE_COURT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              การควบคุมผู้ต้องหา
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.custodyMode ?? ""}
-                onChange={(e) =>
-                  void patchCase({ custodyMode: e.target.value || null })
-                }
-              >
-                <option value="">— เลือก —</option>
-                {(Object.keys(SMART_POLICE_CUSTODY_MODE_LABEL) as SmartPoliceCustodyMode[]).map(
-                  (k) => (
-                    <option key={k} value={k}>
-                      {SMART_POLICE_CUSTODY_MODE_LABEL[k]}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              ข้อหา
-              <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-                <input
-                  className={cn(smartPoliceFieldClass, "flex-1")}
-                  defaultValue={data.chargeText ?? ""}
-                  key={`charge-${data.updatedAt}`}
-                  onBlur={(e) => {
-                    if (e.target.value !== (data.chargeText ?? "")) {
-                      void patchCase({ chargeText: e.target.value, title: e.target.value || data.title });
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={cn(smartPolicePrimaryButtonClass, "shrink-0")}
-                  onClick={() => setChargePickerOpen(true)}
-                >
-                  เลือกจากคลัง
-                </button>
+          <div role="tabpanel" className="space-y-4 text-left">
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>เรื่องคดี</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  ชื่อเรื่อง
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    defaultValue={data.title}
+                    key={`title-${data.updatedAt}`}
+                    onBlur={(e) => {
+                      const next = e.target.value.trim();
+                      if (next && next !== data.title) void patchCase({ title: next });
+                    }}
+                  />
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  ข้อหา
+                  <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      className={cn(smartPoliceFieldClass, "min-w-0 flex-1")}
+                      defaultValue={data.chargeText ?? ""}
+                      key={`charge-${data.updatedAt}`}
+                      onBlur={(e) => {
+                        if (e.target.value !== (data.chargeText ?? "")) {
+                          void patchCase({ chargeText: e.target.value });
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={cn(smartPolicePrimaryButtonClass, "shrink-0")}
+                      onClick={() => setChargePickerOpen(true)}
+                    >
+                      เลือกจากคลัง
+                    </button>
+                  </div>
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  กฎหมายที่อ้าง
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    defaultValue={data.lawRefs ?? ""}
+                    key={`law-${data.updatedAt}`}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data.lawRefs ?? "")) {
+                        void patchCase({ lawRefs: e.target.value });
+                      }
+                    }}
+                  />
+                </label>
               </div>
-              <p className="mt-1 text-[11px] text-[#66638c]">
-                เลือกจากคลังข้อหา หรือพิมพ์แก้ไขเองได้
-              </p>
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              กฎหมายที่อ้าง
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                defaultValue={data.lawRefs ?? ""}
-                key={`law-${data.updatedAt}`}
-                onBlur={(e) => {
-                  if (e.target.value !== (data.lawRefs ?? "")) void patchCase({ lawRefs: e.target.value });
-                }}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              วันรับคดี
-              <input
-                type="date"
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={toDateInput(data.receivedAt)}
-                onChange={(e) =>
-                  void patchCase({
-                    receivedAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
-                  })
-                }
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              เวลารับคดี (ไทย)
-              <div className="mt-1">
-                <AppTime24Input
-                  value={data.receivedTimeHm ?? ""}
-                  onChange={(hm) => void patchCase({ receivedTimeHm: hm || null })}
-                />
-              </div>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ปจว. ข้อรับคดี
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                defaultValue={data.dailyLogNo ?? ""}
-                key={`log-${data.updatedAt}`}
-                onBlur={(e) => {
-                  if (e.target.value !== (data.dailyLogNo ?? "")) {
-                    void patchCase({ dailyLogNo: e.target.value });
-                  }
-                }}
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              พนักงานสอบสวนเจ้าของคดี
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.investigatorOfficerId ?? ""}
-                onChange={(e) =>
-                  void patchCase({ investigatorOfficerId: e.target.value || null })
-                }
-              >
-                <option value="">— ใช้ค่าเริ่มจากตั้งค่า —</option>
-                {officers.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {[o.rankTitle, o.fullName].filter(Boolean).join(" ")}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              วันเกิดเหตุ
-              <input
-                type="date"
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={toDateInput(data.incidentAt)}
-                onChange={(e) =>
-                  void patchCase({
-                    incidentAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
-                  })
-                }
-              />
-            </label>
-            <label className={smartPoliceLabelClass}>
-              ผลชั้นสอบสวน
-              <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={data.investigationResult}
-                onChange={(e) => void patchCase({ investigationResult: e.target.value })}
-              >
-                {(
-                  Object.keys(SMART_POLICE_INVESTIGATION_RESULT_LABEL) as SmartPoliceInvestigationResult[]
-                ).map((k) => (
-                  <option key={k} value={k}>
-                    {SMART_POLICE_INVESTIGATION_RESULT_LABEL[k]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={smartPoliceLabelClass}>
-              วันส่งอัยการ
-              <input
-                type="date"
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                value={toDateInput(data.sentToProsecutorAt)}
-                onChange={(e) =>
-                  void patchCase({
-                    sentToProsecutorAt: e.target.value
-                      ? `${e.target.value}T12:00:00+07:00`
-                      : null,
-                  })
-                }
-              />
-              {data.investigationResult === "PROSECUTE" && !data.sentToProsecutorAt ? (
-                <p className="mt-1 text-[11px] font-semibold text-amber-700">
-                  ผลสั่งฟ้อง — แนะนำกรอกวันส่งอัยการ{" "}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() =>
-                      void patchCase({
-                        sentToProsecutorAt: `${bangkokDateKey()}T12:00:00+07:00`,
-                      })
+            </div>
+
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>สถานะ · ประเภท</p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <label className={smartPoliceLabelClass}>
+                  สถานะ
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.status}
+                    onChange={(e) => void patchCase({ status: e.target.value })}
+                  >
+                    {(Object.keys(SMART_POLICE_CASE_STATUS_LABEL) as SmartPoliceCaseStatus[]).map(
+                      (k) => (
+                        <option key={k} value={k}>
+                          {SMART_POLICE_CASE_STATUS_LABEL[k]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  ความสำคัญ
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.priority ?? "NORMAL"}
+                    onChange={(e) => void patchCase({ priority: e.target.value })}
+                  >
+                    {(Object.keys(SMART_POLICE_CASE_PRIORITY_LABEL) as SmartPoliceCasePriority[]).map(
+                      (k) => (
+                        <option key={k} value={k}>
+                          {SMART_POLICE_CASE_PRIORITY_LABEL[k]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  ประเภทคดี
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.caseType}
+                    onChange={(e) => void patchCase({ caseType: e.target.value })}
+                  >
+                    {SMART_POLICE_CASE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  อำนาจศาล
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.courtType ?? "จังหวัด"}
+                    onChange={(e) => void patchCase({ courtType: e.target.value })}
+                  >
+                    {SMART_POLICE_COURT_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  การควบคุมผู้ต้องหา
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.custodyMode ?? ""}
+                    onChange={(e) => void patchCase({ custodyMode: e.target.value || null })}
+                  >
+                    <option value="">— เลือก —</option>
+                    {(Object.keys(SMART_POLICE_CUSTODY_MODE_LABEL) as SmartPoliceCustodyMode[]).map(
+                      (k) => (
+                        <option key={k} value={k}>
+                          {SMART_POLICE_CUSTODY_MODE_LABEL[k]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  พนักงานสอบสวนเจ้าของคดี
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.investigatorOfficerId ?? ""}
+                    onChange={(e) =>
+                      void patchCase({ investigatorOfficerId: e.target.value || null })
                     }
                   >
-                    ใช้วันนี้
-                  </button>
-                </p>
-              ) : null}
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              ที่เกิดเหตุ
-              <input
-                className={cn(smartPoliceFieldClass, "mt-1")}
-                defaultValue={data.incidentPlace ?? ""}
-                key={`place-${data.updatedAt}`}
-                onBlur={(e) => {
-                  if (e.target.value !== (data.incidentPlace ?? "")) {
-                    void patchCase({ incidentPlace: e.target.value });
-                  }
-                }}
-              />
-            </label>
-            <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
-              สรุปสั้น
-              <textarea
-                className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4rem]")}
-                defaultValue={data.summary ?? ""}
-                key={`sum-${data.updatedAt}`}
-                onBlur={(e) => {
-                  if (e.target.value !== (data.summary ?? "")) void patchCase({ summary: e.target.value });
-                }}
-              />
-            </label>
+                    <option value="">— ใช้ค่าเริ่มจากตั้งค่า —</option>
+                    {officers.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {[o.rankTitle, o.fullName].filter(Boolean).join(" ")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>วันเวลา · สถานที่</p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <label className={smartPoliceLabelClass}>
+                  วันรับคดี
+                  <input
+                    type="date"
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={toDateInput(data.receivedAt)}
+                    onChange={(e) =>
+                      void patchCase({
+                        receivedAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
+                      })
+                    }
+                  />
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  เวลารับคดี (ไทย)
+                  <div className="mt-1">
+                    <AppTime24Input
+                      value={data.receivedTimeHm ?? ""}
+                      onChange={(hm) => void patchCase({ receivedTimeHm: hm || null })}
+                    />
+                  </div>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  ปจว. ข้อรับคดี
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    defaultValue={data.dailyLogNo ?? ""}
+                    key={`log-${data.updatedAt}`}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data.dailyLogNo ?? "")) {
+                        void patchCase({ dailyLogNo: e.target.value });
+                      }
+                    }}
+                  />
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  วันเกิดเหตุ
+                  <input
+                    type="date"
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={toDateInput(data.incidentAt)}
+                    onChange={(e) =>
+                      void patchCase({
+                        incidentAt: e.target.value ? `${e.target.value}T12:00:00+07:00` : null,
+                      })
+                    }
+                  />
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2")}>
+                  ที่เกิดเหตุ
+                  <input
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    defaultValue={data.incidentPlace ?? ""}
+                    key={`place-${data.updatedAt}`}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data.incidentPlace ?? "")) {
+                        void patchCase({ incidentPlace: e.target.value });
+                      }
+                    }}
+                  />
+                </label>
+                <label className={cn(smartPoliceLabelClass, "sm:col-span-2 xl:col-span-3")}>
+                  สรุปสั้น
+                  <textarea
+                    className={cn(smartPoliceTextareaClass, "mt-1 min-h-[4rem]")}
+                    defaultValue={data.summary ?? ""}
+                    key={`sum-${data.updatedAt}`}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data.summary ?? "")) {
+                        void patchCase({ summary: e.target.value });
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>ผลสอบสวน · ส่งอัยการ</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={smartPoliceLabelClass}>
+                  ผลชั้นสอบสวน
+                  <select
+                    className={cn(smartPoliceSelectClass, "mt-1")}
+                    value={data.investigationResult}
+                    onChange={(e) => void patchCase({ investigationResult: e.target.value })}
+                  >
+                    {(
+                      Object.keys(
+                        SMART_POLICE_INVESTIGATION_RESULT_LABEL,
+                      ) as SmartPoliceInvestigationResult[]
+                    ).map((k) => (
+                      <option key={k} value={k}>
+                        {SMART_POLICE_INVESTIGATION_RESULT_LABEL[k]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={smartPoliceLabelClass}>
+                  วันส่งอัยการ
+                  <input
+                    type="date"
+                    className={cn(smartPoliceFieldClass, "mt-1")}
+                    value={toDateInput(data.sentToProsecutorAt)}
+                    onChange={(e) =>
+                      void patchCase({
+                        sentToProsecutorAt: e.target.value
+                          ? `${e.target.value}T12:00:00+07:00`
+                          : null,
+                      })
+                    }
+                  />
+                  {data.investigationResult === "PROSECUTE" && !data.sentToProsecutorAt ? (
+                    <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                      ผลสั่งฟ้อง — แนะนำกรอกวันส่งอัยการ{" "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() =>
+                          void patchCase({
+                            sentToProsecutorAt: `${bangkokDateKey()}T12:00:00+07:00`,
+                          })
+                        }
+                      >
+                        ใช้วันนี้
+                      </button>
+                    </p>
+                  ) : null}
+                </label>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -1113,7 +1147,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           <label className={smartPoliceLabelClass}>
             บทบาท
             <select
-              className={cn(smartPoliceFieldClass, "mt-1")}
+              className={cn(smartPoliceSelectClass, "mt-1")}
               value={partyForm.role}
               onChange={(e) =>
                 setPartyForm((f) => ({ ...f, role: e.target.value as SmartPolicePartyRole }))
@@ -1129,7 +1163,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           <label className={smartPoliceLabelClass}>
             เกี่ยวกับคดี *
             <select
-              className={cn(smartPoliceFieldClass, "mt-1")}
+              className={cn(smartPoliceSelectClass, "mt-1")}
               value={partyForm.caseRelation}
               onChange={(e) => setPartyForm((f) => ({ ...f, caseRelation: e.target.value }))}
             >
@@ -1169,7 +1203,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             <label className={smartPoliceLabelClass}>
               พยานฝ่าย
               <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
+                className={cn(smartPoliceSelectClass, "mt-1")}
                 value={partyForm.witnessSide}
                 onChange={(e) =>
                   setPartyForm((f) => ({
@@ -1188,7 +1222,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             <label className={smartPoliceLabelClass}>
               ผู้ต้องหาให้การ
               <select
-                className={cn(smartPoliceFieldClass, "mt-1")}
+                className={cn(smartPoliceSelectClass, "mt-1")}
                 value={partyForm.pleaStatus}
                 onChange={(e) => setPartyForm((f) => ({ ...f, pleaStatus: e.target.value }))}
               >
@@ -1314,7 +1348,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           <label className={smartPoliceLabelClass}>
             ประเภท
             <select
-              className={cn(smartPoliceFieldClass, "mt-1")}
+              className={cn(smartPoliceSelectClass, "mt-1")}
               value={docForm.kind}
               onChange={(e) =>
                 setDocForm((f) => ({ ...f, kind: e.target.value as SmartPoliceDocumentKind }))
@@ -1355,7 +1389,8 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           void patchCase({
             chargeText: c.chargeText,
             lawRefs: c.lawRefs ?? "",
-            title: c.chargeText,
+            /** ไม่ทับชื่อเรื่องถ้ามีอยู่แล้ว — กันข้อความซ้ำหัวการ์ดกับช่องข้อหา */
+            ...(data.title.trim() ? {} : { title: c.chargeText }),
           });
           showToast("ใส่ข้อหาจากคลังแล้ว");
         }}

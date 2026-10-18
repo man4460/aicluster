@@ -72,17 +72,35 @@ export const smartPoliceRowRemoveIconButtonClass = cn(
 
 export const smartPoliceFieldClass = cn(
   "app-input box-border w-full",
-  smartPoliceBtnHeightClass,
+  /** input ใช้ความสูงคงที่ · ห้ามใส่ py ซ้อนกับ globals select/input */
+  "h-9 min-h-9 max-h-9 py-0 leading-9",
   smartPoliceBtnRadiusClass,
-  "px-3 text-sm font-semibold leading-none text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
+  "px-3 text-sm font-semibold text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
+);
+
+/**
+ * `<select>` — สูงพอให้อักษรเต็ม · py-0 กันชน padding จาก globals.css
+ * (อย่าใช้ h-8 + leading-none — ตัวอักษรจะถูกตัดครึ่ง)
+ */
+export const smartPoliceSelectClass = cn(
+  "app-input box-border w-full appearance-none",
+  "h-9 min-h-9 max-h-9 py-0 leading-9",
+  smartPoliceBtnRadiusClass,
+  "px-3 pr-9 text-sm font-semibold text-[#1e1b4b] touch-manipulation",
+  "bg-[length:0.75rem] bg-[right_0.65rem_center] bg-no-repeat",
+  "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%234d47b6%22 stroke-width=%222%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E')]",
 );
 
 export const smartPoliceTextareaClass = cn(
-  "app-input box-border w-full min-h-[5.5rem] resize-y px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
+  "app-input box-border w-full min-h-[5.5rem] resize-y px-3 py-2.5 text-sm font-semibold leading-snug text-[#1e1b4b] touch-manipulation placeholder:text-slate-400",
   smartPoliceBtnRadiusClass,
 );
 
-export const smartPoliceLabelClass = "block text-xs font-bold text-[#4d47b6]";
+export const smartPoliceLabelClass = "block text-xs font-bold leading-snug text-[#4d47b6]";
+
+/** หัวกลุ่มฟิลด์ในฟอร์มข้อมูลคดี */
+export const smartPoliceFormSectionTitleClass =
+  "text-[11px] font-black uppercase tracking-wide text-[#8b87b8]";
 
 export const smartPolicePanelClass =
   "w-full min-w-0 overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm";
@@ -130,8 +148,8 @@ export function smartPolicePrimaryTabPillClass(active: boolean): string {
 }
 
 export const smartPoliceMobileSelectClass = cn(
-  "box-border w-full min-w-0 appearance-none border border-slate-200 bg-white px-3 pr-8 text-xs font-bold text-[#1e1b4b] shadow-sm outline-none focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15",
-  smartPoliceBtnHeightClass,
+  "box-border w-full min-w-0 appearance-none border border-slate-200 bg-white px-3 pr-9 text-xs font-bold text-[#1e1b4b] shadow-sm outline-none focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/15",
+  "h-9 min-h-9 max-h-9 py-0 leading-9",
   smartPoliceBtnRadiusClass,
 );
 
