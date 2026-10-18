@@ -3,14 +3,14 @@ import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
 import {
   serializeStatementDocument,
   statementDocumentTitle,
-  statementDocumentToPlainText,
 } from "@/lib/smart-police/form-templates";
 import { fillStatementDocument } from "@/lib/smart-police/form-templates/fill-statement-server";
+import { generateOfficialStatementDocxFile } from "@/lib/smart-police/form-templates/fill-statement-docx";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail } from "@/lib/smart-police/serialize";
 import { resolveInvestigatorName } from "@/lib/smart-police/generate-docs";
-import { appOriginFromRequest, generateStatementDocxFile } from "@/lib/smart-police/word-file";
+import { appOriginFromRequest } from "@/lib/smart-police/word-file";
 
 function formatThaiDate(d = new Date()): string {
   return d.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
@@ -84,7 +84,6 @@ export async function createStatementForParty(opts: {
 
   const content = serializeStatementDocument(statementDoc);
   const title = statementDocumentTitle(statementDoc, party.role);
-  const plainForWord = statementDocumentToPlainText(statementDoc);
 
   const maxSort = await prisma.smartPoliceDocument.aggregate({
     where: { caseId: opts.caseId },
@@ -106,14 +105,12 @@ export async function createStatementForParty(opts: {
   let wordFileName: string | null = null;
 
   if (opts.generateWord) {
-    const narrativePageUrl = `${opts.appOrigin}/dashboard/smart-police/cases/${opts.caseId}`;
-    const word = await generateStatementDocxFile({
+    const word = await generateOfficialStatementDocxFile({
       ownerUserId: opts.ownerUserId,
       caseId: opts.caseId,
       documentId: doc.id,
-      bodyText: plainForWord,
-      appOrigin: opts.appOrigin,
-      narrativePageUrl,
+      header: statementDoc.header,
+      pages: statementDoc.pages,
     });
     wordFileUrl = word.wordFileUrl;
     wordFileName = word.wordFileName;

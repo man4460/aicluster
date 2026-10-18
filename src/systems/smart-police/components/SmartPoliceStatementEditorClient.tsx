@@ -183,7 +183,7 @@ export function SmartPoliceStatementEditorClient({
     setDirty(false);
     await regenerateWord();
     setSaving(false);
-    showToast("บันทึกแบบฟอร์มราชการเข้าสำนวนแล้ว");
+    showToast("บันทึกแล้ว · สร้างไฟล์ Word ตามแบบราชการแล้ว — กด «Word ในสำนวน» เพื่อเปิด");
   }
 
   async function printDoc() {
@@ -259,9 +259,9 @@ export function SmartPoliceStatementEditorClient({
     <div className="fixed inset-0 z-[110] flex flex-col bg-[#6b7280] text-white">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-600/80 bg-slate-800 px-3 py-3 sm:px-5">
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold sm:text-base">แบบฟอร์มราชการ · {meta.title}</p>
+          <p className="truncate text-sm font-bold sm:text-base">กรอกข้อมูล → สร้าง Word ราชการ · {meta.title}</p>
           <p className="truncate text-xs text-slate-400">
-            สำนักงานตำรวจแห่งชาติ · {h.caseNumber} · {h.partyName}
+            แม่แบบ .docx จริง (docxtemplater) · {h.caseNumber} · {h.partyName}
             {dirty ? " · ยังไม่บันทึก" : ""}
           </p>
         </div>
@@ -344,8 +344,8 @@ export function SmartPoliceStatementEditorClient({
             ลบหน้านี้
           </button>
         ) : null}
-        <p className="ml-auto hidden text-[11px] text-slate-300 sm:block">
-          พิมพ์บนจุดไข่ปลาเหมือน Word (ไม่มีกล่อง) · เพิ่มหน้า = ใบต่อ
+        <p className="ml-auto hidden max-w-md text-right text-[11px] text-slate-300 sm:block">
+          กรอกในเว็บ → บันทึกแล้วได้ไฟล์ Word ตามแบบ ส ๕๖-๔ เป๊ะ (เปิดใน Microsoft Word)
         </p>
       </div>
 

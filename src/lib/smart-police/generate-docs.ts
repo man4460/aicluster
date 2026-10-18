@@ -3,9 +3,9 @@ import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
 import {
   serializeStatementDocument,
   statementDocumentTitle,
-  statementDocumentToPlainText,
 } from "@/lib/smart-police/form-templates";
 import { fillStatementDocument } from "@/lib/smart-police/form-templates/fill-statement-server";
+import { generateOfficialStatementDocxFile } from "@/lib/smart-police/form-templates/fill-statement-docx";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 import { buildSmartPolicePrintVars } from "@/lib/smart-police/print";
 import { mapSmartPoliceCaseDetail, type SmartPoliceCaseDetailRow } from "@/lib/smart-police/serialize";
@@ -14,7 +14,6 @@ import {
   SMART_POLICE_INVESTIGATION_RESULT_LABEL,
   SMART_POLICE_PARTY_ROLE_LABEL,
 } from "@/lib/smart-police/types";
-import { generateStatementDocxFile } from "@/lib/smart-police/word-file";
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 
 function formatThaiDate(d = new Date()): string {
@@ -390,7 +389,6 @@ export async function generateSmartPoliceDocs(opts: {
       });
       const content = serializeStatementDocument(statementDoc);
       const title = statementDocumentTitle(statementDoc, party.role);
-      const plainForWord = statementDocumentToPlainText(statementDoc);
 
       const existing = await prisma.smartPoliceDocument.findFirst({
         where: { caseId: opts.caseId, kind: "STATEMENT", partyId: party.id },
@@ -417,14 +415,12 @@ export async function generateSmartPoliceDocs(opts: {
       }
 
       if (opts.generateWord) {
-        const narrativePageUrl = `${opts.appOrigin}/dashboard/smart-police/cases/${opts.caseId}`;
-        const word = await generateStatementDocxFile({
+        const word = await generateOfficialStatementDocxFile({
           ownerUserId: opts.ownerUserId,
           caseId: opts.caseId,
           documentId: doc.id,
-          bodyText: plainForWord,
-          appOrigin: opts.appOrigin,
-          narrativePageUrl,
+          header: statementDoc.header,
+          pages: statementDoc.pages,
         });
         await prisma.smartPoliceDocument.update({
           where: { id: doc.id },

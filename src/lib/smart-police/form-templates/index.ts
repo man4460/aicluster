@@ -40,3 +40,4 @@ export {
   isStatementDocumentV3,
   statementDocumentHasPages,
 } from "@/lib/smart-police/form-templates/statement-types";
+/** fill-statement-docx = server-only — import ตรงจาก API/server ห้าม re-export ที่นี่ */
