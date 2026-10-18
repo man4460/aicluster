@@ -262,14 +262,20 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
-/* คำให้การแบบ Word — แต่ละถาม/ตอบเป็นบล็อก · ป้ายชิดซ้าย · ข้อความยาวเยื้อง (hanging indent) */
+/*
+ * คำให้การแบบ Word:
+ * ถาม[tab]ข้อความ……
+ *     บรรทัดต่อตรงตำแหน่งแท็บ
+ * ตอบ[tab]ข้อความ……
+ */
 .sp-stmt-lined-body {
-  --sp-qa-hang: 7ch;
+  /* กว้าง ≈ ป้าย «ถาม»/«ตอบ» + แท็บ — ไม่กินทั้งคำว่า «ถาม 1.» */
+  --sp-qa-hang: 4ch;
   margin: 0;
   padding: 0;
   -webkit-touch-callout: default;
-  tab-size: 8;
-  -moz-tab-size: 8;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 .sp-stmt-lined-body:empty::before {
   content: attr(data-placeholder);
@@ -288,8 +294,8 @@ textarea.sp-word-field:focus-visible {
   padding: 0 0 0 var(--sp-qa-hang);
   text-indent: calc(-1 * var(--sp-qa-hang));
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
   min-height: 1em;
 }
 .sp-stmt-qa-block:focus {

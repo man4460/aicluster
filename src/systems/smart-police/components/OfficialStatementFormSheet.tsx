@@ -28,10 +28,12 @@ const TITLE = "15pt";
 const LINE = "6.2mm";
 /** ระยะบรรทัดโซนถาม–ตอบ — กว้างกว่าแถวด้านบนเล็กน้อย อ่าน/แตะง่าย */
 const STMT_LINE = "7.8mm";
-const QA_STARTER = "ถาม 1. ";
-const QA_PLACEHOLDER = "ถาม 1. …\nตอบ …";
+/** ป้าย + แท็บ แบบ Word — ข้อความต่อในบรรทัดเดียวกัน · ขึ้นบรรทัดใหม่เยื้องตรงแท็บ */
+const QA_STARTER = "ถาม\t";
+const QA_PLACEHOLDER = "ถาม\t…\nตอบ\t…";
 const QA_BLOCK_CLASS = "sp-stmt-qa-block";
 const QA_ANS_PREFIX = /^\s*ตอบ\b/;
+const QA_ASK_PREFIX = /^\s*ถาม\b/;
 
 function Dot({
   value,
@@ -228,6 +230,8 @@ function LinedBody({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
+  /** กัน Enter ซ้ำจาก keydown + beforeinput */
+  const enterLock = useRef(false);
 
   useEffect(() => {
     const root = ref.current;
@@ -255,7 +259,25 @@ function LinedBody({
     emit();
   }
 
+  function nextPrefix(curText: string, root: HTMLElement): string {
+    // อยู่บรรทัดตอบ → ถามถัดไป · นอกนั้น → ตอบ (ไม่สร้างตอบซ้ำ)
+    if (QA_ANS_PREFIX.test(curText)) {
+      return `ถาม ${nextQuestionNoFromRoot(root)}.\t`;
+    }
+    if (QA_ASK_PREFIX.test(curText) || isBlankBody(curText)) {
+      return "ตอบ\t";
+    }
+    // ข้อความอิสระ — ถือว่าจบถามแล้วไปตอบ
+    return "ตอบ\t";
+  }
+
   function onEnter(shift: boolean) {
+    if (enterLock.current) return;
+    enterLock.current = true;
+    window.setTimeout(() => {
+      enterLock.current = false;
+    }, 50);
+
     const root = ref.current;
     if (!root) return;
     normalizeRootToBlocks(root);
@@ -279,11 +301,7 @@ function LinedBody({
     if (!cur) return;
 
     const curText = (cur.textContent || "").replace(/\u200b/g, "");
-    const prefix = shift
-      ? ""
-      : QA_ANS_PREFIX.test(curText)
-        ? `ถาม ${nextQuestionNoFromRoot(root)}. `
-        : "ตอบ ";
+    const prefix = shift ? "" : nextPrefix(curText, root);
     const next = createQaBlock(prefix);
     cur.after(next);
     root.focus({ preventScroll: true });
@@ -357,7 +375,7 @@ function LinedBody({
           touchAction: "manipulation",
           WebkitUserSelect: "text",
           userSelect: "text",
-          tabSize: 8,
+          tabSize: 4,
           minHeight: "44px",
         }}
         onPointerDown={(e) => {
@@ -379,6 +397,7 @@ function LinedBody({
           }
         }}
         onBeforeInput={(e) => {
+          // สำรองมือถือ — แต่ไม่ซ้ำกับ keydown (มี enterLock)
           const it = (e as unknown as InputEvent).inputType;
           if (it === "insertParagraph" || it === "insertLineBreak") {
             e.preventDefault();
