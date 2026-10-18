@@ -20,6 +20,7 @@ import {
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
   smartPoliceFillPanelClass,
+  smartPoliceFillScrollBodyClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelSectionClass,
@@ -202,7 +203,7 @@ export function SmartPoliceSettingsClient() {
           </div>
         </div>
 
-        <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <div className={cn(smartPoliceFillScrollBodyClass, "mt-2")}>
           {tab === "charges" ? (
             <div role="tabpanel" aria-label="คลังข้อหา" className="flex min-h-0 flex-1 flex-col">
               <SmartPoliceChargesPanel

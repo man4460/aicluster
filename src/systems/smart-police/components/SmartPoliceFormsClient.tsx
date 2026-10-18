@@ -20,6 +20,7 @@ import {
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
   smartPoliceOutlineButtonClass,
+  smartPoliceFillBodyClass,
   smartPoliceFillPanelClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
@@ -214,7 +215,7 @@ export function SmartPoliceFormsClient() {
           </div>
         </div>
 
-        <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
+        <div className={smartPoliceFillBodyClass}>
           {filtered.length === 0 ? (
             <AppEmptyState tone="violet">
               {filtersActive ? "ไม่พบแบบฟอร์มที่ตรงเงื่อนไข" : "ยังไม่มีแบบฟอร์ม"}

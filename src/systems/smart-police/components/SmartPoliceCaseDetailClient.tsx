@@ -47,6 +47,8 @@ import {
   smartPoliceListRowClass,
   smartPoliceMobileSelectClass,
   smartPoliceMutedTextClass,
+  smartPoliceFillPanelClass,
+  smartPoliceFillScrollBodyClass,
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
@@ -376,10 +378,16 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
 
   return (
     <div className={smartPolicePageStackClass}>
-      {toast ? <p className={smartPoliceToastSuccessClass}>{toast}</p> : null}
+      {toast ? <p className={cn(smartPoliceToastSuccessClass, "shrink-0")}>{toast}</p> : null}
 
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className="min-w-0 text-left">
             <div className={smartPoliceCardTitleRowClass}>
               <span className="text-[11px] font-bold text-[#4d47b6]">{data.caseNumber}</span>
@@ -405,7 +413,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           </div>
         </div>
 
-        <div className="mt-1.5 sm:hidden">
+        <div className="mt-1.5 shrink-0 sm:hidden">
           <select
             className={smartPoliceMobileSelectClass}
             value={tab}
@@ -421,7 +429,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         </div>
         <nav
           role="tablist"
-          className={cn(smartPolicePrimaryTabShellClass, "mt-2.5 hidden sm:inline-flex")}
+          className={cn(smartPolicePrimaryTabShellClass, "mt-2.5 hidden shrink-0 sm:inline-flex")}
           aria-label="ส่วนสำนวน"
         >
           {tabs.map((t) => (
@@ -438,7 +446,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           ))}
         </nav>
 
-        <div className={cn(smartPolicePanelDividerClass, "mt-2.5 pt-2.5")}>
+        <div className={cn(smartPolicePanelDividerClass, smartPoliceFillScrollBodyClass, "mt-2.5 pt-2.5")}>
         {tab === "info" ? (
           <div role="tabpanel" className="grid gap-3 text-left sm:grid-cols-2 xl:grid-cols-3">
             <label className={smartPoliceLabelClass}>

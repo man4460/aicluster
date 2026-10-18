@@ -29,6 +29,7 @@ import {
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
   smartPoliceMutedTextClass,
+  smartPoliceFillBodyClass,
   smartPoliceFillPanelClass,
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
@@ -377,7 +378,7 @@ export function SmartPoliceCasesClient() {
           </div>
         </div>
 
-        <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
+        <div className={smartPoliceFillBodyClass}>
         {loading ? (
           <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
         ) : cases.length === 0 ? (

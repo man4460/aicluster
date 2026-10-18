@@ -14,11 +14,14 @@ import {
   smartPoliceCardTitleClass,
   smartPoliceCardTitleRowClass,
   smartPoliceHeaderActionShellClass,
+  smartPoliceFillBodyClass,
+  smartPoliceFillPanelClass,
   smartPoliceMutedTextClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
   smartPolicePanelDividerClass,
   smartPolicePanelSectionClass,
+  smartPoliceScrollListClass,
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryIconButtonClass,
   smartPoliceSectionHeadingClass,
@@ -63,8 +66,14 @@ export function SmartPoliceDashboardClient() {
 
   return (
     <div className={smartPolicePageStackClass}>
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>ภาพรวม</h2>
             {s?.totalCases != null ? (
@@ -90,7 +99,7 @@ export function SmartPoliceDashboardClient() {
           </div>
         </div>
 
-        <div className={cn("mt-1.5", smartPoliceStatsGridClass)}>
+        <div className={cn("mt-1.5 shrink-0", smartPoliceStatsGridClass)}>
           {[
             { label: "ทั้งหมด", value: s?.totalCases ?? "—" },
             { label: "เปิด/สอบสวน", value: (s?.openCases ?? 0) + (s?.inProgress ?? 0) },
@@ -127,8 +136,14 @@ export function SmartPoliceDashboardClient() {
           ))}
         </div>
 
-        <div className={cn(smartPolicePanelDividerClass, "mt-2 space-y-1 pt-2")}>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <div
+          className={cn(
+            smartPolicePanelDividerClass,
+            smartPoliceFillBodyClass,
+            "mt-2 space-y-1 pt-2",
+          )}
+        >
+          <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
             <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
             <nav
               className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 text-[11px] font-semibold"
@@ -172,7 +187,7 @@ export function SmartPoliceDashboardClient() {
           ) : !data?.recentCases.length ? (
             <AppEmptyState>ยังไม่มีคดี — กด «สำนวนแรก» เพื่อเริ่มวิซาร์ด</AppEmptyState>
           ) : (
-            <ul className="space-y-1">
+            <ul className={cn(smartPoliceScrollListClass, "space-y-1")}>
               {data.recentCases.map((c) => (
                 <li key={c.id}>
                   <SmartPoliceCaseListCard caseItem={c} />

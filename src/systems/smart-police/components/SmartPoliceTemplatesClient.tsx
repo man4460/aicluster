@@ -18,6 +18,8 @@ import {
   smartPoliceLabelClass,
   smartPoliceListRowClass,
   smartPoliceMutedTextClass,
+  smartPoliceFillPanelClass,
+  smartPoliceFillScrollBodyClass,
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
@@ -79,8 +81,14 @@ export function SmartPoliceTemplatesClient() {
 
   return (
     <div className={smartPolicePageStackClass}>
-      <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
-        <div className={smartPoliceCardHeaderRowClass}>
+      <section
+        className={cn(
+          smartPolicePanelClass,
+          smartPolicePanelSectionClass,
+          smartPoliceFillPanelClass,
+        )}
+      >
+        <div className={cn(smartPoliceCardHeaderRowClass, "shrink-0")}>
           <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>แม่แบบ</h2>
             {!loading ? (
@@ -104,13 +112,13 @@ export function SmartPoliceTemplatesClient() {
           </div>
         </div>
 
-        <div className="mt-1.5">
+        <div className={smartPoliceFillScrollBodyClass}>
           {loading ? (
             <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
           ) : templates.length === 0 ? (
             <AppEmptyState>ไม่มีแม่แบบ</AppEmptyState>
           ) : (
-            <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            <ul className="grid min-h-0 grid-cols-1 content-start gap-2 lg:grid-cols-2">
               {templates.map((t) => (
                 <li key={t.id} className={smartPoliceListRowClass}>
                   <div className="min-w-0 flex-1">

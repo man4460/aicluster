@@ -91,6 +91,13 @@ export const smartPolicePanelClass =
 export const smartPoliceFillPanelClass =
   "flex min-h-0 flex-1 flex-col";
 
+/** โซนเนื้อหาใต้หัวการ์ด — ยืดเต็ม (คู่กับ scroll list ด้านใน) */
+export const smartPoliceFillBodyClass = "mt-1.5 flex min-h-0 flex-1 flex-col";
+
+/** โซนเนื้อหาเลื่อนทั้งก้อนเมื่อล้น (รายงาน · แม่แบบ · รายละเอียด · ตั้งค่า) */
+export const smartPoliceFillScrollBodyClass =
+  "mt-1.5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain";
+
 /** padding การ์ด — ย่อความสูง */
 export const smartPolicePanelSectionClass = "px-2.5 py-2 sm:px-3 sm:py-2.5";
 
