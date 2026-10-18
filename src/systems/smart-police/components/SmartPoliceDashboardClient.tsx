@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
-  AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
 } from "@/components/app-templates";
@@ -15,11 +14,14 @@ import {
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
+  smartPolicePanelDividerClass,
   smartPolicePanelSectionClass,
   smartPolicePrimaryButtonClass,
   smartPolicePrimaryIconButtonClass,
+  smartPoliceSectionHeadingClass,
   smartPoliceStatInlineClass,
   smartPoliceStatsGridClass,
+  smartPoliceSubtitleClass,
 } from "@/systems/smart-police/lib/ui-tokens";
 import { SMART_POLICE_CASE_STATUS_LABEL } from "@/lib/smart-police/types";
 import type { SmartPoliceCaseStatus } from "@/generated/prisma/enums";
@@ -68,8 +70,8 @@ export function SmartPoliceDashboardClient() {
         <AppSectionHeader
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          title="ภาพรวมคดี"
-          description="เปิดคดีใหม่ หรือตั้งค่าหัวกระดาษสถานี"
+          title="ภาพรวม"
+          description="สถิติคดีและรายการล่าสุด"
           action={
             <div className="flex shrink-0 flex-nowrap items-center gap-1.5">
               <Link
@@ -106,6 +108,7 @@ export function SmartPoliceDashboardClient() {
             </div>
           }
         />
+
         <div className={cn("mt-4", smartPoliceStatsGridClass)}>
           {[
             { label: "คดีทั้งหมด", value: s?.totalCases ?? "—" },
@@ -122,41 +125,42 @@ export function SmartPoliceDashboardClient() {
             </div>
           ))}
         </div>
-      </section>
 
-      <AppDashboardSection>
-        <AppSectionHeader
-          title="คดีล่าสุด"
-          description="อัปเดตล่าสุดจากระบบ"
-        />
-        {loading ? (
-          <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
-        ) : !data?.recentCases.length ? (
-          <AppEmptyState>ยังไม่มีคดี — กด «คดีใหม่» เพื่อเริ่มบันทึกสำนวน</AppEmptyState>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {data.recentCases.map((c) => (
-              <li key={c.id}>
-                <Link href={`/dashboard/smart-police/cases/${c.id}`} className={smartPoliceListRowClass}>
-                  <div className="min-w-0 text-left">
-                    <p className="truncate text-sm font-bold text-[#1e1b4b]">
-                      <span className="text-[#4d47b6]">{c.caseNumber}</span>
-                      <span className="mx-1.5 text-slate-300" aria-hidden>
-                        ·
-                      </span>
-                      {c.title}
-                    </p>
-                    <p className="mt-0.5 text-xs font-medium text-[#66638c]">
-                      {SMART_POLICE_CASE_STATUS_LABEL[c.status]} · {c.documentCount} เอกสาร
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิด →</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AppDashboardSection>
+        <div className={cn(smartPolicePanelDividerClass, "mt-4 space-y-3 pt-4")}>
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
+            <p className={cn(smartPoliceSubtitleClass, "mt-0")}>อัปเดตล่าสุดจากระบบ</p>
+          </div>
+
+          {loading ? (
+            <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
+          ) : !data?.recentCases.length ? (
+            <AppEmptyState>ยังไม่มีคดี — กด «คดีใหม่» เพื่อเริ่มบันทึกสำนวน</AppEmptyState>
+          ) : (
+            <ul className="space-y-2">
+              {data.recentCases.map((c) => (
+                <li key={c.id}>
+                  <Link href={`/dashboard/smart-police/cases/${c.id}`} className={smartPoliceListRowClass}>
+                    <div className="min-w-0 text-left">
+                      <p className="truncate text-sm font-bold text-[#1e1b4b]">
+                        <span className="text-[#4d47b6]">{c.caseNumber}</span>
+                        <span className="mx-1.5 text-slate-300" aria-hidden>
+                          ·
+                        </span>
+                        {c.title}
+                      </p>
+                      <p className="mt-0.5 text-xs font-medium text-[#66638c]">
+                        {SMART_POLICE_CASE_STATUS_LABEL[c.status]} · {c.documentCount} เอกสาร
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิด →</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
