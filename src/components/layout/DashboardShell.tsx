@@ -2382,14 +2382,6 @@ export function DashboardShell({
             )}
           </nav>
           <div className="border-t border-slate-200/70 bg-white/70 px-2.5 py-2">
-            {useModuleWorkspaceSidebarNav ? (
-              <Link
-                href="/dashboard"
-                className="mb-1.5 flex w-full items-center justify-center rounded-lg border border-slate-200/80 bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#4d47b6] transition hover:bg-slate-50"
-              >
-                ← หน้าแรกแดชบอร์ด
-              </Link>
-            ) : null}
             <p className="truncate text-[11px] text-slate-500" title={username}>
               {username}
             </p>
@@ -2435,13 +2427,6 @@ export function DashboardShell({
                         variant="drawer"
                         onNavigate={closeDrawer}
                       />
-                      <Link
-                        href="/dashboard"
-                        onClick={closeDrawer}
-                        className="mx-0.5 rounded-xl bg-white/15 px-2.5 py-1.5 text-center text-xs font-bold text-white hover:bg-white/25"
-                      >
-                        ← หน้าแรกแดชบอร์ด
-                      </Link>
                     </>
                   ) : (
                     mainNavGroups.map((group) => (
