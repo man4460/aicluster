@@ -76,14 +76,17 @@ export function AppCompareBarList({
 }: AppCompareBarListProps) {
   const v = variant;
 
+  const showTitle = Boolean(title?.trim());
+
   if (rows.length === 0) {
     return (
       <div className={className}>
-        <h3 className={cn("text-sm font-semibold", titleTone[v])}>{title}</h3>
+        {showTitle ? <h3 className={cn("text-sm font-semibold", titleTone[v])}>{title}</h3> : null}
         {subtitle ? <p className={cn("mt-0.5 text-xs", subTone[v])}>{subtitle}</p> : null}
         <p
           className={cn(
-            "mt-3 rounded-xl border border-dashed py-6 text-center text-sm",
+            "rounded-xl border border-dashed py-6 text-center text-sm",
+            (showTitle || subtitle) && "mt-3",
             v === "brand" ? "border-[#d8d6ec] bg-[#faf9ff] text-[#66638c]" : "border-slate-200 bg-slate-50/40 text-slate-500",
           )}
         >
@@ -95,9 +98,9 @@ export function AppCompareBarList({
 
   return (
     <div className={className}>
-      <h3 className={cn("text-sm font-semibold", titleTone[v])}>{title}</h3>
+      {showTitle ? <h3 className={cn("text-sm font-semibold", titleTone[v])}>{title}</h3> : null}
       {subtitle ? <p className={cn("mt-0.5 text-xs", subTone[v])}>{subtitle}</p> : null}
-      <div className="mt-3 max-h-72 space-y-3 overflow-y-auto pr-1">
+      <div className={cn("max-h-72 space-y-2 overflow-y-auto pr-1", (showTitle || subtitle) && "mt-2")}>
         {rows.map((r) => (
           <div key={r.key}>
             <div className="flex items-baseline justify-between gap-2 text-xs sm:text-sm">

@@ -21,8 +21,8 @@ import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/
 import { IconSpPlus } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
   smartPoliceCardHeaderRowClass,
-  smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
   smartPoliceFilterGroupDividerClass,
   smartPoliceFilterTextClass,
@@ -222,9 +222,11 @@ export function SmartPoliceCasesClient() {
     <>
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
-          <div className="min-w-0">
+          <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>รายการคดี</h2>
-            <p className={smartPoliceCardMetaClass}>ค้นหา · กรองสถานะ / ความสำคัญ</p>
+            {!loading ? (
+              <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">{cases.length}</span>
+            ) : null}
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <button
@@ -375,15 +377,15 @@ export function SmartPoliceCasesClient() {
         </div>
 
         {loading ? (
-          <p className={cn("mt-2.5", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
+          <p className={cn("mt-1.5", smartPoliceMutedTextClass)}>กำลังโหลด…</p>
         ) : cases.length === 0 ? (
-          <AppEmptyState className="mt-2.5">
+          <AppEmptyState className="mt-1.5">
             {filtersActive
               ? "ไม่พบคดีตามเงื่อนไขกรอง"
               : "ไม่พบคดี — กด «สำนวนแรก» เพื่อเริ่มวิซาร์ด"}
           </AppEmptyState>
         ) : (
-          <ul className="mt-2.5 space-y-1.5">
+          <ul className="mt-1.5 space-y-1">
             {cases.map((c) => (
               <li key={c.id}>
                 <Link

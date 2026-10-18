@@ -8,8 +8,8 @@ import { SMART_POLICE_CASE_PRIORITY_LABEL, SMART_POLICE_CASE_STATUS_LABEL } from
 import { IconSpPlus, IconSpPrint } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
   smartPoliceCardHeaderRowClass,
-  smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
   smartPoliceListRowClass,
@@ -76,9 +76,11 @@ export function SmartPoliceDashboardClient() {
     <div className={smartPolicePageStackClass}>
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
-          <div className="min-w-0">
+          <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>ภาพรวม</h2>
-            <p className={smartPoliceCardMetaClass}>สถิติคดี · กรองด่วน</p>
+            {s?.totalCases != null ? (
+              <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">{s.totalCases} คดี</span>
+            ) : null}
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <Link
@@ -99,7 +101,7 @@ export function SmartPoliceDashboardClient() {
           </div>
         </div>
 
-        <div className={cn("mt-2", smartPoliceStatsGridClass)}>
+        <div className={cn("mt-1.5", smartPoliceStatsGridClass)}>
           {[
             { label: "ทั้งหมด", value: s?.totalCases ?? "—" },
             { label: "เปิด/สอบสวน", value: (s?.openCases ?? 0) + (s?.inProgress ?? 0) },
@@ -117,7 +119,7 @@ export function SmartPoliceDashboardClient() {
                     : undefined,
                 )}
               >
-                <p className="flex items-center gap-0.5 truncate text-[9px] font-bold uppercase tracking-wide text-[#8b87b8] sm:text-[10px]">
+                <p className="flex items-center gap-0.5 truncate text-[9px] font-bold uppercase tracking-wide text-[#8b87b8]">
                   {"icon" in card && card.icon ? (
                     <IconSpPrint className="h-2.5 w-2.5 shrink-0" aria-hidden />
                   ) : null}
@@ -125,7 +127,7 @@ export function SmartPoliceDashboardClient() {
                 </p>
                 <p
                   className={cn(
-                    "text-base font-black tabular-nums sm:text-lg",
+                    "text-sm font-black tabular-nums sm:text-base",
                     "warn" in card && card.warn ? "text-amber-800" : "text-[#1e1b4b]",
                   )}
                 >
@@ -136,18 +138,18 @@ export function SmartPoliceDashboardClient() {
           ))}
         </div>
 
-        <div className={cn(smartPolicePanelDividerClass, "mt-2.5 space-y-1.5 pt-2.5")}>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className={cn(smartPolicePanelDividerClass, "mt-2 space-y-1 pt-2")}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
             <h3 className={smartPoliceSectionHeadingClass}>คดีล่าสุด</h3>
             <nav
-              className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-0.5 text-[11px] font-semibold"
+              className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 text-[11px] font-semibold"
               aria-label="กรองด่วน"
             >
               <Link
                 href="/dashboard/smart-police/cases?prosecutor=pending"
                 className="text-[#5b61ff] underline-offset-2 hover:underline"
               >
-                ยังไม่ส่งอัยการ
+                ยังไม่ส่ง
                 {s?.notSentToProsecutor != null ? (
                   <span className="ml-0.5 tabular-nums">{s.notSentToProsecutor}</span>
                 ) : null}
@@ -159,7 +161,7 @@ export function SmartPoliceDashboardClient() {
                 href="/dashboard/smart-police/cases?priority=URGENT"
                 className="text-amber-700 underline-offset-2 hover:underline"
               >
-                คดีด่วน
+                ด่วน
                 {s?.urgentCount != null ? (
                   <span className="ml-0.5 tabular-nums">{s.urgentCount}</span>
                 ) : null}
@@ -171,7 +173,7 @@ export function SmartPoliceDashboardClient() {
                 href="/dashboard/smart-police/cases"
                 className="text-[#66638c] underline-offset-2 hover:underline hover:text-[#4d47b6]"
               >
-                คดีทั้งหมด
+                ทั้งหมด
               </Link>
             </nav>
           </div>
@@ -181,7 +183,7 @@ export function SmartPoliceDashboardClient() {
           ) : !data?.recentCases.length ? (
             <AppEmptyState>ยังไม่มีคดี — กด «สำนวนแรก» เพื่อเริ่มวิซาร์ด</AppEmptyState>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {data.recentCases.map((c) => (
                 <li key={c.id}>
                   <Link
@@ -190,22 +192,21 @@ export function SmartPoliceDashboardClient() {
                       c.overdue ? smartPoliceListRowAccentClass("rose") : smartPoliceListRowClass
                     }
                   >
-                    <div className="min-w-0 text-left">
-                      <p className="truncate text-sm font-bold text-[#1e1b4b]">
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-[13px] font-bold text-[#1e1b4b]">
                         <span className="text-[#4d47b6]">{c.caseNumber}</span>
-                        <span className="mx-1.5 text-slate-300" aria-hidden>
+                        <span className="mx-1 text-slate-300" aria-hidden>
                           ·
                         </span>
                         {c.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] font-medium text-[#66638c]">
+                      <p className="truncate text-[10px] font-medium text-[#66638c]">
                         {SMART_POLICE_CASE_STATUS_LABEL[c.status]} ·{" "}
                         {SMART_POLICE_CASE_PRIORITY_LABEL[c.priority]}
-                        {c.daysSinceReceived != null ? ` · รับคดี ${c.daysSinceReceived} วัน` : ""}
-                        {c.sentToProsecutorAt ? " · ส่งอัยการแล้ว" : ""} · {c.documentCount} เอกสาร
+                        {c.daysSinceReceived != null ? ` · ${c.daysSinceReceived} วัน` : ""}
+                        {c.sentToProsecutorAt ? " · ส่งอัยการ" : ""} · {c.documentCount} เอกสาร
                       </p>
                     </div>
-                    <span className="shrink-0 text-[11px] font-bold text-[#5b61ff]">เปิด →</span>
                   </Link>
                 </li>
               ))}

@@ -11,15 +11,14 @@ import {
 } from "@/lib/smart-police/blank-forms-catalog";
 import {
   smartPoliceCardHeaderRowClass,
-  smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
   smartPoliceFilterGroupDividerClass,
   smartPoliceFilterTextClass,
   smartPoliceFilterTextRowClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceListRowAccentClass,
-  smartPoliceMutedTextClass,
   smartPoliceOutlineButtonClass,
   smartPolicePageStackClass,
   smartPolicePanelClass,
@@ -103,11 +102,11 @@ export function SmartPoliceFormsClient() {
     <div className={smartPolicePageStackClass}>
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
-          <div className="min-w-0">
+          <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>แบบฟอร์ม</h2>
-            <p className={smartPoliceCardMetaClass}>
-              แบบฟอร์มเปล่า · แสดง {filtered.length}/{total}
-            </p>
+            <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
+              {filtered.length}/{total}
+            </span>
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <button
@@ -208,7 +207,7 @@ export function SmartPoliceFormsClient() {
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-1.5">
           {filtered.length === 0 ? (
             <AppEmptyState tone="violet">
               {filtersActive ? "ไม่พบแบบฟอร์มที่ตรงเงื่อนไข" : "ยังไม่มีแบบฟอร์ม"}
@@ -235,8 +234,7 @@ function FormRow({ item }: { item: SmartPoliceBlankFormItem }) {
     <li className={smartPoliceListRowAccentClass(tone)}>
       <div className="min-w-0 flex-1 text-left">
         <p className="text-[10px] font-bold text-[#4d47b6]">{item.category}</p>
-        <p className="font-semibold text-[#1e1b4b]">{item.title}</p>
-        <p className={cn(smartPoliceMutedTextClass, "mt-0.5 truncate text-[11px]")}>{item.fileName}</p>
+        <p className="text-[13px] font-semibold text-[#1e1b4b]">{item.title}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <span

@@ -12,8 +12,8 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
   smartPoliceCardHeaderRowClass,
-  smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
@@ -41,12 +41,6 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: "officers", label: "พนักงานสอบสวน" },
   { key: "charges", label: "คลังข้อหา" },
 ];
-
-const TAB_META: Record<SettingsTab, string> = {
-  agency: "ชื่อสถานี · ที่อยู่ · หัวหน้าหน่วย · ท้ายกระดาษพิมพ์",
-  officers: "รายชื่อพงส. · ตั้งค่าเริ่มต้นในเอกสาร",
-  charges: "ข้อหา + ตัวบทกฎหมายมาตรฐาน · สถานีเพิ่มเองได้",
-};
 
 const emptyOfficer = { fullName: "", rankTitle: "", position: "", isDefault: false };
 
@@ -150,9 +144,8 @@ export function SmartPoliceSettingsClient() {
 
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
-          <div className="min-w-0">
+          <div className={smartPoliceCardTitleRowClass}>
             <h2 className={smartPoliceCardTitleClass}>ตั้งค่า</h2>
-            <p className={smartPoliceCardMetaClass}>{TAB_META[tab]}</p>
           </div>
 
           <div
@@ -202,7 +195,7 @@ export function SmartPoliceSettingsClient() {
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2">
           {tab === "charges" ? (
             <div role="tabpanel" aria-label="คลังข้อหา">
               <SmartPoliceChargesPanel

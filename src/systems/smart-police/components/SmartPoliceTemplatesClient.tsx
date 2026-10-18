@@ -11,8 +11,8 @@ import type { SmartPoliceTemplateDto } from "@/lib/smart-police/types";
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
   smartPoliceCardHeaderRowClass,
-  smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
@@ -81,11 +81,13 @@ export function SmartPoliceTemplatesClient() {
     <div className={smartPolicePageStackClass}>
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
-          <div className="min-w-0">
-            <h2 className={smartPoliceCardTitleClass}>แม่แบบเอกสาร</h2>
-            <p className={smartPoliceCardMetaClass}>
-              สำนวน คำให้การ หมายเรียก — ใช้ตัวแปร {"{{caseNumber}}"} {"{{partyName}}"}
-            </p>
+          <div className={smartPoliceCardTitleRowClass}>
+            <h2 className={smartPoliceCardTitleClass}>แม่แบบ</h2>
+            {!loading ? (
+              <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
+                {templates.length}
+              </span>
+            ) : null}
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
             <button
@@ -102,7 +104,7 @@ export function SmartPoliceTemplatesClient() {
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-1.5">
           {loading ? (
             <p className={smartPoliceMutedTextClass}>กำลังโหลด…</p>
           ) : templates.length === 0 ? (

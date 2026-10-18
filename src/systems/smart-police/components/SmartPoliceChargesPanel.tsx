@@ -133,11 +133,6 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
         </div>
       ) : null}
 
-      <p className={cn(smartPoliceMutedTextClass, "shrink-0 text-[11px] leading-snug")}>
-        คลังมาตรฐาน: ชื่อข้อหา + ตัวบท (ป.อาญา · ประมวลยาเสพติด 2564 · พ.ร.บ.เฉพาะ) ·
-        สถานีเพิ่มเองได้ · แสดง {charges.length} ข้อหา
-      </p>
-
       <input
         className={cn(smartPoliceFieldClass, "shrink-0")}
         placeholder="ค้นหาข้อหา / มาตรา / คำค้น"

@@ -39,6 +39,7 @@ import {
   smartPoliceCardHeaderRowClass,
   smartPoliceCardMetaClass,
   smartPoliceCardTitleClass,
+  smartPoliceCardTitleRowClass,
   smartPoliceFieldClass,
   smartPoliceHeaderActionShellClass,
   smartPoliceLabelClass,
@@ -380,14 +381,14 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
       <section className={cn(smartPolicePanelClass, smartPolicePanelSectionClass)}>
         <div className={smartPoliceCardHeaderRowClass}>
           <div className="min-w-0 text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-[#4d47b6]">
-              {data.caseNumber}
-            </p>
-            <h2 className={smartPoliceCardTitleClass}>{data.title}</h2>
-            <p className={smartPoliceCardMetaClass}>
-              {data.caseType} · {SMART_POLICE_CASE_STATUS_LABEL[data.status]}
+            <div className={smartPoliceCardTitleRowClass}>
+              <span className="text-[11px] font-bold text-[#4d47b6]">{data.caseNumber}</span>
+              <h2 className={smartPoliceCardTitleClass}>{data.title}</h2>
+            </div>
+            <p className={cn(smartPoliceCardMetaClass, "mt-0.5 truncate font-medium")}>
+              {SMART_POLICE_CASE_STATUS_LABEL[data.status]}
               {data.chargeText
-                ? ` · ${data.chargeText.slice(0, 36)}${data.chargeText.length > 36 ? "…" : ""}`
+                ? ` · ${data.chargeText.slice(0, 40)}${data.chargeText.length > 40 ? "…" : ""}`
                 : ""}
             </p>
           </div>
@@ -404,7 +405,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
           </div>
         </div>
 
-        <div className="mt-2.5 sm:hidden">
+        <div className="mt-1.5 sm:hidden">
           <select
             className={smartPoliceMobileSelectClass}
             value={tab}
@@ -695,9 +696,11 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         {tab === "parties" ? (
           <div role="tabpanel" className="space-y-2">
             <div className={smartPoliceCardHeaderRowClass}>
-              <div className="min-w-0">
-                <h3 className={smartPoliceCardTitleClass}>บุคคลในคดี</h3>
-                <p className={smartPoliceCardMetaClass}>ระบุเกี่ยวกับคดีเพื่อสร้างคำให้การอัตโนมัติ</p>
+              <div className={smartPoliceCardTitleRowClass}>
+                <h3 className={smartPoliceCardTitleClass}>บุคคล</h3>
+                <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
+                  {data.parties.length}
+                </span>
               </div>
               <div className={smartPoliceHeaderActionShellClass}>
                 <button
@@ -713,7 +716,7 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                 </button>
               </div>
             </div>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {data.parties.map((p) => (
                 <li
                   key={p.id}
@@ -897,15 +900,15 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
         ) : null}
 
         {tab === "docs" ? (
-          <div role="tabpanel" className="space-y-2.5">
-            <div className="space-y-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2.5">
+          <div role="tabpanel" className="space-y-2">
+            <div className="space-y-1 rounded-md border border-slate-200/80 bg-slate-50/50 p-2">
               <div className={smartPoliceCardHeaderRowClass}>
-                <div className="min-w-0">
-                  <h3 className={smartPoliceCardTitleClass}>Checklist วันแรก</h3>
-                  <p className={smartPoliceCardMetaClass}>
-                    {day1Summary.done}/{day1Summary.total} ฉบับ
-                    {day1Summary.pending > 0 ? ` · ค้าง ${day1Summary.pending}` : " · ครบแล้ว"}
-                  </p>
+                <div className={smartPoliceCardTitleRowClass}>
+                  <h3 className={smartPoliceCardTitleClass}>วันแรก</h3>
+                  <span className={smartPoliceCardMetaClass}>
+                    {day1Summary.done}/{day1Summary.total}
+                    {day1Summary.pending > 0 ? ` · ค้าง ${day1Summary.pending}` : ""}
+                  </span>
                 </div>
                 {day1Summary.pending > 0 ? (
                   <button
@@ -920,20 +923,17 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                   </button>
                 ) : null}
               </div>
-              <ul className="space-y-1.5">
+              <ul className="space-y-1">
                 {day1Items.map((item) => (
                   <li
                     key={item.key}
                     className={cn(
                       smartPoliceListRowAccentClass(item.done ? "emerald" : "amber"),
-                      "flex-col gap-1.5 p-2 sm:flex-row sm:items-center sm:justify-between",
+                      "flex-col gap-1 sm:flex-row sm:items-center sm:justify-between",
                     )}
                   >
                     <div className="min-w-0 text-left">
-                      <p className="text-xs font-semibold text-[#1e1b4b] sm:text-sm">{item.label}</p>
-                      <p className="text-[10px] font-medium text-[#66638c]">
-                        {item.done ? "มีแล้ว" : "ยังไม่มี"}
-                      </p>
+                      <p className="text-[13px] font-semibold text-[#1e1b4b]">{item.label}</p>
                     </div>
                     <div className={cn(smartPoliceToolbarRowClass, "shrink-0")}>
                       {!item.done && item.generateKind ? (
@@ -970,7 +970,12 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             </div>
 
             <div className={smartPoliceCardHeaderRowClass}>
-              <h3 className={smartPoliceCardTitleClass}>เอกสารในคดี</h3>
+              <div className={smartPoliceCardTitleRowClass}>
+                <h3 className={smartPoliceCardTitleClass}>เอกสาร</h3>
+                <span className="text-[11px] font-semibold tabular-nums text-[#66638c]">
+                  {data.documents.length}
+                </span>
+              </div>
               <div className={smartPoliceHeaderActionShellClass}>
                 <button
                   type="button"

@@ -40,23 +40,27 @@ export const smartPolicePrimaryIconButtonClass = cn(
   appDashboardBrandGradientFillClass,
 );
 
-/** แถวหัวการ์ด — ชื่อซ้าย · ปุ่มขวา (ห่อเมื่อแคบ) */
+/** แถวหัวการ์ด — ชื่อซ้าย · ปุ่มขวา (กะทัดรัด · ไม่ซ้อนคำอธิบายซ้ำเมนู) */
 export const smartPoliceCardHeaderRowClass =
-  "flex flex-wrap items-center justify-between gap-2 gap-y-1.5";
+  "flex flex-wrap items-center justify-between gap-1.5 gap-y-1";
 
 /** กลุ่มปุ่มแอ็กชันหัวการ์ด — กะทัดรัดในกล่องเดียวกัน */
 export const smartPoliceHeaderActionShellClass =
-  "inline-flex shrink-0 flex-wrap items-center gap-0.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-0.5 sm:flex-nowrap";
+  "inline-flex shrink-0 flex-wrap items-center gap-0.5 rounded-md border border-slate-200/90 bg-slate-50/80 p-0.5 sm:flex-nowrap";
 
 /** แถวเครื่องมือในเนื้อหา (เช่น เอกสาร) */
 export const smartPoliceToolbarRowClass =
   "flex flex-wrap items-center gap-1";
 
 export const smartPoliceCardTitleClass =
-  "text-sm font-black tracking-tight text-[#1e1b4b] sm:text-[15px]";
+  "text-[13px] font-black tracking-tight text-[#1e1b4b] sm:text-sm";
 
+/** เมตาสั้นข้างหัวข้อ (เช่น นับจำนวน) — ห้ามซ้ำชื่อเมนู sidebar */
 export const smartPoliceCardMetaClass =
-  "mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]";
+  "text-[11px] font-semibold tabular-nums text-[#66638c]";
+
+/** หัวข้อ + เมตาในแถวเดียว */
+export const smartPoliceCardTitleRowClass = "flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5";
 
 export const smartPoliceRowIconButtonClass = cn(
   "box-border inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 items-center justify-center rounded-md border border-slate-200/90 bg-white text-[#4d47b6] shadow-sm touch-manipulation transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50",
@@ -81,20 +85,21 @@ export const smartPoliceTextareaClass = cn(
 export const smartPoliceLabelClass = "block text-xs font-bold text-[#4d47b6]";
 
 export const smartPolicePanelClass =
-  "w-full min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm";
+  "w-full min-w-0 overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm";
 
-export const smartPolicePanelSectionClass = "px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5";
+/** padding การ์ด — ย่อความสูง */
+export const smartPolicePanelSectionClass = "px-2.5 py-2 sm:px-3 sm:py-2.5";
 
 export const smartPolicePanelDividerClass = "border-t border-slate-200/80";
 
 export const smartPoliceSectionHeadingClass =
-  "flex items-center gap-2 text-sm font-bold text-[#1e1b4b]";
+  "flex items-center gap-1.5 text-[13px] font-bold text-[#1e1b4b]";
 
 export const smartPoliceSubtitleClass =
-  "mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]";
+  "text-[11px] font-medium leading-snug text-[#66638c]";
 
-/** เนื้อหาทุกหน้า — กว้างเต็มคอลัมน์ขวา */
-export const smartPolicePageStackClass = "flex min-h-0 w-full min-w-0 flex-1 flex-col space-y-3";
+/** เนื้อหาทุกหน้า — กว้างเต็มคอลัมน์ขวา · ช่องว่างการ์ดแน่น */
+export const smartPolicePageStackClass = "flex min-h-0 w-full min-w-0 flex-1 flex-col space-y-2";
 
 /** แผงหลักยืดเต็มความกว้าง */
 export const smartPoliceContentBleedClass = "w-full min-w-0 max-w-none";
@@ -156,17 +161,17 @@ export const smartPoliceScrollListClass =
   "min-h-0 max-h-[min(58vh,36rem)] overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]";
 
 export const smartPoliceStatInlineClass =
-  "flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0 rounded-md bg-slate-50/90 px-1.5 py-1.5 sm:px-2 sm:py-2";
+  "flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0 rounded-md bg-slate-50/90 px-1.5 py-1 sm:px-2 sm:py-1.5";
 
 /** สรุปสถิติแถวเดียว · มือถือเลื่อนแนวนอนได้ */
 export const smartPoliceStatsGridClass =
-  "flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2 sm:overflow-visible";
+  "flex flex-nowrap gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1.5 sm:overflow-visible";
 
 export const smartPoliceStatCellClass =
-  "min-w-[4.75rem] shrink-0 sm:min-w-0 sm:flex-1";
+  "min-w-[4.25rem] shrink-0 sm:min-w-0 sm:flex-1";
 
 export const smartPoliceListRowClass =
-  "flex flex-col gap-2 rounded-lg border border-slate-200/90 bg-white p-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/30 sm:flex-row sm:items-center sm:justify-between sm:p-3.5";
+  "flex flex-col gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 py-2 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/30 sm:flex-row sm:items-center sm:justify-between";
 
 export const smartPoliceListRowAccentClass = (
   tone: "indigo" | "violet" | "amber" | "sky" | "emerald" | "rose",
@@ -180,7 +185,7 @@ export const smartPoliceListRowAccentClass = (
     rose: "border-l-[3px] border-l-rose-500 bg-rose-50/40 border-rose-200/80",
   } as const;
   return cn(
-    "flex items-start justify-between gap-2 rounded-lg border p-3 shadow-sm",
+    "flex items-start justify-between gap-2 rounded-md border px-2.5 py-2 shadow-sm",
     map[tone],
   );
 };
