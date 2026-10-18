@@ -295,24 +295,78 @@ export function OfficialStatementFormSheet({
               </h1>
             </header>
 
-            {/* แถวแรก: สถานี — จังหวัด (อยู่ใต้หัวข้อชัดเจน) */}
-            <Row>
-              <L>สถานีตำรวจ</L>
-              <Dot aria-label="สถานีตำรวจ" value={h.stationName} onChange={(v) => set("stationName", v)} minCh={8} />
-              <L>เขต/อำเภอ</L>
-              <Dot aria-label="เขตอำเภอสถานี" value={h.district} onChange={(v) => set("district", v)} minCh={5} />
-              <L>จังหวัด</L>
-              <Dot aria-label="จังหวัด" value={h.province} onChange={(v) => set("province", v)} minCh={8} />
-            </Row>
+            {/* แถวแรก: ชิดขอบซ้าย–ขวาของคอลัมน์เนื้อหา */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                columnGap: "2mm",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+                width: "100%",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>สถานีตำรวจ</L>
+                <Dot
+                  aria-label="สถานีตำรวจ"
+                  value={h.stationName}
+                  onChange={(v) => set("stationName", v)}
+                  flex
+                  minCh={4}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>เขต/อำเภอ</L>
+                <Dot
+                  aria-label="เขตอำเภอสถานี"
+                  value={h.district}
+                  onChange={(v) => set("district", v)}
+                  flex
+                  minCh={3}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>จังหวัด</L>
+                <Dot
+                  aria-label="จังหวัด"
+                  value={h.province}
+                  onChange={(v) => set("province", v)}
+                  flex
+                  minCh={4}
+                />
+              </div>
+            </div>
 
-            <Row>
-              <L>วันที่</L>
-              <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} minCh={2} />
-              <L>เดือน</L>
-              <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} minCh={5} />
-              <L>พ.ศ.</L>
-              <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} minCh={4} />
-            </Row>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                columnGap: "2mm",
+                alignItems: "baseline",
+                minHeight: LINE,
+                margin: "0 0 0.8mm",
+                lineHeight: LINE,
+                fontSize: BODY,
+                width: "100%",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>วันที่</L>
+                <Dot aria-label="วันที่" value={h.dayThai} onChange={(v) => set("dayThai", v)} flex minCh={2} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>เดือน</L>
+                <Dot aria-label="เดือน" value={h.monthThai} onChange={(v) => set("monthThai", v)} flex minCh={3} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                <L>พ.ศ.</L>
+                <Dot aria-label="พ.ศ." value={h.yearThai} onChange={(v) => set("yearThai", v)} flex minCh={3} />
+              </div>
+            </div>
 
             <div
               style={{
