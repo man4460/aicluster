@@ -91,64 +91,59 @@ export async function ensureSmartPoliceBuiltinTemplates(ownerUserId: string) {
   await dedupeBuiltinTemplates(ownerUserId);
 }
 
+/** ลบข้อหาระบบที่ข้อความซ้ำ — เก็บแถวเก่าสุดต่อข้อความ */
+async function dedupeBuiltinCharges(ownerUserId: string) {
+  const rows = await prisma.smartPoliceCharge.findMany({
+    where: { ownerUserId, isBuiltin: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, chargeText: true },
+  });
+  const seen = new Set<string>();
+  const duplicateIds: string[] = [];
+  for (const row of rows) {
+    const key = row.chargeText.trim();
+    if (seen.has(key)) duplicateIds.push(row.id);
+    else seen.add(key);
+  }
+  if (duplicateIds.length > 0) {
+    await prisma.smartPoliceCharge.deleteMany({ where: { id: { in: duplicateIds } } });
+  }
+}
+
 /**
- * ซิงก์คลังข้อหาระบบ (ownerUserId = null)
- * — แทนที่ builtin ทั้งชุดให้ตรง catalog ปัจจุบัน (ตัวบทกฎหมายมาตรฐาน)
- * — ไม่แตะข้อหาที่สถานีเพิ่มเอง (isBuiltin=false)
+ * เติมคลังข้อหาระบบต่อสถานี (เหมือนแม่แบบ)
+ * — สร้างเฉพาะรายการที่ยังไม่มีตามข้อความข้อหา (รวมที่ปิดใช้/แก้แล้ว)
+ * — ไม่ทับค่าที่สถานีแก้เอง · ไม่สร้างซ้ำหลังลบ
  */
-export async function ensureSmartPoliceBuiltinCharges() {
-  const wanted = new Set(SMART_POLICE_BUILTIN_CHARGES.map((c) => c.chargeText.trim()));
+export async function ensureSmartPoliceBuiltinCharges(ownerUserId: string) {
+  await dedupeBuiltinCharges(ownerUserId);
 
   const existing = await prisma.smartPoliceCharge.findMany({
-    where: { isBuiltin: true, ownerUserId: null },
-    select: { id: true, chargeText: true, category: true, lawRefs: true, keywords: true, sortOrder: true },
+    where: { ownerUserId },
+    select: { chargeText: true },
+  });
+  const have = new Set(existing.map((r) => r.chargeText.trim()));
+
+  const missing = SMART_POLICE_BUILTIN_CHARGES.filter((c) => !have.has(c.chargeText.trim()));
+  if (missing.length === 0) {
+    await dedupeBuiltinCharges(ownerUserId);
+    return;
+  }
+
+  await prisma.smartPoliceCharge.createMany({
+    data: missing.map((c) => ({
+      ownerUserId,
+      category: c.category,
+      chargeText: c.chargeText,
+      lawRefs: c.lawRefs,
+      keywords: c.keywords,
+      isBuiltin: true,
+      isActive: true,
+      sortOrder: c.sortOrder,
+    })),
   });
 
-  const obsoleteIds = existing
-    .filter((r) => !wanted.has(r.chargeText.trim()))
-    .map((r) => r.id);
-  if (obsoleteIds.length > 0) {
-    await prisma.smartPoliceCharge.deleteMany({ where: { id: { in: obsoleteIds } } });
-  }
-
-  const byText = new Map(existing.map((r) => [r.chargeText.trim(), r]));
-
-  for (const c of SMART_POLICE_BUILTIN_CHARGES) {
-    const key = c.chargeText.trim();
-    const row = byText.get(key);
-    if (!row) {
-      await prisma.smartPoliceCharge.create({
-        data: {
-          ownerUserId: null,
-          category: c.category,
-          chargeText: c.chargeText,
-          lawRefs: c.lawRefs,
-          keywords: c.keywords,
-          isBuiltin: true,
-          isActive: true,
-          sortOrder: c.sortOrder,
-        },
-      });
-      continue;
-    }
-    const needUpdate =
-      row.category !== c.category ||
-      (row.lawRefs ?? "") !== c.lawRefs ||
-      (row.keywords ?? "") !== c.keywords ||
-      row.sortOrder !== c.sortOrder;
-    if (needUpdate) {
-      await prisma.smartPoliceCharge.update({
-        where: { id: row.id },
-        data: {
-          category: c.category,
-          lawRefs: c.lawRefs,
-          keywords: c.keywords,
-          sortOrder: c.sortOrder,
-          isActive: true,
-        },
-      });
-    }
-  }
+  await dedupeBuiltinCharges(ownerUserId);
 }
 
 export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
@@ -157,7 +152,7 @@ export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
   });
   if (existing) {
     await ensureSmartPoliceBuiltinTemplates(ownerUserId);
-    await ensureSmartPoliceBuiltinCharges();
+    await ensureSmartPoliceBuiltinCharges(ownerUserId);
     return mapSmartPoliceProfile(existing);
   }
   const created = await prisma.smartPoliceProfile.create({
@@ -168,6 +163,6 @@ export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
     },
   });
   await ensureSmartPoliceBuiltinTemplates(ownerUserId);
-  await ensureSmartPoliceBuiltinCharges();
+  await ensureSmartPoliceBuiltinCharges(ownerUserId);
   return mapSmartPoliceProfile(created);
 }

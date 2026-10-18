@@ -1,5 +1,5 @@
 /**
- * ซิงก์คลังข้อหาระบบจาก charge-catalog-seed
+ * ซิงก์คลังข้อหาระบบต่อสถานีจาก charge-catalog-seed
  * รัน: npx tsx scripts/sync-smart-police-charges.ts
  */
 import { ensureSmartPoliceBuiltinCharges } from "../src/lib/smart-police/api-owner";
@@ -8,19 +8,16 @@ import { prisma } from "../src/lib/prisma";
 
 async function main() {
   console.log("seed count", SMART_POLICE_BUILTIN_CHARGES.length);
-  await ensureSmartPoliceBuiltinCharges();
-  const total = await prisma.smartPoliceCharge.count({
-    where: { isBuiltin: true, ownerUserId: null },
+  const profiles = await prisma.smartPoliceProfile.findMany({
+    select: { ownerUserId: true, stationName: true },
   });
-  const byCat = await prisma.smartPoliceCharge.groupBy({
-    by: ["category"],
-    where: { isBuiltin: true, ownerUserId: null },
-    _count: true,
-    orderBy: { category: "asc" },
-  });
-  console.log("builtin total", total);
-  for (const row of byCat) {
-    console.log(`  ${row.category}: ${row._count}`);
+  console.log("stations", profiles.length);
+  for (const p of profiles) {
+    await ensureSmartPoliceBuiltinCharges(p.ownerUserId);
+    const total = await prisma.smartPoliceCharge.count({
+      where: { ownerUserId: p.ownerUserId, isBuiltin: true },
+    });
+    console.log(`  ${p.stationName} (${p.ownerUserId.slice(0, 8)}…): builtin ${total}`);
   }
 }
 

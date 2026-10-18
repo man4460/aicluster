@@ -4,9 +4,9 @@ import { SMART_POLICE_MODULE_SLUG } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { withSmartPoliceOwner } from "@/lib/smart-police/api-route";
 
-async function loadEditable(ownerUserId: string, id: string) {
+async function loadOwned(ownerUserId: string, id: string) {
   return prisma.smartPoliceCharge.findFirst({
-    where: { id, ownerUserId, isBuiltin: false },
+    where: { id, ownerUserId },
   });
 }
 
@@ -15,12 +15,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!gate.ok) return gate.res;
   await requireModulePage(SMART_POLICE_MODULE_SLUG);
   const { id } = await ctx.params;
-  const existing = await loadEditable(gate.ctx.ownerUserId, id);
+  const existing = await loadOwned(gate.ctx.ownerUserId, id);
   if (!existing) {
-    return NextResponse.json(
-      { error: "แก้ไขได้เฉพาะข้อหาที่สถานีสร้างเอง" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "ไม่พบข้อหา" }, { status: 404 });
   }
 
   const body = (await req.json()) as Record<string, unknown>;
@@ -58,12 +55,9 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!gate.ok) return gate.res;
   await requireModulePage(SMART_POLICE_MODULE_SLUG);
   const { id } = await ctx.params;
-  const existing = await loadEditable(gate.ctx.ownerUserId, id);
+  const existing = await loadOwned(gate.ctx.ownerUserId, id);
   if (!existing) {
-    return NextResponse.json(
-      { error: "ลบได้เฉพาะข้อหาที่สถานีสร้างเอง" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "ไม่พบข้อหา" }, { status: 404 });
   }
   await prisma.smartPoliceCharge.delete({ where: { id } });
   return NextResponse.json({ ok: true });

@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   if (!gate.ok) return gate.res;
   await requireModulePage(SMART_POLICE_MODULE_SLUG);
   await getOrCreateSmartPoliceProfile(gate.ctx.ownerUserId);
-  await ensureSmartPoliceBuiltinCharges();
+  await ensureSmartPoliceBuiltinCharges(gate.ctx.ownerUserId);
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
@@ -58,13 +58,9 @@ export async function GET(req: Request) {
 
   const rows = await prisma.smartPoliceCharge.findMany({
     where: {
-      AND: [
-        {
-          OR: [{ ownerUserId: null, isBuiltin: true }, { ownerUserId: gate.ctx.ownerUserId }],
-        },
-        activeOnly ? { isActive: true } : {},
-        category ? { category } : {},
-      ],
+      ownerUserId: gate.ctx.ownerUserId,
+      ...(activeOnly ? { isActive: true } : {}),
+      ...(category ? { category } : {}),
     },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { chargeText: "asc" }],
   });

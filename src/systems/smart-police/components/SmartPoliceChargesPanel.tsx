@@ -13,6 +13,7 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
+  SMART_POLICE_ENTRY_MODAL_SIZE,
   smartPoliceFieldClass,
   smartPoliceModalFormClass,
   smartPoliceSelectClass,
@@ -22,7 +23,6 @@ import {
   smartPoliceLabelClass,
   smartPoliceListRowAccentClass,
   smartPoliceMutedTextClass,
-  smartPoliceOutlineButtonClass,
   smartPolicePrimaryButtonClass,
   smartPoliceRowIconButtonClass,
   smartPoliceRowRemoveIconButtonClass,
@@ -35,6 +35,7 @@ const emptyForm = {
   chargeText: "",
   lawRefs: "",
   keywords: "",
+  isActive: true,
 };
 
 type Props = {
@@ -86,13 +87,13 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
   }, [openAdd, registerOpenAdd]);
 
   function openEdit(c: SmartPoliceChargeDto) {
-    if (!c.isOwnerCustom) return;
     setEditingId(c.id);
     setForm({
       category: c.category,
       chargeText: c.chargeText,
       lawRefs: c.lawRefs ?? "",
       keywords: c.keywords ?? "",
+      isActive: c.isActive,
     });
     setModalOpen(true);
   }
@@ -118,9 +119,13 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
   }
 
   async function remove(c: SmartPoliceChargeDto) {
-    if (!c.isOwnerCustom) return;
     if (!window.confirm(`ลบข้อหา «${c.chargeText}»?`)) return;
-    await fetch(`/api/smart-police/charges/${c.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/smart-police/charges/${c.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = (await res.json()) as { error?: string };
+      onToast?.(err.error ?? "ลบไม่สำเร็จ");
+      return;
+    }
     onToast?.("ลบแล้ว");
     await load();
   }
@@ -130,7 +135,7 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
       {!hideAddButton ? (
         <div className="flex shrink-0 justify-end">
           <button type="button" className={cn(smartPolicePrimaryButtonClass, "shrink-0")} onClick={openAdd}>
-            + เพิ่มข้อหาสถานี
+            + เพิ่มข้อหา
           </button>
         </div>
       ) : null}
@@ -190,35 +195,26 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
                 <p className="font-semibold text-[#1e1b4b]">{c.chargeText}</p>
                 {c.lawRefs ? <p className="mt-0.5 text-xs leading-snug text-[#66638c]">{c.lawRefs}</p> : null}
               </div>
-              {c.isOwnerCustom ? (
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    type="button"
-                    className={smartPoliceRowIconButtonClass}
-                    aria-label={`แก้ไข ${c.chargeText}`}
-                    onClick={() => openEdit(c)}
-                  >
-                    <IconRowEdit className="h-4 w-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={smartPoliceRowRemoveIconButtonClass}
-                    aria-label={`ลบ ${c.chargeText}`}
-                    onClick={() => void remove(c)}
-                  >
-                    <IconRowRemove className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              ) : (
-                <span
-                  className={cn(
-                    smartPoliceOutlineButtonClass,
-                    "pointer-events-none px-2 text-[10px]",
-                  )}
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  className={smartPoliceRowIconButtonClass}
+                  aria-label={`แก้ไข ${c.chargeText}`}
+                  title="แก้ไข"
+                  onClick={() => openEdit(c)}
                 >
-                  ระบบ
-                </span>
-              )}
+                  <IconRowEdit className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className={smartPoliceRowRemoveIconButtonClass}
+                  aria-label={`ลบ ${c.chargeText}`}
+                  title="ลบ"
+                  onClick={() => void remove(c)}
+                >
+                  <IconRowRemove className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -227,8 +223,8 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
       <FormModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingId ? "แก้ไขข้อหา" : "เพิ่มข้อหาสถานี"}
-        size="md"
+        title={editingId ? "แก้ไขข้อหา" : "เพิ่มข้อหา"}
+        size={SMART_POLICE_ENTRY_MODAL_SIZE}
         footer={
           <FormModalFooterActions
             onCancel={() => setModalOpen(false)}
@@ -278,6 +274,16 @@ export function SmartPoliceChargesPanel({ onToast, hideAddButton, registerOpenAd
               onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
             />
           </label>
+          {editingId ? (
+            <label className="flex items-center gap-2 text-sm font-semibold text-[#1e1b4b]">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+              />
+              เปิดใช้ในคลัง
+            </label>
+          ) : null}
         </div>
       </FormModal>
     </div>
