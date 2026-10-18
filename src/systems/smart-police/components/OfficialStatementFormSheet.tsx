@@ -278,7 +278,7 @@ export function OfficialStatementFormSheet({
                 height={110}
                 style={{ display: "block", margin: "0 auto 1.5mm", height: "28mm", width: "auto" }}
               />
-              <p style={{ margin: 0, fontSize: TITLE, fontWeight: 700, lineHeight: 1.15 }}>
+              <p style={{ margin: 0, fontSize: "20pt", fontWeight: 700, lineHeight: 1.15 }}>
                 สำนักงานตำรวจแห่งชาติ
               </p>
               <h1
