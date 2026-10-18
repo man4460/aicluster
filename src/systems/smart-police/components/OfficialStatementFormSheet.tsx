@@ -269,8 +269,8 @@ function LinedBody({
           touchAction: "manipulation",
           WebkitUserSelect: "text",
           userSelect: "text",
-          // แท็บเยื้องแบบ Word — กว้างใกล้ป้าย «ถาม 1. »
-          tabSize: 7,
+          // แท็บเยื้องแบบ Word — กว้างกว่าป้าย «ถาม 1. » เล็กน้อย
+          tabSize: 10,
           minHeight: "44px",
         }}
         onPointerDown={(e) => {

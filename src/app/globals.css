@@ -267,8 +267,8 @@ textarea.sp-word-field:focus-visible {
   margin: 0;
   padding: 0;
   -webkit-touch-callout: default;
-  tab-size: 7;
-  -moz-tab-size: 7;
+  tab-size: 10;
+  -moz-tab-size: 10;
 }
 .sp-stmt-lined-body:empty::before,
 .sp-stmt-lined-body:has(> br:only-child)::before {
