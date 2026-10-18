@@ -46,13 +46,14 @@ export function SmartPoliceTemplatesClient() {
 
         <div className={cn(smartPoliceMutedTextClass, "mt-2 shrink-0 space-y-1")}>
           <p>
-            ในคดี ไปที่ <strong className="text-[#1e1b4b]">บุคคล</strong> แล้วกด{" "}
-            <strong className="text-[#1e1b4b]">คำให้การ</strong> — ระบบเปิดแบบจำลองฟอร์ม
-            เติมชื่อ·ข้อหา·สถานีจากคดี แล้วให้พนักงานสอบสวน{" "}
-            <strong className="text-[#1e1b4b]">พิมพ์ถาม–ตอบ</strong> ได้เลย จากนั้นบันทึกและพิมพ์ลงลายเซ็น
+            ใช้<strong className="text-[#1e1b4b]">ฟอร์ม Word จริง</strong> (เช่น คำให้การผู้กล่าวหา.docx)
+            ทำงานร่วมกับระบบ: ในคดีกด{" "}
+            <strong className="text-[#1e1b4b]">คำให้การ</strong> ที่บุคคล → เห็นพรีวิวฟอร์ม + พิมพ์ถาม–ตอบ →{" "}
+            <strong className="text-[#1e1b4b]">บันทึกเข้าสำนวน + Word</strong> · เปิด Word ต้นฉบับหรืออัปโหลดไฟล์ที่พิมพ์ใน Word
+            กลับเข้าสำนวนได้
           </p>
           <p>
-            ดาวน์โหลดไฟล์เปล่าอยู่ที่เมนู{" "}
+            คลังไฟล์เปล่าทั้งหมดอยู่ที่{" "}
             <Link href="/dashboard/smart-police/forms" className="font-semibold text-[#5b61ff] underline">
               แบบฟอร์ม
             </Link>
@@ -67,7 +68,7 @@ export function SmartPoliceTemplatesClient() {
               {SMART_POLICE_STATEMENT_TEMPLATES.map((t) => (
                 <li key={t.slug} className={smartPoliceListRowAccentClass(TONE_BY_SLUG[t.slug])}>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-[10px] font-bold text-[#4d47b6]">ใช้ในคดี · ถาม/ตอบ</p>
+                    <p className="text-[10px] font-bold text-[#4d47b6]">ฟอร์ม Word · ถาม/ตอบ · บันทึกสำนวน</p>
                     <p className="text-[13px] font-semibold text-[#1e1b4b]">{t.title}</p>
                     <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">{t.description}</p>
                   </div>

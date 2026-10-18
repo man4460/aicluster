@@ -1,9 +1,9 @@
 import type { SmartPoliceDocumentKind } from "@/generated/prisma/enums";
 import {
   isStatementDocumentV2,
+  isStatementDocumentV3,
   parseStatementDocumentContent,
   statementDocumentToPlainText,
-  statementFormDocumentCss,
   type StatementDocumentContent,
   type StatementDocumentContentV1,
 } from "@/lib/smart-police/form-templates";
@@ -455,6 +455,27 @@ export function buildSmartPoliceA4PreviewFromCase(opts: {
         printHtml: buildSmartPoliceFormHtmlPrintHtml(model),
       };
     }
+    if (isStatementDocumentV3(json)) {
+      const model = buildModelFromStatementJson({
+        profile: opts.profile,
+        caseDetail: opts.caseDetail,
+        document: opts.document,
+        party,
+        json: {
+          templateSlug: json.templateSlug,
+          version: 1,
+          header: json.header,
+          pages: json.pages,
+        },
+      });
+      model.formBodyHtml = json.formHtml;
+      const bodyText = statementDocumentToPlainText(json);
+      return {
+        model,
+        bodyText,
+        printHtml: buildSmartPoliceStatementA4PrintHtml(model, bodyText),
+      };
+    }
     const model = buildModelFromStatementJson({
       profile: opts.profile,
       caseDetail: opts.caseDetail,
@@ -674,6 +695,13 @@ window.addEventListener("load", function () {
 </html>`;
 }
 
+const FORM_HTML_PRINT_CSS = `
+.sp-form-root { font-family: "TH Sarabun New","Sarabun",Tahoma,sans-serif; font-size: 15px; line-height: 1.45; color: #111; }
+.sp-form-body table { width: 100%; border-collapse: collapse; }
+.sp-form-body td, .sp-form-body th { border: 1px solid #64748b; padding: 4px 6px; vertical-align: top; }
+.sp-form-body p { margin: 0.15em 0; }
+`;
+
 /** พิมพ์แบบฟอร์ม Word HTML (v2) — ให้ลงลายเซ็นเก็บในสำนวน */
 export function buildSmartPoliceFormHtmlPrintHtml(model: SmartPoliceA4PreviewModel): string {
   const body = model.formBodyHtml || "<p>—</p>";
@@ -684,7 +712,7 @@ export function buildSmartPoliceFormHtmlPrintHtml(model: SmartPoliceA4PreviewMod
 <title>${escapeHtml(model.documentTitle)} — ${escapeHtml(model.caseNumber)}</title>
 <style>
 @page { size: A4; margin: 12mm 10mm; }
-${statementFormDocumentCss()}
+${FORM_HTML_PRINT_CSS}
 body { margin: 0; background: #fff; }
 .sheet { max-width: 210mm; margin: 0 auto; }
 </style>

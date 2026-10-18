@@ -41,7 +41,7 @@ export type StatementHeaderFields = {
   partyPleaStatus: string;
 };
 
-/** v1 — ถาม/ตอบแยกหน้า (legacy) */
+/** v1 — ถาม/ตอบอย่างเดียว (legacy) */
 export type StatementDocumentContentV1 = {
   templateSlug: StatementTemplateSlug;
   version: 1;
@@ -49,10 +49,7 @@ export type StatementDocumentContentV1 = {
   pages: StatementPage[];
 };
 
-/**
- * v2 — ฟอร์ม HTML จากแบบฟอร์ม Word จริง
- * แก้ได้เหมือนพิมพ์บน Word / กรอก PDF แล้วบันทึก·พิมพ์ลงลายเซ็น
- */
+/** v2 — HTML จาก Word ทั้งก้อน (legacy) */
 export type StatementDocumentContentV2 = {
   templateSlug: StatementTemplateSlug;
   version: 2;
@@ -60,11 +57,30 @@ export type StatementDocumentContentV2 = {
   blankFormFileName: string;
   blankFormTitle: string;
   header: StatementHeaderFields;
-  /** เนื้อหาแบบฟอร์ม HTML (mammoth + ช่องที่เติมแล้ว) */
   bodyHtml: string;
 };
 
-export type StatementDocumentContent = StatementDocumentContentV1 | StatementDocumentContentV2;
+/**
+ * v3 — ฟอร์ม Word จริง + ถาม/ตอบ ในระบบ
+ * ลิงก์แบบฟอร์มต้นฉบับ · พรีวิว HTML · พิมพ์ถาม–ตอบ · บันทึกแล้วสร้าง .docx แนบสำนวน
+ */
+export type StatementDocumentContentV3 = {
+  templateSlug: StatementTemplateSlug;
+  version: 3;
+  blankFormId: string;
+  blankFormFileName: string;
+  blankFormTitle: string;
+  blankFormHref: string;
+  header: StatementHeaderFields;
+  /** พรีวิวแบบฟอร์ม Word (mammoth) หลังเติมช่องจากคดี */
+  formHtml: string;
+  pages: StatementPage[];
+};
+
+export type StatementDocumentContent =
+  | StatementDocumentContentV1
+  | StatementDocumentContentV2
+  | StatementDocumentContentV3;
 
 export type StatementTemplateMeta = {
   slug: StatementTemplateSlug;
@@ -80,4 +96,16 @@ export function isStatementDocumentV2(
   doc: StatementDocumentContent,
 ): doc is StatementDocumentContentV2 {
   return doc.version === 2 && "bodyHtml" in doc;
+}
+
+export function isStatementDocumentV3(
+  doc: StatementDocumentContent,
+): doc is StatementDocumentContentV3 {
+  return doc.version === 3 && "formHtml" in doc && Array.isArray(doc.pages);
+}
+
+export function statementDocumentHasPages(
+  doc: StatementDocumentContent,
+): doc is StatementDocumentContentV1 | StatementDocumentContentV3 {
+  return doc.version === 1 || doc.version === 3;
 }

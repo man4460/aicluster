@@ -6,6 +6,7 @@ import {
 import type {
   StatementDocumentContent,
   StatementDocumentContentV1,
+  StatementDocumentContentV3,
   StatementHeaderFields,
   StatementPage,
   StatementQaItem,
@@ -13,6 +14,8 @@ import type {
 import {
   STATEMENT_CONTENT_MARKER,
   isStatementDocumentV2,
+  isStatementDocumentV3,
+  statementDocumentHasPages,
 } from "@/lib/smart-police/form-templates/statement-types";
 import { SMART_POLICE_PARTY_ROLE_LABEL } from "@/lib/smart-police/types";
 import { statementTitleForRole } from "@/lib/smart-police/statement-form";
@@ -95,7 +98,7 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
 }
 
 /** คำถามเริ่มต้นตามบทบาท — พงส. แก้/พิมพ์ต่อได้ */
-function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: string): string[] {
+export function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: string): string[] {
   const hint = behaviorHint.trim();
   if (role === "COMPLAINANT") {
     return [
@@ -127,11 +130,8 @@ function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: string):
   ];
 }
 
-/**
- * สร้างแบบจำลองฟอร์มคำให้การ — เติมหัวจากคดี/บุคคล + หน้าถาม–ตอบให้พงส. พิมพ์ต่อ
- * (ไม่ดึง fs/Word ใน client path)
- */
-export function fillStatementDocument(input: FillStatementInput): StatementDocumentContentV1 {
+/** fallback ถ้าไม่มีไฟล์ Word บนเซิร์ฟเวอร์ */
+export function fillStatementDocumentSync(input: FillStatementInput): StatementDocumentContentV1 {
   const meta = statementTemplateMetaForRole(input.role);
   const hint = (input.behaviorHint ?? "").trim();
   return {
@@ -140,11 +140,6 @@ export function fillStatementDocument(input: FillStatementInput): StatementDocum
     header: buildHeader(input),
     pages: [createEmptyPage(seedQuestionsForRole(input.role, hint))],
   };
-}
-
-/** @deprecated ใช้ fillStatementDocument */
-export function fillStatementDocumentSync(input: FillStatementInput): StatementDocumentContentV1 {
-  return fillStatementDocument(input);
 }
 
 export function serializeStatementDocument(doc: StatementDocumentContent): string {
@@ -157,6 +152,7 @@ export function parseStatementDocumentContent(raw: string): StatementDocumentCon
   try {
     const parsed = JSON.parse(t) as StatementDocumentContent;
     if (!parsed?.templateSlug || !parsed.header) return null;
+    if (parsed.version === 3 && isStatementDocumentV3(parsed)) return parsed;
     if (parsed.version === 2 && "bodyHtml" in parsed) return parsed;
     if (parsed.version === 1 && Array.isArray((parsed as StatementDocumentContentV1).pages)) {
       return parsed;
@@ -174,7 +170,41 @@ export function statementDocumentTitle(
   return `${statementTitleForRole(role)} — ${doc.header.partyName || "ไม่ระบุชื่อ"}`;
 }
 
+function pagesToPlainText(
+  title: string,
+  h: StatementHeaderFields,
+  pages: StatementPage[],
+): string {
+  const lines: string[] = [
+    title,
+    "",
+    h.stationName,
+    `เลขที่คดี ${h.caseNumber}`,
+    `เรื่อง ${h.caseTitle}`,
+    `ผู้ให้การ ${h.partyName} (${h.partyRoleLabel})`,
+    h.partyPhone ? `โทรศัพท์ ${h.partyPhone}` : "",
+    h.partyIdCard ? `บัตรประชาชน ${h.partyIdCard}` : "",
+    h.chargeText ? `ข้อหา ${h.chargeText}` : "",
+    h.investigator ? `พนักงานสอบสวน ${h.investigator}` : "",
+    "",
+    "—— บันทึกถาม–ตอบ ——",
+    "",
+  ].filter((x, i, a) => x !== "" || (i > 0 && a[i - 1] !== ""));
+
+  let qNo = 1;
+  for (const page of pages) {
+    for (const qa of page.qa) {
+      lines.push(`ถาม ${qNo}. ${qa.question.trim() || "…"}`);
+      lines.push(`ตอบ ${qa.answer.trim() || "…"}`);
+      lines.push("");
+      qNo += 1;
+    }
+  }
+  return lines.join("\n");
+}
+
 export function statementDocumentToPlainText(doc: StatementDocumentContent): string {
+  const title = getStatementTemplateMeta(doc.templateSlug).title;
   if (isStatementDocumentV2(doc)) {
     const h = doc.header;
     const textish = doc.bodyHtml
@@ -187,35 +217,41 @@ export function statementDocumentToPlainText(doc: StatementDocumentContent): str
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]{2,}/g, " ")
       .trim();
-    return `${getStatementTemplateMeta(doc.templateSlug).title}\nเลขที่คดี ${h.caseNumber}\nเรื่อง ${h.caseTitle}\n\n${textish}`;
+    return `${title}\nเลขที่คดี ${h.caseNumber}\nเรื่อง ${h.caseTitle}\n\n${textish}`;
   }
-
-  const h = doc.header;
-  const lines: string[] = [
-    getStatementTemplateMeta(doc.templateSlug).title,
-    "",
-    h.stationName,
-    `เลขที่คดี ${h.caseNumber}`,
-    `เรื่อง ${h.caseTitle}`,
-    `ผู้ให้การ ${h.partyName} (${h.partyRoleLabel})`,
-    "",
-  ];
-  let qNo = 1;
-  for (const page of doc.pages) {
-    for (const qa of page.qa) {
-      lines.push(`ถาม ${qNo}. ${qa.question.trim() || "…"}`);
-      lines.push(`ตอบ ${qa.answer.trim() || "…"}`);
-      lines.push("");
-      qNo += 1;
-    }
+  if (statementDocumentHasPages(doc)) {
+    return pagesToPlainText(title, doc.header, doc.pages);
   }
-  return lines.join("\n");
+  return title;
 }
 
 export function isStatementJsonContent(raw: string): boolean {
   return parseStatementDocumentContent(raw) != null;
 }
 
-export function statementFormDocumentCss(): string {
-  return "";
+/** ดึงข้อความสำหรับสร้าง .docx จาก content ดิบ (JSON หรือข้อความ) */
+export function statementContentBodyTextForWord(raw: string): string {
+  const parsed = parseStatementDocumentContent(raw);
+  if (parsed) return statementDocumentToPlainText(parsed);
+  return raw;
 }
+
+export function ensureStatementPagesDoc(
+  doc: StatementDocumentContent,
+): StatementDocumentContentV1 | StatementDocumentContentV3 {
+  if (statementDocumentHasPages(doc)) return doc;
+  // v2 → แปลงเป็นโครงถาม–ตอบโดยเก็บ header
+  return {
+    templateSlug: doc.templateSlug,
+    version: 1,
+    header: doc.header,
+    pages: [
+      createEmptyPage([
+        "ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ",
+        "มีพยานหรือหลักฐานเกี่ยวข้องอย่างไร",
+      ]),
+    ],
+  };
+}
+
+export type { StatementDocumentContentV3 };

@@ -3,6 +3,7 @@ import { requireModulePage } from "@/lib/modules/guard";
 import { SMART_POLICE_MODULE_SLUG } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { withSmartPoliceOwner } from "@/lib/smart-police/api-route";
+import { statementContentBodyTextForWord } from "@/lib/smart-police/form-templates";
 import { appOriginFromRequest, generateStatementDocxFile } from "@/lib/smart-police/word-file";
 import { syncStatementLinksIntoNarrative } from "@/lib/smart-police/narrative-links";
 
@@ -27,7 +28,7 @@ export async function POST(
     ownerUserId: gate.ctx.ownerUserId,
     caseId,
     documentId: docId,
-    bodyText: doc.content,
+    bodyText: statementContentBodyTextForWord(doc.content),
     appOrigin,
     narrativePageUrl,
   });

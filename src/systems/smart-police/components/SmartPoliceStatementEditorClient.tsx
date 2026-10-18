@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { openPrintableHtml } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   createEmptyPage,
   createEmptyQa,
+  ensureStatementPagesDoc,
   getStatementTemplateMeta,
-  isStatementDocumentV2,
+  isStatementDocumentV3,
   parseStatementDocumentContent,
   serializeStatementDocument,
+  statementDocumentHasPages,
   type StatementDocumentContentV1,
+  type StatementDocumentContentV3,
   type StatementHeaderFields,
 } from "@/lib/smart-police/form-templates";
-import type { SmartPoliceCaseDetail } from "@/lib/smart-police/types";
+import type { SmartPoliceCaseDetail, SmartPoliceDocumentDto } from "@/lib/smart-police/types";
 import {
   smartPoliceMutedTextClass,
   smartPoliceOutlineButtonClass,
@@ -24,6 +27,8 @@ import {
 
 const dotted =
   "border-b border-dotted border-slate-400 pb-0.5 min-h-[1.35em] w-full bg-transparent text-[#1e293b] outline-none focus:border-[#5b61ff]";
+
+type EditableDoc = StatementDocumentContentV1 | StatementDocumentContentV3;
 
 function HeaderField({
   label,
@@ -64,12 +69,14 @@ export function SmartPoliceStatementEditorClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [docTitle, setDocTitle] = useState("");
-  const [content, setContent] = useState<StatementDocumentContentV1 | null>(null);
-  const [legacyHtml, setLegacyHtml] = useState<string | null>(null);
+  const [content, setContent] = useState<EditableDoc | null>(null);
+  const [wordFileUrl, setWordFileUrl] = useState<string | null>(null);
+  const [wordFileName, setWordFileName] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const uploadRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,7 +88,7 @@ export function SmartPoliceStatementEditorClient({
       return;
     }
     const json = (await res.json()) as { case: SmartPoliceCaseDetail };
-    const doc = json.case.documents.find((d) => d.id === documentId);
+    const doc = json.case.documents.find((d) => d.id === documentId) as SmartPoliceDocumentDto | undefined;
     if (!doc) {
       setError("ไม่พบเอกสารคำให้การ");
       return;
@@ -92,23 +99,9 @@ export function SmartPoliceStatementEditorClient({
       return;
     }
     setDocTitle(doc.title);
-    if (isStatementDocumentV2(parsed)) {
-      setLegacyHtml(parsed.bodyHtml);
-      setContent({
-        templateSlug: parsed.templateSlug,
-        version: 1,
-        header: parsed.header,
-        pages: [
-          createEmptyPage([
-            "ขอทราบรายละเอียดเหตุการณ์ตามที่ทราบ",
-            "มีพยานหรือหลักฐานเกี่ยวข้องอย่างไร",
-          ]),
-        ],
-      });
-    } else {
-      setLegacyHtml(null);
-      setContent(parsed);
-    }
+    setWordFileUrl(doc.wordFileUrl);
+    setWordFileName(doc.wordFileName);
+    setContent(ensureStatementPagesDoc(parsed));
     setPageIndex(0);
     setDirty(false);
   }, [caseId, documentId]);
@@ -127,7 +120,7 @@ export function SmartPoliceStatementEditorClient({
 
   function showToast(msg: string) {
     setToast(msg);
-    window.setTimeout(() => setToast(null), 2200);
+    window.setTimeout(() => setToast(null), 2500);
   }
 
   function patchHeader<K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) {
@@ -137,7 +130,7 @@ export function SmartPoliceStatementEditorClient({
 
   function updateQa(pageIdx: number, qaIdx: number, field: "question" | "answer", value: string) {
     setContent((c) => {
-      if (!c) return c;
+      if (!c || !statementDocumentHasPages(c)) return c;
       const pages = c.pages.map((p, pi) => {
         if (pi !== pageIdx) return p;
         return {
@@ -152,7 +145,7 @@ export function SmartPoliceStatementEditorClient({
 
   function addQa() {
     setContent((c) => {
-      if (!c) return c;
+      if (!c || !statementDocumentHasPages(c)) return c;
       const pages = c.pages.map((p, pi) =>
         pi === pageIndex ? { ...p, qa: [...p.qa, createEmptyQa()] } : p,
       );
@@ -163,7 +156,7 @@ export function SmartPoliceStatementEditorClient({
 
   function removeQa(qaIdx: number) {
     setContent((c) => {
-      if (!c) return c;
+      if (!c || !statementDocumentHasPages(c)) return c;
       const pages = c.pages.map((p, pi) => {
         if (pi !== pageIndex) return p;
         if (p.qa.length <= 1) return p;
@@ -176,7 +169,7 @@ export function SmartPoliceStatementEditorClient({
 
   function addPage() {
     setContent((c) => {
-      if (!c) return c;
+      if (!c || !statementDocumentHasPages(c)) return c;
       return { ...c, pages: [...c.pages, createEmptyPage([""])] };
     });
     setPageIndex((i) => i + 1);
@@ -184,7 +177,7 @@ export function SmartPoliceStatementEditorClient({
   }
 
   function removePage() {
-    if (!content || content.pages.length <= 1) return;
+    if (!content || !statementDocumentHasPages(content) || content.pages.length <= 1) return;
     if (!window.confirm("ลบหน้านี้?")) return;
     const nextPages = content.pages.filter((_, i) => i !== pageIndex);
     setContent({ ...content, pages: nextPages });
@@ -192,7 +185,23 @@ export function SmartPoliceStatementEditorClient({
     setDirty(true);
   }
 
-  async function save() {
+  async function regenerateWord() {
+    const res = await fetch(`/api/smart-police/cases/${caseId}/documents/${documentId}/word`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      showToast("สร้างไฟล์ Word ไม่สำเร็จ");
+      return null;
+    }
+    const json = (await res.json()) as {
+      document: { wordFileUrl: string; wordFileName: string; downloadUrl?: string };
+    };
+    setWordFileUrl(json.document.wordFileUrl);
+    setWordFileName(json.document.wordFileName);
+    return json.document;
+  }
+
+  async function save(opts?: { alsoWord?: boolean }) {
     if (!content) return;
     setSaving(true);
     const res = await fetch(`/api/smart-police/cases/${caseId}/documents/${documentId}`, {
@@ -203,14 +212,19 @@ export function SmartPoliceStatementEditorClient({
         content: serializeStatementDocument(content),
       }),
     });
-    setSaving(false);
     if (!res.ok) {
+      setSaving(false);
       showToast("บันทึกไม่สำเร็จ");
       return;
     }
     setDirty(false);
-    setLegacyHtml(null);
-    showToast("บันทึกไว้ในสำนวนแล้ว");
+    if (opts?.alsoWord !== false) {
+      await regenerateWord();
+      showToast("บันทึกเข้าสำนวนแล้ว · อัปเดตไฟล์ Word แล้ว");
+    } else {
+      showToast("บันทึกเข้าสำนวนแล้ว");
+    }
+    setSaving(false);
   }
 
   async function printDoc() {
@@ -224,23 +238,27 @@ export function SmartPoliceStatementEditorClient({
       openPrintableHtml(html);
       return;
     }
-    openPrintableHtml(
-      `<!doctype html><html><head><meta charset="utf-8"/><title>${escapeHtml(docTitle)}</title>
-<style>body{font-family:"TH Sarabun New",Sarabun,Tahoma,sans-serif;padding:24px;line-height:1.5}
-.q{background:#e0f2fe;border:1px solid #334155;padding:8px;margin-top:12px;font-weight:600}
-.a{border:1px solid #334155;border-top:0;padding:8px;min-height:2.5em;white-space:pre-wrap}</style></head>
-<body><h1>${escapeHtml(getStatementTemplateMeta(content.templateSlug).title)}</h1>
-<p>เลขที่คดี ${escapeHtml(content.header.caseNumber)} · ${escapeHtml(content.header.partyName)}</p>
-${content.pages
-  .flatMap((p) => p.qa)
-  .map(
-    (qa, i) =>
-      `<div class="q">ถาม ${i + 1}. ${escapeHtml(qa.question || "…")}</div><div class="a">ตอบ ${escapeHtml(qa.answer || "…")}</div>`,
-  )
-  .join("")}
-<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},200)})</script>
-</body></html>`,
-    );
+    showToast("พิมพ์ไม่สำเร็จ");
+  }
+
+  async function onUploadWord(file: File | null) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.set("file", file);
+    const res = await fetch(`/api/smart-police/cases/${caseId}/documents/${documentId}/upload-word`, {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      showToast("อัปโหลด Word ไม่สำเร็จ");
+      return;
+    }
+    const json = (await res.json()) as {
+      document: { wordFileUrl: string; wordFileName: string };
+    };
+    setWordFileUrl(json.document.wordFileUrl);
+    setWordFileName(json.document.wordFileName);
+    showToast("อัปโหลด Word เข้าสำนวนแล้ว");
   }
 
   const backHref = `/dashboard/smart-police/cases/${caseId}?tab=parties`;
@@ -268,7 +286,9 @@ ${content.pages
   const meta = getStatementTemplateMeta(content.templateSlug);
   const h = content.header;
   const page = content.pages[pageIndex];
-  const addr = [h.stationAddress, h.province].filter(Boolean).join(" ");
+  const isV3 = isStatementDocumentV3(content);
+  const blankHref = isV3 ? content.blankFormHref : null;
+  const blankTitle = isV3 ? content.blankFormTitle : meta.title;
   let qaOffset = 0;
   for (let i = 0; i < pageIndex; i++) qaOffset += content.pages[i]?.qa.length ?? 0;
 
@@ -278,7 +298,7 @@ ${content.pages
         <div className="min-w-0">
           <p className="truncate text-sm font-bold sm:text-base">{meta.title}</p>
           <p className="truncate text-xs text-slate-400">
-            แบบจำลองฟอร์ม · เติมจากคดีแล้ว · พิมพ์ถาม–ตอบได้
+            ฟอร์ม Word: {blankTitle}
             {" · "}
             {h.caseNumber} · {h.partyName}
             {dirty ? " · ยังไม่บันทึก" : ""}
@@ -296,6 +316,45 @@ ${content.pages
           >
             ✕ ปิด
           </Link>
+          {blankHref ? (
+            <a
+              href={blankHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
+            >
+              เปิดฟอร์ม Word ต้นฉบับ
+            </a>
+          ) : null}
+          {wordFileUrl ? (
+            <a
+              href={wordFileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(smartPoliceOutlineButtonClass, "border-emerald-500/50 bg-emerald-900/40 text-emerald-100")}
+              title={wordFileName ?? "Word"}
+            >
+              ดาวน์โหลด Word ในสำนวน
+            </a>
+          ) : null}
+          <button
+            type="button"
+            className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
+            onClick={() => uploadRef.current?.click()}
+          >
+            อัปโหลด Word กลับ
+          </button>
+          <input
+            ref={uploadRef}
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              e.target.value = "";
+              void onUploadWord(f);
+            }}
+          />
           <Link
             href={previewHref}
             className={cn(smartPoliceOutlineButtonClass, "border-slate-500 bg-slate-700/50 text-slate-100")}
@@ -313,15 +372,15 @@ ${content.pages
             type="button"
             className={smartPolicePrimaryButtonClass}
             disabled={saving || !dirty}
-            onClick={() => void save()}
+            onClick={() => void save({ alsoWord: true })}
           >
-            {saving ? "…" : "บันทึกเข้าสำนวน"}
+            {saving ? "…" : "บันทึกเข้าสำนวน + Word"}
           </button>
         </div>
       </header>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-600/60 bg-slate-900/40 px-3 py-2 sm:px-5">
-        <span className="text-[11px] font-semibold text-slate-400">หน้า</span>
+        <span className="text-[11px] font-semibold text-slate-400">หน้าถาม–ตอบ</span>
         {content.pages.map((p, i) => (
           <button
             key={p.id}
@@ -351,180 +410,132 @@ ${content.pages
             ลบหน้านี้
           </button>
         ) : null}
+        <p className="ml-auto hidden text-[11px] text-slate-400 sm:block">
+          พิมพ์ถาม–ตอบในระบบ → บันทึก → ได้ไฟล์ Word ในสำนวน · หรือเปิด Word ต้นฉบับแล้วอัปโหลดกลับ
+        </p>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#5c6570] p-3 sm:p-6">
-        {legacyHtml ? (
-          <p className="mx-auto mb-3 max-w-[210mm] rounded-lg bg-amber-50 px-3 py-2 text-center text-[12px] text-amber-900">
-            เอกสารเก่าเป็น HTML จาก Word — ใช้แบบจำลองถาม–ตอบด้านล่างแทน แล้วกดบันทึกเพื่ออัปเดตสำนวน
-          </p>
-        ) : null}
-
-        <article className="mx-auto mb-8 w-full max-w-[210mm] bg-white px-[14mm] py-[16mm] text-[#111] shadow-xl">
-          <header className="grid grid-cols-[56px_1fr_100px] items-start gap-2">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-slate-400 text-center text-[10px] text-slate-500"
-              aria-hidden
-            >
-              ตรา
-            </div>
-            <div className="text-center">
-              <h1 className="text-lg font-bold sm:text-xl">{h.stationName}</h1>
-              {addr ? <p className="text-[13px] text-slate-600">{addr}</p> : null}
-              {h.commanderLine ? <p className="text-[13px] text-slate-600">{h.commanderLine}</p> : null}
-            </div>
-            <div className="text-right text-[11px] text-slate-600">
-              เลขที่คดี
-              <br />
-              <strong className="text-slate-800">{h.caseNumber}</strong>
-            </div>
-          </header>
-
-          <div className="mt-4 text-center">
-            <h2 className="text-xl font-bold sm:text-2xl">บันทึกคำให้การ</h2>
-            <p className="mt-0.5 text-[15px] font-semibold text-slate-700">{meta.title}</p>
-            <p className="text-[14px] text-slate-600">เรื่อง {h.caseTitle}</p>
-            <p className="text-[13px] text-slate-500">
-              {h.caseType}
-              {h.chargeText ? ` · ข้อหา ${h.chargeText}` : ""}
+        <div className="mx-auto mb-8 grid w-full max-w-[1100px] gap-4 lg:grid-cols-2">
+          {/* ฟอร์ม Word จริง */}
+          <section className="min-w-0">
+            <p className="mb-2 text-center text-[12px] font-semibold text-slate-200">
+              แบบฟอร์ม Word จริง — {blankTitle}
             </p>
-          </div>
-
-          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-            <p className="mb-2 text-[12px] font-bold text-[#4d47b6]">ข้อมูลผู้ให้การ (ดึงจากคดี — แก้ได้)</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <HeaderField label="คำให้การของ" value={h.partyName} onChange={(v) => patchHeader("partyName", v)} />
-              <HeaderField label="เป็น" value={h.partyRoleLabel} readOnly />
-              <HeaderField label="อายุ" value={h.partyAge} onChange={(v) => patchHeader("partyAge", v)} />
-              <HeaderField
-                label="สัญชาติ"
-                value={h.partyNationality}
-                onChange={(v) => patchHeader("partyNationality", v)}
-              />
-              <HeaderField
-                label="หมายเลขโทรศัพท์"
-                value={h.partyPhone}
-                onChange={(v) => patchHeader("partyPhone", v)}
-              />
-              <HeaderField
-                label="บัตรประจำตัวประชาชน"
-                value={h.partyIdCard}
-                onChange={(v) => patchHeader("partyIdCard", v)}
-              />
-              <HeaderField
-                label="อาชีพ"
-                value={h.partyOccupation}
-                onChange={(v) => patchHeader("partyOccupation", v)}
-              />
-              <HeaderField
-                label="สถานที่ทำงาน"
-                value={h.partyWorkplace}
-                onChange={(v) => patchHeader("partyWorkplace", v)}
-              />
-              <HeaderField
-                label="ที่อยู่"
-                value={h.partyAddress}
-                onChange={(v) => patchHeader("partyAddress", v)}
-                className="sm:col-span-2"
-              />
-              <HeaderField
-                label="ข้อหา"
-                value={h.chargeText}
-                onChange={(v) => patchHeader("chargeText", v)}
-                className="sm:col-span-2"
-              />
-              <HeaderField
-                label="พนักงานสอบสวน"
-                value={h.investigator}
-                onChange={(v) => patchHeader("investigator", v)}
-              />
-              <HeaderField label="วันที่" value={h.todayThai} onChange={(v) => patchHeader("todayThai", v)} />
+            <div className="overflow-auto rounded-lg bg-white p-3 shadow-xl sm:p-4">
+              {isV3 && content.formHtml ? (
+                <div
+                  className="sp-form-preview text-[13px] text-[#111] [&_table]:w-full [&_td]:border [&_td]:border-slate-500 [&_td]:p-1 [&_th]:border [&_th]:border-slate-500 [&_th]:p-1"
+                  dangerouslySetInnerHTML={{ __html: content.formHtml }}
+                />
+              ) : (
+                <p className="p-6 text-center text-sm text-slate-500">
+                  ไม่มีพรีวิวฟอร์ม — เปิดไฟล์ Word ต้นฉบับจากปุ่มด้านบน
+                </p>
+              )}
             </div>
-          </div>
+          </section>
 
-          <hr className="my-4 border-slate-300" />
+          {/* ถาม–ตอบ ในระบบ */}
+          <section className="min-w-0">
+            <article className="rounded-lg bg-white px-4 py-5 text-[#111] shadow-xl sm:px-5">
+              <h2 className="text-center text-lg font-bold">{meta.title}</h2>
+              <p className="mt-1 text-center text-[13px] text-slate-600">
+                เลขที่คดี {h.caseNumber} · เรื่อง {h.caseTitle}
+              </p>
 
-          <p className="mb-2 text-center text-[13px] font-semibold text-slate-600">
-            บันทึกการสอบปากคำ (ถาม / ตอบ) — พิมพ์หรือแก้ได้เลย
-          </p>
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <p className="mb-2 text-[12px] font-bold text-[#4d47b6]">ข้อมูลจากคดี (แก้ได้)</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <HeaderField label="คำให้การของ" value={h.partyName} onChange={(v) => patchHeader("partyName", v)} />
+                  <HeaderField label="เป็น" value={h.partyRoleLabel} readOnly />
+                  <HeaderField
+                    label="โทรศัพท์"
+                    value={h.partyPhone}
+                    onChange={(v) => patchHeader("partyPhone", v)}
+                  />
+                  <HeaderField
+                    label="บัตรประชาชน"
+                    value={h.partyIdCard}
+                    onChange={(v) => patchHeader("partyIdCard", v)}
+                  />
+                  <HeaderField
+                    label="ข้อหา"
+                    value={h.chargeText}
+                    onChange={(v) => patchHeader("chargeText", v)}
+                    className="sm:col-span-2"
+                  />
+                  <HeaderField
+                    label="พนักงานสอบสวน"
+                    value={h.investigator}
+                    onChange={(v) => patchHeader("investigator", v)}
+                  />
+                  <HeaderField label="วันที่" value={h.todayThai} onChange={(v) => patchHeader("todayThai", v)} />
+                </div>
+              </div>
 
-          {!page ? null : (
-            <div className="space-y-3">
-              {page.qa.map((qa, qi) => {
-                const no = qaOffset + qi + 1;
-                return (
-                  <div key={qa.id} className="overflow-hidden rounded-lg border border-slate-700">
-                    <div className="flex gap-2 bg-sky-50 px-2 py-2">
-                      <span className="shrink-0 pt-2 text-[13px] font-bold text-slate-800">ถาม {no}.</span>
-                      <textarea
-                        className={cn(smartPoliceTextareaClass, "min-h-[2.75rem] flex-1 border-sky-200 bg-white")}
-                        placeholder="พิมพ์คำถาม…"
-                        value={qa.question}
-                        onChange={(e) => updateQa(pageIndex, qi, "question", e.target.value)}
-                      />
-                      {page.qa.length > 1 ? (
-                        <button
-                          type="button"
-                          className="shrink-0 self-start pt-2 text-[11px] font-bold text-rose-600"
-                          onClick={() => removeQa(qi)}
-                        >
-                          ลบ
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="flex gap-2 bg-white px-2 py-2">
-                      <span className="shrink-0 pt-2 text-[13px] font-bold text-slate-800">ตอบ</span>
-                      <textarea
-                        className={cn(smartPoliceTextareaClass, "min-h-[5rem] flex-1")}
-                        placeholder="พิมพ์คำตอบ / คำให้การ…"
-                        value={qa.answer}
-                        onChange={(e) => updateQa(pageIndex, qi, "answer", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+              <p className="mb-2 mt-4 text-center text-[13px] font-semibold text-slate-600">
+                บันทึกถาม / ตอบ — พิมพ์ได้เลย
+              </p>
 
-          <button type="button" className={cn(smartPoliceOutlineButtonClass, "mt-3")} onClick={addQa}>
-            + เพิ่มถาม–ตอบ
-          </button>
+              {!page ? null : (
+                <div className="space-y-3">
+                  {page.qa.map((qa, qi) => {
+                    const no = qaOffset + qi + 1;
+                    return (
+                      <div key={qa.id} className="overflow-hidden rounded-lg border border-slate-700">
+                        <div className="flex gap-2 bg-sky-50 px-2 py-2">
+                          <span className="shrink-0 pt-2 text-[13px] font-bold">ถาม {no}.</span>
+                          <textarea
+                            className={cn(smartPoliceTextareaClass, "min-h-[2.75rem] flex-1 border-sky-200 bg-white")}
+                            placeholder="พิมพ์คำถาม…"
+                            value={qa.question}
+                            onChange={(e) => updateQa(pageIndex, qi, "question", e.target.value)}
+                          />
+                          {page.qa.length > 1 ? (
+                            <button
+                              type="button"
+                              className="shrink-0 self-start pt-2 text-[11px] font-bold text-rose-600"
+                              onClick={() => removeQa(qi)}
+                            >
+                              ลบ
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="flex gap-2 bg-white px-2 py-2">
+                          <span className="shrink-0 pt-2 text-[13px] font-bold">ตอบ</span>
+                          <textarea
+                            className={cn(smartPoliceTextareaClass, "min-h-[5rem] flex-1")}
+                            placeholder="พิมพ์คำตอบ / คำให้การ…"
+                            value={qa.answer}
+                            onChange={(e) => updateQa(pageIndex, qi, "answer", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-          <div className="mt-8 grid grid-cols-2 gap-6 text-center text-[13px] text-slate-600">
-            <div>
-              <p>ลงชื่อผู้ให้การ</p>
-              <p className="mt-6 border-b border-dotted border-slate-400" />
-              <p className="mt-1">({h.partyName || "………………"})</p>
-            </div>
-            <div>
-              <p>ลงชื่อพนักงานสอบสวน</p>
-              <p className="mt-6 border-b border-dotted border-slate-400" />
-              <p className="mt-1">({h.investigator || "………………"})</p>
-            </div>
-          </div>
+              <button type="button" className={cn(smartPoliceOutlineButtonClass, "mt-3")} onClick={addQa}>
+                + เพิ่มถาม–ตอบ
+              </button>
 
-          <p className={cn(smartPoliceMutedTextClass, "mt-6 text-center")}>
-            ชื่อเอกสาร:{" "}
-            <input
-              className="rounded border border-slate-300 px-2 py-1 text-sm text-[#1e1b4b]"
-              value={docTitle}
-              onChange={(e) => {
-                setDocTitle(e.target.value);
-                setDirty(true);
-              }}
-            />
-          </p>
-        </article>
+              <p className={cn(smartPoliceMutedTextClass, "mt-4 text-center text-[12px]")}>
+                ชื่อเอกสาร:{" "}
+                <input
+                  className="rounded border border-slate-300 px-2 py-1 text-sm text-[#1e1b4b]"
+                  value={docTitle}
+                  onChange={(e) => {
+                    setDocTitle(e.target.value);
+                    setDirty(true);
+                  }}
+                />
+              </p>
+            </article>
+          </section>
+        </div>
       </div>
     </div>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
