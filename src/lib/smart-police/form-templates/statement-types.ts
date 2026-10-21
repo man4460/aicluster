@@ -66,6 +66,10 @@ export type StatementHeaderFields = {
   fatherName: string;
   motherName: string;
   relationshipNote: string;
+  /** ผู้ต้องหา — เกิดแขวง/ตำบล · เขต/อำเภอ · จังหวัด */
+  birthTambon: string;
+  birthAmphoe: string;
+  birthProvince: string;
 };
 
 /** v1 — ถาม/ตอบอย่างเดียว (legacy) */

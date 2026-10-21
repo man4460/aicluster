@@ -22,6 +22,8 @@ const PLACEHOLDER: Record<QaKind, string> = { ask: "พิมพ์คำถา�
 /** ไม่ใช้ \b — ภาษาไทยไม่นับเป็น word char */
 const PREFIX_RE = /^\s*(ถาม|ตอบ)\s*(?:\d+\s*[.)]?)?[ \t]?/;
 const DOT_ROWS = 48;
+/** ความกว้างคอลัมน์ป้ายถาม/ตอบ — Tab ต้องย่อหน้าเท่านี้ */
+const LABEL_COL = "10mm";
 
 let seq = 0;
 function newRowId(): string {
@@ -29,7 +31,8 @@ function newRowId(): string {
   return `qa-${Date.now().toString(36)}-${seq.toString(36)}`;
 }
 
-function parseQaText(value: string): QaRow[] {
+function parseQaText(value: string, emptyKind: QaKind = "ask"): QaRow[] {
+  if (value === "") return [{ id: newRowId(), kind: emptyKind, text: "" }];
   const rows: QaRow[] = [];
   for (const line of value.replace(/\r\n/g, "\n").split("\n")) {
     const m = line.match(PREFIX_RE);
@@ -37,16 +40,19 @@ function parseQaText(value: string): QaRow[] {
       rows.push({ id: newRowId(), kind: m[1] === "ถาม" ? "ask" : "ans", text: line.slice(m[0].length) });
       continue;
     }
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      rows.push({ id: newRowId(), kind: "cont", text: "" });
+      continue;
+    }
     const last = rows[rows.length - 1];
     if (last) last.text = last.text ? `${last.text}\n${line}` : line;
     else rows.push({ id: newRowId(), kind: "cont", text: line });
   }
-  return rows.length > 0 ? rows : [{ id: newRowId(), kind: "ask", text: "" }];
+  return rows.length > 0 ? rows : [{ id: newRowId(), kind: emptyKind, text: "" }];
 }
 
 function serializeQaRows(rows: QaRow[]): string {
-  if (rows.length === 1 && rows[0].kind === "ask" && !rows[0].text.trim()) return "";
+  if (rows.length === 1 && !rows[0].text.trim()) return "";
   return rows.map((r) => (r.kind === "cont" ? r.text : `${LABEL[r.kind]} ${r.text}`)).join("\n");
 }
 
@@ -149,9 +155,9 @@ function insertPlainText(el: HTMLElement, text: string) {
 }
 
 /**
- * ถาม–ตอบแบบ Word — ป้ายคอลัมน์ซ้ายคงที่ · ข้อความยาวขึ้นบรรทัดใหม่ตรงขอบช่องพิมพ์
- * Enter = แถวใหม่สลับ ถาม/ตอบ · Shift+Enter = ขึ้นบรรทัดในแถวเดิม · Tab = ย่อหน้า
- * Backspace ต้นแถว = รวมกับแถวก่อน
+ * ถาม–ตอบแบบ Word — ป้ายคอลัมน์ซ้าย · ข้อความยาวขึ้นบรรทัดใหม่ตรงขอบช่องพิมพ์
+ * Enter = ย่อหน้าใหม่ชิดซ้ายเสมอแนวป้ายถาม (ไม่มีป้าย) · กดป้ายซ้ายเพื่อสลับ ถาม/ตอบ/ว่าง
+ * Shift+Enter = ขึ้นบรรทัดในแถวเดิม · Tab = ย่อหน้ากว้างเท่าคอลัมน์ถาม · Backspace ต้นแถว = รวมกับแถวก่อน
  */
 export function StatementQaEditor({
   value,
@@ -163,7 +169,7 @@ export function StatementQaEditor({
   fontSize,
   onOverflow,
   focusRequest,
-  continuesKind,
+  emptyKind = "ask",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -175,12 +181,14 @@ export function StatementQaEditor({
   /** แถวที่ล้นกรอบหน้า → ส่งต่อหน้าถัดไป (focus = แถว/ตำแหน่งเคอร์เซอร์ในข้อความที่ส่งต่อ) */
   onOverflow?: (text: string, focus: QaFocus | null) => void;
   focusRequest?: QaFocusRequest | null;
-  /** ป้ายของย่อหน้าที่ไหลมาจากหน้าก่อน — Enter ต่อจากย่อหน้านั้นจะสลับเป็นอีกป้าย */
+  /** คงไว้เพื่อ API เดิม — Enter ไม่สลับถาม/ตอบแล้ว */
   continuesKind?: "ask" | "ans" | null;
+  /** ช่องว่างทั้งหน้า — ผู้ต้องหาใช้ cont (ไม่มีป้ายถาม) ให้พิมพ์อย่างอื่นก่อน */
+  emptyKind?: QaKind;
 }) {
-  const [state, setState] = useState(() => ({ rows: parseQaText(value), source: value }));
+  const [state, setState] = useState(() => ({ rows: parseQaText(value, emptyKind), source: value }));
   if (value !== state.source) {
-    setState({ rows: parseQaText(value), source: value });
+    setState({ rows: parseQaText(value, emptyKind), source: value });
   }
   const rows = state.rows;
   /** handler อ่านแถวล่าสุดก่อน re-render — commit อัปเดตทันที */
@@ -288,13 +296,22 @@ export function StatementQaEditor({
     const before = full.slice(0, off);
     const after = full.slice(off).replace(/^[ \t]+/, "");
     el.textContent = before;
-    const baseKind = cur.kind === "cont" ? (continuesKind ?? "ask") : cur.kind;
-    const added: QaRow = { id: newRowId(), kind: baseKind === "ask" ? "ans" : "ask", text: after };
+    const added: QaRow = { id: newRowId(), kind: "cont", text: after };
     const next = [...list];
     next[idx] = { ...cur, text: before };
     next.splice(idx + 1, 0, added);
     pendingFocus.current = { id: added.id, at: "start" };
     commit(next);
+  }
+
+  function cycleRowKind(idx: number) {
+    const list = rowsRef.current;
+    const cur = list[idx];
+    if (!cur) return;
+    const order: QaKind[] = ["ask", "ans", "cont"];
+    const nextKind = order[(order.indexOf(cur.kind) + 1) % order.length] ?? "cont";
+    commit(list.map((r, j) => (j === idx ? { ...r, kind: nextKind } : r)));
+    focusRow(idx, "start");
   }
 
   function mergeWithPrev(idx: number, el: HTMLElement) {
@@ -408,21 +425,44 @@ export function StatementQaEditor({
             ))}
           </div>
           <div ref={groupRef} role="group" aria-label={ariaLabel} className="relative">
-            {rows.map((row, idx) => (
+            {rows.map((row, idx) => {
+              const isCont = row.kind === "cont";
+              return (
               <div
                 key={row.id}
-                style={{ display: "grid", gridTemplateColumns: "10mm minmax(0, 1fr)", alignItems: "start" }}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isCont ? "minmax(0, 1fr)" : `${LABEL_COL} minmax(0, 1fr)`,
+                  alignItems: "start",
+                }}
               >
-                <span
-                  aria-hidden
-                  style={{ fontSize, lineHeight, userSelect: "none" }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    focusRow(idx, "start");
-                  }}
-                >
-                  {LABEL[row.kind]}
-                </span>
+                {isCont ? null : (
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label={`ป้าย${LABEL[row.kind]} แถวที่ ${idx + 1} — กดเพื่อเปลี่ยน`}
+                    title="กดเพื่อเปลี่ยนป้าย"
+                    style={{
+                      appearance: "none",
+                      border: 0,
+                      background: "transparent",
+                      padding: 0,
+                      margin: 0,
+                      width: "100%",
+                      font: "inherit",
+                      fontSize,
+                      lineHeight,
+                      color: "inherit",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => cycleRowKind(idx)}
+                  >
+                    {LABEL[row.kind]}
+                  </button>
+                )}
                 <div
                   ref={(el) => {
                     if (!el) {
@@ -436,7 +476,7 @@ export function StatementQaEditor({
                   }}
                   role="textbox"
                   aria-multiline
-                  aria-label={`${LABEL[row.kind]} แถวที่ ${idx + 1}`}
+                  aria-label={`${LABEL[row.kind] || "ย่อหน้า"} แถวที่ ${idx + 1}`}
                   contentEditable
                   suppressContentEditableWarning
                   spellCheck={false}
@@ -450,7 +490,7 @@ export function StatementQaEditor({
                     whiteSpace: "pre-wrap",
                     overflowWrap: "anywhere",
                     wordBreak: "break-word",
-                    tabSize: 8,
+                    tabSize: LABEL_COL,
                     color: "#111",
                   }}
                   onKeyDown={(e) => onCellKeyDown(e, idx)}
@@ -466,7 +506,8 @@ export function StatementQaEditor({
                   }}
                 />
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

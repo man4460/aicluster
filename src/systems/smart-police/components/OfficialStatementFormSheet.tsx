@@ -9,9 +9,14 @@ import {
   type QaFocusRequest,
 } from "@/systems/smart-police/components/StatementQaEditor";
 import {
+  SMART_POLICE_STATEMENT_FORM_TITLE,
+  statementFormTitleForSlug,
   statementPageSlot,
+  statementPreambleForSlug,
+  statementShowsBirthPlaceRow,
   type StatementHeaderFields,
   type StatementPage,
+  type StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates";
 
 /**
@@ -117,6 +122,7 @@ function LinedBody(props: {
   onOverflow?: (text: string, focus: QaFocus | null) => void;
   focusRequest?: QaFocusRequest | null;
   continuesKind?: "ask" | "ans" | null;
+  emptyKind?: "ask" | "ans" | "cont";
 }) {
   return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={BODY} />;
 }
@@ -140,6 +146,8 @@ export function OfficialStatementFormSheet({
   header,
   pages,
   pageIndex,
+  formTitle,
+  templateSlug,
   onHeaderChange,
   onPageTextChange,
   onOverflow,
@@ -151,6 +159,7 @@ export function OfficialStatementFormSheet({
   pages: StatementPage[];
   pageIndex: number;
   formTitle?: string;
+  templateSlug?: StatementTemplateSlug;
   onHeaderChange: <K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) => void;
   onPageTextChange: (pageIdx: number, text: string) => void;
   /** ข้อความล้นหน้านี้ → ไหลไปหน้าถัดไป */
@@ -168,6 +177,7 @@ export function OfficialStatementFormSheet({
   const slot = statementPageSlot(pageIndex);
   const isLinedOnly = slot.kind === "main" || slot.kind === "cont";
   const isFrontCont = slot.kind === "cont" && slot.side === "หน้า";
+  const isSuspectForm = statementShowsBirthPlaceRow(templateSlug ?? "statement-complainant");
 
   return (
     <article
@@ -211,17 +221,6 @@ export function OfficialStatementFormSheet({
                   {slot.sheetNo}
                 </span>
               </Row>
-              <p
-                style={{
-                  position: "absolute",
-                  left: LINED_EDGE,
-                  bottom: LINED_BOTTOM,
-                  margin: 0,
-                  fontSize: "10pt",
-                }}
-              >
-                ({slot.formCode})
-              </p>
             </>
           ) : null}
           <div
@@ -244,6 +243,7 @@ export function OfficialStatementFormSheet({
               onOverflow={onOverflow}
               focusRequest={focusRequest}
               continuesKind={continuesKindBefore(pages, pageIndex)}
+              emptyKind={isSuspectForm ? "cont" : "ask"}
             />
           </div>
         </>
@@ -288,7 +288,8 @@ export function OfficialStatementFormSheet({
                 textUnderlineOffset: "1mm",
               }}
             >
-              บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน
+              {formTitle?.trim() ||
+                (templateSlug ? statementFormTitleForSlug(templateSlug) : SMART_POLICE_STATEMENT_FORM_TITLE)}
             </h1>
           </header>
 
@@ -368,7 +369,6 @@ export function OfficialStatementFormSheet({
               />
               <b>บันทึก</b>
             </p>
-            <p style={{ marginTop: "auto", fontSize: "9pt", color: "#444" }}>(ส ๕๖ - ๔)</p>
           </aside>
 
           {/* เนื้อหาหลัก — สถานีตำรวจ อยู่แนวเดียวกับคำให้การของ */}
@@ -760,37 +760,84 @@ export function OfficialStatementFormSheet({
                 <Dot aria-label="มารดา" value={h.motherName} onChange={(v) => set("motherName", v)} flex minCh={4} />
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "1.5mm",
-                width: "100%",
-                minHeight: LINE,
-                margin: "0 0 0.8mm",
-                lineHeight: LINE,
-                fontSize: BODY,
-              }}
-            >
-              <L>เกี่ยวข้องเป็นอะไรกับคู่กรณี</L>
-              <Dot
-                aria-label="เกี่ยวข้อง"
-                value={h.relationshipNote}
-                onChange={(v) => set("relationshipNote", v)}
-                flex
-                minCh={8}
-              />
-            </div>
+            {isSuspectForm ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.2fr 1fr 1.1fr",
+                  columnGap: "2mm",
+                  width: "100%",
+                  alignItems: "baseline",
+                  minHeight: LINE,
+                  margin: "0 0 0.8mm",
+                  lineHeight: LINE,
+                  fontSize: BODY,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                  <L>เกิดแขวง/ตำบล</L>
+                  <Dot
+                    aria-label="เกิดแขวงตำบล"
+                    value={h.birthTambon}
+                    onChange={(v) => set("birthTambon", v)}
+                    flex
+                    minCh={3}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                  <L>เขต/อำเภอ</L>
+                  <Dot
+                    aria-label="เกิดเขตอำเภอ"
+                    value={h.birthAmphoe}
+                    onChange={(v) => set("birthAmphoe", v)}
+                    flex
+                    minCh={3}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "1.2mm", minWidth: 0 }}>
+                  <L>จังหวัด</L>
+                  <Dot
+                    aria-label="เกิดจังหวัด"
+                    value={h.birthProvince}
+                    onChange={(v) => set("birthProvince", v)}
+                    flex
+                    minCh={4}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "1.5mm",
+                  width: "100%",
+                  minHeight: LINE,
+                  margin: "0 0 0.8mm",
+                  lineHeight: LINE,
+                  fontSize: BODY,
+                }}
+              >
+                <L>เกี่ยวข้องเป็นอะไรกับคู่กรณี</L>
+                <Dot
+                  aria-label="เกี่ยวข้อง"
+                  value={h.relationshipNote}
+                  onChange={(v) => set("relationshipNote", v)}
+                  flex
+                  minCh={8}
+                />
+              </div>
+            )}
             <p
               style={{
                 margin: "0.3mm 0 3.5mm",
-                fontWeight: 700,
+                fontWeight: isSuspectForm ? 400 : 700,
                 fontSize: BODY,
                 flexShrink: 0,
-                lineHeight: LINE,
+                lineHeight: isSuspectForm ? 1.35 : LINE,
               }}
             >
-              ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า
+              {statementPreambleForSlug(templateSlug ?? "statement-complainant")}
             </p>
 
             <LinedBody
@@ -801,6 +848,7 @@ export function OfficialStatementFormSheet({
               onChange={(t) => onPageTextChange(0, t)}
               onOverflow={onOverflow}
               focusRequest={focusRequest}
+              emptyKind={isSuspectForm ? "cont" : "ask"}
             />
           </div>
         </div>
@@ -816,6 +864,8 @@ export function OfficialStatementFormSheet({
 export function OfficialStatementFormDocument({
   header,
   pages,
+  formTitle,
+  templateSlug,
   onHeaderChange,
   onPageTextChange,
   onPageOverflow,
@@ -824,6 +874,8 @@ export function OfficialStatementFormDocument({
 }: {
   header: StatementHeaderFields;
   pages: StatementPage[];
+  formTitle?: string;
+  templateSlug?: StatementTemplateSlug;
   onHeaderChange: <K extends keyof StatementHeaderFields>(key: K, value: StatementHeaderFields[K]) => void;
   onPageTextChange: (pageIdx: number, text: string) => void;
   /** ข้อความที่ล้นจากหน้า pageIdx — ใส่ต้นหน้า pageIdx + 1 (สร้างใบต่อถ้ายังไม่มี) */
@@ -849,6 +901,8 @@ export function OfficialStatementFormDocument({
           header={header}
           pages={pages}
           pageIndex={i}
+          formTitle={formTitle}
+          templateSlug={templateSlug}
           onHeaderChange={onHeaderChange}
           onPageTextChange={onPageTextChange}
           onActivate={onActivePageChange}

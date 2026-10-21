@@ -35,7 +35,7 @@ export function buildStatementDocxFillData(
   return {
     ...header,
     amphoe: header.amphoe || header.district,
-    relationshipNote: header.relationshipNote || "ไม่เกี่ยวข้อง สาบานตนแล้ว",
+    relationshipNote: header.relationshipNote || "",
     statementBody: body,
     pageNo: String(Math.max(1, pages.length)),
   };

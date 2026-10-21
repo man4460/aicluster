@@ -9,7 +9,10 @@ import {
   type FillStatementInput,
 } from "@/lib/smart-police/form-templates/fill-statement";
 import { buildOfficialStatementFormHtml } from "@/lib/smart-police/form-templates/official-statement-form-html";
-import { statementTemplateMetaForRole } from "@/lib/smart-police/form-templates/statement-catalog";
+import {
+  statementFormTitleForSlug,
+  statementTemplateMetaForRole,
+} from "@/lib/smart-police/form-templates/statement-catalog";
 import type { StatementDocumentContentV3 } from "@/lib/smart-police/form-templates/statement-types";
 
 /**
@@ -29,15 +32,11 @@ export async function fillStatementDocument(
   const hint = (input.behaviorHint ?? "").trim();
   const pages = createDefaultStatementPages(seedQuestionsForRole(input.role, hint));
 
-  const formTitle =
-    input.role === "SUSPECT"
-      ? "บันทึกคำให้การของผู้ต้องหา"
-      : "บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน";
-
   const formHtml = buildOfficialStatementFormHtml({
     header,
     pages,
-    formTitle,
+    formTitle: statementFormTitleForSlug(meta.slug),
+    templateSlug: meta.slug,
   });
 
   return {

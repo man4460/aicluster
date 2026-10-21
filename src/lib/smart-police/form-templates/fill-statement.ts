@@ -44,6 +44,9 @@ const EMPTY_HEADER_EXTRAS: Pick<
   | "fatherName"
   | "motherName"
   | "relationshipNote"
+  | "birthTambon"
+  | "birthAmphoe"
+  | "birthProvince"
 > = {
   district: "",
   dayThai: "",
@@ -66,6 +69,9 @@ const EMPTY_HEADER_EXTRAS: Pick<
   fatherName: "",
   motherName: "",
   relationshipNote: "ไม่เกี่ยวข้อง สาบานตนแล้ว",
+  birthTambon: "",
+  birthAmphoe: "",
+  birthProvince: "",
 };
 
 export function normalizeStatementHeader(
@@ -311,10 +317,11 @@ export function buildHeader(input: FillStatementInput): StatementHeaderFields {
       "สถานีตำรวจ",
     ethnicity: (input.ethnicity ?? "").trim() || "ไทย",
     religion: (input.religion ?? "").trim() || "พุทธ",
+    relationshipNote: input.role === "SUSPECT" ? "" : "ไม่เกี่ยวข้อง สาบานตนแล้ว",
   });
 }
 
-/** คำถามเริ่มต้นตามบทบาท — พงส. แก้/พิมพ์ต่อได้ */
+/** คำถามเริ่มต้นตามบทบาท — พงส. แก้/พิมพ์ต่อได้ · ผู้ต้องหาไม่ seed ให้พิมพ์อิสระก่อนถาม */
 export function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: string): string[] {
   const hint = behaviorHint.trim();
   if (role === "COMPLAINANT") {
@@ -328,14 +335,8 @@ export function seedQuestionsForRole(role: SmartPolicePartyRole, behaviorHint: s
     ];
   }
   if (role === "SUSPECT") {
-    return [
-      "ขอทราบชื่อ นามสกุล อายุ อาชีพ และที่อยู่ปัจจุบันของท่าน",
-      "ท่านทราบข้อหาที่ถูกกล่าวหาหรือไม่ และต้องการชี้แจงอย่างไร",
-      hint
-        ? `เกี่ยวกับพฤติการณ์ที่กล่าวหา (${hint.slice(0, 80)}${hint.length > 80 ? "…" : ""}) ท่านขอชี้แจงว่าอย่างไร`
-        : "ขอให้ท่านชี้แจงข้อเท็จจริงตามที่ทราบ",
-      "ท่านมีพยานหรือหลักฐานที่จะนำสืบหรือไม่",
-    ];
+    /** หลัง «กระทำผิดว่า» ให้พิมพ์อิสระ — ไม่ขึ้นต้นถาม */
+    return [];
   }
   return [
     "ขอทราบชื่อ นามสกุล อายุ อาชีพ และที่อยู่ปัจจุบันของท่าน",

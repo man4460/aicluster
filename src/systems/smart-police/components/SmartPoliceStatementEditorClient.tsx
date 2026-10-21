@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { openPrintableHtml } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
+  statementFormTitleForSlug,
   appendContinuationSheetPair,
   flowStatementOverflow,
   ensureStatementPagesDoc,
@@ -32,11 +33,6 @@ const toolbarBtnRoseClass =
   "inline-flex min-h-[36px] items-center justify-center rounded-xl border border-rose-400/70 bg-rose-950/80 px-3 text-sm font-semibold text-rose-50 hover:bg-rose-900/80";
 
 type EditableDoc = StatementDocumentContentV1 | StatementDocumentContentV3;
-
-function formTitleForSlug(slug: string): string {
-  if (slug === "statement-suspect") return "บันทึกคำให้การของผู้ต้องหา";
-  return "บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน";
-}
 
 export function SmartPoliceStatementEditorClient({
   caseId,
@@ -186,7 +182,8 @@ export function SmartPoliceStatementEditorClient({
         formHtml: buildOfficialStatementFormHtml({
           header: content.header,
           pages: content.pages,
-          formTitle: formTitleForSlug(content.templateSlug),
+          formTitle: statementFormTitleForSlug(content.templateSlug),
+          templateSlug: content.templateSlug,
         }),
       };
       setContent(toSave);
@@ -228,7 +225,8 @@ export function SmartPoliceStatementEditorClient({
     const body = buildOfficialStatementFormHtml({
       header: content.header,
       pages: content.pages,
-      formTitle: formTitleForSlug(content.templateSlug),
+      formTitle: statementFormTitleForSlug(content.templateSlug),
+      templateSlug: content.templateSlug,
     });
     openPrintableHtml(wrapOfficialStatementPrintHtml({ title: docTitle, bodyHtml: body }));
   }
@@ -381,6 +379,8 @@ export function SmartPoliceStatementEditorClient({
         <OfficialStatementFormDocument
           header={content.header}
           pages={content.pages}
+          formTitle={statementFormTitleForSlug(content.templateSlug)}
+          templateSlug={content.templateSlug}
           onHeaderChange={patchHeader}
           onPageTextChange={updatePageText}
           onPageOverflow={flowOverflow}

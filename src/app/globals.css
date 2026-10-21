@@ -268,6 +268,56 @@ textarea.sp-word-field:focus-visible {
   pointer-events: none;
 }
 
+/* ช่องในตารางแบบฟอร์มราชการ — ใช้เส้นตาราง ไม่ซ้ำจุดไข่ปลา · รายการห่อในเซลล์ */
+.sp-a4-sheet table input.sp-word-field,
+.sp-a4-sheet table textarea.sp-word-field {
+  border: none !important;
+  border-bottom: none !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.sp-a4-sheet table textarea.sp-word-field {
+  overflow: hidden !important;
+  resize: none !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.sp-a4-sheet textarea.sp-lined-notes {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  resize: none !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #111 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+.sp-a4-sheet textarea.sp-lined-notes:focus,
+.sp-a4-sheet textarea.sp-lined-notes:focus-visible {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+@media print {
+  .sp-scene-map-pick {
+    display: none !important;
+  }
+}
+
+@page sp-a4-landscape {
+  size: A4 landscape;
+  margin: 0;
+}
+
 /* A4 จริงตอนพิมพ์ */
 @media print {
   .sp-a4-sheet {
@@ -276,6 +326,11 @@ textarea.sp-word-field:focus-visible {
     margin: 0 !important;
     box-shadow: none !important;
     page-break-after: always;
+  }
+  .sp-a4-sheet.sp-a4-landscape {
+    width: 297mm !important;
+    height: 210mm !important;
+    page: sp-a4-landscape;
   }
 }
 

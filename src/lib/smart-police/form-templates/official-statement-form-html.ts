@@ -1,8 +1,13 @@
 import { OFFICIAL_STATEMENT_FORM_CSS } from "@/lib/smart-police/form-templates/official-statement-form-css";
 import { statementPageTabLabel } from "@/lib/smart-police/form-templates/fill-statement";
+import {
+  statementPreambleForSlug,
+  statementShowsBirthPlaceRow,
+} from "@/lib/smart-police/form-templates/statement-catalog";
 import type {
   StatementHeaderFields,
   StatementPage,
+  StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates/statement-types";
 
 function esc(s: string): string {
@@ -18,13 +23,16 @@ function dot(value: string): string {
   return v ? esc(v) : "………………";
 }
 
-/** HTML แบบฟอร์มราชการตามแม่แบบ คำให้การผู้กล่าวหา.docx */
+/** HTML แบบฟอร์มราชการตามแม่แบบ คำให้การผู้กล่าวหา.docx (ผู้ต้องหาต่างที่ชื่อแบบ + แถวเกิด/แจ้งข้อหา) */
 export function buildOfficialStatementFormHtml(opts: {
   header: StatementHeaderFields;
   pages: StatementPage[];
   formTitle: string;
+  templateSlug?: StatementTemplateSlug;
 }): string {
   const h = opts.header;
+  const slug = opts.templateSlug ?? "statement-complainant";
+  const isSuspect = statementShowsBirthPlaceRow(slug);
   const bodyPages = opts.pages
     .map((p, i) => {
       const raw = (p.text || "").trim();
@@ -59,7 +67,6 @@ export function buildOfficialStatementFormHtml(opts: {
 <div class="sp-off-field"><span class="sp-off-label">หมดอายุ</span><div class="sp-off-dot">${dot(h.idExpiresOn)}</div></div>
 <div class="sp-off-field"><span class="sp-off-label">ออกให้ ณ</span><div class="sp-off-dot">${dot(h.idIssuedAt)}</div></div>
 <div class="sp-off-field" style="text-align:center;margin-top:2rem"><span class="sp-off-label">ลงชื่อ</span> ……… <span class="sp-off-label">บันทึก</span></div>
-<p style="font-size:10px;margin-top:2rem;color:#444">(ส ๕๖ - ๔)</p>
 </aside>
 <div class="sp-off-main">
 <div class="sp-off-head">
@@ -100,8 +107,15 @@ export function buildOfficialStatementFormHtml(opts: {
 <span class="sp-off-label">ชื่อกำนัน</span> <span class="sp-off-dot sp-off-flex1">${dot(h.kamnan)}</span></div>
 <div class="sp-off-row"><span class="sp-off-label">ชื่อบิดา</span> <span class="sp-off-dot sp-off-flex1">${dot(h.fatherName)}</span>
 <span class="sp-off-label">ชื่อมารดา</span> <span class="sp-off-dot sp-off-flex1">${dot(h.motherName)}</span></div>
-<div class="sp-off-row"><span class="sp-off-label">เกี่ยวข้องเป็นอะไรกับคู่กรณี</span> <span class="sp-off-dot sp-off-flex1">${dot(h.relationshipNote)}</span></div>
-<p><strong>ขอให้ถ้อยคำต่อพนักงานสอบสวนด้วยความสัตย์จริงว่า</strong></p>
+${
+    isSuspect
+      ? `<div class="sp-off-row"><span class="sp-off-label">เกิดแขวง/ตำบล</span> <span class="sp-off-dot sp-off-flex1">${dot(h.birthTambon)}</span>
+<span class="sp-off-label">เขต/อำเภอ</span> <span class="sp-off-dot sp-off-flex1">${dot(h.birthAmphoe)}</span>
+<span class="sp-off-label">จังหวัด</span> <span class="sp-off-dot sp-off-flex1">${dot(h.birthProvince)}</span></div>
+<p>${esc(statementPreambleForSlug(slug))}</p>`
+      : `<div class="sp-off-row"><span class="sp-off-label">เกี่ยวข้องเป็นอะไรกับคู่กรณี</span> <span class="sp-off-dot sp-off-flex1">${dot(h.relationshipNote)}</span></div>
+<p><strong>${esc(statementPreambleForSlug(slug))}</strong></p>`
+  }
 <div class="sp-off-qa">
 ${qaHtml}
 </div>

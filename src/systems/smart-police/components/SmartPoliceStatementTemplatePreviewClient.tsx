@@ -9,7 +9,9 @@ import {
   getStatementTemplateMeta,
   normalizeStatementHeader,
   removeStatementPageAt,
+  statementFormTitleForSlug,
   statementPageTabLabel,
+  statementPartyRoleLabelForSlug,
   type StatementHeaderFields,
   type StatementPage,
   type StatementTemplateSlug,
@@ -28,10 +30,8 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
   const meta = getStatementTemplateMeta(slug);
   const [header, setHeader] = useState<StatementHeaderFields>(() =>
     normalizeStatementHeader({
-      partyRoleLabel:
-        slug === "statement-suspect" ? "ผู้ต้องหา" : slug === "statement-witness" ? "พยาน" : "ผู้กล่าวหา",
-      relationshipNote: "ไม่เกี่ยวข้อง สาบานตนแล้ว",
-      province: "กรุงเทพมหานคร",
+      partyRoleLabel: statementPartyRoleLabelForSlug(slug),
+      relationshipNote: slug === "statement-suspect" ? "" : "ไม่เกี่ยวข้อง สาบานตนแล้ว",
     }),
   );
   const [pages, setPages] = useState<StatementPage[]>(() => createDefaultStatementPages());
@@ -67,17 +67,18 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col bg-[#6b7280] text-white">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-[#6b7280] text-white shadow-sm">
       <header className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-slate-600/80 bg-slate-800 px-2 py-1.5 sm:px-3">
         <Link
           href="/dashboard/smart-police/templates"
-          className={cn(barBtnClass, "w-8 px-0")}
+          className={cn(barBtnClass, "gap-1 px-2")}
           aria-label="กลับรายการแม่แบบ"
-          title="กลับรายการแม่แบบ"
+          title="กลับ"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
+          กลับ
         </Link>
         <p className="mr-1 min-w-0 truncate text-xs font-bold sm:text-sm" title={meta.title}>
           {meta.title}
@@ -121,6 +122,8 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
         <OfficialStatementFormDocument
           header={header}
           pages={pages}
+          formTitle={statementFormTitleForSlug(slug)}
+          templateSlug={slug}
           onHeaderChange={patchHeader}
           onPageTextChange={updatePageText}
           onPageOverflow={flowOverflow}
