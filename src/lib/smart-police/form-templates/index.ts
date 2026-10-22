@@ -33,6 +33,12 @@ export {
   CASE_COVER_TEMPLATE_TITLE,
   INQUIRY_REPORT_FORM_TITLE,
   INQUIRY_REPORT_TEMPLATE_TITLE,
+  INQUIRY_MEMO_FORM_TITLE,
+  INQUIRY_MEMO_TEMPLATE_TITLE,
+  INQUIRY_DOCKET_FORM_TITLE,
+  INQUIRY_DOCKET_TEMPLATE_TITLE,
+  SCENE_INSPECT_FORM_TITLE,
+  SCENE_INSPECT_TEMPLATE_TITLE,
   SMART_POLICE_OFFICIAL_FORM_TEMPLATES,
   SMART_POLICE_PROPERTY_LIST_TEMPLATE,
   SMART_POLICE_PROPERTY_LIST_TEMPLATES,
@@ -50,6 +56,9 @@ export {
   SMART_POLICE_LINEUP_ID_TEMPLATE,
   SMART_POLICE_CASE_COVER_TEMPLATE,
   SMART_POLICE_INQUIRY_REPORT_TEMPLATE,
+  SMART_POLICE_INQUIRY_MEMO_TEMPLATE,
+  SMART_POLICE_INQUIRY_DOCKET_TEMPLATE,
+  SMART_POLICE_SCENE_INSPECT_TEMPLATE,
   getOfficialFormTemplateMeta,
   isCompensationSettlementFormSlug,
   isExhibitListFormSlug,
@@ -61,6 +70,9 @@ export {
   isLineupIdFormSlug,
   isCaseCoverFormSlug,
   isInquiryReportFormSlug,
+  isInquiryMemoFormSlug,
+  isInquiryDocketFormSlug,
+  isSceneInspectFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -77,6 +89,9 @@ export {
   type LineupIdTemplateSlug,
   type CaseCoverTemplateSlug,
   type InquiryReportTemplateSlug,
+  type InquiryMemoTemplateSlug,
+  type InquiryDocketTemplateSlug,
+  type SceneInspectTemplateSlug,
   type OfficialFormKind,
   type OfficialFormTemplateMeta,
   type ExhibitListTemplateSlug,
@@ -149,6 +164,24 @@ export {
   createEmptyInquiryReportFields,
   type InquiryReportFields,
 } from "@/lib/smart-police/form-templates/inquiry-report";
+export {
+  createEmptyInquiryMemoFields,
+  packInquiryMemoPages,
+  type InquiryMemoFields,
+} from "@/lib/smart-police/form-templates/inquiry-memo";
+export {
+  createDefaultInquiryDocketRows,
+  createEmptyInquiryDocketHeader,
+  createEmptyInquiryDocketRow,
+  paginateInquiryDocketRows,
+  type InquiryDocketHeader,
+  type InquiryDocketRow,
+} from "@/lib/smart-police/form-templates/inquiry-docket";
+export {
+  createEmptySceneInspectFields,
+  packSceneInspectPages,
+  type SceneInspectFields,
+} from "@/lib/smart-police/form-templates/scene-inspect";
 export {
   ORAL_PLEA_DEFAULT_QA,
   createEmptyOralPleaFields,
