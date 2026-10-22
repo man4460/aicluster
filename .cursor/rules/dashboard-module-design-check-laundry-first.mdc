@@ -42,7 +42,7 @@ alwaysApply: true
 | **ร้านออนไลน์ (สินค้า · หน้าร้าน · ฟอร์ม)** | **`ecommerce-store-module-dashboard-template.mdc`** · `EcommerceProductsClient` · `EcommerceStorefrontClient` |
 | **โชว์รูมรถมือสอง** | **`used-car-showroom-module-dashboard-template.mdc`** · Manage กรอง+FormModal · Settings 5 แท็บ · พอร์ทัล `/car/[slug]` |
 | **ธุรกิจ รปภ.** | **`smart-guard-tour-module-dashboard-template.mdc`** · กรองในแถวเมนูย่อย · ชิปสถานะ**ข้อความล้วน** · `/guard/[slug]` |
-| **Smart Police (สำนวน)** | **`smart-police-module-dashboard-template.mdc`** · วิซาร์ดสำนวนแรก · day1 checklist · priority · ส่งอัยการ · **แม่แบบราชการใหม่:** overflow เพิ่มหน้า + ไม่ใส่หมายเหตุ + ไม่โชว์รหัสฟอร์ม ตาม `smart-police-statement-form-template.mdc` §บังคับทุกครั้ง — ไม่รอให้สั่ง |
+| **Smart Police (สำนวน)** | **`smart-police-module-dashboard-template.mdc`** · วิซาร์ดสำนวนแรก · day1 checklist · priority · ส่งอัยการ · **แม่แบบราชการใหม่:** overflow เพิ่มหน้า + ไม่ใส่หมายเหตุ + ไม่โชว์รหัสฟอร์ม + หัวสถานที่บันทึก/วันที่ชิดขวาช่องที่ 3 ตาม `smart-police-statement-form-template.mdc` §บังคับทุกครั้ง — ไม่รอให้สั่ง |
 
 ## หลังออกแบบ
 

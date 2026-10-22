@@ -5,6 +5,9 @@ import {
   isCasePhotoFormSlug,
   isChargeNoticeFormSlug,
   isPhotoIdFormSlug,
+  isLineupIdFormSlug,
+  isCaseCoverFormSlug,
+  isInquiryReportFormSlug,
   isCompensationSettlementFormSlug,
   isRightsNoticeFormSlug,
   isExhibitListFormSlug,
@@ -26,6 +29,9 @@ import { SmartPoliceChargeNoticePreviewClient } from "@/systems/smart-police/com
 import { SmartPoliceRightsNoticePreviewClient } from "@/systems/smart-police/components/SmartPoliceRightsNoticePreviewClient";
 import { SmartPoliceCasePhotoPreviewClient } from "@/systems/smart-police/components/SmartPoliceCasePhotoPreviewClient";
 import { SmartPolicePhotoIdPreviewClient } from "@/systems/smart-police/components/SmartPolicePhotoIdPreviewClient";
+import { SmartPoliceLineupIdPreviewClient } from "@/systems/smart-police/components/SmartPoliceLineupIdPreviewClient";
+import { SmartPoliceCaseCoverPreviewClient } from "@/systems/smart-police/components/SmartPoliceCaseCoverPreviewClient";
+import { SmartPoliceInquiryReportPreviewClient } from "@/systems/smart-police/components/SmartPoliceInquiryReportPreviewClient";
 import { SmartPoliceOralPleaPreviewClient } from "@/systems/smart-police/components/SmartPoliceOralPleaPreviewClient";
 import { SmartPoliceVictimRightsPreviewClient } from "@/systems/smart-police/components/SmartPoliceVictimRightsPreviewClient";
 import { SmartPoliceWithdrawComplaintPreviewClient } from "@/systems/smart-police/components/SmartPoliceWithdrawComplaintPreviewClient";
@@ -76,6 +82,15 @@ export default async function SmartPoliceOfficialFormPreviewPage({
   }
   if (isPhotoIdFormSlug(slug)) {
     return <SmartPolicePhotoIdPreviewClient />;
+  }
+  if (isLineupIdFormSlug(slug)) {
+    return <SmartPoliceLineupIdPreviewClient />;
+  }
+  if (isCaseCoverFormSlug(slug)) {
+    return <SmartPoliceCaseCoverPreviewClient />;
+  }
+  if (isInquiryReportFormSlug(slug)) {
+    return <SmartPoliceInquiryReportPreviewClient />;
   }
   notFound();
 }

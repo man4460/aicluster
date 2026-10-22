@@ -13,7 +13,10 @@ export type OfficialFormKind =
   | "charge-notice"
   | "rights-notice"
   | "case-photo"
-  | "photo-id";
+  | "photo-id"
+  | "lineup-id"
+  | "case-cover"
+  | "inquiry-report";
 
 export type PropertyListTemplateSlug =
   | "property-damaged"
@@ -31,6 +34,9 @@ export type ChargeNoticeTemplateSlug = "charge-notice";
 export type RightsNoticeTemplateSlug = "rights-notice";
 export type CasePhotoTemplateSlug = "case-photo";
 export type PhotoIdTemplateSlug = "photo-id";
+export type LineupIdTemplateSlug = "lineup-id";
+export type CaseCoverTemplateSlug = "case-cover";
+export type InquiryReportTemplateSlug = "inquiry-report";
 
 export type OfficialFormTemplateSlug =
   | "statement-complainant"
@@ -47,7 +53,10 @@ export type OfficialFormTemplateSlug =
   | ChargeNoticeTemplateSlug
   | RightsNoticeTemplateSlug
   | CasePhotoTemplateSlug
-  | PhotoIdTemplateSlug;
+  | PhotoIdTemplateSlug
+  | LineupIdTemplateSlug
+  | CaseCoverTemplateSlug
+  | InquiryReportTemplateSlug;
 
 export type OfficialFormTemplateMeta = {
   slug: OfficialFormTemplateSlug;
@@ -197,6 +206,36 @@ export const SMART_POLICE_PHOTO_ID_TEMPLATE: OfficialFormTemplateMeta = {
   blankFormId: "19",
 };
 
+export const LINEUP_ID_FORM_TITLE = "บันทึกการชี้ตัวผู้ต้องหา";
+export const LINEUP_ID_TEMPLATE_TITLE = "บันทึกชี้ตัวผู้ต้องหา";
+
+export const SMART_POLICE_LINEUP_ID_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "lineup-id",
+  title: LINEUP_ID_TEMPLATE_TITLE,
+  kind: "lineup-id",
+  blankFormId: "20",
+};
+
+export const CASE_COVER_FORM_TITLE = "ปกสำนวน";
+export const CASE_COVER_TEMPLATE_TITLE = "ปกสำนวน";
+
+export const SMART_POLICE_CASE_COVER_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "case-cover",
+  title: CASE_COVER_TEMPLATE_TITLE,
+  kind: "case-cover",
+  blankFormId: "21",
+};
+
+export const INQUIRY_REPORT_FORM_TITLE = "รายงานการสอบสวน";
+export const INQUIRY_REPORT_TEMPLATE_TITLE = "รายงานการสอบสวน";
+
+export const SMART_POLICE_INQUIRY_REPORT_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "inquiry-report",
+  title: INQUIRY_REPORT_TEMPLATE_TITLE,
+  kind: "inquiry-report",
+  blankFormId: "22",
+};
+
 export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = [
   ...SMART_POLICE_STATEMENT_TEMPLATES.map((t) => ({
     slug: t.slug,
@@ -216,6 +255,9 @@ export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = 
   SMART_POLICE_RIGHTS_NOTICE_TEMPLATE,
   SMART_POLICE_CASE_PHOTO_TEMPLATE,
   SMART_POLICE_PHOTO_ID_TEMPLATE,
+  SMART_POLICE_LINEUP_ID_TEMPLATE,
+  SMART_POLICE_CASE_COVER_TEMPLATE,
+  SMART_POLICE_INQUIRY_REPORT_TEMPLATE,
 ];
 
 export function getOfficialFormTemplateMeta(
@@ -282,4 +324,16 @@ export function isCasePhotoFormSlug(slug: string): slug is CasePhotoTemplateSlug
 
 export function isPhotoIdFormSlug(slug: string): slug is PhotoIdTemplateSlug {
   return slug === "photo-id";
+}
+
+export function isLineupIdFormSlug(slug: string): slug is LineupIdTemplateSlug {
+  return slug === "lineup-id";
+}
+
+export function isCaseCoverFormSlug(slug: string): slug is CaseCoverTemplateSlug {
+  return slug === "case-cover";
+}
+
+export function isInquiryReportFormSlug(slug: string): slug is InquiryReportTemplateSlug {
+  return slug === "inquiry-report";
 }

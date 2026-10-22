@@ -27,6 +27,12 @@ export {
   CASE_PHOTO_TEMPLATE_TITLE,
   PHOTO_ID_FORM_TITLE,
   PHOTO_ID_TEMPLATE_TITLE,
+  LINEUP_ID_FORM_TITLE,
+  LINEUP_ID_TEMPLATE_TITLE,
+  CASE_COVER_FORM_TITLE,
+  CASE_COVER_TEMPLATE_TITLE,
+  INQUIRY_REPORT_FORM_TITLE,
+  INQUIRY_REPORT_TEMPLATE_TITLE,
   SMART_POLICE_OFFICIAL_FORM_TEMPLATES,
   SMART_POLICE_PROPERTY_LIST_TEMPLATE,
   SMART_POLICE_PROPERTY_LIST_TEMPLATES,
@@ -41,6 +47,9 @@ export {
   SMART_POLICE_RIGHTS_NOTICE_TEMPLATE,
   SMART_POLICE_CASE_PHOTO_TEMPLATE,
   SMART_POLICE_PHOTO_ID_TEMPLATE,
+  SMART_POLICE_LINEUP_ID_TEMPLATE,
+  SMART_POLICE_CASE_COVER_TEMPLATE,
+  SMART_POLICE_INQUIRY_REPORT_TEMPLATE,
   getOfficialFormTemplateMeta,
   isCompensationSettlementFormSlug,
   isExhibitListFormSlug,
@@ -49,6 +58,9 @@ export {
   isRightsNoticeFormSlug,
   isCasePhotoFormSlug,
   isPhotoIdFormSlug,
+  isLineupIdFormSlug,
+  isCaseCoverFormSlug,
+  isInquiryReportFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -62,6 +74,9 @@ export {
   type RightsNoticeTemplateSlug,
   type CasePhotoTemplateSlug,
   type PhotoIdTemplateSlug,
+  type LineupIdTemplateSlug,
+  type CaseCoverTemplateSlug,
+  type InquiryReportTemplateSlug,
   type OfficialFormKind,
   type OfficialFormTemplateMeta,
   type ExhibitListTemplateSlug,
@@ -121,6 +136,19 @@ export {
   createEmptyPhotoIdFields,
   type PhotoIdFields,
 } from "@/lib/smart-police/form-templates/photo-id";
+export {
+  LINEUP_ID_PERSON_COUNT,
+  createEmptyLineupIdFields,
+  type LineupIdFields,
+} from "@/lib/smart-police/form-templates/lineup-id";
+export {
+  createEmptyCaseCoverFields,
+  type CaseCoverFields,
+} from "@/lib/smart-police/form-templates/case-cover";
+export {
+  createEmptyInquiryReportFields,
+  type InquiryReportFields,
+} from "@/lib/smart-police/form-templates/inquiry-report";
 export {
   ORAL_PLEA_DEFAULT_QA,
   createEmptyOralPleaFields,

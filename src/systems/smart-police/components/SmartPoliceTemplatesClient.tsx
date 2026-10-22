@@ -53,6 +53,9 @@ const TONE_BY_SLUG: Record<string, "violet" | "rose" | "sky" | "amber"> = {
   "rights-notice": "rose",
   "case-photo": "sky",
   "photo-id": "sky",
+  "lineup-id": "sky",
+  "case-cover": "violet",
+  "inquiry-report": "violet",
 };
 
 type TemplateRow = OfficialFormTemplateMeta & {

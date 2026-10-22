@@ -184,19 +184,10 @@ function SignBlock({
   onParen: (v: string) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "auto 1fr auto",
-        columnGap: "1.5mm",
-        rowGap: "0.15mm",
-        marginBottom: "1.2mm",
-        alignItems: "baseline",
-      }}
-    >
+    <>
       <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ลงชื่อ</span>
       <Dot aria-label={`ลงชื่อ${role}`} value={name} onChange={onName} flex minCh={8} />
-      <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>{role}</span>
+      <span style={{ flexShrink: 0, lineHeight: SIGN_LINE, whiteSpace: "nowrap" }}>{role}</span>
       <span aria-hidden />
       <div
         style={{
@@ -207,7 +198,8 @@ function SignBlock({
           minHeight: SIGN_LINE,
           lineHeight: SIGN_LINE,
           paddingLeft: "4mm",
-          paddingRight: "4mm",
+          marginBottom: "1.2mm",
+          minWidth: 0,
         }}
       >
         <span style={{ flexShrink: 0 }}>(</span>
@@ -215,7 +207,7 @@ function SignBlock({
         <span style={{ flexShrink: 0 }}>)</span>
       </div>
       <span aria-hidden />
-    </div>
+    </>
   );
 }
 
@@ -317,24 +309,62 @@ export function OfficialPhotoIdDocument({
                 </h1>
               </header>
               <div style={{ flexShrink: 0 }}>
-                <Row style={{ flexWrap: "nowrap" }}>
-                  <T>สถานที่บันทึก</T>
-                  <Dot
-                    aria-label="สถานที่บันทึก"
-                    value={fields.recordPlace}
-                    onChange={(v) => onChange("recordPlace", v)}
-                    flex
-                    minCh={10}
-                  />
-                </Row>
-                <Row style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}>
-                  <T>วันที่</T>
-                  <Dot aria-label="วันที่" value={fields.day} onChange={(v) => onChange("day", v)} minCh={4} />
-                  <T>เดือน</T>
-                  <Dot aria-label="เดือน" value={fields.month} onChange={(v) => onChange("month", v)} minCh={6} />
-                  <T>พ.ศ.</T>
-                  <Dot aria-label="พ.ศ." value={fields.year} onChange={(v) => onChange("year", v)} minCh={5} />
-                </Row>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    columnGap: "1.5mm",
+                    width: "100%",
+                    marginBottom: "0.45mm",
+                    fontSize: BODY,
+                  }}
+                >
+                  <div
+                    style={{
+                      gridColumn: "3",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.45mm",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "nowrap",
+                        alignItems: "baseline",
+                        gap: "1.5mm",
+                        minHeight: LINE,
+                        lineHeight: LINE,
+                      }}
+                    >
+                      <T>สถานที่บันทึก</T>
+                      <Dot
+                        aria-label="สถานที่บันทึก"
+                        value={fields.recordPlace}
+                        onChange={(v) => onChange("recordPlace", v)}
+                        flex
+                        minCh={8}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "nowrap",
+                        alignItems: "baseline",
+                        gap: "1.5mm",
+                        minHeight: LINE,
+                        lineHeight: LINE,
+                      }}
+                    >
+                      <T>วันที่</T>
+                      <Dot aria-label="วันที่" value={fields.day} onChange={(v) => onChange("day", v)} flex minCh={3} />
+                      <T>เดือน</T>
+                      <Dot aria-label="เดือน" value={fields.month} onChange={(v) => onChange("month", v)} flex minCh={4} />
+                      <T>พ.ศ.</T>
+                      <Dot aria-label="พ.ศ." value={fields.year} onChange={(v) => onChange("year", v)} flex minCh={4} />
+                    </div>
+                  </div>
+                </div>
                 <Row style={{ flexWrap: "nowrap" }}>
                   <T>๑. ชื่อ และตำแหน่งผู้อำนวยการชี้รูป</T>
                   <Dot
@@ -531,7 +561,18 @@ export function OfficialPhotoIdDocument({
           ) : null}
 
           {page.showSigns ? (
-            <div style={{ width: "62%", marginLeft: "auto", flexShrink: 0 }}>
+            <div
+              style={{
+                width: "62%",
+                marginLeft: "auto",
+                flexShrink: 0,
+                display: "grid",
+                gridTemplateColumns: "auto minmax(0, 1fr) auto",
+                columnGap: "1.5mm",
+                rowGap: "0.15mm",
+                alignItems: "baseline",
+              }}
+            >
               <SignBlock
                 role="ผู้กล่าวหา ชี้รูป"
                 name={fields.signComplainant}
@@ -574,16 +615,15 @@ export function OfficialPhotoIdDocument({
                 onName={(v) => onChange("signOfficer", v)}
                 onParen={(v) => onChange("signOfficerParen", v)}
               />
-              <Row style={{ flexWrap: "nowrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
-                <span style={{ flexShrink: 0 }}>ตำแหน่ง</span>
-                <Dot
-                  aria-label="ตำแหน่งผู้บันทึก"
-                  value={fields.officerPosition}
-                  onChange={(v) => onChange("officerPosition", v)}
-                  flex
-                  minCh={8}
-                />
-              </Row>
+              <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ตำแหน่ง</span>
+              <Dot
+                aria-label="ตำแหน่งผู้บันทึก"
+                value={fields.officerPosition}
+                onChange={(v) => onChange("officerPosition", v)}
+                flex
+                minCh={8}
+              />
+              <span aria-hidden />
             </div>
           ) : null}
         </Sheet>
