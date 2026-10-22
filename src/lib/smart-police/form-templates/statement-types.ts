@@ -70,6 +70,9 @@ export type StatementHeaderFields = {
   birthTambon: string;
   birthAmphoe: string;
   birthProvince: string;
+  /** ท้ายคำให้การ — ลงชื่อผู้ให้การ / พงส. */
+  signParty: string;
+  signOfficer: string;
 };
 
 /** v1 — ถาม/ตอบอย่างเดียว (legacy) */

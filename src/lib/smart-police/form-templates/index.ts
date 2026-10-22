@@ -2,6 +2,8 @@ export {
   PROPERTY_DAMAGED_FORM_TITLE,
   PROPERTY_DAMAGED_RECOVERED_FORM_TITLE,
   PROPERTY_DAMAGED_UNRECOVERED_FORM_TITLE,
+  EXHIBIT_LIST_FORM_TITLE,
+  EXHIBIT_LIST_TEMPLATE_TITLE,
   SCENE_MAP_FORM_TITLE,
   SCENE_MAP_TEMPLATE_TITLE,
   WITHDRAW_COMPLAINT_FORM_TITLE,
@@ -15,16 +17,38 @@ export {
   ORAL_PLEA_FORM_TITLE,
   ORAL_PLEA_FORM_SUBTITLE,
   ORAL_PLEA_TEMPLATE_TITLE,
+  ARREST_RECORD_FORM_TITLE,
+  ARREST_RECORD_TEMPLATE_TITLE,
+  CHARGE_NOTICE_FORM_TITLE,
+  CHARGE_NOTICE_TEMPLATE_TITLE,
+  RIGHTS_NOTICE_FORM_TITLE,
+  RIGHTS_NOTICE_TEMPLATE_TITLE,
+  CASE_PHOTO_FORM_TITLE,
+  CASE_PHOTO_TEMPLATE_TITLE,
+  PHOTO_ID_FORM_TITLE,
+  PHOTO_ID_TEMPLATE_TITLE,
   SMART_POLICE_OFFICIAL_FORM_TEMPLATES,
   SMART_POLICE_PROPERTY_LIST_TEMPLATE,
   SMART_POLICE_PROPERTY_LIST_TEMPLATES,
+  SMART_POLICE_EXHIBIT_LIST_TEMPLATE,
   SMART_POLICE_SCENE_MAP_TEMPLATE,
   SMART_POLICE_WITHDRAW_COMPLAINT_TEMPLATE,
   SMART_POLICE_COMPENSATION_SETTLEMENT_TEMPLATE,
   SMART_POLICE_VICTIM_RIGHTS_TEMPLATE,
   SMART_POLICE_ORAL_PLEA_TEMPLATE,
+  SMART_POLICE_ARREST_RECORD_TEMPLATE,
+  SMART_POLICE_CHARGE_NOTICE_TEMPLATE,
+  SMART_POLICE_RIGHTS_NOTICE_TEMPLATE,
+  SMART_POLICE_CASE_PHOTO_TEMPLATE,
+  SMART_POLICE_PHOTO_ID_TEMPLATE,
   getOfficialFormTemplateMeta,
   isCompensationSettlementFormSlug,
+  isExhibitListFormSlug,
+  isArrestRecordFormSlug,
+  isChargeNoticeFormSlug,
+  isRightsNoticeFormSlug,
+  isCasePhotoFormSlug,
+  isPhotoIdFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -33,8 +57,14 @@ export {
   isWithdrawComplaintFormSlug,
   propertyListTitleForSlug,
   type CompensationSettlementTemplateSlug,
+  type ArrestRecordTemplateSlug,
+  type ChargeNoticeTemplateSlug,
+  type RightsNoticeTemplateSlug,
+  type CasePhotoTemplateSlug,
+  type PhotoIdTemplateSlug,
   type OfficialFormKind,
   type OfficialFormTemplateMeta,
+  type ExhibitListTemplateSlug,
   type OfficialFormTemplateSlug,
   type OralPleaTemplateSlug,
   type PropertyListTemplateSlug,
@@ -43,7 +73,9 @@ export {
   type WithdrawComplaintTemplateSlug,
 } from "@/lib/smart-police/form-templates/official-form-catalog";
 export {
+  createEmptySceneMapExtraPage,
   createEmptySceneMapFields,
+  type SceneMapExtraPage,
   type SceneMapFields,
 } from "@/lib/smart-police/form-templates/scene-map";
 export {
@@ -61,11 +93,51 @@ export {
   type VictimRightsFields,
 } from "@/lib/smart-police/form-templates/victim-rights";
 export {
-  ORAL_PLEA_DEFAULT_ANSWER_GRUDGE,
-  ORAL_PLEA_DEFAULT_ANSWER_LAWYER,
+  ARREST_SIGN_DEFAULT,
+  ARREST_SIGN_MIN,
+  addArrestSignSlot,
+  createEmptyArrestRecordFields,
+  removeLastArrestSignSlot,
+  type ArrestRecordFields,
+} from "@/lib/smart-police/form-templates/arrest-record";
+export {
+  CHARGE_NOTICE_APPEARANCES,
+  createEmptyChargeNoticeFields,
+  type ChargeNoticeAppearance,
+  type ChargeNoticeFields,
+} from "@/lib/smart-police/form-templates/charge-notice";
+export {
+  createEmptyRightsNoticeFields,
+  type RightsNoticeFields,
+} from "@/lib/smart-police/form-templates/rights-notice";
+export {
+  createEmptyCasePhotoExtraPage,
+  createEmptyCasePhotoFields,
+  type CasePhotoExtraPage,
+  type CasePhotoFields,
+} from "@/lib/smart-police/form-templates/case-photo";
+export {
+  PHOTO_ID_PHOTO_COUNT,
+  createEmptyPhotoIdFields,
+  type PhotoIdFields,
+} from "@/lib/smart-police/form-templates/photo-id";
+export {
+  ORAL_PLEA_DEFAULT_QA,
   createEmptyOralPleaFields,
+  createEmptyOralPleaQaPages,
+  flowOralPleaQaOverflow,
   type OralPleaFields,
 } from "@/lib/smart-police/form-templates/oral-plea";
+export {
+  EXHIBIT_LIST_ROWS_CONT,
+  EXHIBIT_LIST_ROWS_FIRST,
+  createDefaultExhibitListRows,
+  createEmptyExhibitListHeader,
+  createEmptyExhibitListRow,
+  formatExhibitListTotal,
+  paginateExhibitListRows,
+  type ExhibitListHeader,
+} from "@/lib/smart-police/form-templates/exhibit-list";
 export {
   PROPERTY_LIST_DEFAULT_ROWS,
   PROPERTY_LIST_ROWS_CONT,
@@ -121,6 +193,11 @@ export {
   buildOfficialStatementFormHtml,
   wrapOfficialStatementPrintHtml,
 } from "@/lib/smart-police/form-templates/official-statement-form-html";
+export {
+  isStandaloneOfficialFormCode,
+  stripOfficialFormCodesFromHtml,
+  stripOfficialFormCodesFromText,
+} from "@/lib/smart-police/form-templates/official-form-codes";
 export type {
   StatementDocumentContent,
   StatementDocumentContentV1,

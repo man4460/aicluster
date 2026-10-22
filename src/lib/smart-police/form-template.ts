@@ -8,6 +8,7 @@ import {
   smartPoliceBlankFormHref,
   type SmartPoliceBlankFormItem,
 } from "@/lib/smart-police/blank-forms-catalog";
+import { stripOfficialFormCodesFromHtml } from "@/lib/smart-police/form-templates/official-form-codes";
 
 export type SmartPoliceFormFileKind = "pdf" | "docx" | "other";
 
@@ -39,7 +40,8 @@ export async function loadBlankFormPreviewHtml(fileName: string): Promise<string
   const disk = smartPoliceBlankFormDiskPath(fileName);
   const buf = await fs.readFile(disk);
   const result = await mammoth.convertToHtml({ buffer: buf });
-  return result.value || "<p></p>";
+  const html = stripOfficialFormCodesFromHtml(result.value || "");
+  return html || "<p></p>";
 }
 
 export function blankFormPublicHref(fileName: string): string {

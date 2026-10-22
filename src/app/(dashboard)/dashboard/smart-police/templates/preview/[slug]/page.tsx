@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import {
   getOfficialFormTemplateMeta,
+  isArrestRecordFormSlug,
+  isCasePhotoFormSlug,
+  isChargeNoticeFormSlug,
+  isPhotoIdFormSlug,
   isCompensationSettlementFormSlug,
+  isRightsNoticeFormSlug,
+  isExhibitListFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -11,9 +17,15 @@ import {
 } from "@/lib/smart-police/form-templates";
 import type { StatementTemplateSlug } from "@/lib/smart-police/form-templates";
 import { SmartPoliceCompensationSettlementPreviewClient } from "@/systems/smart-police/components/SmartPoliceCompensationSettlementPreviewClient";
+import { SmartPoliceExhibitListPreviewClient } from "@/systems/smart-police/components/SmartPoliceExhibitListPreviewClient";
 import { SmartPolicePropertyListPreviewClient } from "@/systems/smart-police/components/SmartPolicePropertyListPreviewClient";
 import { SmartPoliceSceneMapPreviewClient } from "@/systems/smart-police/components/SmartPoliceSceneMapPreviewClient";
 import { SmartPoliceStatementTemplatePreviewClient } from "@/systems/smart-police/components/SmartPoliceStatementTemplatePreviewClient";
+import { SmartPoliceArrestRecordPreviewClient } from "@/systems/smart-police/components/SmartPoliceArrestRecordPreviewClient";
+import { SmartPoliceChargeNoticePreviewClient } from "@/systems/smart-police/components/SmartPoliceChargeNoticePreviewClient";
+import { SmartPoliceRightsNoticePreviewClient } from "@/systems/smart-police/components/SmartPoliceRightsNoticePreviewClient";
+import { SmartPoliceCasePhotoPreviewClient } from "@/systems/smart-police/components/SmartPoliceCasePhotoPreviewClient";
+import { SmartPolicePhotoIdPreviewClient } from "@/systems/smart-police/components/SmartPolicePhotoIdPreviewClient";
 import { SmartPoliceOralPleaPreviewClient } from "@/systems/smart-police/components/SmartPoliceOralPleaPreviewClient";
 import { SmartPoliceVictimRightsPreviewClient } from "@/systems/smart-police/components/SmartPoliceVictimRightsPreviewClient";
 import { SmartPoliceWithdrawComplaintPreviewClient } from "@/systems/smart-police/components/SmartPoliceWithdrawComplaintPreviewClient";
@@ -32,6 +44,9 @@ export default async function SmartPoliceOfficialFormPreviewPage({
   if (isPropertyListFormSlug(slug)) {
     return <SmartPolicePropertyListPreviewClient slug={slug} />;
   }
+  if (isExhibitListFormSlug(slug)) {
+    return <SmartPoliceExhibitListPreviewClient />;
+  }
   if (isSceneMapFormSlug(slug)) {
     return <SmartPoliceSceneMapPreviewClient />;
   }
@@ -46,6 +61,21 @@ export default async function SmartPoliceOfficialFormPreviewPage({
   }
   if (isOralPleaFormSlug(slug)) {
     return <SmartPoliceOralPleaPreviewClient />;
+  }
+  if (isArrestRecordFormSlug(slug)) {
+    return <SmartPoliceArrestRecordPreviewClient />;
+  }
+  if (isChargeNoticeFormSlug(slug)) {
+    return <SmartPoliceChargeNoticePreviewClient />;
+  }
+  if (isRightsNoticeFormSlug(slug)) {
+    return <SmartPoliceRightsNoticePreviewClient />;
+  }
+  if (isCasePhotoFormSlug(slug)) {
+    return <SmartPoliceCasePhotoPreviewClient />;
+  }
+  if (isPhotoIdFormSlug(slug)) {
+    return <SmartPolicePhotoIdPreviewClient />;
   }
   notFound();
 }

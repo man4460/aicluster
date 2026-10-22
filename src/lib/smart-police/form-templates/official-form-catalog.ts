@@ -3,33 +3,51 @@ import { SMART_POLICE_STATEMENT_TEMPLATES } from "@/lib/smart-police/form-templa
 export type OfficialFormKind =
   | "statement"
   | "property-list"
+  | "exhibit-list"
   | "scene-map"
   | "withdraw-complaint"
   | "compensation-settlement"
   | "victim-rights"
-  | "oral-plea";
+  | "oral-plea"
+  | "arrest-record"
+  | "charge-notice"
+  | "rights-notice"
+  | "case-photo"
+  | "photo-id";
 
 export type PropertyListTemplateSlug =
   | "property-damaged"
   | "property-damaged-recovered"
   | "property-damaged-unrecovered";
 
+export type ExhibitListTemplateSlug = "exhibit-list";
 export type SceneMapTemplateSlug = "scene-map";
 export type WithdrawComplaintTemplateSlug = "withdraw-complaint";
 export type CompensationSettlementTemplateSlug = "compensation-settlement";
 export type VictimRightsTemplateSlug = "victim-rights";
 export type OralPleaTemplateSlug = "oral-plea";
+export type ArrestRecordTemplateSlug = "arrest-record";
+export type ChargeNoticeTemplateSlug = "charge-notice";
+export type RightsNoticeTemplateSlug = "rights-notice";
+export type CasePhotoTemplateSlug = "case-photo";
+export type PhotoIdTemplateSlug = "photo-id";
 
 export type OfficialFormTemplateSlug =
   | "statement-complainant"
   | "statement-suspect"
   | "statement-witness"
   | PropertyListTemplateSlug
+  | ExhibitListTemplateSlug
   | SceneMapTemplateSlug
   | WithdrawComplaintTemplateSlug
   | CompensationSettlementTemplateSlug
   | VictimRightsTemplateSlug
-  | OralPleaTemplateSlug;
+  | OralPleaTemplateSlug
+  | ArrestRecordTemplateSlug
+  | ChargeNoticeTemplateSlug
+  | RightsNoticeTemplateSlug
+  | CasePhotoTemplateSlug
+  | PhotoIdTemplateSlug;
 
 export type OfficialFormTemplateMeta = {
   slug: OfficialFormTemplateSlug;
@@ -64,6 +82,16 @@ export const SMART_POLICE_PROPERTY_LIST_TEMPLATES: OfficialFormTemplateMeta[] = 
 ];
 
 export const SMART_POLICE_PROPERTY_LIST_TEMPLATE = SMART_POLICE_PROPERTY_LIST_TEMPLATES[0]!;
+
+export const EXHIBIT_LIST_FORM_TITLE = "บัญชีทรัพย์ของกลางคดีอาญา";
+export const EXHIBIT_LIST_TEMPLATE_TITLE = "บัญชีของกลาง";
+
+export const SMART_POLICE_EXHIBIT_LIST_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "exhibit-list",
+  title: EXHIBIT_LIST_TEMPLATE_TITLE,
+  kind: "exhibit-list",
+  blankFormId: "13",
+};
 
 export const SCENE_MAP_FORM_TITLE = "แผนที่สังเขปแสดงสถานที่เกิดเหตุ";
 export const SCENE_MAP_TEMPLATE_TITLE = "แผนที่เกิดเหตุ";
@@ -119,6 +147,56 @@ export const SMART_POLICE_ORAL_PLEA_TEMPLATE: OfficialFormTemplateMeta = {
   blankFormId: "12",
 };
 
+export const ARREST_RECORD_FORM_TITLE = "บันทึกการจับกุม";
+export const ARREST_RECORD_TEMPLATE_TITLE = "บันทึกจับกุม";
+
+export const SMART_POLICE_ARREST_RECORD_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "arrest-record",
+  title: ARREST_RECORD_TEMPLATE_TITLE,
+  kind: "arrest-record",
+  blankFormId: "14",
+};
+
+export const CHARGE_NOTICE_FORM_TITLE = "บันทึกการแจ้งข้อกล่าวหา";
+export const CHARGE_NOTICE_TEMPLATE_TITLE = "บันทึกแจ้งข้อหา";
+
+export const SMART_POLICE_CHARGE_NOTICE_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "charge-notice",
+  title: CHARGE_NOTICE_TEMPLATE_TITLE,
+  kind: "charge-notice",
+  blankFormId: "15",
+};
+
+export const RIGHTS_NOTICE_FORM_TITLE = "บันทึกการแจ้งสิทธิของผู้ถูกจับหรือผู้ต้องหา";
+export const RIGHTS_NOTICE_TEMPLATE_TITLE = "บันทึกแจ้งสิทธิผู้ต้องหา";
+
+export const SMART_POLICE_RIGHTS_NOTICE_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "rights-notice",
+  title: RIGHTS_NOTICE_TEMPLATE_TITLE,
+  kind: "rights-notice",
+  blankFormId: "16",
+};
+
+export const CASE_PHOTO_FORM_TITLE = "ภาพถ่ายประกอบคดี";
+export const CASE_PHOTO_TEMPLATE_TITLE = "ภาพถ่ายประกอบคดี";
+
+export const SMART_POLICE_CASE_PHOTO_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "case-photo",
+  title: CASE_PHOTO_TEMPLATE_TITLE,
+  kind: "case-photo",
+  blankFormId: "17",
+};
+
+export const PHOTO_ID_FORM_TITLE = "บันทึกการชี้รูปผู้ต้องหา";
+export const PHOTO_ID_TEMPLATE_TITLE = "บันทึกชี้รูปผู้ต้องหา";
+
+export const SMART_POLICE_PHOTO_ID_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "photo-id",
+  title: PHOTO_ID_TEMPLATE_TITLE,
+  kind: "photo-id",
+  blankFormId: "19",
+};
+
 export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = [
   ...SMART_POLICE_STATEMENT_TEMPLATES.map((t) => ({
     slug: t.slug,
@@ -127,11 +205,17 @@ export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = 
     blankFormId: t.blankFormId,
   })),
   ...SMART_POLICE_PROPERTY_LIST_TEMPLATES,
+  SMART_POLICE_EXHIBIT_LIST_TEMPLATE,
   SMART_POLICE_SCENE_MAP_TEMPLATE,
   SMART_POLICE_WITHDRAW_COMPLAINT_TEMPLATE,
   SMART_POLICE_COMPENSATION_SETTLEMENT_TEMPLATE,
   SMART_POLICE_VICTIM_RIGHTS_TEMPLATE,
   SMART_POLICE_ORAL_PLEA_TEMPLATE,
+  SMART_POLICE_ARREST_RECORD_TEMPLATE,
+  SMART_POLICE_CHARGE_NOTICE_TEMPLATE,
+  SMART_POLICE_RIGHTS_NOTICE_TEMPLATE,
+  SMART_POLICE_CASE_PHOTO_TEMPLATE,
+  SMART_POLICE_PHOTO_ID_TEMPLATE,
 ];
 
 export function getOfficialFormTemplateMeta(
@@ -154,6 +238,10 @@ export function propertyListTitleForSlug(slug: string): string {
   return SMART_POLICE_PROPERTY_LIST_TEMPLATES.find((t) => t.slug === slug)?.title ?? PROPERTY_DAMAGED_FORM_TITLE;
 }
 
+export function isExhibitListFormSlug(slug: string): slug is ExhibitListTemplateSlug {
+  return slug === "exhibit-list";
+}
+
 export function isSceneMapFormSlug(slug: string): slug is SceneMapTemplateSlug {
   return slug === "scene-map";
 }
@@ -174,4 +262,24 @@ export function isVictimRightsFormSlug(slug: string): slug is VictimRightsTempla
 
 export function isOralPleaFormSlug(slug: string): slug is OralPleaTemplateSlug {
   return slug === "oral-plea";
+}
+
+export function isArrestRecordFormSlug(slug: string): slug is ArrestRecordTemplateSlug {
+  return slug === "arrest-record";
+}
+
+export function isChargeNoticeFormSlug(slug: string): slug is ChargeNoticeTemplateSlug {
+  return slug === "charge-notice";
+}
+
+export function isRightsNoticeFormSlug(slug: string): slug is RightsNoticeTemplateSlug {
+  return slug === "rights-notice";
+}
+
+export function isCasePhotoFormSlug(slug: string): slug is CasePhotoTemplateSlug {
+  return slug === "case-photo";
+}
+
+export function isPhotoIdFormSlug(slug: string): slug is PhotoIdTemplateSlug {
+  return slug === "photo-id";
 }

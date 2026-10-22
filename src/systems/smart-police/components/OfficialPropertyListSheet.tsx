@@ -230,7 +230,7 @@ export function OfficialPropertyListDocument({
   return (
     <div className="flex flex-col gap-6 pb-8">
       {pages.map((pageRows, pageIdx) => {
-        const isLast = pageIdx === pages.length - 1;
+        const isFirst = pageIdx === 0;
         const startSeq = seq;
         seq += pageRows.length;
         return (
@@ -250,23 +250,28 @@ export function OfficialPropertyListDocument({
               flexDirection: "column",
             }}
           >
-            <header style={{ textAlign: "center", marginBottom: "5mm", flexShrink: 0 }}>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: TITLE,
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "1mm",
-                }}
-              >
-                {formTitle}
-                {pageIdx > 0 ? " (ต่อ)" : ""}
-              </h1>
-            </header>
+            {isFirst ? (
+              <header style={{ textAlign: "center", marginBottom: "5mm", flexShrink: 0 }}>
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: TITLE,
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    textDecoration: "underline",
+                    textUnderlineOffset: "1mm",
+                  }}
+                >
+                  {formTitle}
+                </h1>
+              </header>
+            ) : (
+              <p style={{ margin: "0 0 3mm", textAlign: "center", fontSize: BODY, flexShrink: 0 }}>
+                {thaiNumeral(pageIdx + 1)}
+              </p>
+            )}
 
-            {pageIdx === 0 ? (
+            {isFirst ? (
               <div style={{ flexShrink: 0, marginBottom: "3mm" }}>
                 <Row>
                   <L>สถานีตำรวจ/หน่วยงาน</L>
@@ -512,12 +517,12 @@ export function OfficialPropertyListDocument({
                         ...tdVert,
                         height: "100%",
                         padding: 0,
-                        ...(isLast ? null : { borderBottom: RULE }),
+                        ...(isFirst ? null : { borderBottom: RULE }),
                       }}
                     />
                   ))}
                 </tr>
-                {isLast ? (
+                {isFirst ? (
                   <tr>
                     <td style={{ ...th, borderTop: RULE, height: "8mm" }} />
                     <td style={{ ...th, borderTop: RULE }} />
@@ -536,7 +541,7 @@ export function OfficialPropertyListDocument({
               </tbody>
             </table>
 
-            {isLast ? (
+            {isFirst ? (
               <div style={{ flexShrink: 0, marginTop: "3mm" }}>
                 <p style={{ margin: "0 0 5mm", fontSize: BODY, lineHeight: 1.45, textAlign: "center" }}>
                   ข้าฯ ขอรับรองว่าทรัพย์สินตามรายการดังกล่าวข้างต้น ได้บันทึกขึ้นถูกต้องตรงกับความเป็นจริง
@@ -557,7 +562,6 @@ export function OfficialPropertyListDocument({
                       ["ผู้ต้องหา", "signSuspect"],
                       ["ผู้กล่าวหา", "signComplainant"],
                       ["พยาน", "signWitness"],
-                      ["พงส. / บันทึก / อ่าน", "signOfficer"],
                     ] as const
                   ).map(([label, key]) => (
                     <div
@@ -583,7 +587,32 @@ export function OfficialPropertyListDocument({
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div
+                style={{
+                  width: "58%",
+                  marginLeft: "auto",
+                  marginTop: "4mm",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "2mm",
+                  minHeight: LINE,
+                  lineHeight: LINE,
+                  fontSize: BODY,
+                }}
+              >
+                <L>ลงชื่อ</L>
+                <Dot
+                  aria-label="ลงชื่อพงส. บันทึก อ่าน"
+                  value={header.signOfficer}
+                  onChange={(v) => onHeaderChange("signOfficer", v)}
+                  flex
+                  minCh={8}
+                />
+                <span style={{ flexShrink: 0 }}>พงส. / บันทึก / อ่าน</span>
+              </div>
+            )}
           </article>
         );
       })}

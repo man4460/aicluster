@@ -4,7 +4,7 @@ import type {
   StatementTemplateSlug,
 } from "@/lib/smart-police/form-templates/statement-types";
 
-/** ชื่อแบบฟอร์ม ส ๕๖-๔ ผู้กล่าวหา / พยาน */
+/** ชื่อแบบฟอร์มผู้กล่าวหา / พยาน */
 export const SMART_POLICE_STATEMENT_FORM_TITLE =
   "บันทึกคำให้การของผู้ร้องทุกข์ ผู้กล่าวโทษ หรือพยาน";
 
@@ -44,7 +44,7 @@ export const SMART_POLICE_STATEMENT_TEMPLATES: StatementTemplateMeta[] = [
     slug: "statement-complainant",
     title: "คำให้การผู้กล่าวหา",
     description:
-      "ฟอร์ม ส ๕๖-๔ ชุดเดียวกับผู้ต้องหา/พยาน — ต่างกันที่ช่อง «เป็น» ด้านซ้าย · พิมพ์ถาม–ตอบบนฟอร์ม · บันทึกแล้วได้ Word ในสำนวน",
+      "ชุดเดียวกับผู้ต้องหา/พยาน — ต่างกันที่ช่อง «เป็น» ด้านซ้าย · พิมพ์ถาม–ตอบบนฟอร์ม · บันทึกแล้วได้ Word ในสำนวน",
     roles: ["COMPLAINANT"],
     blankFormId: "2",
   },

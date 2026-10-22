@@ -127,7 +127,7 @@ export const SMART_POLICE_BLANK_FORMS: SmartPoliceBlankFormItem[] = [
   {
     "id": "16",
     "category": "เอกสารผู้ต้องหา",
-    "title": "บันทึกแจ้งสิทธิ",
+    "title": "บันทึกแจ้งสิทธิผู้ต้องหา",
     "sortOrder": 6,
     "fileName": "บันทึกแจ้งสิทธิ.docx"
   },

@@ -22,6 +22,10 @@ export function SmartPoliceOralPleaPreviewClient() {
     setFields((f) => ({ ...f, [key]: value }));
   }
 
+  function patchQaPages(updater: (pages: string[]) => string[]) {
+    setFields((f) => ({ ...f, qaPages: updater(f.qaPages) }));
+  }
+
   function goToPage(i: number) {
     setPageIndex(i);
     document.querySelector(`[data-sheet-index="${i}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -45,7 +49,7 @@ export function SmartPoliceOralPleaPreviewClient() {
           {ORAL_PLEA_TEMPLATE_TITLE}
         </p>
         <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="หน้าเอกสาร">
-          {[0, 1].map((i) => (
+          {fields.qaPages.map((_, i) => (
             <button
               key={`p-${i}`}
               type="button"
@@ -68,7 +72,7 @@ export function SmartPoliceOralPleaPreviewClient() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">
-        <OfficialOralPleaDocument fields={fields} onChange={patch} />
+        <OfficialOralPleaDocument fields={fields} onChange={patch} onQaPagesChange={patchQaPages} />
       </div>
     </div>
   );

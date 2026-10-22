@@ -1,3 +1,9 @@
+export type SceneMapExtraPage = {
+  id: string;
+  mapImageUrl: string;
+  notes: string;
+};
+
 export type SceneMapFields = {
   caseBetween: string;
   complainantLine: string;
@@ -16,6 +22,7 @@ export type SceneMapFields = {
   approxTime: string;
   notes: string;
   mapImageUrl: string;
+  extraPages: SceneMapExtraPage[];
   signComplainant: string;
   signSuspect1: string;
   signSuspect2: string;
@@ -25,6 +32,14 @@ export type SceneMapFields = {
   signOfficerParen: string;
   signOfficerPosition: string;
 };
+
+function newId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function createEmptySceneMapExtraPage(): SceneMapExtraPage {
+  return { id: newId("smap"), mapImageUrl: "", notes: "" };
+}
 
 export function createEmptySceneMapFields(): SceneMapFields {
   return {
@@ -45,6 +60,7 @@ export function createEmptySceneMapFields(): SceneMapFields {
     approxTime: "",
     notes: "",
     mapImageUrl: "",
+    extraPages: [],
     signComplainant: "",
     signSuspect1: "",
     signSuspect2: "",

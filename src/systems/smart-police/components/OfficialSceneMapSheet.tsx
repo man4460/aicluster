@@ -3,7 +3,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { SCENE_MAP_FORM_TITLE } from "@/lib/smart-police/form-templates/official-form-catalog";
-import type { SceneMapFields } from "@/lib/smart-police/form-templates/scene-map";
+import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
+import type { SceneMapExtraPage, SceneMapFields } from "@/lib/smart-police/form-templates/scene-map";
 
 const PAGE = { w: "297mm", h: "210mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
@@ -97,18 +98,136 @@ function SignRow({
   );
 }
 
-export function OfficialSceneMapDocument({
-  fields,
-  onChange,
+function MapNotesPane({
+  mapImageUrl,
+  notes,
+  noteLines,
   onPickMap,
+  onNotesChange,
+  mapAlt,
+  notesLabel,
+  footer,
 }: {
-  fields: SceneMapFields;
-  onChange: <K extends keyof SceneMapFields>(key: K, value: SceneMapFields[K]) => void;
+  mapImageUrl: string;
+  notes: string;
+  noteLines: number;
   onPickMap?: () => void;
+  onNotesChange: (v: string) => void;
+  mapAlt: string;
+  notesLabel: string;
+  footer?: ReactNode;
 }) {
   return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "grid",
+        gridTemplateColumns: "1.15fr 0.85fr",
+        columnGap: "4mm",
+        alignItems: "stretch",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          border: RULE,
+          background: "#fff",
+          minHeight: 0,
+          overflow: "hidden",
+        }}
+      >
+        {mapImageUrl ? (
+          <img
+            src={mapImageUrl}
+            alt={mapAlt}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          />
+        ) : null}
+        <button
+          type="button"
+          className="sp-scene-map-pick"
+          onClick={onPickMap}
+          aria-label={mapImageUrl ? "เปลี่ยนรูปแผนที่สังเขป" : "แทรกรูปแผนที่สังเขป"}
+          style={{
+            position: "absolute",
+            inset: 0,
+            border: "none",
+            background: "transparent",
+            cursor: onPickMap ? "pointer" : "default",
+            padding: 0,
+          }}
+        />
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "2mm",
+            right: "2.5mm",
+            fontSize: SMALL,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            pointerEvents: "none",
+            zIndex: 2,
+          }}
+        >
+          ↑เหนือ
+        </span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+        <p
+          style={{
+            margin: "0 0 1mm",
+            textAlign: "center",
+            fontWeight: 700,
+            fontSize: BODY,
+            flexShrink: 0,
+          }}
+        >
+          คำอธิบายแผนที่
+        </p>
+        <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>
+          <div aria-hidden>
+            {Array.from({ length: noteLines }, (_, i) => (
+              <div
+                key={`note-rule-${i}`}
+                style={{
+                  height: LINE,
+                  borderBottom: "0.5pt dotted #111",
+                  boxSizing: "border-box",
+                }}
+              />
+            ))}
+          </div>
+          <textarea
+            aria-label={notesLabel}
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            spellCheck={false}
+            className="sp-lined-notes"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              fontFamily: "inherit",
+              fontSize: BODY,
+              lineHeight: LINE,
+              color: "#111",
+            }}
+          />
+        </div>
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+function SheetFrame({ index, children }: { index: number; children: ReactNode }) {
+  return (
     <article
-      data-sheet-index={0}
+      data-sheet-index={index}
       className="sp-a4-sheet sp-a4-landscape relative mx-auto bg-white text-[#111] shadow-xl print:shadow-none"
       style={{
         width: PAGE.w,
@@ -122,6 +241,32 @@ export function OfficialSceneMapDocument({
         flexDirection: "column",
       }}
     >
+      {children}
+    </article>
+  );
+}
+
+export function OfficialSceneMapDocument({
+  fields,
+  onChange,
+  onPickMap,
+}: {
+  fields: SceneMapFields;
+  onChange: <K extends keyof SceneMapFields>(key: K, value: SceneMapFields[K]) => void;
+  onPickMap?: (pageIdx: number) => void;
+}) {
+  const extraPages = fields.extraPages ?? [];
+
+  function patchExtra<K extends keyof SceneMapExtraPage>(idx: number, key: K, value: SceneMapExtraPage[K]) {
+    onChange(
+      "extraPages",
+      extraPages.map((p, i) => (i === idx ? { ...p, [key]: value } : p)),
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 pb-8 print:gap-0">
+      <SheetFrame index={0}>
       <header style={{ textAlign: "center", marginBottom: "4mm", flexShrink: 0 }}>
         <h1
           style={{
@@ -248,114 +393,15 @@ export function OfficialSceneMapDocument({
         </Row>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: "grid",
-          gridTemplateColumns: "1.15fr 0.85fr",
-          columnGap: "4mm",
-          alignItems: "stretch",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            border: RULE,
-            background: "#fff",
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          {fields.mapImageUrl ? (
-            <img
-              src={fields.mapImageUrl}
-              alt="แผนที่สังเขปสถานที่เกิดเหตุ"
-              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-            />
-          ) : null}
-          <button
-            type="button"
-            className="sp-scene-map-pick"
-            onClick={onPickMap}
-            aria-label={fields.mapImageUrl ? "เปลี่ยนรูปแผนที่สังเขป" : "แทรกรูปแผนที่สังเขป"}
-            style={{
-              position: "absolute",
-              inset: 0,
-              border: "none",
-              background: "transparent",
-              cursor: onPickMap ? "pointer" : "default",
-              padding: 0,
-            }}
-          />
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              top: "2mm",
-              right: "2.5mm",
-              fontSize: SMALL,
-              fontWeight: 700,
-              lineHeight: 1.2,
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          >
-            ↑เหนือ
-          </span>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            minWidth: 0,
-            minHeight: 0,
-          }}
-        >
-          <p
-            style={{
-              margin: "0 0 1mm",
-              textAlign: "center",
-              fontWeight: 700,
-              fontSize: BODY,
-              flexShrink: 0,
-            }}
-          >
-            คำอธิบายแผนที่
-          </p>
-          <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>
-            <div aria-hidden>
-              {Array.from({ length: 22 }, (_, i) => (
-                <div
-                  key={`note-rule-${i}`}
-                  style={{
-                    height: LINE,
-                    borderBottom: "0.5pt dotted #111",
-                    boxSizing: "border-box",
-                  }}
-                />
-              ))}
-            </div>
-            <textarea
-              aria-label="คำอธิบายแผนที่"
-              value={fields.notes}
-              onChange={(e) => onChange("notes", e.target.value)}
-              spellCheck={false}
-              className="sp-lined-notes"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                fontFamily: "inherit",
-                fontSize: BODY,
-                lineHeight: LINE,
-                color: "#111",
-              }}
-            />
-          </div>
-
+      <MapNotesPane
+        mapImageUrl={fields.mapImageUrl}
+        notes={fields.notes}
+        noteLines={22}
+        onPickMap={onPickMap ? () => onPickMap(0) : undefined}
+        onNotesChange={(v) => onChange("notes", v)}
+        mapAlt="แผนที่สังเขปสถานที่เกิดเหตุ"
+        notesLabel="คำอธิบายแผนที่"
+        footer={
           <div
             style={{
               flexShrink: 0,
@@ -433,8 +479,29 @@ export function OfficialSceneMapDocument({
               />
             </div>
           </div>
-        </div>
-      </div>
-    </article>
+        }
+      />
+      </SheetFrame>
+
+      {extraPages.map((page, extraIdx) => {
+        const sheetIndex = extraIdx + 1;
+        return (
+          <SheetFrame key={page.id} index={sheetIndex}>
+            <p style={{ margin: "0 0 3mm", textAlign: "center", fontSize: BODY, flexShrink: 0 }}>
+              {thaiNumeral(sheetIndex + 1)}
+            </p>
+            <MapNotesPane
+              mapImageUrl={page.mapImageUrl}
+              notes={page.notes}
+              noteLines={24}
+              onPickMap={onPickMap ? () => onPickMap(sheetIndex) : undefined}
+              onNotesChange={(v) => patchExtra(extraIdx, "notes", v)}
+              mapAlt={`แผนที่สังเขปสถานที่เกิดเหตุ หน้า ${sheetIndex + 1}`}
+              notesLabel={`คำอธิบายแผนที่ หน้า ${sheetIndex + 1}`}
+            />
+          </SheetFrame>
+        );
+      })}
+    </div>
   );
 }

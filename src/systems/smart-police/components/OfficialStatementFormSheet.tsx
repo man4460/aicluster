@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import {
   lastQaKind,
   StatementQaEditor,
+  StatementReadbackSignOff,
   type QaFocus,
   type QaFocusRequest,
 } from "@/systems/smart-police/components/StatementQaEditor";
@@ -12,6 +13,7 @@ import {
   SMART_POLICE_STATEMENT_FORM_TITLE,
   statementFormTitleForSlug,
   statementPageSlot,
+  statementPartyRoleLabelForSlug,
   statementPreambleForSlug,
   statementShowsBirthPlaceRow,
   type StatementHeaderFields,
@@ -20,7 +22,7 @@ import {
 } from "@/lib/smart-police/form-templates";
 
 /**
- * แม่แบบคำให้การ ส ๕๖-๔ — ออกแบบใหม่เป็นเอกสาร HTML (ไม่ทับพิกัด PNG)
+ * แม่แบบคำให้การ — ออกแบบใหม่เป็นเอกสาร HTML (ไม่ทับพิกัด PNG)
  * พิมพ์บนจุดไข่ปลาในช่องจริง · ระยะแถวคงที่
  */
 
@@ -123,8 +125,98 @@ function LinedBody(props: {
   focusRequest?: QaFocusRequest | null;
   continuesKind?: "ask" | "ans" | null;
   emptyKind?: "ask" | "ans" | "cont";
+  footer?: ReactNode;
 }) {
   return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={BODY} />;
+}
+
+/** ลงชื่อแนวตั้งในขอบเย็บ — หน้า 2 / ใบต่อ ตามแบบราชการ */
+function BindingMarginSignStrip({
+  side,
+  roleLabel,
+  signParty,
+  signOfficer,
+  onSignParty,
+  onSignOfficer,
+}: {
+  side: "left" | "right";
+  roleLabel: string;
+  signParty: string;
+  signOfficer: string;
+  onSignParty: (v: string) => void;
+  onSignOfficer: (v: string) => void;
+}) {
+  const field: CSSProperties = {
+    width: "30mm",
+    minWidth: "30mm",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    height: "auto",
+    paddingBottom: "1px",
+  };
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: LINED_TOP,
+        bottom: LINED_BOTTOM,
+        width: LINED_BINDING,
+        ...(side === "left" ? { left: 0 } : { right: 0 }),
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1mm",
+          width: "200mm",
+          fontSize: SMALL,
+          lineHeight: LINE,
+          transform: side === "left" ? "rotate(-90deg)" : "rotate(90deg)",
+        }}
+      >
+        <p style={{ margin: 0, textAlign: "center", flexShrink: 0, whiteSpace: "nowrap" }}>
+          อ่านให้ฟังแล้วรับว่าเป็นความจริงถูกต้อง
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "nowrap",
+            alignItems: "baseline",
+            gap: "2mm",
+            width: "100%",
+            justifyContent: "center",
+          }}
+        >
+          <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
+          <input
+            aria-label={`ลงชื่อ${roleLabel} แนวตั้ง`}
+            value={signParty}
+            onChange={(e) => onSignParty(e.target.value)}
+            spellCheck={false}
+            className="sp-word-field align-baseline"
+            style={field}
+          />
+          <span style={{ flexShrink: 0 }}>{roleLabel}</span>
+          <span style={{ flexShrink: 0, marginLeft: "4mm" }}>ลงชื่อ</span>
+          <input
+            aria-label="ลงชื่อสอบสวน พิมพ์ อ่าน แนวตั้ง"
+            value={signOfficer}
+            onChange={(e) => onSignOfficer(e.target.value)}
+            spellCheck={false}
+            className="sp-word-field align-baseline"
+            style={field}
+          />
+          <span style={{ flexShrink: 0 }}>สอบสวน/พิมพ์/อ่าน</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function continuesKindBefore(pages: StatementPage[], pageIndex: number): "ask" | "ans" | null {
@@ -178,6 +270,24 @@ export function OfficialStatementFormSheet({
   const isLinedOnly = slot.kind === "main" || slot.kind === "cont";
   const isFrontCont = slot.kind === "cont" && slot.side === "หน้า";
   const isSuspectForm = statementShowsBirthPlaceRow(templateSlug ?? "statement-complainant");
+  const isLastPage = pageIndex === pages.length - 1;
+  const roleLabel = statementPartyRoleLabelForSlug(templateSlug ?? "statement-complainant");
+  const signOff = isLastPage ? (
+    <StatementReadbackSignOff
+      roleLabel={roleLabel}
+      signParty={h.signParty ?? ""}
+      signOfficer={h.signOfficer ?? ""}
+      onSignParty={(v) => set("signParty", v)}
+      onSignOfficer={(v) => set("signOfficer", v)}
+      lineHeight={STMT_LINE}
+      fontSize={BODY}
+    />
+  ) : undefined;
+  const bindingSignSide: "left" | "right" | null = isLinedOnly
+    ? isFrontCont
+      ? "left"
+      : "right"
+    : null;
 
   return (
     <article
@@ -244,8 +354,19 @@ export function OfficialStatementFormSheet({
               focusRequest={focusRequest}
               continuesKind={continuesKindBefore(pages, pageIndex)}
               emptyKind={isSuspectForm ? "cont" : "ask"}
+              footer={signOff}
             />
           </div>
+          {bindingSignSide ? (
+            <BindingMarginSignStrip
+              side={bindingSignSide}
+              roleLabel={roleLabel}
+              signParty={h.signParty ?? ""}
+              signOfficer={h.signOfficer ?? ""}
+              onSignParty={(v) => set("signParty", v)}
+              onSignOfficer={(v) => set("signOfficer", v)}
+            />
+          ) : null}
         </>
       ) : (
         <div
@@ -849,6 +970,7 @@ export function OfficialStatementFormSheet({
               onOverflow={onOverflow}
               focusRequest={focusRequest}
               emptyKind={isSuspectForm ? "cont" : "ask"}
+              footer={signOff}
             />
           </div>
         </div>

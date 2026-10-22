@@ -47,6 +47,8 @@ const EMPTY_HEADER_EXTRAS: Pick<
   | "birthTambon"
   | "birthAmphoe"
   | "birthProvince"
+  | "signParty"
+  | "signOfficer"
 > = {
   district: "",
   dayThai: "",
@@ -72,6 +74,8 @@ const EMPTY_HEADER_EXTRAS: Pick<
   birthTambon: "",
   birthAmphoe: "",
   birthProvince: "",
+  signParty: "",
+  signOfficer: "",
 };
 
 export function normalizeStatementHeader(
@@ -147,7 +151,7 @@ export function createEmptyPage(seedQuestions?: string[]): StatementPage {
 }
 
 /**
- * ชุดเริ่มต้น 1 ชุด = หน้าแรก (ส ๕๖-๔) + หน้าหลัก (ด้านหลังแผ่นแรก)
+ * ชุดเริ่มต้น 1 ชุด = หน้าแรก + หน้าหลัก (ด้านหลังแผ่นแรก)
  * จากนั้นค่อยเพิ่มใบต่อคำให้การเป็นคู่ หน้า/หลัง
  */
 export function createDefaultStatementPages(seedQuestions?: string[]): StatementPage[] {
@@ -205,23 +209,22 @@ export function removeStatementPageAt(
 }
 
 export type StatementPageSlot =
-  | { kind: "first"; label: string; formCode: "ส ๕๖ - ๔"; sheetNo: 1; side: "หน้า" }
-  | { kind: "main"; label: string; formCode: "ส ๕๖ - ๔"; sheetNo: 1; side: "หลัง" }
-  | { kind: "cont"; label: string; formCode: "ส ๕๖ - ๖"; sheetNo: number; side: "หน้า" | "หลัง" };
+  | { kind: "first"; label: string; sheetNo: 1; side: "หน้า" }
+  | { kind: "main"; label: string; sheetNo: 1; side: "หลัง" }
+  | { kind: "cont"; label: string; sheetNo: number; side: "หน้า" | "หลัง" };
 
 export function statementPageSlot(pageIndex: number): StatementPageSlot {
   if (pageIndex <= 0) {
-    return { kind: "first", label: "หน้าแรก", formCode: "ส ๕๖ - ๔", sheetNo: 1, side: "หน้า" };
+    return { kind: "first", label: "หน้าแรก", sheetNo: 1, side: "หน้า" };
   }
   if (pageIndex === 1) {
-    return { kind: "main", label: "หน้าหลัก", formCode: "ส ๕๖ - ๔", sheetNo: 1, side: "หลัง" };
+    return { kind: "main", label: "หน้าหลัก", sheetNo: 1, side: "หลัง" };
   }
   const contOrd = Math.floor((pageIndex - 2) / 2) + 1;
   const side: "หน้า" | "หลัง" = (pageIndex - 2) % 2 === 0 ? "หน้า" : "หลัง";
   return {
     kind: "cont",
     label: `ใบต่อ ${contOrd} · ${side}`,
-    formCode: "ส ๕๖ - ๖",
     sheetNo: contOrd + 1,
     side,
   };

@@ -42,11 +42,17 @@ const TONE_BY_SLUG: Record<string, "violet" | "rose" | "sky" | "amber"> = {
   "property-damaged": "amber",
   "property-damaged-recovered": "amber",
   "property-damaged-unrecovered": "amber",
+  "exhibit-list": "amber",
   "scene-map": "sky",
   "withdraw-complaint": "violet",
   "compensation-settlement": "amber",
   "victim-rights": "sky",
   "oral-plea": "rose",
+  "arrest-record": "rose",
+  "charge-notice": "rose",
+  "rights-notice": "rose",
+  "case-photo": "sky",
+  "photo-id": "sky",
 };
 
 type TemplateRow = OfficialFormTemplateMeta & {

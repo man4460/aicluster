@@ -1,12 +1,17 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   ORAL_PLEA_FORM_SUBTITLE,
   ORAL_PLEA_FORM_TITLE,
 } from "@/lib/smart-police/form-templates/official-form-catalog";
-import type { OralPleaFields } from "@/lib/smart-police/form-templates/oral-plea";
+import { flowOralPleaQaOverflow, type OralPleaFields } from "@/lib/smart-police/form-templates/oral-plea";
+import {
+  lastQaKind,
+  StatementQaEditor,
+  StatementReadbackSignOff,
+} from "@/systems/smart-police/components/StatementQaEditor";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
@@ -14,6 +19,17 @@ const BODY = "13pt";
 const SMALL = "11pt";
 const TITLE = "15pt";
 const LINE = "6.2mm";
+const STMT_LINE = "7.8mm";
+/** ย่อหน้าเอกสารราชการ */
+const INDENT = "12mm";
+const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
+
+function thaiPageNo(n: number): string {
+  return String(n)
+    .split("")
+    .map((d) => THAI_DIGITS[Number(d)] ?? d)
+    .join("");
+}
 
 function Dot({
   value,
@@ -76,19 +92,72 @@ function T({ children }: { children: ReactNode }) {
   return <span style={{ flexShrink: 0 }}>{children}</span>;
 }
 
-function LinedNotes({
+const CHARGE_PREFIX = "พฤติการณ์และการกระทำของผู้ต้องหาเป็นความผิดฐาน “";
+
+function ChargeWrap({
   value,
   onChange,
-  lines,
-  ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
-  lines: number;
-  ariaLabel: string;
 }) {
+  const prefixRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const [indent, setIndent] = useState(0);
+  const [lines, setLines] = useState(1);
+
+  useLayoutEffect(() => {
+    if (prefixRef.current) setIndent(prefixRef.current.offsetWidth);
+  }, []);
+
+  useLayoutEffect(() => {
+    const text = textRef.current;
+    const line = lineRef.current;
+    if (!text || !line) return;
+    const one = line.offsetHeight || 1;
+    setLines(Math.min(3, Math.max(1, Math.ceil(text.scrollHeight / one))));
+  }, [value, indent]);
+
+  const firstIndent = indent ? `calc(${INDENT} + ${indent + 4}px)` : INDENT;
+
   return (
-    <div style={{ position: "relative", margin: "0 0 1.2mm" }}>
+    <div style={{ position: "relative", margin: "0 0 1mm", width: "100%" }}>
+      <div ref={lineRef} aria-hidden style={{ height: LINE, position: "absolute", visibility: "hidden" }} />
+      <span
+        ref={prefixRef}
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: INDENT,
+          top: 0,
+          zIndex: 1,
+          fontSize: BODY,
+          lineHeight: LINE,
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {CHARGE_PREFIX}
+      </span>
+      <div
+        ref={textRef}
+        aria-hidden
+        style={{
+          position: "absolute",
+          visibility: "hidden",
+          pointerEvents: "none",
+          width: "100%",
+          fontSize: BODY,
+          lineHeight: LINE,
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+          textIndent: firstIndent,
+        }}
+      >
+        {value || "\u00a0"}
+      </div>
       <div aria-hidden>
         {Array.from({ length: lines }, (_, i) => (
           <div
@@ -98,7 +167,7 @@ function LinedNotes({
         ))}
       </div>
       <textarea
-        aria-label={ariaLabel}
+        aria-label="พฤติการณ์ ความผิดฐาน"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
@@ -112,6 +181,10 @@ function LinedNotes({
           fontSize: BODY,
           lineHeight: LINE,
           color: "#111",
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+          textIndent: firstIndent,
         }}
       />
     </div>
@@ -133,6 +206,7 @@ function Sheet({ children, index }: { children: ReactNode; index: number }) {
         fontSize: BODY,
         display: "flex",
         flexDirection: "column",
+        minHeight: 0,
       }}
     >
       {children}
@@ -143,78 +217,141 @@ function Sheet({ children, index }: { children: ReactNode; index: number }) {
 export function OfficialOralPleaDocument({
   fields,
   onChange,
+  onQaPagesChange,
 }: {
   fields: OralPleaFields;
   onChange: <K extends keyof OralPleaFields>(key: K, value: OralPleaFields[K]) => void;
+  onQaPagesChange: (updater: (pages: string[]) => string[]) => void;
 }) {
+  const qaPages = fields.qaPages.length >= 2 ? fields.qaPages : [...fields.qaPages, ""];
+
+  function setQaPage(i: number, text: string) {
+    onQaPagesChange((pages) => {
+      const next = pages.length >= 2 ? [...pages] : [...pages, ""];
+      next[i] = text;
+      return next;
+    });
+  }
+
+  function overflowQa(i: number, moved: string) {
+    onQaPagesChange((pages) => flowOralPleaQaOverflow(pages, i, moved));
+  }
+
+  function continuesBefore(i: number) {
+    for (let j = i - 1; j >= 0; j--) {
+      const k = lastQaKind(qaPages[j] ?? "");
+      if (k) return k;
+    }
+    return null;
+  }
+
+  const signOff = (
+    <StatementReadbackSignOff
+      roleLabel="ผู้ต้องหา"
+      signParty={fields.signComplainant}
+      signOfficer={fields.signOfficer}
+      onSignParty={(v) => onChange("signComplainant", v)}
+      onSignOfficer={(v) => onChange("signOfficer", v)}
+      lineHeight={STMT_LINE}
+      fontSize={BODY}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-6 pb-8">
       <Sheet index={0}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "42mm 1fr 46mm",
-            columnGap: "2mm",
-            alignItems: "start",
-            marginBottom: "2mm",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ paddingTop: "28mm", fontSize: SMALL }}>
-            <Row style={{ flexWrap: "nowrap", fontSize: SMALL, minHeight: "5.5mm", lineHeight: "5.5mm" }}>
-              <T>ยศ</T>
-              <Dot aria-label="ยศ" value={fields.rank} onChange={(v) => onChange("rank", v)} flex minCh={4} />
-            </Row>
-          </div>
-          <header style={{ textAlign: "center" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/smart-police/garuda.png"
-              alt=""
-              width={84}
-              height={96}
-              style={{ display: "block", margin: "0 auto 1mm", height: "22mm", width: "auto" }}
-            />
-            <p style={{ margin: 0, fontSize: "20pt", fontWeight: 700, lineHeight: 1.15 }}>สำนักงานตำรวจแห่งชาติ</p>
-            <h1
+        <div style={{ position: "relative", marginBottom: "2.5mm", flexShrink: 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/smart-police/garuda.png"
+            alt=""
+            width={84}
+            height={96}
+            style={{
+              display: "block",
+              position: "absolute",
+              left: "50%",
+              top: 0,
+              transform: "translateX(-50%)",
+              height: "22mm",
+              width: "auto",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              minHeight: "22mm",
+            }}
+          >
+            <div
               style={{
-                margin: "1mm 0 0",
-                fontSize: TITLE,
-                fontWeight: 700,
-                lineHeight: 1.25,
-                textDecoration: "underline",
-                textUnderlineOffset: "1mm",
+                width: "58mm",
+                fontSize: SMALL,
+                textAlign: "right",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.4mm",
               }}
             >
-              {ORAL_PLEA_FORM_TITLE}
-            </h1>
-            <p
-              style={{
-                margin: "0.6mm 0 0",
-                fontSize: TITLE,
-                fontWeight: 700,
-                lineHeight: 1.25,
-                textDecoration: "underline",
-                textUnderlineOffset: "1mm",
-              }}
-            >
-              {ORAL_PLEA_FORM_SUBTITLE}
-            </p>
-          </header>
-          <div style={{ fontSize: SMALL, textAlign: "right" }}>
-            <p style={{ margin: 0, fontWeight: 700, lineHeight: 1.35 }}>บัตรประจำตัวประชาชน</p>
-            <Row style={{ flexWrap: "nowrap", fontSize: SMALL, minHeight: "5.5mm", lineHeight: "5.5mm" }}>
-              <T>เลขที่</T>
-              <Dot
-                aria-label="เลขที่บัตรประชาชน"
-                value={fields.idCardNo}
-                onChange={(v) => onChange("idCardNo", v)}
-                flex
-                minCh={6}
-              />
-            </Row>
-            <p style={{ margin: "8mm 0 0", fontWeight: 700 }}>บันทึก</p>
+              <p style={{ margin: 0, fontWeight: 700, lineHeight: 1.35 }}>บัตรประจำตัวประชาชน</p>
+              <Row style={{ flexWrap: "nowrap", fontSize: SMALL, minHeight: "5.5mm", lineHeight: "5.5mm", margin: 0 }}>
+                <T>เลขที่</T>
+                <Dot
+                  aria-label="เลขที่บัตรประชาชน"
+                  value={fields.idCardNo}
+                  onChange={(v) => onChange("idCardNo", v)}
+                  flex
+                  minCh={6}
+                />
+              </Row>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "nowrap",
+                  alignItems: "baseline",
+                  gap: "1.5mm",
+                  minHeight: "5.5mm",
+                  lineHeight: "5.5mm",
+                  fontSize: SMALL,
+                }}
+              >
+                <T>ยศ</T>
+                <Dot aria-label="ยศ" value={fields.rank} onChange={(v) => onChange("rank", v)} flex minCh={6} />
+                <T>บันทึก</T>
+              </div>
+            </div>
           </div>
+          <p style={{ margin: "1.5mm 0 0", fontSize: "20pt", fontWeight: 700, lineHeight: 1.15, textAlign: "center" }}>
+            สำนักงานตำรวจแห่งชาติ
+          </p>
+          <h1
+            style={{
+              margin: "1mm 0 0",
+              fontSize: TITLE,
+              fontWeight: 700,
+              lineHeight: 1.25,
+              textAlign: "center",
+              textDecoration: "underline",
+              textUnderlineOffset: "1mm",
+            }}
+          >
+            {ORAL_PLEA_FORM_TITLE}
+          </h1>
+          <p
+            style={{
+              margin: "0.5mm 0 0",
+              fontSize: TITLE,
+              fontWeight: 700,
+              lineHeight: 1.25,
+              textAlign: "center",
+              textDecoration: "underline",
+              textUnderlineOffset: "1mm",
+            }}
+          >
+            {ORAL_PLEA_FORM_SUBTITLE}
+          </p>
         </div>
 
         <Row>
@@ -364,13 +501,13 @@ export function OfficialOralPleaDocument({
           />
         </Row>
 
-        <p style={{ margin: "1.5mm 0 0.8mm", fontSize: BODY, lineHeight: 1.5, textAlign: "justify" }}>
+        <p style={{ margin: "1.5mm 0 0.8mm", fontSize: BODY, lineHeight: 1.5, textAlign: "justify", textIndent: INDENT }}>
           พนักงานสอบสวนได้แจ้งข้อกล่าวหาให้ข้าพเจ้าทราบ และได้แจ้งให้ทราบด้วยว่าคำให้การนี้อาจนำไปเป็นพยานหลักฐานในชั้นพิจารณาของศาลได้
         </p>
-        <p style={{ margin: "0 0 2mm", fontSize: BODY, lineHeight: 1.5 }}>
+        <p style={{ margin: "0 0 2mm", fontSize: BODY, lineHeight: 1.5, textIndent: INDENT }}>
           ข้าพเจ้าทราบข้อกล่าวหาตลอดแล้ว ขอให้การด้วยความเต็มใจ ดังต่อไปนี้
         </p>
-        <p style={{ margin: "0 0 1mm", fontSize: BODY, lineHeight: 1.5 }}>
+        <p style={{ margin: "0 0 1mm", fontSize: BODY, lineHeight: 1.5, textIndent: INDENT }}>
           พนักงานสอบสวนได้แจ้งข้อเท็จจริงและข้อกล่าวหาให้ทราบว่า
         </p>
         <Row>
@@ -392,160 +529,54 @@ export function OfficialOralPleaDocument({
           />
           <T>น.</T>
         </Row>
-        <Row>
-          <T>พฤติการณ์และการกระทำของผู้ต้องหาเป็นความผิดฐาน “</T>
-          <Dot
-            aria-label="ความผิดฐาน"
-            value={fields.charge}
-            onChange={(v) => onChange("charge", v)}
-            flex
-            minCh={8}
+        <div style={{ width: "100%", margin: "0 0 1.5mm" }}>
+          <ChargeWrap value={fields.charge} onChange={(v) => onChange("charge", v)} />
+          <p style={{ margin: "0.4mm 0 0", fontSize: BODY, lineHeight: 1.5, textAlign: "justify" }}>
+            ” และได้แจ้งสิทธิของผู้ต้องหาให้ทราบว่า ผู้ต้องหามีสิทธิที่จะให้การหรือไม่ก็ได้ ถ้าผู้ต้องหาให้การถ้อยคำที่ผู้ต้องหาให้การนั้นอาจใช้เป็นพยานหลักฐานในการพิจารณาคดีได้ และผู้ต้องหามีสิทธิให้ทนายความหรือผู้ซึ่งตนไว้วางใจเข้าฟังการสอบปากคำตนได้
+          </p>
+        </div>
+        <div style={{ flex: 1, minHeight: "48mm", display: "flex", flexDirection: "column" }}>
+          <StatementQaEditor
+            ariaLabel="ถาม–ตอบ ฟ้องวาจา หน้า 1"
+            minHeight="48mm"
+            fill
+            value={qaPages[0] ?? ""}
+            onChange={(t) => setQaPage(0, t)}
+            onOverflow={(moved) => overflowQa(0, moved)}
+            emptyKind="ask"
+            lineHeight={STMT_LINE}
+            fontSize={BODY}
+            footer={qaPages.length === 1 ? signOff : undefined}
           />
-          <T>”</T>
-        </Row>
-        <p style={{ margin: "0 0 2mm", fontSize: BODY, lineHeight: 1.5, textAlign: "justify" }}>
-          และได้แจ้งสิทธิของผู้ต้องหาให้ทราบว่า ผู้ต้องหามีสิทธิที่จะให้การหรือไม่ก็ได้ ถ้าผู้ต้องหาให้การถ้อยคำที่ผู้ต้องหาให้การนั้นอาจใช้เป็นพยานหลักฐานในการพิจารณาคดีได้ และผู้ต้องหามีสิทธิให้ทนายความหรือผู้ซึ่งตนไว้วางใจเข้าฟังการสอบปากคำตนได้
-        </p>
-        <p style={{ margin: "0 0 0.6mm", fontSize: BODY, lineHeight: 1.45, textAlign: "justify" }}>
-          <b>ถาม</b> ผู้ต้องหามีทนายความหรือไม่ ต้องการให้ผู้ใดร่วมฟังการสอบสวนหรือไม่ และตามที่ได้แจ้งข้อกล่าวหาให้ทราบแล้วนั้น
-          เข้าใจดีแล้วหรือไม่ จะให้อย่างไร เคยต้องโทษคดีอาญาใด ๆ มาก่อนหรือไม่
-        </p>
-        <Row style={{ alignItems: "flex-start" }}>
-          <L>ตอบ</L>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <LinedNotes
-              value={fields.answerLawyer}
-              onChange={(v) => onChange("answerLawyer", v)}
-              lines={4}
-              ariaLabel="คำตอบเรื่องทนายความและรับสารภาพ"
-            />
-          </div>
-        </Row>
-      </Sheet>
-
-      <Sheet index={1}>
-        <p style={{ margin: "0 0 4mm", textAlign: "center", fontSize: BODY }}>(๒)</p>
-        <p style={{ margin: "0 0 0.6mm", fontSize: BODY, lineHeight: 1.45, textAlign: "justify" }}>
-          <b>ถาม</b> ขอทราบประวัติผู้ต้องหาพอสังเขป และผู้ต้องหาเคยต้องหาหรือต้องโทษคดีอาญาใด ๆ มาก่อนหรือไม่
-        </p>
-        <p style={{ margin: "0 0 0.8mm", fontSize: BODY, lineHeight: LINE }}>
-          <b>ตอบ</b> ข้าฯ มีภูมิลำเนาตามที่อยู่ดังกล่าวข้างต้นและปัจจุบันพักอาศัยอยู่ที่
-        </p>
-        <Row>
-          <Dot
-            aria-label="ที่พักปัจจุบัน"
-            value={fields.currentStay}
-            onChange={(v) => onChange("currentStay", v)}
-            flex
-          />
-        </Row>
-        <Row>
-          <T>หากข้าฯ ย้ายที่อยู่เมื่อใด จะแจ้งให้พนักงานสอบสวนทราบทันที ข้าฯ จบการศึกษาชั้น</T>
-          <Dot
-            aria-label="การศึกษา"
-            value={fields.education}
-            onChange={(v) => onChange("education", v)}
-            flex
-            minCh={6}
-          />
-        </Row>
-        <Row>
-          <T>ประกอบอาชีพ</T>
-          <Dot aria-label="ประกอบอาชีพ" value={fields.job} onChange={(v) => onChange("job", v)} flex minCh={5} />
-          <T>อยู่ที่</T>
-          <Dot
-            aria-label="สถานที่ทำงาน"
-            value={fields.workplace}
-            onChange={(v) => onChange("workplace", v)}
-            flex
-            minCh={5}
-          />
-          <T>มีรายได้ประมาณเดือนละ</T>
-          <Dot aria-label="รายได้" value={fields.income} onChange={(v) => onChange("income", v)} flex minCh={4} />
-          <T>บาท</T>
-          <T>สถานภาพ</T>
-          <Dot
-            aria-label="สถานภาพ"
-            value={fields.maritalStatus}
-            onChange={(v) => onChange("maritalStatus", v)}
-            flex
-            minCh={4}
-          />
-        </Row>
-        <p style={{ margin: "0 0 2mm", fontSize: BODY, lineHeight: 1.5 }}>
-          ไม่เคยต้องหาหรือต้องโทษอาญาใด ๆ มาก่อน
-        </p>
-        <p style={{ margin: "0 0 0.6mm", fontSize: BODY, lineHeight: 1.45 }}>
-          <b>ถาม</b> เหตุในคดีนี้เกิดที่ไหน เมื่อใด
-        </p>
-        <Row>
-          <L>ตอบ</L>
-          <T>เหตุเกิด</T>
-          <Dot
-            aria-label="สถานที่เกิดเหตุ"
-            value={fields.incidentPlace}
-            onChange={(v) => onChange("incidentPlace", v)}
-            flex
-          />
-          <T>เมื่อ</T>
-          <Dot
-            aria-label="เมื่อเกิดเหตุ"
-            value={fields.incidentWhen}
-            onChange={(v) => onChange("incidentWhen", v)}
-            flex
-            minCh={6}
-          />
-          <T>เวลาประมาณ</T>
-          <Dot
-            aria-label="เวลาประมาณเกิดเหตุหน้า 2"
-            value={fields.incidentClock}
-            onChange={(v) => onChange("incidentClock", v)}
-            flex
-            minCh={4}
-          />
-          <T>น.</T>
-        </Row>
-        <p style={{ margin: "2mm 0 0.6mm", fontSize: BODY, lineHeight: 1.45 }}>
-          <b>ถาม</b> ผู้ต้องหาเคยมีสาเหตุโกรธเคืองกับผู้หนึ่งผู้ใดมาก่อนหรือไม่
-        </p>
-        <Row style={{ alignItems: "flex-start" }}>
-          <L>ตอบ</L>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <LinedNotes
-              value={fields.answerGrudge}
-              onChange={(v) => onChange("answerGrudge", v)}
-              lines={2}
-              ariaLabel="คำตอบเรื่องสาเหตุโกรธเคือง"
-            />
-          </div>
-        </Row>
-
-        <p style={{ margin: "10mm 0 8mm", textAlign: "center", fontSize: BODY }}>
-          อ่านให้ฟังแล้วรับว่าเป็นความจริงถูกต้อง
-        </p>
-        <div style={{ width: "72%", marginLeft: "auto" }}>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>ลงชื่อ</T>
-            <Dot
-              aria-label="ลงชื่อผู้กล่าวหา"
-              value={fields.signComplainant}
-              onChange={(v) => onChange("signComplainant", v)}
-              flex
-            />
-            <T>ผู้กล่าวหา</T>
-          </Row>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>ลงชื่อ</T>
-            <Dot
-              aria-label="ลงชื่อสอบสวน"
-              value={fields.signOfficer}
-              onChange={(v) => onChange("signOfficer", v)}
-              flex
-            />
-            <T>สอบสวน/พิมพ์/อ่าน</T>
-          </Row>
         </div>
       </Sheet>
+
+      {qaPages.slice(1).map((text, offset) => {
+        const pageIdx = offset + 1;
+        const isLast = pageIdx === qaPages.length - 1;
+        return (
+          <Sheet key={`oral-qa-${pageIdx}`} index={pageIdx}>
+            <p style={{ margin: "0 0 3mm", textAlign: "center", fontSize: BODY, flexShrink: 0 }}>
+              ({thaiPageNo(pageIdx + 1)})
+            </p>
+            <div style={{ flex: 1, minHeight: "80mm", display: "flex", flexDirection: "column" }}>
+              <StatementQaEditor
+                ariaLabel={`ถาม–ตอบ ฟ้องวาจา หน้า ${pageIdx + 1}`}
+                minHeight="80mm"
+                fill
+                value={text}
+                onChange={(t) => setQaPage(pageIdx, t)}
+                onOverflow={(moved) => overflowQa(pageIdx, moved)}
+                continuesKind={continuesBefore(pageIdx)}
+                emptyKind="ask"
+                lineHeight={STMT_LINE}
+                fontSize={BODY}
+                footer={isLast ? signOff : undefined}
+              />
+            </div>
+          </Sheet>
+        );
+      })}
     </div>
   );
 }

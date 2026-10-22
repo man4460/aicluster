@@ -1,0 +1,177 @@
+"use client";
+
+import Link from "next/link";
+import { useRef, useState, type ChangeEvent } from "react";
+import {
+  AppGalleryCameraFileInputs,
+  prepareImageFileAsDataUrl,
+  useAppCameraCapture,
+} from "@/components/app-templates";
+import { cn } from "@/lib/cn";
+import { CASE_PHOTO_TEMPLATE_TITLE } from "@/lib/smart-police/form-templates/official-form-catalog";
+import {
+  createEmptyCasePhotoExtraPage,
+  createEmptyCasePhotoFields,
+  type CasePhotoFields,
+} from "@/lib/smart-police/form-templates/case-photo";
+import { OfficialCasePhotoDocument } from "@/systems/smart-police/components/OfficialCasePhotoSheet";
+import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+
+const barBtnClass =
+  "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
+
+export function SmartPoliceCasePhotoPreviewClient() {
+  const [fields, setFields] = useState<CasePhotoFields>(() => createEmptyCasePhotoFields());
+  const [pageIndex, setPageIndex] = useState(0);
+  const pickPageRef = useRef(0);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const camera = useAppCameraCapture({ title: "ถ่ายภาพประกอบคดี" });
+
+  const extraPages = fields.extraPages ?? [];
+  const sheetCount = 1 + extraPages.length;
+  const currentImageUrl = pageIndex === 0 ? fields.imageUrl : extraPages[pageIndex - 1]?.imageUrl ?? "";
+
+  function patch<K extends keyof CasePhotoFields>(key: K, value: CasePhotoFields[K]) {
+    setFields((f) => ({ ...f, [key]: value }));
+  }
+
+  function applyImageUrl(url: string, pageIdx: number) {
+    if (pageIdx <= 0) {
+      setFields((f) => ({ ...f, imageUrl: url }));
+      return;
+    }
+    setFields((f) => ({
+      ...f,
+      extraPages: (f.extraPages ?? []).map((p, i) => (i === pageIdx - 1 ? { ...p, imageUrl: url } : p)),
+    }));
+  }
+
+  async function applyImageFile(file: File | undefined) {
+    if (!file) return;
+    const url = await prepareImageFileAsDataUrl(file);
+    applyImageUrl(url, pickPageRef.current);
+  }
+
+  async function onFileInput(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    await applyImageFile(file);
+  }
+
+  function goToPage(i: number) {
+    pickPageRef.current = i;
+    setPageIndex(i);
+    document.querySelector(`[data-sheet-index="${i}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function openPick(pageIdx: number) {
+    pickPageRef.current = pageIdx;
+    setPageIndex(pageIdx);
+    galleryInputRef.current?.click();
+  }
+
+  function addExtraPage() {
+    const nextIndex = extraPages.length + 1;
+    setFields((f) => ({
+      ...f,
+      extraPages: [...(f.extraPages ?? []), createEmptyCasePhotoExtraPage()],
+    }));
+    pickPageRef.current = nextIndex;
+    setPageIndex(nextIndex);
+    window.setTimeout(() => {
+      document
+        .querySelector(`[data-sheet-index="${nextIndex}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
+
+  function removeLastExtraPage() {
+    if (extraPages.length === 0) return;
+    setFields((f) => ({
+      ...f,
+      extraPages: (f.extraPages ?? []).slice(0, -1),
+    }));
+    const lastIndex = extraPages.length - 1;
+    pickPageRef.current = Math.min(pickPageRef.current, lastIndex);
+    setPageIndex((i) => Math.min(i, lastIndex));
+  }
+
+  return (
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-[#6b7280] text-white shadow-sm">
+      <header className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-slate-600/80 bg-slate-800 px-2 py-1.5 sm:px-3">
+        <Link
+          href="/dashboard/smart-police/templates"
+          className={cn(barBtnClass, "gap-1 px-2")}
+          aria-label="กลับรายการแม่แบบ"
+          title="กลับ"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          กลับ
+        </Link>
+        <p className="mr-1 min-w-0 truncate text-xs font-bold sm:text-sm" title={CASE_PHOTO_TEMPLATE_TITLE}>
+          {CASE_PHOTO_TEMPLATE_TITLE}
+        </p>
+        <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="หน้าเอกสาร">
+          {Array.from({ length: sheetCount }, (_, i) => (
+            <button
+              key={`p-${i}`}
+              type="button"
+              className={cn(
+                "h-8 min-w-8 shrink-0 rounded-md px-1.5 text-xs font-bold tabular-nums",
+                i === pageIndex ? "bg-white text-[#4d47b6]" : "bg-slate-700 text-slate-200 hover:bg-slate-600",
+              )}
+              aria-current={i === pageIndex ? "page" : undefined}
+              aria-label={`หน้า ${i + 1}`}
+              title={`หน้า ${i + 1}`}
+              onClick={() => goToPage(i)}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className={barBtnClass} onClick={addExtraPage}>
+          + เพิ่มหน้าภาพ
+        </button>
+        {extraPages.length > 0 ? (
+          <button type="button" className={barBtnClass} onClick={removeLastExtraPage} aria-label="ลบหน้าภาพสุดท้าย">
+            ลบหน้าสุดท้าย
+          </button>
+        ) : null}
+        <button type="button" className={barBtnClass} onClick={() => openPick(pageIndex)}>
+          แทรกรูป
+        </button>
+        <button
+          type="button"
+          className={barBtnClass}
+          onClick={() => {
+            pickPageRef.current = pageIndex;
+            camera.openCamera((file) => void applyImageFile(file));
+          }}
+        >
+          ถ่ายรูป
+        </button>
+        {currentImageUrl ? (
+          <button type="button" className={barBtnClass} onClick={() => applyImageUrl("", pageIndex)}>
+            ลบรูป
+          </button>
+        ) : null}
+        <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
+          ไปใช้ในคดี
+        </Link>
+      </header>
+
+      <AppGalleryCameraFileInputs
+        galleryInputRef={galleryInputRef}
+        cameraInputRef={camera.cameraInputRef}
+        onChange={(e) => void onFileInput(e)}
+      />
+      {camera.cameraModal}
+
+      <div className="min-h-0 flex-1 overflow-auto overscroll-contain bg-[#9ca3af] p-3 sm:p-6">
+        <OfficialCasePhotoDocument fields={fields} onChange={patch} onPickPhoto={openPick} />
+      </div>
+    </div>
+  );
+}

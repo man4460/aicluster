@@ -5,8 +5,10 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type CSSProperties,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { cn } from "@/lib/cn";
 
@@ -154,6 +156,78 @@ function insertPlainText(el: HTMLElement, text: string) {
   sel.addRange(range);
 }
 
+/** ท้ายคำให้การ — ต่อจากแถวถาม–ตอบสุดท้าย · ป้ายตามบทบาท */
+export function StatementReadbackSignOff({
+  roleLabel,
+  signParty,
+  signOfficer,
+  onSignParty,
+  onSignOfficer,
+  lineHeight,
+  fontSize,
+}: {
+  roleLabel: string;
+  signParty: string;
+  signOfficer: string;
+  onSignParty: (v: string) => void;
+  onSignOfficer: (v: string) => void;
+  lineHeight: string;
+  fontSize: string;
+}) {
+  const row: CSSProperties = {
+    display: "flex",
+    flexWrap: "nowrap",
+    alignItems: "baseline",
+    gap: "1.5mm",
+    minHeight: lineHeight,
+    lineHeight,
+    fontSize,
+    width: "100%",
+    margin: 0,
+  };
+  const inputStyle: CSSProperties = {
+    minWidth: 0,
+    width: "100%",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    height: "auto",
+    paddingBottom: "1px",
+  };
+  return (
+    <div>
+      <p style={{ margin: 0, textAlign: "center", fontSize, lineHeight }}>
+        อ่านให้ฟังแล้วรับว่าเป็นความจริงถูกต้อง
+      </p>
+      <div style={{ width: "72%", marginLeft: "auto" }}>
+        <div style={row}>
+          <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
+          <input
+            aria-label={`ลงชื่อ${roleLabel}`}
+            value={signParty}
+            onChange={(e) => onSignParty(e.target.value)}
+            spellCheck={false}
+            className="sp-word-field min-w-0 flex-1 align-baseline"
+            style={inputStyle}
+          />
+          <span style={{ flexShrink: 0 }}>{roleLabel}</span>
+        </div>
+        <div style={row}>
+          <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
+          <input
+            aria-label="ลงชื่อสอบสวน พิมพ์ อ่าน"
+            value={signOfficer}
+            onChange={(e) => onSignOfficer(e.target.value)}
+            spellCheck={false}
+            className="sp-word-field min-w-0 flex-1 align-baseline"
+            style={inputStyle}
+          />
+          <span style={{ flexShrink: 0 }}>สอบสวน/พิมพ์/อ่าน</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * ถาม–ตอบแบบ Word — ป้ายคอลัมน์ซ้าย · ข้อความยาวขึ้นบรรทัดใหม่ตรงขอบช่องพิมพ์
  * Enter = ย่อหน้าใหม่ชิดซ้ายเสมอแนวป้ายถาม (ไม่มีป้าย) · กดป้ายซ้ายเพื่อสลับ ถาม/ตอบ/ว่าง
@@ -170,6 +244,7 @@ export function StatementQaEditor({
   onOverflow,
   focusRequest,
   emptyKind = "ask",
+  footer,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -185,6 +260,8 @@ export function StatementQaEditor({
   continuesKind?: "ask" | "ans" | null;
   /** ช่องว่างทั้งหน้า — ผู้ต้องหาใช้ cont (ไม่มีป้ายถาม) ให้พิมพ์อย่างอื่นก่อน */
   emptyKind?: QaKind;
+  /** ต่อท้ายแถวถาม–ตอบสุดท้าย (เช่น อ่านให้ฟังแล้ว · ลงชื่อ) */
+  footer?: ReactNode;
 }) {
   const [state, setState] = useState(() => ({ rows: parseQaText(value, emptyKind), source: value }));
   if (value !== state.source) {
@@ -199,6 +276,7 @@ export function StatementQaEditor({
   const composing = useRef(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     rowsRef.current = rows;
@@ -237,7 +315,8 @@ export function StatementQaEditor({
     if (!box || !group) return;
     // เบราว์เซอร์เลื่อนกล่อง overflow-hidden ตามเคอร์เซอร์ได้ — ต้องอยู่ที่ 0 ก่อนวัด
     box.scrollTop = 0;
-    const limit = box.getBoundingClientRect().top + box.clientHeight + 1;
+    const footerH = footerRef.current?.getBoundingClientRect().height ?? 0;
+    const limit = box.getBoundingClientRect().top + box.clientHeight - footerH + 1;
     const rowEls = [...group.children];
     const cut = rowEls.findIndex((el) => el.getBoundingClientRect().bottom > limit);
     if (cut < 0) return;
@@ -509,6 +588,11 @@ export function StatementQaEditor({
               );
             })}
           </div>
+          {footer ? (
+            <div ref={footerRef} data-qa-footer style={{ position: "relative", zIndex: 1 }}>
+              {footer}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -23,8 +23,8 @@ export type PropertyListRow = {
   note: string;
 };
 
-export const PROPERTY_LIST_ROWS_FIRST = 8;
-export const PROPERTY_LIST_ROWS_CONT = 12;
+export const PROPERTY_LIST_ROWS_FIRST = 10;
+export const PROPERTY_LIST_ROWS_CONT = 16;
 export const PROPERTY_LIST_DEFAULT_ROWS = 3;
 
 function newId(prefix: string): string {
