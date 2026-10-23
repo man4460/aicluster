@@ -66,6 +66,7 @@ const TONE_BY_SLUG: Record<string, "violet" | "rose" | "sky" | "amber"> = {
   "bail-bond": "amber",
   "investigate-notice": "sky",
   "official-memo": "violet",
+  "witness-summons": "sky",
 };
 
 type TemplateRow = OfficialFormTemplateMeta & {

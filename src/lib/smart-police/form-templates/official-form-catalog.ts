@@ -26,7 +26,8 @@ export type OfficialFormKind =
   | "custody-log"
   | "bail-bond"
   | "investigate-notice"
-  | "official-memo";
+  | "official-memo"
+  | "witness-summons";
 
 export type PropertyListTemplateSlug =
   | "property-damaged"
@@ -57,6 +58,7 @@ export type CustodyLogTemplateSlug = "custody-log";
 export type BailBondTemplateSlug = "bail-bond";
 export type InvestigateNoticeTemplateSlug = "investigate-notice";
 export type OfficialMemoTemplateSlug = "official-memo";
+export type WitnessSummonsTemplateSlug = "witness-summons";
 
 export type OfficialFormTemplateSlug =
   | "statement-complainant"
@@ -86,7 +88,8 @@ export type OfficialFormTemplateSlug =
   | CustodyLogTemplateSlug
   | BailBondTemplateSlug
   | InvestigateNoticeTemplateSlug
-  | OfficialMemoTemplateSlug;
+  | OfficialMemoTemplateSlug
+  | WitnessSummonsTemplateSlug;
 
 export type OfficialFormTemplateMeta = {
   slug: OfficialFormTemplateSlug;
@@ -370,6 +373,16 @@ export const SMART_POLICE_OFFICIAL_MEMO_TEMPLATE: OfficialFormTemplateMeta = {
   blankFormId: "official-memo",
 };
 
+export const WITNESS_SUMMONS_FORM_TITLE = "หมายเรียกพยาน";
+export const WITNESS_SUMMONS_TEMPLATE_TITLE = "หมายเรียกพยาน";
+
+export const SMART_POLICE_WITNESS_SUMMONS_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "witness-summons",
+  title: WITNESS_SUMMONS_TEMPLATE_TITLE,
+  kind: "witness-summons",
+  blankFormId: "35",
+};
+
 export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = [
   ...SMART_POLICE_STATEMENT_TEMPLATES.map((t) => ({
     slug: t.slug,
@@ -402,6 +415,7 @@ export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = 
   SMART_POLICE_BAIL_BOND_TEMPLATE,
   SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE,
   SMART_POLICE_OFFICIAL_MEMO_TEMPLATE,
+  SMART_POLICE_WITNESS_SUMMONS_TEMPLATE,
 ];
 
 export function getOfficialFormTemplateMeta(
@@ -520,4 +534,8 @@ export function isInvestigateNoticeFormSlug(slug: string): slug is InvestigateNo
 
 export function isOfficialMemoFormSlug(slug: string): slug is OfficialMemoTemplateSlug {
   return slug === "official-memo";
+}
+
+export function isWitnessSummonsFormSlug(slug: string): slug is WitnessSummonsTemplateSlug {
+  return slug === "witness-summons";
 }

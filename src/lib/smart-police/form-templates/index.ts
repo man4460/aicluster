@@ -56,6 +56,8 @@ export {
   INVESTIGATE_NOTICE_TEMPLATE_TITLE,
   OFFICIAL_MEMO_FORM_TITLE,
   OFFICIAL_MEMO_TEMPLATE_TITLE,
+  WITNESS_SUMMONS_FORM_TITLE,
+  WITNESS_SUMMONS_TEMPLATE_TITLE,
   SMART_POLICE_OFFICIAL_FORM_TEMPLATES,
   SMART_POLICE_PROPERTY_LIST_TEMPLATE,
   SMART_POLICE_PROPERTY_LIST_TEMPLATES,
@@ -83,6 +85,7 @@ export {
   SMART_POLICE_BAIL_BOND_TEMPLATE,
   SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE,
   SMART_POLICE_OFFICIAL_MEMO_TEMPLATE,
+  SMART_POLICE_WITNESS_SUMMONS_TEMPLATE,
   getOfficialFormTemplateMeta,
   isCompensationSettlementFormSlug,
   isExhibitListFormSlug,
@@ -104,6 +107,7 @@ export {
   isBailBondFormSlug,
   isInvestigateNoticeFormSlug,
   isOfficialMemoFormSlug,
+  isWitnessSummonsFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -130,6 +134,7 @@ export {
   type BailBondTemplateSlug,
   type InvestigateNoticeTemplateSlug,
   type OfficialMemoTemplateSlug,
+  type WitnessSummonsTemplateSlug,
   type OfficialFormKind,
   type OfficialFormTemplateMeta,
   type ExhibitListTemplateSlug,
@@ -268,6 +273,15 @@ export {
   packOfficialMemoPages,
   type OfficialMemoFields,
 } from "@/lib/smart-police/form-templates/official-memo";
+export {
+  createEmptyWitnessSummonsFields,
+  packWitnessSummonsPages,
+  WITNESS_SUMMONS_AUTHORITY,
+  WITNESS_SUMMONS_LINE_MM,
+  WITNESS_SUMMONS_RECEIPT_TEXT,
+  WITNESS_SUMMONS_WARNING,
+  type WitnessSummonsFields,
+} from "@/lib/smart-police/form-templates/witness-summons";
 export {
   ORAL_PLEA_DEFAULT_QA,
   createEmptyOralPleaFields,

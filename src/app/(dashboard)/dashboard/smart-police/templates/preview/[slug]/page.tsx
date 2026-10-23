@@ -18,6 +18,7 @@ import {
   isBailBondFormSlug,
   isInvestigateNoticeFormSlug,
   isOfficialMemoFormSlug,
+  isWitnessSummonsFormSlug,
   isCompensationSettlementFormSlug,
   isRightsNoticeFormSlug,
   isExhibitListFormSlug,
@@ -193,6 +194,12 @@ export default async function SmartPoliceOfficialFormPreviewPage({
       "@/systems/smart-police/components/SmartPoliceMemoPreviewClient"
     );
     return <SmartPoliceMemoPreviewClient />;
+  }
+  if (isWitnessSummonsFormSlug(slug)) {
+    const { SmartPoliceWitnessSummonsPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceWitnessSummonsPreviewClient"
+    );
+    return <SmartPoliceWitnessSummonsPreviewClient />;
   }
   notFound();
 }
