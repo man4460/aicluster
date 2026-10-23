@@ -16,10 +16,10 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const SIGN_LINE = "5.8mm";
+const LINE = "7.2mm";
+const SIGN_LINE = "6.7mm";
 
 function Dot({
   value,
@@ -220,9 +220,9 @@ function SignLine({
   ariaLabel: string;
 }) {
   return (
-    <Row style={{ flexWrap: "nowrap", marginBottom: "0.2mm", minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+    <Row style={{ flexWrap: "wrap", marginBottom: "0.2mm", minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
       <span style={{ flexShrink: 0 }}>(ลงชื่อ)</span>
-      <Dot aria-label={ariaLabel} value={value} onChange={onChange} flex minCh={10} />
+      <Dot aria-label={ariaLabel} value={value} onChange={onChange} flex minCh={6} />
       <span style={{ flexShrink: 0 }}>{role}</span>
     </Row>
   );
@@ -574,7 +574,17 @@ export function OfficialChargeNoticeDocument({
 
           {page.showSigns ? (
             <>
-              <div style={{ width: "62%", marginLeft: "auto", flexShrink: 0, marginTop: "1mm" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  columnGap: "4mm",
+                  rowGap: "0.6mm",
+                  width: "100%",
+                  flexShrink: 0,
+                  marginTop: "1mm",
+                }}
+              >
                 <SignLine
                   role="ผู้ต้องหา/ผู้มอบตัว/ผู้เข้าพบ"
                   ariaLabel="ลงชื่อผู้ต้องหา ผู้มอบตัว หรือผู้เข้าพบ"
@@ -593,7 +603,7 @@ export function OfficialChargeNoticeDocument({
                   value={fields.signRecorder}
                   onChange={(v) => onChange("signRecorder", v)}
                 />
-                <Row style={{ flexWrap: "nowrap", marginBottom: "2mm", minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+                <Row style={{ flexWrap: "nowrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
                   <span style={{ flexShrink: 0 }}>ตำแหน่ง</span>
                   <Dot
                     aria-label="ตำแหน่งผู้บันทึก"

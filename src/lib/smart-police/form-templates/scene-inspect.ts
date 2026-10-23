@@ -3,11 +3,11 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const SCENE_INSPECT_LINE_MM = 6.2;
+export const SCENE_INSPECT_LINE_MM = 7.2;
 export const SCENE_INSPECT_PAGE_INNER_MM = 273;
 export const SCENE_INSPECT_HEADER_MM = 118;
 export const SCENE_INSPECT_PAGE_NO_MM = 12;
-export const SCENE_INSPECT_SIGNS_MM = 26;
+export const SCENE_INSPECT_SIGNS_MM = 31.9;
 
 export const SCENE_INSPECT_FLOW_FIELDS = [
   {

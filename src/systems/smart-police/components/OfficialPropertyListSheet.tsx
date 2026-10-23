@@ -13,10 +13,9 @@ import {
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
-const SMALL = "11pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
+const LINE = "7.2mm";
 const RULE = "0.55pt solid #111";
 
 function Dot({
@@ -137,7 +136,7 @@ function CellWrap({
   ariaLabel: string;
 }) {
   return (
-    <div style={{ position: "relative", width: "100%", minHeight: "6.2mm" }}>
+    <div style={{ position: "relative", width: "100%", minHeight: LINE }}>
       <div
         aria-hidden
         style={{
@@ -206,7 +205,7 @@ const tdVert: CSSProperties = {
   verticalAlign: "top",
   padding: "0.5mm 1.2mm",
   overflow: "hidden",
-  minHeight: "7.2mm",
+  minHeight: LINE,
 };
 const ROW_MIN: CSSProperties = { height: "1px" };
 
@@ -309,7 +308,7 @@ export function OfficialPropertyListDocument({
                     alignItems: "stretch",
                     columnGap: "2mm",
                     margin: "2mm 0 2.5mm",
-                    height: "22mm",
+                    height: "25mm",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center" }}>
@@ -391,20 +390,20 @@ export function OfficialPropertyListDocument({
                 width: "100%",
                 borderCollapse: "collapse",
                 tableLayout: "fixed",
-                fontSize: SMALL,
+                fontSize: BODY,
                 flex: 1,
                 minHeight: 0,
               }}
             >
               <colgroup>
-                <col style={{ width: "12mm" }} />
-                <col />
-                <col style={{ width: "16mm" }} />
-                <col style={{ width: "18mm" }} />
                 <col style={{ width: "14mm" }} />
-                <col style={{ width: "28mm" }} />
-                <col style={{ width: "24mm" }} />
+                <col />
                 <col style={{ width: "18mm" }} />
+                <col style={{ width: "20mm" }} />
+                <col style={{ width: "16mm" }} />
+                <col style={{ width: "30mm" }} />
+                <col style={{ width: "26mm" }} />
+                <col style={{ width: "20mm" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -524,18 +523,43 @@ export function OfficialPropertyListDocument({
                 </tr>
                 {isFirst ? (
                   <tr>
-                    <td style={{ ...th, borderTop: RULE, height: "8mm" }} />
-                    <td style={{ ...th, borderTop: RULE }} />
-                    <td style={{ ...th, borderTop: RULE }}>รวม</td>
-                    <td style={{ ...th, borderTop: RULE, fontWeight: 400, textAlign: "right" }}>
-                      {total.baht}
+                    <td
+                      colSpan={8}
+                      style={{
+                        ...th,
+                        borderTop: RULE,
+                        height: "11mm",
+                        fontWeight: 700,
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          justifyContent: "center",
+                          gap: "12mm",
+                          width: "100%",
+                          fontSize: BODY,
+                          lineHeight: LINE,
+                        }}
+                      >
+                        <span>
+                          รวม{" "}
+                          <span style={{ display: "inline-block", minWidth: "12mm", textAlign: "center" }}>
+                            {total.itemsThai}
+                          </span>{" "}
+                          รายการ
+                        </span>
+                        <span>
+                          ราคารวม{" "}
+                          <span style={{ display: "inline-block", minWidth: "28mm", textAlign: "right" }}>
+                            {total.baht}.{total.satang}
+                          </span>{" "}
+                          บาท
+                        </span>
+                      </div>
                     </td>
-                    <td style={{ ...th, borderTop: RULE, fontWeight: 400 }}>{total.satang}</td>
-                    <td style={{ ...th, borderTop: RULE, fontWeight: 400, textAlign: "left" }}>
-                      {total.items ? `${total.items} รายการ` : "รายการ"}
-                    </td>
-                    <td style={{ ...th, borderTop: RULE, fontWeight: 400, textAlign: "left" }}>ราคารวม</td>
-                    <td style={{ ...th, borderTop: RULE }}>บาท</td>
                   </tr>
                 ) : null}
               </tbody>
@@ -543,17 +567,25 @@ export function OfficialPropertyListDocument({
 
             {isFirst ? (
               <div style={{ flexShrink: 0, marginTop: "3mm" }}>
-                <p style={{ margin: "0 0 5mm", fontSize: BODY, lineHeight: 1.45, textAlign: "center" }}>
+                <p
+                  style={{
+                    margin: "0 0 2.5mm",
+                    fontSize: BODY,
+                    lineHeight: LINE,
+                    textAlign: "left",
+                    textIndent: "12mm",
+                  }}
+                >
                   ข้าฯ ขอรับรองว่าทรัพย์สินตามรายการดังกล่าวข้างต้น ได้บันทึกขึ้นถูกต้องตรงกับความเป็นจริง
                   ได้อ่านให้ฟังและตรวจดูแล้วรับว่าถูกต้อง
                 </p>
                 <div
                   style={{
-                    width: "62%",
-                    marginLeft: "auto",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "1.2mm",
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    columnGap: "4mm",
+                    rowGap: "1.2mm",
                     fontSize: BODY,
                   }}
                 >
@@ -562,16 +594,19 @@ export function OfficialPropertyListDocument({
                       ["ผู้ต้องหา", "signSuspect"],
                       ["ผู้กล่าวหา", "signComplainant"],
                       ["พยาน", "signWitness"],
+                      ["พงส. / บันทึก / อ่าน", "signOfficer"],
                     ] as const
                   ).map(([label, key]) => (
                     <div
                       key={key}
                       style={{
                         display: "flex",
+                        flexWrap: "wrap",
                         alignItems: "baseline",
                         gap: "2mm",
                         minHeight: LINE,
                         lineHeight: LINE,
+                        minWidth: 0,
                       }}
                     >
                       <L>ลงชื่อ</L>
@@ -582,7 +617,7 @@ export function OfficialPropertyListDocument({
                         flex
                         minCh={8}
                       />
-                      <span style={{ flexShrink: 0, minWidth: "28mm" }}>{label}</span>
+                      <span style={{ flexShrink: 0 }}>{label}</span>
                     </div>
                   ))}
                 </div>
@@ -595,6 +630,7 @@ export function OfficialPropertyListDocument({
                   marginTop: "4mm",
                   flexShrink: 0,
                   display: "flex",
+                  flexWrap: "wrap",
                   alignItems: "baseline",
                   gap: "2mm",
                   minHeight: LINE,

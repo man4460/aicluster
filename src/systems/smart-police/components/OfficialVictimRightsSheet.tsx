@@ -11,11 +11,18 @@ import type { VictimInvolvement, VictimRightsFields } from "@/lib/smart-police/f
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
-const SMALL = "11pt";
-const LIST = "10.5pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
+const LINE = "7.2mm";
+const INDENT = "12mm";
+/** ลงชื่อแบ่ง 2 ส่วน — เจ้าหน้าที่ท้ายสุดอยู่คอลัมน์ขวา */
+const SIGN_GRID: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  columnGap: "10mm",
+  rowGap: "2mm",
+  width: "100%",
+};
 const RULE = "0.55pt solid #111";
 
 function Dot({
@@ -111,11 +118,11 @@ function SignPair({
   onParen: (v: string) => void;
 }) {
   return (
-    <div style={{ margin: "0 0 2.2mm" }}>
-      <Row style={{ flexWrap: "nowrap", marginBottom: "0.2mm" }}>
+    <div style={{ margin: 0, minWidth: 0, width: "100%" }}>
+      <Row style={{ flexWrap: "wrap", marginBottom: "0.2mm" }}>
         <T>(ลงชื่อ)</T>
-        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={8} />
-        <T>{role}</T>
+        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={6} />
+        <span style={{ flexShrink: 0 }}>{role}</span>
       </Row>
       <Row style={{ flexWrap: "nowrap", width: "78%", marginLeft: "12mm", marginBottom: 0 }}>
         <T>(</T>
@@ -145,15 +152,15 @@ function InvolvementBox({
         alignItems: "flex-start",
         gap: "2.2mm",
         width: "100%",
-        margin: "0 0 1.4mm",
+        margin: "0 0 0.6mm",
         padding: 0,
         border: "none",
         background: "transparent",
         font: "inherit",
         textAlign: "left",
         cursor: "pointer",
-        lineHeight: 1.4,
-        fontSize: SMALL,
+        lineHeight: LINE,
+        fontSize: BODY,
       }}
     >
       <span
@@ -167,7 +174,7 @@ function InvolvementBox({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "9pt",
+          fontSize: "10pt",
           lineHeight: 1,
         }}
       >
@@ -220,6 +227,68 @@ function LinedNotes({
   );
 }
 
+function PlaceDateHeader({
+  place,
+  day,
+  month,
+  year,
+  onPlace,
+  onDay,
+  onMonth,
+  onYear,
+  pageSuffix,
+}: {
+  place: string;
+  day: string;
+  month: string;
+  year: string;
+  onPlace: (v: string) => void;
+  onDay: (v: string) => void;
+  onMonth: (v: string) => void;
+  onYear: (v: string) => void;
+  pageSuffix?: string;
+}) {
+  const placeLabel = pageSuffix ? `สถานที่บันทึกหน้า ${pageSuffix}` : "สถานที่บันทึก";
+  const dayLabel = pageSuffix ? `วันที่หน้า ${pageSuffix}` : "วันที่";
+  const monthLabel = pageSuffix ? `เดือนหน้า ${pageSuffix}` : "เดือน";
+  const yearLabel = pageSuffix ? `พ.ศ. หน้า ${pageSuffix}` : "พ.ศ.";
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        columnGap: "1.5mm",
+        width: "100%",
+        marginBottom: "2mm",
+        fontSize: BODY,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          gridColumn: "3",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.45mm",
+        }}
+      >
+        <Row style={{ flexWrap: "nowrap", margin: 0 }}>
+          <T>สถานที่บันทึก</T>
+          <Dot aria-label={placeLabel} value={place} onChange={onPlace} flex />
+        </Row>
+        <Row style={{ flexWrap: "nowrap", margin: 0 }}>
+          <T>วันที่</T>
+          <Dot aria-label={dayLabel} value={day} onChange={onDay} minCh={3} />
+          <T>เดือน</T>
+          <Dot aria-label={monthLabel} value={month} onChange={onMonth} flex minCh={5} />
+          <T>พ.ศ.</T>
+          <Dot aria-label={yearLabel} value={year} onChange={onYear} minCh={5} />
+        </Row>
+      </div>
+    </div>
+  );
+}
+
 export function OfficialVictimRightsDocument({
   fields,
   onChange,
@@ -247,25 +316,21 @@ export function OfficialVictimRightsDocument({
           >
             {VICTIM_RIGHTS_FORM_TITLE_P1}
           </h1>
-          <p style={{ margin: "1mm 0 0", fontSize: SMALL, fontWeight: 700, lineHeight: 1.35 }}>
+          <p style={{ margin: "1mm 0 0", fontSize: BODY, fontWeight: 700, lineHeight: 1.35 }}>
             {VICTIM_RIGHTS_SUBTITLE_P1}
           </p>
         </header>
 
-        <div style={{ width: "58%", marginLeft: "auto", flexShrink: 0, marginBottom: "2mm" }}>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>สถานที่บันทึก</T>
-            <Dot aria-label="สถานที่บันทึก" value={fields.place} onChange={(v) => onChange("place", v)} flex />
-          </Row>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>วันที่</T>
-            <Dot aria-label="วันที่" value={fields.datedDay} onChange={(v) => onChange("datedDay", v)} minCh={3} />
-            <T>เดือน</T>
-            <Dot aria-label="เดือน" value={fields.datedMonth} onChange={(v) => onChange("datedMonth", v)} flex minCh={5} />
-            <T>พ.ศ.</T>
-            <Dot aria-label="พ.ศ." value={fields.datedYear} onChange={(v) => onChange("datedYear", v)} minCh={5} />
-          </Row>
-        </div>
+        <PlaceDateHeader
+          place={fields.place}
+          day={fields.datedDay}
+          month={fields.datedMonth}
+          year={fields.datedYear}
+          onPlace={(v) => onChange("place", v)}
+          onDay={(v) => onChange("datedDay", v)}
+          onMonth={(v) => onChange("datedMonth", v)}
+          onYear={(v) => onChange("datedYear", v)}
+        />
 
         <Row>
           <T>ในคดีอาญาที่</T>
@@ -312,7 +377,7 @@ export function OfficialVictimRightsDocument({
         <LinedNotes
           value={fields.caseBrief}
           onChange={(v) => onChange("caseBrief", v)}
-          lines={3}
+          lines={2}
           ariaLabel="พฤติการณ์แห่งคดีโดยย่อ"
         />
         <p style={{ margin: "0.4mm 0 1mm", lineHeight: LINE, fontSize: BODY }}>
@@ -328,62 +393,65 @@ export function OfficialVictimRightsDocument({
           onToggle={() => setInvolvement("related")}
           label="อาจมีส่วนเกี่ยวข้องกับการกระทำความผิด"
         />
-        <p style={{ margin: "1mm 0 1mm", fontSize: SMALL, lineHeight: 1.4 }}>
+        <p style={{ margin: "1mm 0 1mm", fontSize: BODY, lineHeight: LINE }}>
           โดยแจ้งให้ทราบว่า ผู้เสียหาย/ทายาทผู้เสียหาย อาจมีสิทธิดังนี้
         </p>
-        <div style={{ fontSize: LIST, lineHeight: 1.38, flex: 1, minHeight: 0 }}>
+        <div style={{ fontSize: BODY, lineHeight: LINE, flex: 1, minHeight: 0 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              columnGap: "4mm",
+              marginBottom: "1mm",
+            }}
+          >
+            <div>
+              <p style={{ margin: "0 0 0.4mm" }}>๑. กรณีได้รับบาดเจ็บสาหัสหรือกรณีทางเพศ</p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>
+                ๑.๑ ค่าใช้จ่ายในการรักษาพยาบาล (ไม่เกิน ๓๐,๐๐๐ บาท)
+              </p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>
+                ๑.๒ ค่าฟื้นฟูสมรรถภาพทางร่างกายและจิตใจ (ไม่เกิน ๒๐,๐๐๐ บาท)
+              </p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>
+                ๑.๓ ค่าขาดประโยชน์ทำมาหาได้ในระหว่างที่ไม่สามารถประกอบการงานได้ตามปกติ (วันละไม่เกิน ๒๐๐
+                บาท เป็นระยะเวลาไม่เกิน ๑ ปี)
+              </p>
+              <p style={{ margin: 0, paddingLeft: "5mm" }}>
+                ๑.๔ ค่าตอบแทนความเสียหายอื่น ตามที่คณะกรรมการเห็นสมควร (ไม่เกิน ๓๐,๐๐๐ บาท)
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: "0 0 0.4mm" }}>๒. กรณีถึงแก่ความตาย</p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>
+                ๒.๑ ค่าตอบแทน (ตั้งแต่ ๓๐,๐๐๐ บาท – ๑๐๐,๐๐๐ บาท)
+              </p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>๒.๒ ค่าจัดการศพ (๒๐,๐๐๐ บาท)</p>
+              <p style={{ margin: "0 0 0.25mm", paddingLeft: "5mm" }}>
+                ๒.๓ ค่าขาดอุปการะเลี้ยงดู (ไม่เกิน ๓๐,๐๐๐ บาท)
+              </p>
+              <p style={{ margin: 0, paddingLeft: "5mm" }}>
+                ๒.๔ ค่าเสียหายอื่น ตามที่คณะกรรมการเห็นสมควร (ไม่เกิน ๓๐,๐๐๐ บาท)
+              </p>
+            </div>
+          </div>
           <p style={{ margin: "0 0 0.6mm" }}>
-            ๑. กรณีได้รับบาดเจ็บสาหัสหรือกรณีทางเพศ
-          </p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>
-            ๑.๑ ค่าใช้จ่ายในการรักษาพยาบาล (ไม่เกิน ๓๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>
-            ๑.๒ ค่าฟื้นฟูสมรรถภาพทางร่างกายและจิตใจ (ไม่เกิน ๒๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>
-            ๑.๓ ค่าขาดประโยชน์ทำมาหาได้ในระหว่างที่ไม่สามารถประกอบการงานได้ตามปกติ (วันละไม่เกิน ๒๐๐
-            บาท เป็นระยะเวลาไม่เกิน ๑ ปี)
-          </p>
-          <p style={{ margin: "0 0 1mm", paddingLeft: "6mm" }}>
-            ๑.๔ ค่าตอบแทนความเสียหายอื่น ตามที่คณะกรรมการเห็นสมควร (ไม่เกิน ๓๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 0.6mm" }}>๒. กรณีถึงแก่ความตาย</p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>
-            ๒.๑ ค่าตอบแทน (ตั้งแต่ ๓๐,๐๐๐ บาท – ๑๐๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>๒.๒ ค่าจัดการศพ (๒๐,๐๐๐ บาท)</p>
-          <p style={{ margin: "0 0 0.35mm", paddingLeft: "6mm" }}>
-            ๒.๓ ค่าขาดอุปการะเลี้ยงดู (ไม่เกิน ๓๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 1mm", paddingLeft: "6mm" }}>
-            ๒.๔ ค่าเสียหายอื่น ตามที่คณะกรรมการเห็นสมควร (ไม่เกิน ๓๐,๐๐๐ บาท)
-          </p>
-          <p style={{ margin: "0 0 1mm" }}>
             ๓. ในการยื่นขอรับค่าตอบแทนผู้เสียหาย ผู้เสียหายไม่ต้องเสียค่าธรรมเนียมใด ๆ โดยไปยื่นขอรับค่าตอบแทนผู้เสียหายที่
             สำนักงานช่วยเหลือทางการเงินแก่ผู้เสียหายและจำเลยในคดีอาญา หรือสำนักงานยุติธรรมจังหวัด
           </p>
-          <p style={{ margin: "0 0 1mm" }}>
+          <p style={{ margin: "0 0 0.6mm" }}>
             ๔. ในการยื่นคำขอรับค่าตอบแทนผู้เสียหาย ต้องยื่นภายในหนึ่งปี นับแต่วันที่ได้รู้ถึงการกระทำผิด
           </p>
-          <p style={{ margin: "0 0 1.5mm" }}>
+          <p style={{ margin: "0 0 0.8mm", fontSize: BODY, lineHeight: LINE }}>
             ๕. การยื่นขอรับค่าตอบแทนผู้เสียหาย ตาม พ.ร.บ. นี้ไม่เป็นการตัดสิทธิหรือประโยชน์ที่ผู้เสียหายพึงได้รับตามกฎหมายอื่น
           </p>
-          <p style={{ margin: 0 }}>
+          <p style={{ margin: 0, fontSize: BODY, lineHeight: LINE }}>
             พนักงานสอบสวนได้จัดทำบันทึกนี้ขึ้นสองฉบับ และมอบสำเนาให้ผู้เสียหาย/ทายาทผู้เสียหาย รับไว้แล้ว
             จึงให้ลงลายมือชื่อไว้เป็นหลักฐาน
           </p>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            columnGap: "8mm",
-            marginTop: "3mm",
-            flexShrink: 0,
-          }}
-        >
+        <div style={{ ...SIGN_GRID, marginTop: "3mm", flexShrink: 0 }}>
           <SignPair
             role="ผู้เสียหาย/ทายาทผู้เสียหาย"
             sign={fields.signVictim}
@@ -392,7 +460,7 @@ export function OfficialVictimRightsDocument({
             onParen={(v) => onChange("signVictimParen", v)}
           />
           <SignPair
-            role="ผู้แจ้งสิทธิ/บันทึก"
+            role="ผู้แจ้งสิทธิ/บันทึก/อ่าน"
             sign={fields.signOfficer}
             paren={fields.signOfficerParen}
             onSign={(v) => onChange("signOfficer", v)}
@@ -402,9 +470,9 @@ export function OfficialVictimRightsDocument({
         <p
           style={{
             margin: "auto 0 0",
-            fontSize: "9pt",
+            fontSize: BODY,
             textAlign: "center",
-            lineHeight: 1.35,
+            lineHeight: LINE,
             flexShrink: 0,
           }}
         >
@@ -428,26 +496,17 @@ export function OfficialVictimRightsDocument({
           </h1>
         </header>
 
-        <div style={{ width: "58%", marginLeft: "auto", flexShrink: 0, marginBottom: "3mm" }}>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>สถานที่บันทึก</T>
-            <Dot aria-label="สถานที่บันทึกหน้า 2" value={fields.place} onChange={(v) => onChange("place", v)} flex />
-          </Row>
-          <Row style={{ flexWrap: "nowrap" }}>
-            <T>วันที่</T>
-            <Dot aria-label="วันที่หน้า 2" value={fields.datedDay} onChange={(v) => onChange("datedDay", v)} minCh={3} />
-            <T>เดือน</T>
-            <Dot
-              aria-label="เดือนหน้า 2"
-              value={fields.datedMonth}
-              onChange={(v) => onChange("datedMonth", v)}
-              flex
-              minCh={5}
-            />
-            <T>พ.ศ.</T>
-            <Dot aria-label="พ.ศ. หน้า 2" value={fields.datedYear} onChange={(v) => onChange("datedYear", v)} minCh={5} />
-          </Row>
-        </div>
+        <PlaceDateHeader
+          place={fields.place}
+          day={fields.datedDay}
+          month={fields.datedMonth}
+          year={fields.datedYear}
+          onPlace={(v) => onChange("place", v)}
+          onDay={(v) => onChange("datedDay", v)}
+          onMonth={(v) => onChange("datedMonth", v)}
+          onYear={(v) => onChange("datedYear", v)}
+          pageSuffix="2"
+        />
 
         <Row>
           <T>วันนี้เวลา</T>
@@ -501,17 +560,17 @@ export function OfficialVictimRightsDocument({
         <p style={{ margin: "2mm 0 1.5mm", lineHeight: LINE, fontSize: BODY }}>
           ทราบถึงสิทธิตามกฎหมายดังต่อไปนี้
         </p>
-        <p style={{ margin: "0 0 4mm", textAlign: "justify", fontSize: BODY, lineHeight: 1.55 }}>
+        <p style={{ margin: "0 0 2mm", textAlign: "left", textIndent: INDENT, fontSize: BODY, lineHeight: LINE }}>
           ผู้เสียหายมีสิทธิที่จะเรียกเอาค่าสินไหมทดแทนเพราะเหตุได้รับอันตรายแก่ชีวิต ร่างกาย จิตใจ หรือได้รับความเสื่อมเสียต่อเสรีภาพในร่างกายชื่อเสียงหรือได้รับความเสียหายในทางทรัพย์สินอันเนื่องมาจากการกระทำความผิดของจำเลย
           ผู้เสียหายจะยื่นคำร้องต่อศาลที่พิจารณาคดีอาญาขอให้บังคับจำเลยชดใช้ค่าสินไหมทดแทนแก่ตนก็ได้
           (ตามประมวลกฎหมายวิธีพิจารณาความอาญา มาตรา ๔๔/๑ และตาม พ.ร.บ. ค่าตอบแทนและค่าทดแทนและค่าใช้จ่ายแก่จำเลยในคดีอาญา
           พ.ศ. ๒๕๔๔ มาตรา ๑๗, ๑๘)
         </p>
-        <p style={{ margin: "0 0 8mm", textAlign: "justify", fontSize: BODY, lineHeight: 1.55 }}>
+        <p style={{ margin: "0 0 3mm", textAlign: "left", textIndent: INDENT, fontSize: BODY, lineHeight: LINE }}>
           ผู้เสียหายได้รับทราบสิทธิของผู้เสียหายดังกล่าวข้างต้นแล้ว จึงลงลายมือชื่อไว้เป็นหลักฐาน อ่านให้ฟังแล้วรับว่าถูกต้อง
         </p>
 
-        <div style={{ width: "72%", marginLeft: "auto", flexShrink: 0 }}>
+        <div style={{ ...SIGN_GRID, flexShrink: 0 }}>
           <SignPair
             role="ผู้เสียหาย"
             sign={fields.p2SignVictim}
@@ -520,31 +579,33 @@ export function OfficialVictimRightsDocument({
             onParen={(v) => onChange("p2SignVictimParen", v)}
           />
           <SignPair
-            role="ผู้แจ้งสิทธิ/บันทึก/อ่าน"
-            sign={fields.p2SignOfficer}
-            paren={fields.p2SignOfficerParen}
-            onSign={(v) => onChange("p2SignOfficer", v)}
-            onParen={(v) => onChange("p2SignOfficerParen", v)}
-          />
-          <Row style={{ flexWrap: "nowrap", width: "86%", marginLeft: "10mm" }}>
-            <T>ตำแหน่ง</T>
-            <Dot
-              aria-label="ตำแหน่งผู้แจ้งสิทธิตัวบรรจง"
-              value={fields.p2OfficerPosition}
-              onChange={(v) => onChange("p2OfficerPosition", v)}
-              flex
-            />
-          </Row>
-          <SignPair
             role="พยาน"
             sign={fields.p2SignWitness}
             paren={fields.p2SignWitnessParen}
             onSign={(v) => onChange("p2SignWitness", v)}
             onParen={(v) => onChange("p2SignWitnessParen", v)}
           />
+          <div style={{ gridColumn: 2 }}>
+            <SignPair
+              role="ผู้แจ้งสิทธิ/บันทึก/อ่าน"
+              sign={fields.p2SignOfficer}
+              paren={fields.p2SignOfficerParen}
+              onSign={(v) => onChange("p2SignOfficer", v)}
+              onParen={(v) => onChange("p2SignOfficerParen", v)}
+            />
+            <Row style={{ flexWrap: "nowrap", width: "78%", marginLeft: "12mm", marginBottom: 0 }}>
+              <T>ตำแหน่ง</T>
+              <Dot
+                aria-label="ตำแหน่งผู้แจ้งสิทธิตัวบรรจง"
+                value={fields.p2OfficerPosition}
+                onChange={(v) => onChange("p2OfficerPosition", v)}
+                flex
+              />
+            </Row>
+          </div>
         </div>
 
-        <div style={{ marginTop: "auto", width: "55%" }}>
+        <div style={{ marginTop: "auto", width: "55%", fontSize: BODY, lineHeight: LINE }}>
           <T>หมายเหตุ</T>
           <LinedNotes
             value={fields.note}

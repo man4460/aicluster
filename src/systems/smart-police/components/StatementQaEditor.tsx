@@ -12,20 +12,26 @@ import {
 } from "react";
 import { cn } from "@/lib/cn";
 
-type QaKind = "ask" | "ans" | "cont";
+type QaKind = "ask" | "ans" | "cont" | "body" | "para";
 type QaRow = { id: string; kind: QaKind; text: string };
 type CaretTarget = "start" | "end" | number;
 export type QaFocus = { row: number; offset: number };
 export type QaFocusRequest = QaFocus & { nonce: number };
 
-/** cont = ย่อหน้าที่ต่อมาจากหน้าก่อน (ไม่มีป้าย) */
-const LABEL: Record<QaKind, string> = { ask: "ถาม", ans: "ตอบ", cont: "" };
-const PLACEHOLDER: Record<QaKind, string> = { ask: "พิมพ์คำถาม…", ans: "พิมพ์คำตอบ…", cont: "" };
-/** ไม่ใช้ \b — ภาษาไทยไม่นับเป็น word char */
-const PREFIX_RE = /^\s*(ถาม|ตอบ)\s*(?:\d+\s*[.)]?)?[ \t]?/;
+/** cont = Enter ชิดซ้าย · body = รายละเอียด 1 tab ทั้งก้อน · para = ย่อหน้า บรรทัดแรก 2 tab / ห่อ 1 tab */
+const LABEL: Record<QaKind, string> = { ask: "ถาม", ans: "ตอบ", cont: "", body: "", para: "" };
+const PLACEHOLDER: Record<QaKind, string> = {
+  ask: "พิมพ์คำถาม…",
+  ans: "พิมพ์คำตอบ…",
+  cont: "",
+  body: "พิมพ์รายละเอียด…",
+  para: "",
+};
+/** ป้ายถาม/ตอบ ชิดซ้ายสุด — ไม่กิน Tab นำหน้า */
+const PREFIX_RE = /^(ถาม|ตอบ)(?:\s*\d+\s*[.)]?)?[ \t]/;
 const DOT_ROWS = 48;
-/** ความกว้างคอลัมน์ป้ายถาม/ตอบ — Tab ต้องย่อหน้าเท่านี้ */
-const LABEL_COL = "10mm";
+/** 1 tab = คอลัมน์รายละเอียดหลังถาม/ตอบ */
+const LABEL_COL = "12mm";
 
 let seq = 0;
 function newRowId(): string {
@@ -37,9 +43,27 @@ function parseQaText(value: string, emptyKind: QaKind = "ask"): QaRow[] {
   if (value === "") return [{ id: newRowId(), kind: emptyKind, text: "" }];
   const rows: QaRow[] = [];
   for (const line of value.replace(/\r\n/g, "\n").split("\n")) {
-    const m = line.match(PREFIX_RE);
-    if (m) {
-      rows.push({ id: newRowId(), kind: m[1] === "ถาม" ? "ask" : "ans", text: line.slice(m[0].length) });
+    const prefix = line.match(PREFIX_RE);
+    if (prefix) {
+      rows.push({
+        id: newRowId(),
+        kind: prefix[1] === "ถาม" ? "ask" : "ans",
+        text: line.slice(prefix[0].length),
+      });
+      continue;
+    }
+    if (line.startsWith("\t\t")) {
+      const text = line.slice(2);
+      const last = rows[rows.length - 1];
+      if (last?.kind === "para") last.text = last.text ? `${last.text}\n${text}` : text;
+      else rows.push({ id: newRowId(), kind: "para", text });
+      continue;
+    }
+    if (line.startsWith("\t")) {
+      const text = line.slice(1);
+      const last = rows[rows.length - 1];
+      if (last?.kind === "body") last.text = last.text ? `${last.text}\n${text}` : text;
+      else rows.push({ id: newRowId(), kind: "body", text });
       continue;
     }
     if (!line.trim()) {
@@ -54,8 +78,15 @@ function parseQaText(value: string, emptyKind: QaKind = "ask"): QaRow[] {
 }
 
 function serializeQaRows(rows: QaRow[]): string {
-  if (rows.length === 1 && !rows[0].text.trim()) return "";
-  return rows.map((r) => (r.kind === "cont" ? r.text : `${LABEL[r.kind]} ${r.text}`)).join("\n");
+  if (rows.length === 1 && !rows[0].text.trim() && rows[0].kind !== "body" && rows[0].kind !== "para") return "";
+  return rows
+    .map((r) => {
+      if (r.kind === "para") return `\t\t${r.text}`;
+      if (r.kind === "body") return `\t${r.text}`;
+      if (r.kind === "cont") return r.text;
+      return `${LABEL[r.kind]} ${r.text}`;
+    })
+    .join("\n");
 }
 
 /** ป้ายสุดท้ายของข้อความหน้า (ถาม/ตอบ) — ใช้ต่อ Enter หลังย่อหน้าที่ไหลมาจากหน้าก่อน */
@@ -63,7 +94,7 @@ export function lastQaKind(text: string): "ask" | "ans" | null {
   const rows = parseQaText(text);
   for (let i = rows.length - 1; i >= 0; i--) {
     const k = rows[i].kind;
-    if (k !== "cont" && (rows.length > 1 || rows[i].text.trim())) return k;
+    if ((k === "ask" || k === "ans") && (rows.length > 1 || rows[i].text.trim())) return k;
   }
   return null;
 }
@@ -176,7 +207,7 @@ export function StatementReadbackSignOff({
 }) {
   const row: CSSProperties = {
     display: "flex",
-    flexWrap: "nowrap",
+    flexWrap: "wrap",
     alignItems: "baseline",
     gap: "1.5mm",
     minHeight: lineHeight,
@@ -214,14 +245,14 @@ export function StatementReadbackSignOff({
         <div style={row}>
           <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
           <input
-            aria-label="ลงชื่อสอบสวน พิมพ์ อ่าน"
+            aria-label="ลงชื่อพงส. บันทึก อ่าน"
             value={signOfficer}
             onChange={(e) => onSignOfficer(e.target.value)}
             spellCheck={false}
             className="sp-word-field min-w-0 flex-1 align-baseline"
             style={inputStyle}
           />
-          <span style={{ flexShrink: 0 }}>สอบสวน/พิมพ์/อ่าน</span>
+          <span style={{ flexShrink: 0 }}>พงส./บันทึก/อ่าน</span>
         </div>
       </div>
     </div>
@@ -229,9 +260,9 @@ export function StatementReadbackSignOff({
 }
 
 /**
- * ถาม–ตอบแบบ Word — ป้ายคอลัมน์ซ้าย · ข้อความยาวขึ้นบรรทัดใหม่ตรงขอบช่องพิมพ์
- * Enter = ย่อหน้าใหม่ชิดซ้ายเสมอแนวป้ายถาม (ไม่มีป้าย) · กดป้ายซ้ายเพื่อสลับ ถาม/ตอบ/ว่าง
- * Shift+Enter = ขึ้นบรรทัดในแถวเดิม · Tab = ย่อหน้ากว้างเท่าคอลัมน์ถาม · Backspace ต้นแถว = รวมกับแถวก่อน
+ * ถาม–ตอบแบบ Word
+ * รายละเอียด (ถาม/ตอบ + ห่อบรรทัด + ไหลหน้า 2) = เยื้อง 1 tab ทั้งก้อน
+ * Enter = ชิดซ้ายสุด · พิมพ์ถาม/ตอบ แล้ว Tab · Tab 1 = รายละเอียด · Tab 2 = ย่อหน้าแบบ Word
  */
 export function StatementQaEditor({
   value,
@@ -335,8 +366,10 @@ export function StatementQaEditor({
       const head = cur.text.slice(0, fit);
       const tail = cur.text.slice(fit);
       const lead = tail.length - tail.replace(/^[ \t]+/, "").length;
+      const body = tail.slice(lead);
+      const hanging = cur.kind === "ask" || cur.kind === "ans" || cur.kind === "body" || cur.kind === "para";
       kept = [...list.slice(0, cut), { ...cur, text: head }];
-      moved = [{ id: newRowId(), kind: "cont", text: tail.slice(lead) }, ...list.slice(cut + 1)];
+      moved = [{ id: newRowId(), kind: hanging ? "body" : "cont", text: body }, ...list.slice(cut + 1)];
       if (active === cell) {
         const off = caretOffset(cell);
         if (off >= fit) focus = { row: 0, offset: Math.max(0, off - fit - lead) };
@@ -364,7 +397,21 @@ export function StatementQaEditor({
 
   function syncText(id: string, el: HTMLElement) {
     const text = el.textContent ?? "";
-    commit(rowsRef.current.map((r) => (r.id === id ? { ...r, text } : r)));
+    const list = rowsRef.current;
+    const idx = list.findIndex((r) => r.id === id);
+    const row = idx >= 0 ? list[idx] : undefined;
+    if (row && (row.kind === "cont" || row.kind === "body" || row.kind === "para")) {
+      const prefix = text.match(PREFIX_RE);
+      if (prefix) {
+        const kind: QaKind = prefix[1] === "ถาม" ? "ask" : "ans";
+        const rest = text.slice(prefix[0].length);
+        el.textContent = rest;
+        pendingFocus.current = { id, at: "start" };
+        commit(list.map((r, j) => (j === idx ? { ...r, kind, text: rest } : r)));
+        return;
+      }
+    }
+    commit(list.map((r) => (r.id === id ? { ...r, text } : r)));
   }
 
   function splitRow(idx: number, el: HTMLElement) {
@@ -388,9 +435,22 @@ export function StatementQaEditor({
     const cur = list[idx];
     if (!cur) return;
     const order: QaKind[] = ["ask", "ans", "cont"];
-    const nextKind = order[(order.indexOf(cur.kind) + 1) % order.length] ?? "cont";
+    const nextKind =
+      cur.kind === "body" || cur.kind === "para" || cur.kind === "cont"
+        ? "ask"
+        : (order[(order.indexOf(cur.kind) + 1) % order.length] ?? "cont");
     commit(list.map((r, j) => (j === idx ? { ...r, kind: nextKind } : r)));
     focusRow(idx, "start");
+  }
+
+  function patchRow(idx: number, kind: QaKind, text: string, caret: CaretTarget) {
+    const list = rowsRef.current;
+    const cur = list[idx];
+    if (!cur) return;
+    const el = cellRefs.current.get(cur.id);
+    if (el && el.textContent !== text) el.textContent = text;
+    pendingFocus.current = { id: cur.id, at: caret };
+    commit(list.map((r, j) => (j === idx ? { ...r, kind, text } : r)));
   }
 
   function mergeWithPrev(idx: number, el: HTMLElement) {
@@ -425,17 +485,44 @@ export function StatementQaEditor({
     }
     if (e.key === "Tab") {
       e.preventDefault();
-      if (!e.shiftKey) {
-        insertPlainText(el, "\t");
-        syncText(rowsRef.current[idx].id, el);
+      const row = rowsRef.current[idx];
+      const off = caretOffset(el);
+      const atStart = off === 0 && !!window.getSelection()?.isCollapsed;
+      if (e.shiftKey) {
+        if (atStart && row.kind === "para") patchRow(idx, "body", row.text, "start");
+        else if (atStart && row.kind === "body") patchRow(idx, "cont", row.text, "start");
+        return;
       }
+      if (atStart && row.kind === "cont" && !row.text.startsWith("\t")) {
+        patchRow(idx, "body", row.text, "start");
+        return;
+      }
+      if (atStart && row.kind === "body") {
+        patchRow(idx, "para", row.text, "start");
+        return;
+      }
+      insertPlainText(el, "\t");
+      syncText(row.id, el);
       return;
     }
     const sel = window.getSelection();
     const collapsed = !!sel && sel.isCollapsed;
-    if (e.key === "Backspace" && idx > 0 && collapsed && caretOffset(el) === 0) {
-      e.preventDefault();
-      mergeWithPrev(idx, el);
+    if (e.key === "Backspace" && collapsed && caretOffset(el) === 0) {
+      const row = rowsRef.current[idx];
+      if (row.kind === "para") {
+        e.preventDefault();
+        patchRow(idx, "body", row.text, "start");
+        return;
+      }
+      if (row.kind === "body") {
+        e.preventDefault();
+        patchRow(idx, "cont", row.text, "start");
+        return;
+      }
+      if (idx > 0) {
+        e.preventDefault();
+        mergeWithPrev(idx, el);
+      }
       return;
     }
     if (e.key === "ArrowUp" && idx > 0 && collapsed && caretOffset(el) === 0) {
@@ -505,21 +592,26 @@ export function StatementQaEditor({
           </div>
           <div ref={groupRef} role="group" aria-label={ariaLabel} className="relative">
             {rows.map((row, idx) => {
-              const isCont = row.kind === "cont";
+              const hanging = row.kind !== "cont";
+              const para = row.kind === "para";
               return (
               <div
                 key={row.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: isCont ? "minmax(0, 1fr)" : `${LABEL_COL} minmax(0, 1fr)`,
+                  gridTemplateColumns: hanging ? `${LABEL_COL} minmax(0, 1fr)` : "minmax(0, 1fr)",
                   alignItems: "start",
                 }}
               >
-                {isCont ? null : (
+                {row.kind === "cont" ? null : (
                   <button
                     type="button"
                     tabIndex={-1}
-                    aria-label={`ป้าย${LABEL[row.kind]} แถวที่ ${idx + 1} — กดเพื่อเปลี่ยน`}
+                    aria-label={
+                      row.kind === "body" || row.kind === "para"
+                        ? `รายละเอียดแถวที่ ${idx + 1} — กดเพื่อใส่ป้ายถาม`
+                        : `ป้าย${LABEL[row.kind]} แถวที่ ${idx + 1} — กดเพื่อเปลี่ยน`
+                    }
                     title="กดเพื่อเปลี่ยนป้าย"
                     style={{
                       appearance: "none",
@@ -555,7 +647,7 @@ export function StatementQaEditor({
                   }}
                   role="textbox"
                   aria-multiline
-                  aria-label={`${LABEL[row.kind] || "ย่อหน้า"} แถวที่ ${idx + 1}`}
+                  aria-label={`${LABEL[row.kind] || (row.kind === "para" ? "ย่อหน้า" : row.kind === "body" ? "รายละเอียด" : "ย่อหน้า")} แถวที่ ${idx + 1}`}
                   contentEditable
                   suppressContentEditableWarning
                   spellCheck={false}
@@ -570,6 +662,7 @@ export function StatementQaEditor({
                     overflowWrap: "anywhere",
                     wordBreak: "break-word",
                     tabSize: LABEL_COL,
+                    textIndent: para ? LABEL_COL : undefined,
                     color: "#111",
                   }}
                   onKeyDown={(e) => onCellKeyDown(e, idx)}

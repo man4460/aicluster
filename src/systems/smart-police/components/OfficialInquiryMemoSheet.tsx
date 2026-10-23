@@ -14,7 +14,7 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
 const LINE = "8.2mm";
 const RULE = "0.75pt solid #111";
@@ -41,7 +41,7 @@ function StationField({
 }) {
   return (
     <>
-      <span style={{ flexShrink: 0, fontWeight: 700, lineHeight: "6.2mm", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ flexShrink: 0, fontWeight: 700, lineHeight: "8.2mm", whiteSpace: "nowrap" }}>{label}</span>
       <input
         aria-label={label}
         value={value}
@@ -52,7 +52,7 @@ function StationField({
           width: "100%",
           minWidth: 0,
           fontSize: BODY,
-          lineHeight: "6.2mm",
+          lineHeight: "8.2mm",
           height: "auto",
           paddingBottom: "1px",
         }}
@@ -336,7 +336,7 @@ export function OfficialInquiryMemoDocument({
               marginBottom: "3.5mm",
               flexShrink: 0,
               fontSize: BODY,
-              lineHeight: "6.2mm",
+              lineHeight: "8.2mm",
             }}
           >
             <StationField

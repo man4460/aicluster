@@ -8,10 +8,9 @@ import type { SceneMapExtraPage, SceneMapFields } from "@/lib/smart-police/form-
 
 const PAGE = { w: "297mm", h: "210mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
-const SMALL = "11pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
+const LINE = "7.2mm";
 const RULE = "0.55pt solid #111";
 
 function Dot({
@@ -84,15 +83,17 @@ function SignRow({
     <div
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "baseline",
         gap: "1.5mm",
         minHeight: LINE,
         lineHeight: LINE,
         fontSize: BODY,
+        minWidth: 0,
       }}
     >
       <span style={{ flexShrink: 0 }}>(ลงชื่อ)</span>
-      <Dot aria-label={`ลงชื่อ${role}`} value={value} onChange={onChange} flex minCh={8} />
+      <Dot aria-label={`ลงชื่อ${role}`} value={value} onChange={onChange} flex minCh={6} />
       <span style={{ flexShrink: 0 }}>{role}</span>
     </div>
   );
@@ -164,7 +165,7 @@ function MapNotesPane({
             position: "absolute",
             top: "2mm",
             right: "2.5mm",
-            fontSize: SMALL,
+            fontSize: BODY,
             fontWeight: 700,
             lineHeight: 1.2,
             pointerEvents: "none",
@@ -405,9 +406,10 @@ export function OfficialSceneMapDocument({
           <div
             style={{
               flexShrink: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.4mm",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              columnGap: "3mm",
+              rowGap: "0.4mm",
               marginTop: "2.5mm",
             }}
           >

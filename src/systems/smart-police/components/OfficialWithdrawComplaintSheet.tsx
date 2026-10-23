@@ -7,9 +7,9 @@ import type { WithdrawComplaintFields } from "@/lib/smart-police/form-templates/
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
+const LINE = "7.2mm";
 const INDENT = "12mm";
 
 function Dot({
@@ -104,11 +104,11 @@ function SignBlock({
   onParen: (v: string) => void;
 }) {
   return (
-    <div style={{ margin: "0 0 5mm" }}>
-      <Row style={{ flexWrap: "nowrap" }}>
+    <div style={{ margin: 0 }}>
+      <Row style={{ flexWrap: "wrap" }}>
         <T>(ลงชื่อ)</T>
-        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={10} />
-        <T>{role}</T>
+        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={6} />
+        <span style={{ flexShrink: 0 }}>{role}</span>
       </Row>
       <Row style={{ flexWrap: "nowrap", width: "78%", marginLeft: "10mm" }}>
         <T>(</T>
@@ -324,7 +324,15 @@ export function OfficialWithdrawComplaintDocument({
         <p style={{ margin: "0 0 8mm", textAlign: "center", fontSize: BODY, lineHeight: LINE }}>
           อ่านให้ฟังแล้ว รับว่าถูกต้อง
         </p>
-        <div style={{ width: "78%", marginLeft: "auto" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            columnGap: "4mm",
+            rowGap: "1mm",
+            width: "100%",
+          }}
+        >
           <SignBlock
             role="ผู้ถอนคำร้องทุกข์"
             sign={fields.signWithdrawer}
@@ -347,13 +355,13 @@ export function OfficialWithdrawComplaintDocument({
             onParen={(v) => onChange("signWitnessParen", v)}
           />
           <SignBlock
-            role="สอบสวน/บันทึก/อ่าน"
+            role="พงส./บันทึก/อ่าน"
             sign={fields.signOfficer}
             paren={fields.signOfficerParen}
             onSign={(v) => onChange("signOfficer", v)}
             onParen={(v) => onChange("signOfficerParen", v)}
           />
-          <Row style={{ flexWrap: "nowrap", width: "86%", marginLeft: "10mm" }}>
+          <Row style={{ flexWrap: "nowrap", margin: 0, gridColumn: "1 / -1" }}>
             <T>ตำแหน่ง</T>
             <Dot
               aria-label="ตำแหน่งผู้สอบสวน"

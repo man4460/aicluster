@@ -1,10 +1,10 @@
 export const ARREST_SIGN_MIN = 1;
 export const ARREST_SIGN_DEFAULT = 2;
-export const ARREST_SIGN_ROW_MM = 6;
+export const ARREST_SIGN_ROW_MM = 6.7;
 export const ARREST_SIGN_GROUP_GAP_MM = 3;
 export const ARREST_RECORDER_MM = 8;
 
-export const ARREST_LINE_MM = 6.2;
+export const ARREST_LINE_MM = 7.2;
 export const ARREST_PAGE_INNER_MM = 273;
 export const ARREST_HEADER_MM = 74;
 export const ARREST_PAGE_NO_MM = 12;
@@ -53,7 +53,7 @@ export type ArrestPageModel = {
 
 export function estimateArrestWrappedLines(text: string, indentCh: number): number {
   if (!text) return 0;
-  const charsPerLine = 40;
+  const charsPerLine = 35;
   const paras = text.replace(/\r/g, "").split("\n");
   let n = 0;
   for (let i = 0; i < paras.length; i++) {

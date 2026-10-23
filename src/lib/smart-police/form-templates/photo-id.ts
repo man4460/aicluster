@@ -3,12 +3,12 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const PHOTO_ID_LINE_MM = 6.2;
+export const PHOTO_ID_LINE_MM = 7.2;
 export const PHOTO_ID_PAGE_INNER_MM = 273;
 export const PHOTO_ID_HEADER_MM = 156;
 export const PHOTO_ID_PAGE_NO_MM = 12;
-export const PHOTO_ID_LOG_MM = 28;
-export const PHOTO_ID_SIGNS_MM = 52;
+export const PHOTO_ID_LOG_MM = 34.3;
+export const PHOTO_ID_SIGNS_MM = 46;
 export const PHOTO_ID_PHOTO_COUNT = 8;
 export const PHOTO_ID_RESULT_MIN = 4;
 

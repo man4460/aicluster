@@ -13,10 +13,10 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const SIGN_LINE = "5.8mm";
+const LINE = "7.2mm";
+const SIGN_LINE = "6.7mm";
 
 function Dot({
   value,
@@ -528,7 +528,7 @@ export function OfficialInquiryReportDocument({
                 style={{
                   margin: "1mm auto 0",
                   maxWidth: "168mm",
-                  fontSize: "11pt",
+                  fontSize: BODY,
                   lineHeight: 1.35,
                   fontWeight: 400,
                 }}

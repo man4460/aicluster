@@ -28,13 +28,14 @@ import {
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
-const SMALL = "11pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-/** ระยะแถวช่องพิมพ์ด้านบน (สถานี · ที่อยู่ ฯลฯ) */
-const LINE = "6.2mm";
-/** ระยะบรรทัดโซนถาม–ตอบ — กว้างกว่าแถวด้านบนเล็กน้อย อ่าน/แตะง่าย */
-const STMT_LINE = "7.8mm";
+/** เนื้อหาบอดี้ · โซนถาม–ตอบ */
+const STMT = "15pt";
+/** ระยะแถวช่องพิมพ์ด้านบน (สถานี · ที่อยู่ ฯลฯ) — คู่กับ 15pt */
+const LINE = "7.2mm";
+/** ระยะบรรทัดโซนถาม–ตอบ — คู่กับตัวอักษร 15pt */
+const STMT_LINE = "9.0mm";
 
 function Dot({
   value,
@@ -127,7 +128,7 @@ function LinedBody(props: {
   emptyKind?: "ask" | "ans" | "cont";
   footer?: ReactNode;
 }) {
-  return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={BODY} />;
+  return <StatementQaEditor {...props} lineHeight={STMT_LINE} fontSize={STMT} />;
 }
 
 /** ลงชื่อแนวตั้งในขอบเย็บ — หน้า 2 / ใบต่อ ตามแบบราชการ */
@@ -175,8 +176,8 @@ function BindingMarginSignStrip({
           alignItems: "center",
           gap: "1mm",
           width: "200mm",
-          fontSize: SMALL,
-          lineHeight: LINE,
+          fontSize: STMT,
+          lineHeight: STMT_LINE,
           transform: side === "left" ? "rotate(-90deg)" : "rotate(90deg)",
         }}
       >
@@ -205,14 +206,14 @@ function BindingMarginSignStrip({
           <span style={{ flexShrink: 0 }}>{roleLabel}</span>
           <span style={{ flexShrink: 0, marginLeft: "4mm" }}>ลงชื่อ</span>
           <input
-            aria-label="ลงชื่อสอบสวน พิมพ์ อ่าน แนวตั้ง"
+            aria-label="ลงชื่อพงส. บันทึก อ่าน แนวตั้ง"
             value={signOfficer}
             onChange={(e) => onSignOfficer(e.target.value)}
             spellCheck={false}
             className="sp-word-field align-baseline"
             style={field}
           />
-          <span style={{ flexShrink: 0 }}>สอบสวน/พิมพ์/อ่าน</span>
+          <span style={{ flexShrink: 0 }}>พงส./บันทึก/อ่าน</span>
         </div>
       </div>
     </div>
@@ -280,7 +281,7 @@ export function OfficialStatementFormSheet({
       onSignParty={(v) => set("signParty", v)}
       onSignOfficer={(v) => set("signOfficer", v)}
       lineHeight={STMT_LINE}
-      fontSize={BODY}
+      fontSize={STMT}
     />
   ) : undefined;
   const bindingSignSide: "left" | "right" | null = isLinedOnly
@@ -315,6 +316,9 @@ export function OfficialStatementFormSheet({
                   top: "14mm",
                   left: `calc(${LINED_BINDING} + 2.5mm)`,
                   right: LINED_EDGE,
+                  fontSize: STMT,
+                  minHeight: STMT_LINE,
+                  lineHeight: STMT_LINE,
                 }}
               >
                 <L>ใบต่อคำให้การ ของ</L>
@@ -325,7 +329,8 @@ export function OfficialStatementFormSheet({
                     minWidth: "16mm",
                     textAlign: "center",
                     borderBottom: "0.5pt dotted #111",
-                    lineHeight: LINE,
+                    fontSize: STMT,
+                    lineHeight: STMT_LINE,
                   }}
                 >
                   {slot.sheetNo}
@@ -419,7 +424,7 @@ export function OfficialStatementFormSheet({
             style={{
               borderRight: "0.55pt solid #111",
               paddingRight: "2.5mm",
-              fontSize: SMALL,
+              fontSize: BODY,
               lineHeight: 1.25,
               display: "flex",
               flexDirection: "column",
@@ -478,7 +483,7 @@ export function OfficialStatementFormSheet({
                 minCh={3}
               />
             </div>
-            <p style={{ textAlign: "center", marginTop: "8mm", fontSize: SMALL }}>
+            <p style={{ textAlign: "center", marginTop: "8mm", fontSize: BODY }}>
               <b>ลงชื่อ</b>
               <span
                 style={{
@@ -953,7 +958,7 @@ export function OfficialStatementFormSheet({
               style={{
                 margin: "0.3mm 0 3.5mm",
                 fontWeight: isSuspectForm ? 400 : 700,
-                fontSize: BODY,
+                fontSize: STMT,
                 flexShrink: 0,
                 lineHeight: isSuspectForm ? 1.35 : LINE,
               }}

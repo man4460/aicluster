@@ -11,6 +11,13 @@ import {
   isInquiryMemoFormSlug,
   isInquiryDocketFormSlug,
   isSceneInspectFormSlug,
+  isCaseProgressFormSlug,
+  isInjuryReferralFormSlug,
+  isForensicRequestFormSlug,
+  isCustodyLogFormSlug,
+  isBailBondFormSlug,
+  isInvestigateNoticeFormSlug,
+  isOfficialMemoFormSlug,
   isCompensationSettlementFormSlug,
   isRightsNoticeFormSlug,
   isExhibitListFormSlug,
@@ -22,25 +29,6 @@ import {
   isWithdrawComplaintFormSlug,
 } from "@/lib/smart-police/form-templates";
 import type { StatementTemplateSlug } from "@/lib/smart-police/form-templates";
-import { SmartPoliceCompensationSettlementPreviewClient } from "@/systems/smart-police/components/SmartPoliceCompensationSettlementPreviewClient";
-import { SmartPoliceExhibitListPreviewClient } from "@/systems/smart-police/components/SmartPoliceExhibitListPreviewClient";
-import { SmartPolicePropertyListPreviewClient } from "@/systems/smart-police/components/SmartPolicePropertyListPreviewClient";
-import { SmartPoliceSceneMapPreviewClient } from "@/systems/smart-police/components/SmartPoliceSceneMapPreviewClient";
-import { SmartPoliceStatementTemplatePreviewClient } from "@/systems/smart-police/components/SmartPoliceStatementTemplatePreviewClient";
-import { SmartPoliceArrestRecordPreviewClient } from "@/systems/smart-police/components/SmartPoliceArrestRecordPreviewClient";
-import { SmartPoliceChargeNoticePreviewClient } from "@/systems/smart-police/components/SmartPoliceChargeNoticePreviewClient";
-import { SmartPoliceRightsNoticePreviewClient } from "@/systems/smart-police/components/SmartPoliceRightsNoticePreviewClient";
-import { SmartPoliceCasePhotoPreviewClient } from "@/systems/smart-police/components/SmartPoliceCasePhotoPreviewClient";
-import { SmartPolicePhotoIdPreviewClient } from "@/systems/smart-police/components/SmartPolicePhotoIdPreviewClient";
-import { SmartPoliceLineupIdPreviewClient } from "@/systems/smart-police/components/SmartPoliceLineupIdPreviewClient";
-import { SmartPoliceCaseCoverPreviewClient } from "@/systems/smart-police/components/SmartPoliceCaseCoverPreviewClient";
-import { SmartPoliceInquiryReportPreviewClient } from "@/systems/smart-police/components/SmartPoliceInquiryReportPreviewClient";
-import { SmartPoliceInquiryMemoPreviewClient } from "@/systems/smart-police/components/SmartPoliceInquiryMemoPreviewClient";
-import { SmartPoliceInquiryDocketPreviewClient } from "@/systems/smart-police/components/SmartPoliceInquiryDocketPreviewClient";
-import { SmartPoliceSceneInspectPreviewClient } from "@/systems/smart-police/components/SmartPoliceSceneInspectPreviewClient";
-import { SmartPoliceOralPleaPreviewClient } from "@/systems/smart-police/components/SmartPoliceOralPleaPreviewClient";
-import { SmartPoliceVictimRightsPreviewClient } from "@/systems/smart-police/components/SmartPoliceVictimRightsPreviewClient";
-import { SmartPoliceWithdrawComplaintPreviewClient } from "@/systems/smart-police/components/SmartPoliceWithdrawComplaintPreviewClient";
 
 export default async function SmartPoliceOfficialFormPreviewPage({
   params,
@@ -51,61 +39,160 @@ export default async function SmartPoliceOfficialFormPreviewPage({
   const meta = getOfficialFormTemplateMeta(slug);
   if (!meta) notFound();
   if (isStatementFormSlug(slug)) {
+    const { SmartPoliceStatementTemplatePreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceStatementTemplatePreviewClient"
+    );
     return <SmartPoliceStatementTemplatePreviewClient slug={slug as StatementTemplateSlug} />;
   }
   if (isPropertyListFormSlug(slug)) {
+    const { SmartPolicePropertyListPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPolicePropertyListPreviewClient"
+    );
     return <SmartPolicePropertyListPreviewClient slug={slug} />;
   }
   if (isExhibitListFormSlug(slug)) {
+    const { SmartPoliceExhibitListPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceExhibitListPreviewClient"
+    );
     return <SmartPoliceExhibitListPreviewClient />;
   }
   if (isSceneMapFormSlug(slug)) {
+    const { SmartPoliceSceneMapPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceSceneMapPreviewClient"
+    );
     return <SmartPoliceSceneMapPreviewClient />;
   }
   if (isWithdrawComplaintFormSlug(slug)) {
+    const { SmartPoliceWithdrawComplaintPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceWithdrawComplaintPreviewClient"
+    );
     return <SmartPoliceWithdrawComplaintPreviewClient />;
   }
   if (isCompensationSettlementFormSlug(slug)) {
+    const { SmartPoliceCompensationSettlementPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceCompensationSettlementPreviewClient"
+    );
     return <SmartPoliceCompensationSettlementPreviewClient />;
   }
   if (isVictimRightsFormSlug(slug)) {
+    const { SmartPoliceVictimRightsPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceVictimRightsPreviewClient"
+    );
     return <SmartPoliceVictimRightsPreviewClient />;
   }
   if (isOralPleaFormSlug(slug)) {
+    const { SmartPoliceOralPleaPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceOralPleaPreviewClient"
+    );
     return <SmartPoliceOralPleaPreviewClient />;
   }
   if (isArrestRecordFormSlug(slug)) {
+    const { SmartPoliceArrestRecordPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceArrestRecordPreviewClient"
+    );
     return <SmartPoliceArrestRecordPreviewClient />;
   }
   if (isChargeNoticeFormSlug(slug)) {
+    const { SmartPoliceChargeNoticePreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceChargeNoticePreviewClient"
+    );
     return <SmartPoliceChargeNoticePreviewClient />;
   }
   if (isRightsNoticeFormSlug(slug)) {
+    const { SmartPoliceRightsNoticePreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceRightsNoticePreviewClient"
+    );
     return <SmartPoliceRightsNoticePreviewClient />;
   }
   if (isCasePhotoFormSlug(slug)) {
+    const { SmartPoliceCasePhotoPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceCasePhotoPreviewClient"
+    );
     return <SmartPoliceCasePhotoPreviewClient />;
   }
   if (isPhotoIdFormSlug(slug)) {
+    const { SmartPolicePhotoIdPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPolicePhotoIdPreviewClient"
+    );
     return <SmartPolicePhotoIdPreviewClient />;
   }
   if (isLineupIdFormSlug(slug)) {
+    const { SmartPoliceLineupIdPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceLineupIdPreviewClient"
+    );
     return <SmartPoliceLineupIdPreviewClient />;
   }
   if (isCaseCoverFormSlug(slug)) {
+    const { SmartPoliceCaseCoverPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceCaseCoverPreviewClient"
+    );
     return <SmartPoliceCaseCoverPreviewClient />;
   }
   if (isInquiryReportFormSlug(slug)) {
+    const { SmartPoliceInquiryReportPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceInquiryReportPreviewClient"
+    );
     return <SmartPoliceInquiryReportPreviewClient />;
   }
   if (isInquiryMemoFormSlug(slug)) {
+    const { SmartPoliceInquiryMemoPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceInquiryMemoPreviewClient"
+    );
     return <SmartPoliceInquiryMemoPreviewClient />;
   }
   if (isInquiryDocketFormSlug(slug)) {
+    const { SmartPoliceInquiryDocketPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceInquiryDocketPreviewClient"
+    );
     return <SmartPoliceInquiryDocketPreviewClient />;
   }
   if (isSceneInspectFormSlug(slug)) {
+    const { SmartPoliceSceneInspectPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceSceneInspectPreviewClient"
+    );
     return <SmartPoliceSceneInspectPreviewClient />;
+  }
+  if (isCaseProgressFormSlug(slug)) {
+    const { SmartPoliceCaseProgressPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceCaseProgressPreviewClient"
+    );
+    return <SmartPoliceCaseProgressPreviewClient />;
+  }
+  if (isInjuryReferralFormSlug(slug)) {
+    const { SmartPoliceInjuryReferralPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceInjuryReferralPreviewClient"
+    );
+    return <SmartPoliceInjuryReferralPreviewClient />;
+  }
+  if (isForensicRequestFormSlug(slug)) {
+    const { SmartPoliceForensicRequestPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceForensicRequestPreviewClient"
+    );
+    return <SmartPoliceForensicRequestPreviewClient />;
+  }
+  if (isCustodyLogFormSlug(slug)) {
+    const { SmartPoliceCustodyLogPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceCustodyLogPreviewClient"
+    );
+    return <SmartPoliceCustodyLogPreviewClient />;
+  }
+  if (isBailBondFormSlug(slug)) {
+    const { SmartPoliceBailBondPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceBailBondPreviewClient"
+    );
+    return <SmartPoliceBailBondPreviewClient />;
+  }
+  if (isInvestigateNoticeFormSlug(slug)) {
+    const { SmartPoliceInvestigateNoticePreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceInvestigateNoticePreviewClient"
+    );
+    return <SmartPoliceInvestigateNoticePreviewClient />;
+  }
+  if (isOfficialMemoFormSlug(slug)) {
+    const { SmartPoliceMemoPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceMemoPreviewClient"
+    );
+    return <SmartPoliceMemoPreviewClient />;
   }
   notFound();
 }

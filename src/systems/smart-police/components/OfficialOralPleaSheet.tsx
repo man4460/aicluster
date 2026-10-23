@@ -15,11 +15,10 @@ import {
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
-const SMALL = "11pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const STMT_LINE = "7.8mm";
+const LINE = "7.2mm";
+const STMT_LINE = "9.0mm";
 /** ย่อหน้าเอกสารราชการ */
 const INDENT = "12mm";
 const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
@@ -288,7 +287,7 @@ export function OfficialOralPleaDocument({
             <div
               style={{
                 width: "58mm",
-                fontSize: SMALL,
+                fontSize: BODY,
                 textAlign: "right",
                 display: "flex",
                 flexDirection: "column",
@@ -296,7 +295,7 @@ export function OfficialOralPleaDocument({
               }}
             >
               <p style={{ margin: 0, fontWeight: 700, lineHeight: 1.35 }}>บัตรประจำตัวประชาชน</p>
-              <Row style={{ flexWrap: "nowrap", fontSize: SMALL, minHeight: "5.5mm", lineHeight: "5.5mm", margin: 0 }}>
+              <Row style={{ flexWrap: "nowrap", fontSize: BODY, minHeight: LINE, lineHeight: LINE, margin: 0 }}>
                 <T>เลขที่</T>
                 <Dot
                   aria-label="เลขที่บัตรประชาชน"
@@ -312,9 +311,9 @@ export function OfficialOralPleaDocument({
                   flexWrap: "nowrap",
                   alignItems: "baseline",
                   gap: "1.5mm",
-                  minHeight: "5.5mm",
-                  lineHeight: "5.5mm",
-                  fontSize: SMALL,
+                  minHeight: LINE,
+                  lineHeight: LINE,
+                  fontSize: BODY,
                 }}
               >
                 <T>ยศ</T>

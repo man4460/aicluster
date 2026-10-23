@@ -3,13 +3,13 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const CHARGE_NOTICE_LINE_MM = 6.2;
+export const CHARGE_NOTICE_LINE_MM = 7.2;
 export const CHARGE_NOTICE_PAGE_INNER_MM = 273;
 export const CHARGE_NOTICE_HEADER_MM = 92;
 export const CHARGE_NOTICE_PAGE_NO_MM = 12;
-export const CHARGE_NOTICE_RIGHTS_MM = 22;
-export const CHARGE_NOTICE_CLOSING_MM = 28;
-export const CHARGE_NOTICE_SIGNS_MM = 40;
+export const CHARGE_NOTICE_RIGHTS_MM = 27;
+export const CHARGE_NOTICE_CLOSING_MM = 34.3;
+export const CHARGE_NOTICE_SIGNS_MM = 36;
 
 export const CHARGE_NOTICE_APPEARANCES = [
   { id: "summoned", label: "ถูกเรียกมาพบ" },

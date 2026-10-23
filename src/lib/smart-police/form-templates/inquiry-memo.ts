@@ -4,8 +4,8 @@ import {
 } from "@/lib/smart-police/form-templates/arrest-record";
 
 export const INQUIRY_MEMO_LINE_MM = 8.2;
-export const INQUIRY_MEMO_ROWS_FIRST = 28;
-export const INQUIRY_MEMO_ROWS_CONT = 27;
+export const INQUIRY_MEMO_ROWS_FIRST = 26;
+export const INQUIRY_MEMO_ROWS_CONT = 25;
 
 export type InquiryMemoFields = {
   station: string;

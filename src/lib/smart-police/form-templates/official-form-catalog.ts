@@ -19,7 +19,14 @@ export type OfficialFormKind =
   | "inquiry-report"
   | "inquiry-memo"
   | "inquiry-docket"
-  | "scene-inspect";
+  | "scene-inspect"
+  | "case-progress"
+  | "injury-referral"
+  | "forensic-request"
+  | "custody-log"
+  | "bail-bond"
+  | "investigate-notice"
+  | "official-memo";
 
 export type PropertyListTemplateSlug =
   | "property-damaged"
@@ -43,6 +50,13 @@ export type InquiryReportTemplateSlug = "inquiry-report";
 export type InquiryMemoTemplateSlug = "inquiry-memo";
 export type InquiryDocketTemplateSlug = "inquiry-docket";
 export type SceneInspectTemplateSlug = "scene-inspect";
+export type CaseProgressTemplateSlug = "case-progress";
+export type InjuryReferralTemplateSlug = "injury-referral";
+export type ForensicRequestTemplateSlug = "forensic-request";
+export type CustodyLogTemplateSlug = "custody-log";
+export type BailBondTemplateSlug = "bail-bond";
+export type InvestigateNoticeTemplateSlug = "investigate-notice";
+export type OfficialMemoTemplateSlug = "official-memo";
 
 export type OfficialFormTemplateSlug =
   | "statement-complainant"
@@ -65,7 +79,14 @@ export type OfficialFormTemplateSlug =
   | InquiryReportTemplateSlug
   | InquiryMemoTemplateSlug
   | InquiryDocketTemplateSlug
-  | SceneInspectTemplateSlug;
+  | SceneInspectTemplateSlug
+  | CaseProgressTemplateSlug
+  | InjuryReferralTemplateSlug
+  | ForensicRequestTemplateSlug
+  | CustodyLogTemplateSlug
+  | BailBondTemplateSlug
+  | InvestigateNoticeTemplateSlug
+  | OfficialMemoTemplateSlug;
 
 export type OfficialFormTemplateMeta = {
   slug: OfficialFormTemplateSlug;
@@ -275,6 +296,80 @@ export const SMART_POLICE_SCENE_INSPECT_TEMPLATE: OfficialFormTemplateMeta = {
   blankFormId: "25",
 };
 
+export const CASE_PROGRESS_FORM_TITLE = "หนังสือแจ้งความคืบหน้าการสอบสวนคดีอาญา";
+export const CASE_PROGRESS_TEMPLATE_TITLE = "หนังสือแจ้งความคืบหน้าทางคดี";
+
+export const SMART_POLICE_CASE_PROGRESS_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "case-progress",
+  title: CASE_PROGRESS_TEMPLATE_TITLE,
+  kind: "case-progress",
+  blankFormId: "26",
+};
+
+export const INJURY_REFERRAL_FORM_TITLE = "ใบนำส่งผู้บาดเจ็บหรือศพให้แพทย์ตรวจชันสูตร";
+export const INJURY_REFERRAL_FORM_TITLE_P2 = "ผลการตรวจชันสูตรบาดแผลหรือศพของแพทย์";
+export const INJURY_REFERRAL_TEMPLATE_TITLE = "ใบนำส่งผู้บาดเจ็บหรือศพ";
+
+export const SMART_POLICE_INJURY_REFERRAL_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "injury-referral",
+  title: INJURY_REFERRAL_TEMPLATE_TITLE,
+  kind: "injury-referral",
+  blankFormId: "27",
+};
+
+export const FORENSIC_REQUEST_FORM_TITLE = "บันทึกข้อความ";
+export const FORENSIC_REQUEST_TEMPLATE_TITLE = "หนังสือส่งตรวจพิสูจน์";
+
+export const SMART_POLICE_FORENSIC_REQUEST_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "forensic-request",
+  title: FORENSIC_REQUEST_TEMPLATE_TITLE,
+  kind: "forensic-request",
+  blankFormId: "28",
+};
+
+export const CUSTODY_LOG_FORM_TITLE = "บันทึกการควบคุมผู้ต้องหา";
+export const CUSTODY_LOG_TEMPLATE_TITLE = "บันทึกควบคุม";
+
+export const SMART_POLICE_CUSTODY_LOG_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "custody-log",
+  title: CUSTODY_LOG_TEMPLATE_TITLE,
+  kind: "custody-log",
+  blankFormId: "29",
+};
+
+export const BAIL_BOND_FORM_TITLE = "คำร้องขอประกัน";
+export const BAIL_BOND_FORM_TITLE_P2_APPOINT = "กำหนดวันเวลาให้ส่งผู้ต้องหาต่อผู้ให้ประกัน";
+export const BAIL_BOND_FORM_TITLE_P2_ASSET =
+  "บัญชีทรัพย์สินของผู้ประกันซึ่งผู้ประกันรับรองว่าเป็นกรรมสิทธิ์ ของผู้ประกันแต่เพียงผู้เดียว และไม่อยู่ในภาระติดพันใด ๆ";
+export const BAIL_BOND_TEMPLATE_TITLE = "สัญญาประกัน";
+
+export const SMART_POLICE_BAIL_BOND_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "bail-bond",
+  title: BAIL_BOND_TEMPLATE_TITLE,
+  kind: "bail-bond",
+  blankFormId: "30",
+};
+
+export const INVESTIGATE_NOTICE_FORM_TITLE = "บันทึกข้อความ";
+export const INVESTIGATE_NOTICE_TEMPLATE_TITLE = "หนังสือแจ้งสืบสวน";
+
+export const SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "investigate-notice",
+  title: INVESTIGATE_NOTICE_TEMPLATE_TITLE,
+  kind: "investigate-notice",
+  blankFormId: "31",
+};
+
+export const OFFICIAL_MEMO_FORM_TITLE = "บันทึกข้อความ";
+export const OFFICIAL_MEMO_TEMPLATE_TITLE = "บันทึกข้อความ";
+
+export const SMART_POLICE_OFFICIAL_MEMO_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "official-memo",
+  title: OFFICIAL_MEMO_TEMPLATE_TITLE,
+  kind: "official-memo",
+  blankFormId: "official-memo",
+};
+
 export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = [
   ...SMART_POLICE_STATEMENT_TEMPLATES.map((t) => ({
     slug: t.slug,
@@ -300,6 +395,13 @@ export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = 
   SMART_POLICE_INQUIRY_MEMO_TEMPLATE,
   SMART_POLICE_INQUIRY_DOCKET_TEMPLATE,
   SMART_POLICE_SCENE_INSPECT_TEMPLATE,
+  SMART_POLICE_CASE_PROGRESS_TEMPLATE,
+  SMART_POLICE_INJURY_REFERRAL_TEMPLATE,
+  SMART_POLICE_FORENSIC_REQUEST_TEMPLATE,
+  SMART_POLICE_CUSTODY_LOG_TEMPLATE,
+  SMART_POLICE_BAIL_BOND_TEMPLATE,
+  SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE,
+  SMART_POLICE_OFFICIAL_MEMO_TEMPLATE,
 ];
 
 export function getOfficialFormTemplateMeta(
@@ -390,4 +492,32 @@ export function isInquiryDocketFormSlug(slug: string): slug is InquiryDocketTemp
 
 export function isSceneInspectFormSlug(slug: string): slug is SceneInspectTemplateSlug {
   return slug === "scene-inspect";
+}
+
+export function isCaseProgressFormSlug(slug: string): slug is CaseProgressTemplateSlug {
+  return slug === "case-progress";
+}
+
+export function isInjuryReferralFormSlug(slug: string): slug is InjuryReferralTemplateSlug {
+  return slug === "injury-referral";
+}
+
+export function isForensicRequestFormSlug(slug: string): slug is ForensicRequestTemplateSlug {
+  return slug === "forensic-request";
+}
+
+export function isCustodyLogFormSlug(slug: string): slug is CustodyLogTemplateSlug {
+  return slug === "custody-log";
+}
+
+export function isBailBondFormSlug(slug: string): slug is BailBondTemplateSlug {
+  return slug === "bail-bond";
+}
+
+export function isInvestigateNoticeFormSlug(slug: string): slug is InvestigateNoticeTemplateSlug {
+  return slug === "investigate-notice";
+}
+
+export function isOfficialMemoFormSlug(slug: string): slug is OfficialMemoTemplateSlug {
+  return slug === "official-memo";
 }

@@ -13,10 +13,10 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const SIGN_LINE = "5.8mm";
+const LINE = "7.2mm";
+const SIGN_LINE = "6.7mm";
 
 function Dot({
   value,
@@ -164,11 +164,22 @@ function SignBlock({
   onParen: (v: string) => void;
 }) {
   return (
-    <>
-      <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ลงชื่อ</span>
-      <Dot aria-label={`ลงชื่อ${role}`} value={name} onChange={onName} flex minCh={8} />
-      <span style={{ flexShrink: 0, lineHeight: SIGN_LINE, whiteSpace: "nowrap" }}>{role}</span>
-      <span aria-hidden />
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.3mm", minWidth: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "baseline",
+          gap: "1.5mm",
+          minHeight: SIGN_LINE,
+          lineHeight: SIGN_LINE,
+          minWidth: 0,
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
+        <Dot aria-label={`ลงชื่อ${role}`} value={name} onChange={onName} flex minCh={6} />
+        <span style={{ flexShrink: 0 }}>{role}</span>
+      </div>
       <div
         style={{
           display: "flex",
@@ -178,7 +189,6 @@ function SignBlock({
           minHeight: SIGN_LINE,
           lineHeight: SIGN_LINE,
           paddingLeft: "4mm",
-          marginBottom: "1.2mm",
           minWidth: 0,
         }}
       >
@@ -186,8 +196,7 @@ function SignBlock({
         <Dot aria-label={`ชื่อวงเล็บ${role}`} value={paren} onChange={onParen} flex minCh={8} />
         <span style={{ flexShrink: 0 }}>)</span>
       </div>
-      <span aria-hidden />
-    </>
+    </div>
   );
 }
 
@@ -588,14 +597,13 @@ export function OfficialLineupIdDocument({
           {page.showSigns ? (
             <div
               style={{
-                width: "62%",
-                marginLeft: "auto",
+                width: "100%",
                 flexShrink: 0,
                 display: "grid",
-                gridTemplateColumns: "auto minmax(0, 1fr) auto",
-                columnGap: "1.5mm",
-                rowGap: "0.15mm",
-                alignItems: "baseline",
+                gridTemplateColumns: "1fr 1fr",
+                columnGap: "4mm",
+                rowGap: "1.2mm",
+                alignItems: "start",
               }}
             >
               <SignBlock
@@ -627,7 +635,7 @@ export function OfficialLineupIdDocument({
                 onParen={(v) => onChange("signDirectorParen", v)}
               />
               <SignBlock
-                role="พนักงานสอบสวน/บันทึก/พิมพ์"
+                role="พงส./บันทึก/อ่าน"
                 name={fields.signOfficer}
                 paren={fields.signOfficerParen}
                 onName={(v) => onChange("signOfficer", v)}

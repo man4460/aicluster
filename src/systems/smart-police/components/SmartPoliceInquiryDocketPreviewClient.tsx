@@ -8,7 +8,6 @@ import {
   createDefaultInquiryDocketRows,
   createEmptyInquiryDocketHeader,
   createEmptyInquiryDocketRow,
-  paginateInquiryDocketRows,
   type InquiryDocketHeader,
   type InquiryDocketRow,
 } from "@/lib/smart-police/form-templates/inquiry-docket";
@@ -22,8 +21,7 @@ export function SmartPoliceInquiryDocketPreviewClient() {
   const [header, setHeader] = useState<InquiryDocketHeader>(() => createEmptyInquiryDocketHeader());
   const [rows, setRows] = useState<InquiryDocketRow[]>(() => createDefaultInquiryDocketRows());
   const [pageIndex, setPageIndex] = useState(0);
-
-  const sheets = paginateInquiryDocketRows(rows);
+  const [pageCount, setPageCount] = useState(1);
 
   function patchHeader<K extends keyof InquiryDocketHeader>(key: K, value: InquiryDocketHeader[K]) {
     setHeader((h) => ({ ...h, [key]: value }));
@@ -64,7 +62,7 @@ export function SmartPoliceInquiryDocketPreviewClient() {
           {INQUIRY_DOCKET_TEMPLATE_TITLE}
         </p>
         <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="หน้าเอกสาร">
-          {sheets.map((_, i) => (
+          {Array.from({ length: pageCount }, (_, i) => (
             <button
               key={`p-${i}`}
               type="button"
@@ -100,6 +98,7 @@ export function SmartPoliceInquiryDocketPreviewClient() {
           rows={rows}
           onHeaderChange={patchHeader}
           onRowChange={patchRow}
+          onPageCount={setPageCount}
         />
       </div>
     </div>

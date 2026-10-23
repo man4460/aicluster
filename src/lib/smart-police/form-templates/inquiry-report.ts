@@ -3,13 +3,13 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const INQUIRY_REPORT_LINE_MM = 6.2;
+export const INQUIRY_REPORT_LINE_MM = 7.2;
 export const INQUIRY_REPORT_PAGE_INNER_MM = 273;
 export const INQUIRY_REPORT_HEADER_MM = 142;
 export const INQUIRY_REPORT_PAGE_NO_MM = 12;
 export const INQUIRY_REPORT_CONT_HEADER_MM = 22;
-export const INQUIRY_REPORT_CLOSING_MM = 10;
-export const INQUIRY_REPORT_SIGNS_MM = 22;
+export const INQUIRY_REPORT_CLOSING_MM = 12.3;
+export const INQUIRY_REPORT_SIGNS_MM = 27;
 export const INQUIRY_REPORT_BODY_MIN = 8;
 export const INQUIRY_REPORT_MIN_PAGES = 3;
 

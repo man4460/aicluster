@@ -17,10 +17,10 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const SIGN_LINE = "5.8mm";
+const LINE = "7.2mm";
+const SIGN_LINE = "6.7mm";
 
 function Dot({
   value,
@@ -236,7 +236,7 @@ function SignName({
   index: number;
 }) {
   return (
-    <Row style={{ flexWrap: "nowrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+    <Row style={{ flexWrap: "wrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
       <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
       <Dot aria-label={`ลงชื่อ${role} คนที่ ${index + 1}`} value={value} onChange={onChange} flex minCh={6} />
       <span style={{ flexShrink: 0 }}>{role}</span>
@@ -727,7 +727,7 @@ export function OfficialArrestRecordDocument({
 
           {page.showRecorder ? (
         <div style={{ width: "58%", marginLeft: "auto", marginTop: "4mm", flexShrink: 0 }}>
-          <Row style={{ flexWrap: "nowrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+          <Row style={{ flexWrap: "wrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
             <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
             <Dot
               aria-label="ลงชื่อผู้จับกุมบันทึกอ่าน"

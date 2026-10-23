@@ -536,7 +536,7 @@ export const SMART_POLICE_A4_PRINT_CSS = `
   * { box-sizing: border-box; }
   body {
     font-family: "TH Sarabun New", "Sarabun", "Tahoma", sans-serif;
-    font-size: 16pt;
+    font-size: 15pt;
     line-height: 1.4;
     color: #111;
     margin: 0;
@@ -547,15 +547,15 @@ export const SMART_POLICE_A4_PRINT_CSS = `
   .spa4-logo {
     width: 64px; height: 64px; border-radius: 9999px;
     border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center;
-    font-size: 11pt; color: #64748b; text-align: center;
+    font-size: 15pt; color: #64748b; text-align: center;
   }
   .spa4-station { text-align: center; }
   .spa4-station h1 { font-size: 18pt; font-weight: 700; margin: 0 0 4px; }
-  .spa4-station p { margin: 0; font-size: 13pt; color: #334155; }
-  .spa4-ref { text-align: right; font-size: 12pt; color: #475569; }
+  .spa4-station p { margin: 0; font-size: 15pt; color: #334155; }
+  .spa4-ref { text-align: right; font-size: 15pt; color: #475569; }
   .spa4-title { text-align: center; margin: 14px 0 6px; }
   .spa4-title h2 { font-size: 22pt; font-weight: 700; margin: 0; letter-spacing: 0.02em; }
-  .spa4-title p { margin: 4px 0 0; font-size: 14pt; color: #334155; }
+  .spa4-title p { margin: 4px 0 0; font-size: 15pt; color: #334155; }
   .spa4-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin: 16px 0; font-size: 15pt; }
   .spa4-meta .row { display: flex; flex-direction: column; gap: 2px; }
   .spa4-meta .lbl { font-weight: 600; color: #1e293b; }
@@ -565,7 +565,7 @@ export const SMART_POLICE_A4_PRINT_CSS = `
     padding-bottom: 2px;
   }
   .spa4-rule { border: none; border-top: 1px solid #cbd5e1; margin: 12px 0; }
-  .spa4-preamble { font-size: 13pt; color: #475569; text-align: center; margin: 8px 0 12px; }
+  .spa4-preamble { font-size: 15pt; color: #475569; text-align: center; margin: 8px 0 12px; }
   .spa4-items { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 15pt; }
   .spa4-items th, .spa4-items td { border: 1px solid #334155; padding: 6px 8px; vertical-align: top; }
   .spa4-items th { background: #e0f2fe; font-weight: 700; text-align: center; }
@@ -576,13 +576,13 @@ export const SMART_POLICE_A4_PRINT_CSS = `
   .spa4-sig .line { border-bottom: 1px dotted #64748b; min-height: 1.4em; margin: 8px 0 4px; }
   .spa4-sig .name { text-align: center; }
   .spa4-date { margin-top: 20px; text-align: center; font-size: 15pt; }
-  .spa4-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 12pt; color: #64748b; text-align: center; }
+  .spa4-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 15pt; color: #64748b; text-align: center; }
   .spa4-qa { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 15pt; }
   .spa4-qa th, .spa4-qa td { border: 1px solid #334155; padding: 6px 8px; vertical-align: top; }
   .spa4-qa th { background: #e0f2fe; font-weight: 700; text-align: left; }
   .spa4-qa .q { background: #f0f9ff; font-weight: 600; }
   .spa4-qa .a { min-height: 2.2em; white-space: pre-wrap; }
-  .spa4-page-label { text-align: center; font-size: 12pt; color: #475569; margin: 4px 0 10px; }
+  .spa4-page-label { text-align: center; font-size: 15pt; color: #475569; margin: 4px 0 10px; }
   .spa4-break { page-break-before: always; break-before: page; }
 `;
 
@@ -701,7 +701,7 @@ window.addEventListener("load", function () {
 }
 
 const FORM_HTML_PRINT_CSS = `
-.sp-form-root { font-family: "TH Sarabun New","Sarabun",Tahoma,sans-serif; font-size: 15px; line-height: 1.45; color: #111; }
+.sp-form-root { font-family: "TH Sarabun New","Sarabun",Tahoma,sans-serif; font-size: 15pt; line-height: 1.45; color: #111; }
 .sp-form-body table { width: 100%; border-collapse: collapse; }
 .sp-form-body td, .sp-form-body th { border: 1px solid #64748b; padding: 4px 6px; vertical-align: top; }
 .sp-form-body p { margin: 0.15em 0; }

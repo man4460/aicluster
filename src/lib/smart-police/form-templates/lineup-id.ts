@@ -3,12 +3,12 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const LINEUP_ID_LINE_MM = 6.2;
+export const LINEUP_ID_LINE_MM = 7.2;
 export const LINEUP_ID_PAGE_INNER_MM = 273;
 export const LINEUP_ID_HEADER_MM = 140;
 export const LINEUP_ID_PAGE_NO_MM = 12;
-export const LINEUP_ID_CLOSING_MM = 18;
-export const LINEUP_ID_SIGNS_MM = 64;
+export const LINEUP_ID_CLOSING_MM = 22.1;
+export const LINEUP_ID_SIGNS_MM = 46;
 export const LINEUP_ID_PERSON_COUNT = 8;
 export const LINEUP_ID_ANSWER_MIN = 4;
 

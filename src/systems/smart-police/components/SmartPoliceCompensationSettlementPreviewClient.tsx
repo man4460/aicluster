@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { COMPENSATION_SETTLEMENT_FORM_TITLE } from "@/lib/smart-police/form-templates/official-form-catalog";
@@ -8,8 +9,20 @@ import {
   createEmptyCompensationSettlementFields,
   type CompensationSettlementFields,
 } from "@/lib/smart-police/form-templates/compensation-settlement";
-import { OfficialCompensationSettlementDocument } from "@/systems/smart-police/components/OfficialCompensationSettlementSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+
+const OfficialCompensationSettlementDocument = dynamic(
+  () =>
+    import("@/systems/smart-police/components/OfficialCompensationSettlementSheet").then(
+      (m) => m.OfficialCompensationSettlementDocument,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="py-16 text-center text-sm font-semibold text-white/90">กำลังโหลดแบบฟอร์ม…</p>
+    ),
+  },
+);
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";

@@ -3,7 +3,7 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 .sp-off {
   font-family: "TH Sarabun New", "Sarabun", "Cordia New", Tahoma, sans-serif;
   color: #111;
-  font-size: 15px;
+  font-size: 15pt;
   line-height: 1.35;
   width: 210mm;
   min-height: 297mm;
@@ -15,9 +15,9 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 .sp-off * { box-sizing: border-box; }
 .sp-off-head { text-align: center; margin-bottom: 6px; }
 .sp-off-garuda { width: 56px; height: auto; display: block; margin: 0 auto 2px; }
-.sp-off-org { font-size: 14.5px; font-weight: 700; margin: 0; }
+.sp-off-org { font-size: 15pt; font-weight: 700; margin: 0; }
 .sp-off-title {
-  font-size: 15.5px; font-weight: 700; margin: 2px 0 8px;
+  font-size: 15pt; font-weight: 700; margin: 2px 0 8px;
 }
 .sp-off-grid {
   display: grid;
@@ -28,10 +28,10 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 .sp-off-side {
   border-right: 1px solid #222;
   padding: 4px 8px 8px 0;
-  font-size: 13.5px;
+  font-size: 15pt;
   position: relative;
 }
-.sp-off-main { padding: 0 0 8px 10px; font-size: 14.5px; }
+.sp-off-main { padding: 0 0 8px 10px; font-size: 15pt; }
 .sp-off-field { margin-bottom: 10px; }
 .sp-off-label { font-weight: 700; display: inline; }
 .sp-off-dot, .sp-off-input {
@@ -63,9 +63,9 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 }
 .sp-off-case-lines { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; }
 .sp-off-case-line { display: flex; align-items: baseline; gap: 6px; }
-.sp-off-hint { font-size: 12px; color: #333; font-weight: 400; }
+.sp-off-hint { font-size: 15pt; color: #333; font-weight: 400; }
 .sp-off-qa { margin-top: 14px; border-top: 1px solid #222; padding-top: 10px; }
-.sp-off-qa-title { text-align: center; font-weight: 700; margin-bottom: 8px; font-size: 15px; }
+.sp-off-qa-title { text-align: center; font-weight: 700; margin-bottom: 8px; font-size: 15pt; }
 .sp-off-qa-block { margin-bottom: 10px; border: 1px solid #333; }
 .sp-off-qa-q { background: #f3f8fc; padding: 6px 8px; border-bottom: 1px solid #333; }
 .sp-off-qa-a { padding: 6px 8px; min-height: 3.2em; }
@@ -75,7 +75,7 @@ export const OFFICIAL_STATEMENT_FORM_CSS = `
 }
 .sp-off-sign {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-  margin-top: 20px; text-align: center; font-size: 14px;
+  margin-top: 20px; text-align: center; font-size: 15pt;
 }
 .sp-off-sign-line { border-bottom: 1px dotted #333; height: 28px; margin: 8px 16px 4px; }
 @media print {

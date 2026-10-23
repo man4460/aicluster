@@ -3,13 +3,13 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const RIGHTS_NOTICE_LINE_MM = 6.2;
+export const RIGHTS_NOTICE_LINE_MM = 7.2;
 export const RIGHTS_NOTICE_PAGE_INNER_MM = 273;
 export const RIGHTS_NOTICE_HEADER_MM = 128;
 export const RIGHTS_NOTICE_PAGE_NO_MM = 12;
-export const RIGHTS_NOTICE_META_MM = 8;
-export const RIGHTS_NOTICE_CLOSING_MM = 16;
-export const RIGHTS_NOTICE_SIGNS_MM = 28;
+export const RIGHTS_NOTICE_META_MM = 9.8;
+export const RIGHTS_NOTICE_CLOSING_MM = 19.6;
+export const RIGHTS_NOTICE_SIGNS_MM = 24;
 
 export const RIGHTS_NOTICE_CHARGE_FIELD = {
   key: "charge" as const,

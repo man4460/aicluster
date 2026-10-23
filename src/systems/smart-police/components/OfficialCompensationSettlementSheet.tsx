@@ -10,9 +10,10 @@ import {
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
+const LINE = "7.2mm";
+const INDENT = "12mm";
 
 function Dot({
   value,
@@ -32,6 +33,8 @@ function Dot({
       aria-label={ariaLabel}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      autoComplete="off"
+      suppressHydrationWarning
       spellCheck={false}
       className={cn("sp-word-field align-baseline", flex ? "min-w-0 flex-1" : "inline")}
       style={{
@@ -85,11 +88,11 @@ function SignRow({
   onParen: (v: string) => void;
 }) {
   return (
-    <div style={{ margin: "0 0 1.2mm" }}>
-      <Row style={{ flexWrap: "nowrap", marginBottom: "0.2mm" }}>
+    <div style={{ margin: 0 }}>
+      <Row style={{ flexWrap: "wrap", marginBottom: "0.2mm" }}>
         <T>ลงชื่อ</T>
-        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={8} />
-        <T>{role}</T>
+        <Dot aria-label={`ลงชื่อ${role}`} value={sign} onChange={onSign} flex minCh={6} />
+        <span style={{ flexShrink: 0 }}>{role}</span>
       </Row>
       <Row style={{ flexWrap: "nowrap", width: "78%", marginLeft: "12mm", marginBottom: 0 }}>
         <T>(</T>
@@ -277,6 +280,8 @@ export function OfficialCompensationSettlementDocument({
           aria-label="รายละเอียดการตกลงค่าเสียหาย"
           value={fields.agreementNotes}
           onChange={(e) => onChange("agreementNotes", e.target.value)}
+          autoComplete="off"
+          suppressHydrationWarning
           spellCheck={false}
           className="sp-lined-notes"
           style={{
@@ -292,70 +297,63 @@ export function OfficialCompensationSettlementDocument({
         />
       </div>
 
-      <div style={{ flexShrink: 0, fontSize: BODY, lineHeight: 1.5, marginBottom: "2mm" }}>
-        <p style={{ margin: "0 0 1.5mm", textAlign: "justify" }}>
+      <div style={{ flexShrink: 0, fontSize: BODY, lineHeight: LINE, marginBottom: "2.5mm" }}>
+        <p style={{ margin: "0 0 1.5mm", textAlign: "left", textIndent: INDENT }}>
           คู่กรณีทั้งสองฝ่าย สามารถตกลงกันได้ และต่างฝ่ายต่างไม่ติดใจที่จะเรียกร้องสิ่งใดกันอีกต่อไป
-          ทั้งในทางแพ่ง และไม่ติดใจในผลแห่งคดีอาญา
-        </p>
-        <p style={{ margin: "0 0 1.5mm", textAlign: "justify" }}>
-          อนึ่ง การตกลงชดใช้ค่าเสียหายนี้ ได้ทำด้วยความสมัครใจของคู่กรณีเอง ไม่มีผู้หนึ่งผู้ใดบังคับ ขู่เข็ญ
+          ทั้งในทางแพ่ง และไม่ติดใจในผลแห่งคดีอาญา อนึ่ง การตกลงชดใช้ค่าเสียหายนี้
+          ได้ทำด้วยความสมัครใจของคู่กรณีเอง ไม่มีผู้หนึ่งผู้ใดบังคับ ขู่เข็ญ
           หรือหลอกลวงซึ่งกันและกัน ด้วยประการใด ๆ ทั้งสิ้น
         </p>
-        <p style={{ margin: 0, textAlign: "justify" }}>
+        <p style={{ margin: 0, textAlign: "left", textIndent: INDENT }}>
           ได้อ่านให้ฟัง และคู่กรณีเข้าใจโดยตลอดแล้ว รับว่าถูกต้องตรงกับความเป็นจริงทุกประการ
+          จึงได้ลงลายมือชื่อไว้เป็นหลักฐาน
         </p>
       </div>
-
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1.15fr",
+          gridTemplateColumns: "1fr 1fr",
           columnGap: "4mm",
+          rowGap: "1mm",
           alignItems: "start",
           flexShrink: 0,
-          marginTop: "1mm",
         }}
       >
-        <p style={{ margin: `${LINE} 0 0`, lineHeight: LINE, fontSize: BODY }}>
-          จึงได้ลงลายมือชื่อไว้เป็นหลักฐาน
-        </p>
-        <div>
-          <SignRow
-            role="คู่กรณีฝ่ายที่ ๑"
-            sign={fields.signParty1}
-            paren={fields.signParty1Paren}
-            onSign={(v) => onChange("signParty1", v)}
-            onParen={(v) => onChange("signParty1Paren", v)}
-          />
-          <SignRow
-            role="คู่กรณีฝ่ายที่ ๒"
-            sign={fields.signParty2}
-            paren={fields.signParty2Paren}
-            onSign={(v) => onChange("signParty2", v)}
-            onParen={(v) => onChange("signParty2Paren", v)}
-          />
-          <SignRow
-            role="พยาน"
-            sign={fields.signWitness1}
-            paren={fields.signWitness1Paren}
-            onSign={(v) => onChange("signWitness1", v)}
-            onParen={(v) => onChange("signWitness1Paren", v)}
-          />
-          <SignRow
-            role="พยาน"
-            sign={fields.signWitness2}
-            paren={fields.signWitness2Paren}
-            onSign={(v) => onChange("signWitness2", v)}
-            onParen={(v) => onChange("signWitness2Paren", v)}
-          />
-          <SignRow
-            role="พนักงานสอบสวน/บันทึก/พิมพ์"
-            sign={fields.signOfficer}
-            paren={fields.signOfficerParen}
-            onSign={(v) => onChange("signOfficer", v)}
-            onParen={(v) => onChange("signOfficerParen", v)}
-          />
-        </div>
+        <SignRow
+          role="คู่กรณีฝ่ายที่ ๑"
+          sign={fields.signParty1}
+          paren={fields.signParty1Paren}
+          onSign={(v) => onChange("signParty1", v)}
+          onParen={(v) => onChange("signParty1Paren", v)}
+        />
+        <SignRow
+          role="คู่กรณีฝ่ายที่ ๒"
+          sign={fields.signParty2}
+          paren={fields.signParty2Paren}
+          onSign={(v) => onChange("signParty2", v)}
+          onParen={(v) => onChange("signParty2Paren", v)}
+        />
+        <SignRow
+          role="พยาน"
+          sign={fields.signWitness1}
+          paren={fields.signWitness1Paren}
+          onSign={(v) => onChange("signWitness1", v)}
+          onParen={(v) => onChange("signWitness1Paren", v)}
+        />
+        <SignRow
+          role="พยาน"
+          sign={fields.signWitness2}
+          paren={fields.signWitness2Paren}
+          onSign={(v) => onChange("signWitness2", v)}
+          onParen={(v) => onChange("signWitness2Paren", v)}
+        />
+        <SignRow
+          role="พงส./บันทึก/อ่าน"
+          sign={fields.signOfficer}
+          paren={fields.signOfficerParen}
+          onSign={(v) => onChange("signOfficer", v)}
+          onParen={(v) => onChange("signOfficerParen", v)}
+        />
       </div>
     </article>
   );

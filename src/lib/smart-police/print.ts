@@ -157,19 +157,19 @@ export function buildSmartPolicePrintDocumentHtml(opts: {
   @page { size: A4; margin: 18mm 16mm; }
   body {
     font-family: "TH Sarabun New", "Sarabun", "Tahoma", sans-serif;
-    font-size: 16pt;
+    font-size: 15pt;
     line-height: 1.45;
     color: #111;
     margin: 0;
   }
   .sp-header { text-align: center; margin-bottom: 1.2rem; }
   .sp-header h1 { font-size: 18pt; font-weight: 700; margin: 0 0 0.25rem; }
-  .sp-meta { font-size: 14pt; color: #333; margin-bottom: 1rem; }
+  .sp-meta { font-size: 15pt; color: #333; margin-bottom: 1rem; }
   .sp-meta-row { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .sp-body { text-align: justify; }
   .sp-line { margin: 0 0 0.15rem; white-space: pre-wrap; }
   .sp-gap { margin: 0.4rem 0; height: 0.5rem; }
-  .sp-footer { margin-top: 2rem; font-size: 13pt; color: #444; text-align: center; border-top: 1px solid #ccc; padding-top: 0.75rem; }
+  .sp-footer { margin-top: 2rem; font-size: 15pt; color: #444; text-align: center; border-top: 1px solid #ccc; padding-top: 0.75rem; }
   @media print {
     .no-print { display: none !important; }
   }

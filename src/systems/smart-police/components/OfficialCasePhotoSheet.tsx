@@ -11,10 +11,10 @@ import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
 const PAGE = { w: "210mm", h: "297mm" };
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "13pt";
+const BODY = "15pt";
 const TITLE = "15pt";
-const LINE = "6.2mm";
-const SIGN_LINE = "5.8mm";
+const LINE = "7.2mm";
+const SIGN_LINE = "6.7mm";
 const RULE = "0.6pt solid #111";
 
 function Dot({
@@ -203,9 +203,9 @@ function SignLine({
   ariaLabel: string;
 }) {
   return (
-    <Row style={{ flexWrap: "nowrap", marginBottom: "0.2mm", minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+    <Row style={{ flexWrap: "wrap", marginBottom: "0.2mm", minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
       <span style={{ flexShrink: 0 }}>ลงชื่อ</span>
-      <Dot aria-label={ariaLabel} value={value} onChange={onChange} flex minCh={8} />
+      <Dot aria-label={ariaLabel} value={value} onChange={onChange} flex minCh={6} />
       <span style={{ flexShrink: 0 }}>{role}</span>
     </Row>
   );
@@ -404,7 +404,16 @@ export function OfficialCasePhotoDocument({
           ได้ตรวจดูและอ่านให้ฟังแล้ว รับว่าเป็นความจริงถูกต้อง จึงได้ลงลายมือชื่อไว้เป็นหลักฐาน
         </p>
 
-        <div style={{ width: "62%", marginLeft: "auto", flexShrink: 0 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            columnGap: "4mm",
+            rowGap: "0.6mm",
+            width: "100%",
+            flexShrink: 0,
+          }}
+        >
           <SignLine
             role="ผู้ต้องหาที่ ๑"
             ariaLabel="ลงชื่อผู้ต้องหาที่ 1"
@@ -424,12 +433,20 @@ export function OfficialCasePhotoDocument({
             onChange={(v) => onChange("signComplainant", v)}
           />
           <SignLine
-            role="พนักงานสอบสวน/บันทึก"
-            ariaLabel="ลงชื่อพนักงานสอบสวนบันทึก"
+            role="พงส./บันทึก/อ่าน"
+            ariaLabel="ลงชื่อพงส. บันทึก อ่าน"
             value={fields.signOfficer}
             onChange={(v) => onChange("signOfficer", v)}
           />
-          <Row style={{ flexWrap: "nowrap", marginBottom: 0, minHeight: SIGN_LINE, lineHeight: SIGN_LINE }}>
+          <Row
+            style={{
+              flexWrap: "nowrap",
+              marginBottom: 0,
+              minHeight: SIGN_LINE,
+              lineHeight: SIGN_LINE,
+              gridColumn: "1 / -1",
+            }}
+          >
             <span style={{ flexShrink: 0 }}>ตำแหน่ง</span>
             <Dot
               aria-label="ตำแหน่งพนักงานสอบสวน"

@@ -3,12 +3,12 @@ import {
   splitArrestTextByLines,
 } from "@/lib/smart-police/form-templates/arrest-record";
 
-export const CASE_COVER_LINE_MM = 6.2;
+export const CASE_COVER_LINE_MM = 7.2;
 export const CASE_COVER_PAGE_INNER_MM = 273;
 export const CASE_COVER_HEADER_MM = 56;
 export const CASE_COVER_PAGE_NO_MM = 12;
-export const CASE_COVER_META_CONTROL_MM = 56;
-export const CASE_COVER_APPT_SEND_MM = 58;
+export const CASE_COVER_META_CONTROL_MM = 58;
+export const CASE_COVER_APPT_SEND_MM = 60;
 
 export const CASE_COVER_PARTY_FIELDS = [
   { key: "charge", label: "ต้องหาว่ากระทำความผิดฐาน", minLines: 2 },
