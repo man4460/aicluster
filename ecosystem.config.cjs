@@ -25,7 +25,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "dev -p 3000 -H 0.0.0.0",
+      args: "dev -p 3000 -H 0.0.0.0 --webpack",
       watch: false,
       env: {
         NODE_ENV: "development",
@@ -36,7 +36,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "dev -p 3001 -H 0.0.0.0",
+      args: "dev -p 3001 -H 0.0.0.0 --webpack",
       watch: false,
       env: {
         NODE_ENV: "development",
