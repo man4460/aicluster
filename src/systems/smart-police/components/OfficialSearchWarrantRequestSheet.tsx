@@ -48,6 +48,10 @@ export function Lbl({
   nowrap = true,
   k,
   w,
+  center,
+  right,
+  underline = false,
+  align,
 }: {
   x?: number;
   y: number;
@@ -57,6 +61,12 @@ export function Lbl({
   nowrap?: boolean;
   k?: string;
   w?: number;
+  /** จัดกลางเต็มความกว้างหน้า */
+  center?: boolean;
+  /** ตรึงจากขอบขวา (mm) แทน x */
+  right?: number;
+  underline?: boolean;
+  align?: CSSProperties["textAlign"];
 }) {
   const { layout, edit, onDragStart, onTextChange } = useContext(SheetCtx);
   // unique per instance: same position can hold different labels on different pages
@@ -84,11 +94,18 @@ export function Lbl({
       style={{
         ...PROSE,
         top: `${topFor(y + dy, size).toFixed(2)}mm`,
-        left: `${((x ?? 0) + dx).toFixed(2)}mm`,
+        ...(center
+          ? { left: 0, right: 0, textAlign: "center" as const }
+          : right !== undefined
+            ? { right: `${(210 - right).toFixed(2)}mm` }
+            : { left: `${((x ?? 0) + dx).toFixed(2)}mm` }),
         fontSize: `${size}pt`,
         fontWeight: bold ? 700 : 400,
+        textDecoration: underline ? "underline" : undefined,
+        textUnderlineOffset: "0.9mm",
         whiteSpace: nowrap ? "nowrap" : "normal",
         ...(w ? { width: `${w}mm` } : {}),
+        ...(align ? { textAlign: align } : {}),
         cursor: edit ? "move" : undefined,
       }}
     >
@@ -106,6 +123,7 @@ export function Line({
   value,
   onChange,
   aria,
+  size,
 }: {
   label?: string;
   labelX?: number;
@@ -115,6 +133,7 @@ export function Line({
   value: string;
   onChange: (v: string) => void;
   aria: string;
+  size?: number;
 }) {
   const { layout, edit, onDragStart, onResizeStart, onToggleHidden } = useContext(SheetCtx);
   // unique per instance: same aria can appear on many rows — key by position too
@@ -168,7 +187,7 @@ export function Line({
             height: `${LINE.toFixed(2)}mm`,
             marginTop: `${(RULE_DY - LINE).toFixed(2)}mm`,
             fontFamily: FONT,
-            fontSize: `${BODY}pt`,
+            fontSize: `${size ?? BODY}pt`,
             lineHeight: `${LINE.toFixed(2)}mm`,
             boxSizing: "border-box",
             padding: 0,

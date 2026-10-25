@@ -1,235 +1,51 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
 import { type ArrestWarrantFields } from "@/lib/smart-police/form-templates/arrest-warrant";
+import { emptySheetLayout, type SheetLayout } from "@/lib/smart-police/form-templates/sheet-layout";
+import {
+  CheckBox,
+  ExtraLines,
+  Lbl,
+  Line,
+  Sheet,
+  SheetCtx,
+} from "@/systems/smart-police/components/OfficialSearchWarrantRequestSheet";
 
-const PAGE_W = 210;
-const PAGE_H = 297;
-const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-
-const BODY = 16;
 const TITLE = 20;
 const HEAD = 22;
-const LINE = 7.76;
-const RIGHT = 193.38;
-const RULE_DY = 6.2;
-
-function topFor(y: number, size: number): number {
-  return y + 0.1227 * size - 1.267;
-}
-
-const PROSE: CSSProperties = {
-  position: "absolute",
-  lineHeight: `${LINE}mm`,
-};
-
-function Lbl({
-  x,
-  y,
-  children,
-  size = BODY,
-  bold = false,
-  right,
-  center,
-  underline = false,
-  nowrap = true,
-  width,
-}: {
-  x?: number;
-  y: number;
-  children: ReactNode;
-  size?: number;
-  bold?: boolean;
-  right?: number;
-  center?: boolean;
-  underline?: boolean;
-  nowrap?: boolean;
-  width?: number;
-}) {
-  return (
-    <span
-      style={{
-        ...PROSE,
-        top: `${topFor(y, size).toFixed(2)}mm`,
-        fontSize: `${size}pt`,
-        fontWeight: bold ? 700 : 400,
-        textDecoration: underline ? "underline" : undefined,
-        whiteSpace: nowrap ? "nowrap" : "normal",
-        ...(center
-          ? { left: 0, right: 0, textAlign: "center" }
-          : right !== undefined
-            ? { right: `${(PAGE_W - right).toFixed(2)}mm` }
-            : { left: `${(x ?? 0).toFixed(2)}mm` }),
-        ...(width !== undefined ? { width: `${width}mm` } : {}),
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Line({
-  label,
-  labelX,
-  x0,
-  x1,
-  y,
-  value,
-  onChange,
-  aria,
-  size = BODY,
-  right,
-  dotted = true,
-}: {
-  label?: string;
-  labelX?: number;
-  x0: number;
-  x1: number;
-  y: number;
-  value: string;
-  onChange: (v: string) => void;
-  aria: string;
-  size?: number;
-  right?: number;
-  dotted?: boolean;
-}) {
-  return (
-    <>
-      {label ? (
-        <Lbl x={labelX ?? x0} y={y} size={size}>
-          {label}
-        </Lbl>
-      ) : null}
-      <span
-        className="sp-rule-cell"
-        style={{
-          position: "absolute",
-          left: `${x0.toFixed(2)}mm`,
-          top: `${(y + 0.7).toFixed(2)}mm`,
-          width: `${Math.max(2, x1 - x0).toFixed(2)}mm`,
-          height: `${RULE_DY.toFixed(2)}mm`,
-          borderBottom: dotted ? "0.5pt dotted #111" : undefined,
-          boxSizing: "border-box",
-        }}
-      >
-        <input
-          aria-label={aria}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
-          className="sp-bare-field"
-          style={{
-            display: "block",
-            width: "100%",
-            minWidth: 0,
-            height: `${LINE.toFixed(2)}mm`,
-            marginTop: `${(RULE_DY - LINE).toFixed(2)}mm`,
-            fontFamily: FONT,
-            fontSize: `${size}pt`,
-            lineHeight: `${LINE.toFixed(2)}mm`,
-            boxSizing: "border-box",
-            padding: 0,
-            textAlign: "left",
-            textIndent: "4mm",
-          }}
-        />
-      </span>
-    </>
-  );
-}
-
-function CheckBox({
-  x,
-  y,
-  checked,
-  onToggle,
-  label,
-}: {
-  x: number;
-  y: number;
-  checked: boolean;
-  onToggle: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={checked}
-      onClick={onToggle}
-      style={{
-        position: "absolute",
-        left: `${x.toFixed(2)}mm`,
-        top: `${(y - 1.0).toFixed(2)}mm`,
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "2.2mm",
-        padding: 0,
-        border: "none",
-        background: "transparent",
-        font: "inherit",
-        fontSize: `${BODY}pt`,
-        lineHeight: `${LINE}mm`,
-        color: "#111",
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          width: "4.2mm",
-          height: "4.2mm",
-          marginTop: "1.1mm",
-          flexShrink: 0,
-          border: "0.5pt solid #111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "10pt",
-          lineHeight: 1,
-        }}
-      >
-        {checked ? "✓" : ""}
-      </span>
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function Sheet({ children }: { children: ReactNode }) {
-  return (
-    <article
-      data-sheet-index={0}
-      className="sp-a4-sheet relative mx-auto bg-white text-[#111] shadow-xl print:shadow-none"
-      style={{
-        width: `${PAGE_W}mm`,
-        height: `${PAGE_H}mm`,
-        boxSizing: "border-box",
-        overflow: "hidden",
-        position: "relative",
-        fontFamily: FONT,
-        fontSize: `${BODY}pt`,
-        lineHeight: `${LINE}mm`,
-        color: "#111",
-      }}
-    >
-      {children}
-    </article>
-  );
-}
 
 export function OfficialArrestWarrantDocument({
   fields,
   onChange,
+  layout = emptySheetLayout(),
+  edit = false,
+  onDragStart,
+  onResizeStart,
+  onTextChange,
+  onToggleHidden,
+  onLineDrag,
+  onLineResize,
+  onDeleteExtra,
 }: {
   fields: ArrestWarrantFields;
   onChange: <K extends keyof ArrestWarrantFields>(key: K, value: ArrestWarrantFields[K]) => void;
+  layout?: SheetLayout;
+  edit?: boolean;
+  onDragStart?: (key: string, e: React.PointerEvent) => void;
+  onResizeStart?: (key: string, e: React.PointerEvent) => void;
+  onTextChange?: (key: string, text: string) => void;
+  onToggleHidden?: (key: string) => void;
+  onLineDrag?: (id: string, e: React.PointerEvent) => void;
+  onLineResize?: (id: string, e: React.PointerEvent) => void;
+  onDeleteExtra?: (id: string) => void;
 }) {
   const toggle = (key: keyof ArrestWarrantFields) => () => onChange(key, !fields[key] as never);
 
   return (
+    <SheetCtx.Provider value={{ layout, edit, onDragStart, onResizeStart, onTextChange, onToggleHidden, onLineDrag, onLineResize, onDeleteExtra }}>
     <div className="flex flex-col gap-6 pb-8 print:gap-0">
       <Sheet>
+        <ExtraLines page={0} />
         {/* หัวแผ่น */}
         <Lbl x={172.0} y={13.2} size={12}>
           สำหรับศาลใช้
@@ -277,12 +93,12 @@ export function OfficialArrestWarrantDocument({
         </Lbl>
         <Line x0={34.60} x1={193.38} y={100.9} value={fields.whereasText} onChange={(v) => onChange("whereasText", v)} aria="ด้วย" />
 
-        <Lbl x={25.5} y={125.1} nowrap={false} width={165}>
+        <Lbl x={25.5} y={125.1} nowrap={false} w={165}>
           ซึ่งต้องหาว่ากระทำความผิดฐาน
         </Lbl>
         <Line x0={80.20} x1={193.38} y={125.1} value={fields.chargeText} onChange={(v) => onChange("chargeText", v)} aria="ข้อหา" />
 
-        <Lbl x={25.5} y={147.4} nowrap={false} width={165}>
+        <Lbl x={25.5} y={147.4} nowrap={false} w={165}>
           กรณีมีหลักฐานตามสมควรว่า
         </Lbl>
         <Line x0={72.60} x1={193.38} y={147.4} value={fields.evidenceText} onChange={(v) => onChange("evidenceText", v)} aria="หลักฐาน" />
@@ -346,5 +162,6 @@ export function OfficialArrestWarrantDocument({
         <Line x0={152.80} x1={193.38} y={279.4} value={fields.purposeText} onChange={(v) => onChange("purposeText", v)} aria="เพื่อจะ" />
       </Sheet>
     </div>
+    </SheetCtx.Provider>
   );
 }

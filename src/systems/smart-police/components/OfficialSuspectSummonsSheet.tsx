@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   SUSPECT_SUMMONS_AUTHORITY,
   SUSPECT_SUMMONS_RECEIPT_TEXT,
@@ -8,6 +8,12 @@ import {
   SUSPECT_SUMMONS_TAIL_NOTE,
   type SuspectSummonsFields,
 } from "@/lib/smart-police/form-templates/suspect-summons";
+import { emptySheetLayout, type SheetLayout } from "@/lib/smart-police/form-templates/sheet-layout";
+import {
+  Lbl as SharedLbl,
+  Line as SharedLine,
+  SheetCtx,
+} from "@/systems/smart-police/components/OfficialSearchWarrantRequestSheet";
 
 /**
  * หมายเรียกผู้ต้องหา — ดัดแปลงจาก OfficialWitnessSummonsSheet (หมายเรียกพยาน)
@@ -64,27 +70,15 @@ function Lbl({
   align?: CSSProperties["textAlign"];
   width?: number;
 }) {
+  // ใช้คอมโพเนนต์กลาง (รองรับโหมดจัดหน้า/ลาก/แก้ข้อความ) โดยแปลงชื่อ prop width → w
   return (
-    <span
-      style={{
-        ...PROSE,
-        top: `${topFor(y, size).toFixed(2)}mm`,
-        fontSize: `${size}pt`,
-        fontWeight: bold ? 700 : 400,
-        textDecoration: underline ? "underline" : undefined,
-        textUnderlineOffset: "0.9mm",
-        whiteSpace: nowrap ? "nowrap" : "normal",
-        ...(right !== undefined ? { right: `${(PAGE_W - right).toFixed(2)}mm` } : { left: `${(x ?? 0).toFixed(2)}mm` }),
-        ...(width !== undefined ? { width: `${width}mm` } : {}),
-        ...(align ? { textAlign: align } : {}),
-      }}
-    >
+    <SharedLbl x={x} y={y} size={size} bold={bold} right={right} underline={underline} nowrap={nowrap} align={align} w={width}>
       {children}
-    </span>
+    </SharedLbl>
   );
 }
 
-/** ช่องกรอก 1 บรรทัด — ตัวอักษรนั่งบนเส้นจุดไข่ปลา (inline input ในการ์ด span) */
+/** ช่องกรอก 1 บรรทัด — ตัวอักษรนั่งบนเส้นจุดไข่ปลา (เส้นจริงอยู่ที่ y+0.7 ในคอมโพเนนต์กลาง) */
 function Line({
   label,
   labelX,
@@ -94,9 +88,7 @@ function Line({
   value,
   onChange,
   aria,
-  bold = false,
-  size = BODY,
-  dotted = true,
+  size,
 }: {
   label?: string;
   labelX?: number;
@@ -106,52 +98,17 @@ function Line({
   value: string;
   onChange: (v: string) => void;
   aria: string;
-  bold?: boolean;
   size?: number;
-  dotted?: boolean;
 }) {
   return (
     <>
       {label ? (
-        <Lbl x={labelX ?? x0} y={y} size={size}>
+        <Lbl x={labelX ?? x0} y={y}>
           {label}
         </Lbl>
       ) : null}
-      <span
-        className="sp-rule-cell"
-        style={{
-          position: "absolute",
-          left: `${x0.toFixed(2)}mm`,
-          top: `${(y - 1.55).toFixed(2)}mm`,
-          width: `${Math.max(2, x1 - x0).toFixed(2)}mm`,
-          height: `${RULE_DY.toFixed(2)}mm`,
-          borderBottom: dotted ? "0.5pt dotted #111" : undefined,
-          boxSizing: "border-box",
-        }}
-      >
-        <input
-          aria-label={aria}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
-          className="sp-bare-field"
-          style={{
-            display: "block",
-            width: "100%",
-            minWidth: 0,
-            height: `${LINE.toFixed(2)}mm`,
-            marginTop: `${(RULE_DY - LINE).toFixed(2)}mm`,
-            fontFamily: FONT,
-            fontSize: `${size}pt`,
-            fontWeight: bold ? 700 : 400,
-            lineHeight: `${LINE.toFixed(2)}mm`,
-            boxSizing: "border-box",
-            padding: 0,
-            textAlign: "left",
-            textIndent: "4mm",
-          }}
-        />
-      </span>
+      {/* เดิมเส้นอยู่ที่ y − 1.55 · คอมโพเนนต์กลางอยู่ที่ y + 0.7 จึงชดเชย 2.25 เพื่อให้ตำแหน่งเดิมคงที่ */}
+      <SharedLine x0={x0} x1={x1} y={y - 2.25} value={value} onChange={onChange} aria={aria} size={size} />
     </>
   );
 }
@@ -170,6 +127,7 @@ function FlowField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { edit } = useContext(SheetCtx);
   return (
     <>
       {Array.from({ length: lines }, (_, i) => (
@@ -214,6 +172,7 @@ function FlowField({
           padding: 0,
           margin: 0,
           overflow: "hidden",
+          pointerEvents: edit ? "none" : "auto",
         }}
       />
     </>
@@ -296,10 +255,26 @@ export function OfficialSuspectSummonsDocument({
   fields,
   onChange,
   onPageCount,
+  layout = emptySheetLayout(),
+  edit = false,
+  onDragStart,
+  onResizeStart,
+  onTextChange,
+  onLineDrag,
+  onLineResize,
+  onToggleHidden,
 }: {
   fields: SuspectSummonsFields;
   onChange: <K extends keyof SuspectSummonsFields>(key: K, value: SuspectSummonsFields[K]) => void;
   onPageCount?: (n: number) => void;
+  layout?: SheetLayout;
+  edit?: boolean;
+  onDragStart?: (key: string, e: React.PointerEvent) => void;
+  onResizeStart?: (key: string, e: React.PointerEvent) => void;
+  onTextChange?: (key: string, text: string) => void;
+  onLineDrag?: (id: string, e: React.PointerEvent) => void;
+  onLineResize?: (id: string, e: React.PointerEvent) => void;
+  onToggleHidden?: (key: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [, setMeasureReady] = useState(false);
@@ -353,6 +328,9 @@ export function OfficialSuspectSummonsDocument({
   const orderRuleStart = reasonRuleStart + (reasonLines - 1) * LINE + (ORDER.firstRuleY - (reasonRuleStart + LINE));
 
   return (
+    <SheetCtx.Provider
+      value={{ layout, edit, onDragStart, onResizeStart, onTextChange, onLineDrag, onLineResize, onToggleHidden }}
+    >
     <div className="flex flex-col gap-6 pb-8 print:gap-0">
       <Sheet index={0}>
         {/* ───────────── หัวแผ่น ───────────── */}
@@ -610,5 +588,6 @@ export function OfficialSuspectSummonsDocument({
         </span>
       </Sheet>
     </div>
+    </SheetCtx.Provider>
   );
 }
