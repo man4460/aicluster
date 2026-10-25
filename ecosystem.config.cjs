@@ -25,10 +25,12 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "dev -p 3000 -H 0.0.0.0 --webpack",
+      args: "dev -p 3000 -H 0.0.0.0 --turbopack",
       watch: false,
+      max_memory_restart: "8G",
       env: {
         NODE_ENV: "development",
+        NODE_OPTIONS: "--max-old-space-size=8192",
       },
     },
     {

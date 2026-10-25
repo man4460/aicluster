@@ -4,11 +4,11 @@ import {
 } from "@/lib/smart-police/form-templates/arrest-record";
 
 export const WITNESS_SUMMONS_LINE_MM = 7.2;
-export const WITNESS_SUMMONS_PAGE_INNER_MM = 275;
-export const WITNESS_SUMMONS_HEADER_MM = 130;
+export const WITNESS_SUMMONS_PAGE_INNER_MM = 281;
+export const WITNESS_SUMMONS_HEADER_MM = 139;
 export const WITNESS_SUMMONS_PAGE_NO_MM = 12;
 export const WITNESS_SUMMONS_APPOINT_MM = 16;
-export const WITNESS_SUMMONS_TAIL_MM = 106;
+export const WITNESS_SUMMONS_TAIL_MM = 96;
 
 export const WITNESS_SUMMONS_AUTHORITY =
   "อาศัยอำนาจตามประมวลกฎหมายวิธีพิจารณาความอาญา พุทธศักราช ๒๔๗๗ มาตรา ๕๒";
@@ -16,10 +16,20 @@ export const WITNESS_SUMMONS_AUTHORITY =
 export const WITNESS_SUMMONS_WARNING =
   "การขัดขืนหลีกเลี่ยงไม่มาตามหมายเรียกของพนักงานสอบสวน มีความผิดต้องระวางโทษจำคุกไม่เกินสามเดือน ปรับไม่เกินห้าพันบาท หรือทั้งจำทั้งปรับตามประมวลกฎหมายอาญามาตรา ๑๖๘";
 
-export const WITNESS_SUMMONS_RECEIPT_TEXT =
-  "ข้าพเจ้าได้รับหมายเรียกพยานของเจ้าพนักงานตำรวจ ซึ่งกำหนดให้ข้าพเจ้าไปยัง";
+/** กล่องคำเตือนต้นฉบับตัดบรรทัดตายตัว 4 บรรทัด (ผู้ใช้แก้ข้อความเองไม่ได้) */
+export const WITNESS_SUMMONS_WARNING_LINES = [
+  "การขัดขืนหลีกเลี่ยงไม่มาตามหมายเรียก",
+  "ของพนักงานสอบสวน มีความผิดต้องระวางโทษ",
+  "จำคุกไม่เกินสามเดือน ปรับไม่เกินห้าพันบาท หรือ",
+  "ทั้งจำทั้งปรับตามประมวลกฎหมายอาญามาตรา ๑๖๘",
+] as const;
+
+export const WITNESS_SUMMONS_RECEIPT_TEXT = "ได้รับหมายเรียกพยานของเจ้าพนักงานตำรวจ";
 
 export const WITNESS_SUMMONS_RECEIPT_TAIL = "ไว้แล้ว";
+
+export const WITNESS_SUMMONS_TAIL_NOTE =
+  "*หมายเหตุ ในส่วนนี้ให้ผู้นำส่งหมาย นำกลับมาคืนแก่พนักงานสอบสวนผู้ออกหมาย";
 
 export const WITNESS_SUMMONS_FLOW_FIELDS = [
   { key: "reason" as const, label: "ด้วยเหตุ", minLines: 2 },
@@ -62,6 +72,8 @@ export type WitnessSummonsFields = {
   district: string;
   province: string;
   headman: string;
+  kamnan: string;
+  officerName: string;
   reason: string;
   orderText: string;
   placeToGo: string;
@@ -69,9 +81,11 @@ export type WitnessSummonsFields = {
   appointMonth: string;
   appointYear: string;
   appointTime: string;
+  appointPlace2: string;
   signName: string;
   signPrinted: string;
   signPosition: string;
+  signPhone: string;
   receiptDay: string;
   receiptMonth: string;
   receiptYear: string;
@@ -81,6 +95,8 @@ export type WitnessSummonsFields = {
   appointMonth2: string;
   appointYear2: string;
   appointTime2: string;
+  receiptName: string;
+  receiptRelation: string;
   receiverName: string;
   delivererName: string;
 };
@@ -101,6 +117,8 @@ export function createEmptyWitnessSummonsFields(): WitnessSummonsFields {
     district: "",
     province: "",
     headman: "",
+    kamnan: "",
+    officerName: "",
     reason: "",
     orderText: "",
     placeToGo: "",
@@ -108,9 +126,11 @@ export function createEmptyWitnessSummonsFields(): WitnessSummonsFields {
     appointMonth: "",
     appointYear: "",
     appointTime: "",
+    appointPlace2: "",
     signName: "",
     signPrinted: "",
     signPosition: "",
+    signPhone: "",
     receiptDay: "",
     receiptMonth: "",
     receiptYear: "",
@@ -120,6 +140,8 @@ export function createEmptyWitnessSummonsFields(): WitnessSummonsFields {
     appointMonth2: "",
     appointYear2: "",
     appointTime2: "",
+    receiptName: "",
+    receiptRelation: "",
     receiverName: "",
     delivererName: "",
   };

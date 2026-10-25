@@ -1,4 +1,5 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+/* ปิด auto source detection — ไม่เช่นนั้น Tailwind v4 จะสแกนทั้ง repo (รวม tmp/ 57k files) จน PostCSS ค้าง/กิน RAM */
 
 /* สแกนไฟล์ UI รวม .ts ใน systems และ components (โทเค็นคลาส) — ไม่สแกน app/api เพื่อเลี่ยง Turbopack error path */
 @source "../**/*.tsx";
@@ -232,6 +233,24 @@ select:focus {
   ring-color: var(--ring-soft);
 }
 
+/* ฟอนต์ราชการ — ดึงจากไฟล์ .docx ต้นฉบับ (public/smart-police/forms/*.docx → embedded TH Sarabun New)
+   ใช้กับแม่แบบฟอร์มราชการ Smart Police เพื่อให้ระยะ/aspect ตรงกับต้นฉบับ Word ทุกตัวอักษร */
+@font-face {
+  font-family: "TH Sarabun New Doc";
+  src: url("/fonts/THSarabunNew-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "TH Sarabun New Doc";
+  src: url("/fonts/THSarabunNew-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
 /* แบบฟอร์มราชการ Smart Police — พิมพ์บนจุดไข่ปลา ไม่มีกล่อง (override input กลาง) */
 input.sp-word-field,
 textarea.sp-word-field {
@@ -262,10 +281,40 @@ textarea.sp-word-field:focus-visible {
   background: transparent !important;
 }
 
+/* ช่องกรอกในแผ่นฟอร์มราชการที่วาดเส้นจุดไข่ปลาเอง (ตำแหน่งมาจาก PDF ต้นฉบับ) — ห้ามใส่เส้น/พื้นหลัง */
+.sp-a4-sheet input.sp-bare-field,
+.sp-a4-sheet input.sp-bare-field:hover,
+.sp-a4-sheet input.sp-bare-field:focus,
+.sp-a4-sheet input.sp-bare-field:focus-visible {
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #111 !important;
+  appearance: none !important;
+}
+
 .sp-qa-cell[data-empty="true"]::before {
   content: attr(data-placeholder);
   color: #9ca3af;
   pointer-events: none;
+}
+
+/* ช่องกรอกที่วาดเส้นจุดไข่ปลาด้วย container เอง — ห้าม input วาดเส้นซ้ำ */
+.sp-a4-sheet .sp-rule-cell > input.sp-bare-field,
+.sp-a4-sheet .sp-rule-cell > input.sp-bare-field:hover,
+.sp-a4-sheet .sp-rule-cell > input.sp-bare-field:focus,
+.sp-a4-sheet .sp-rule-cell > input.sp-bare-field:focus-visible {
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* ช่องในตารางแบบฟอร์มราชการ — ใช้เส้นตาราง ไม่ซ้ำจุดไข่ปลา · รายการห่อในเซลล์ */

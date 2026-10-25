@@ -1,93 +1,248 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { cn } from "@/lib/cn";
 import {
   WITNESS_SUMMONS_AUTHORITY,
   WITNESS_SUMMONS_RECEIPT_TEXT,
   WITNESS_SUMMONS_RECEIPT_TAIL,
-  WITNESS_SUMMONS_WARNING,
-  packWitnessSummonsPages,
+  WITNESS_SUMMONS_TAIL_NOTE,
   type WitnessSummonsFields,
-  type WitnessSummonsFlowKey,
-  type WitnessSummonsPageSlice,
 } from "@/lib/smart-police/form-templates/witness-summons";
-import { estimateArrestWrappedLines as estimateLines } from "@/lib/smart-police/form-templates/arrest-record";
-import { thaiNumeral } from "@/lib/smart-police/form-templates/property-list";
 
-const PAGE = { w: "210mm", h: "297mm" };
+/**
+ * พิกัดทุกค่าในไฟล์นี้เป็น มม. จากมุมบนซ้ายของกระดาษ A4
+ * ที่มา: วัดจาก `public/smart-police/forms/หมายเรียกพยาน.docx` (Word → PDF → pymupdf)
+ * `y` ของทุกค่า = ytop ของกล่องข้อความในต้นฉบับ
+ *
+ * กติกาสำคัญ (เรียนรู้จากการทำแบบนี้):
+ * 1) เส้นจุดไข่ปลาของช่องกรอกวาดด้วย `border-bottom` ของ `<span>` ที่ห่อ input inline
+ *    (แบบเดียวกับ OfficialChargeNoticeSheet) — ไม่วาดเส้นแยกแล้วเอา input ทับ
+ *    เพราะตัวอักษรจะไปลอยเหนือเส้น
+ * 2) ช่องที่ไม่มีเส้นในต้นฉบับ (เช่น ความอาญา, ไป ณ ที่) ต้องไม่มีไข่ปลา
+ * 3) ไม่วัด DOM เพื่อจัดตำแหน่ง → ไม่กระพริบ
+ */
+const PAGE_W = 210;
+const PAGE_H = 297;
 const FONT = '"TH Sarabun New", "TH SarabunPSK", Sarabun, "Cordia New", Tahoma, sans-serif';
-const BODY = "15pt";
-const TITLE = "18pt";
-const LINE = "7.2mm";
-const SIGN_LINE = "6.7mm";
 
-function Dot({
-  value,
-  onChange,
-  "aria-label": ariaLabel,
-  minCh = 4,
-  flex,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  "aria-label"?: string;
-  minCh?: number;
-  flex?: boolean;
-}) {
-  return (
-    <input
-      aria-label={ariaLabel}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      spellCheck={false}
-      className={cn("sp-word-field align-baseline", flex ? "min-w-0 flex-1" : "inline")}
-      style={{
-        minWidth: flex ? 0 : `${minCh}ch`,
-        width: flex ? "100%" : `${Math.max(minCh, (value || "").length + 1)}ch`,
-        fontSize: "inherit",
-        lineHeight: "inherit",
-        height: "auto",
-        paddingBottom: "1px",
-      }}
-    />
-  );
+const BODY = 16;
+const TITLE = 20;
+const AGENCY = 24;
+const CASE_NO = 18;
+const WARN = 11.8;
+const RECEIPT_TITLE = 18;
+const NOTE = 13.5;
+
+const LINE = 7.76;
+const RIGHT = 193.38;
+/** ระยะจาก ytop ของบรรทัด → ขอบบนของเส้นจุดไข่ปลา */
+const RULE_DY = 6.2;
+
+/** ytop ของต้นฉบับ → top ของกล่อง span (line box สูง LINE, ตัวอักษรกึ่งกลาง) */
+function topFor(y: number, size: number): number {
+  return y + 0.1227 * size - 1.267;
 }
 
-function Row({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+const PROSE: CSSProperties = {
+  position: "absolute",
+  lineHeight: `${LINE}mm`,
+};
+
+function Lbl({
+  x,
+  y,
+  children,
+  size = BODY,
+  bold = false,
+  right,
+  underline = false,
+  nowrap = true,
+  align,
+  width,
+}: {
+  x?: number;
+  y: number;
+  children: ReactNode;
+  size?: number;
+  bold?: boolean;
+  right?: number;
+  underline?: boolean;
+  nowrap?: boolean;
+  align?: CSSProperties["textAlign"];
+  width?: number;
+}) {
   return (
-    <div
+    <span
       style={{
-        display: "flex",
-        flexWrap: "nowrap",
-        alignItems: "baseline",
-        gap: "0 1.5mm",
-        minHeight: LINE,
-        margin: "0 0 0.45mm",
-        lineHeight: LINE,
-        fontSize: BODY,
-        width: "100%",
-        ...style,
+        ...PROSE,
+        top: `${topFor(y, size).toFixed(2)}mm`,
+        fontSize: `${size}pt`,
+        fontWeight: bold ? 700 : 400,
+        textDecoration: underline ? "underline" : undefined,
+        textUnderlineOffset: "0.9mm",
+        whiteSpace: nowrap ? "nowrap" : "normal",
+        ...(right !== undefined ? { right: `${(PAGE_W - right).toFixed(2)}mm` } : { left: `${(x ?? 0).toFixed(2)}mm` }),
+        ...(width !== undefined ? { width: `${width}mm` } : {}),
+        ...(align ? { textAlign: align } : {}),
       }}
     >
       {children}
-    </div>
+    </span>
   );
 }
 
-function T({ children }: { children: ReactNode }) {
-  return <span style={{ flexShrink: 0, fontWeight: 700 }}>{children}</span>;
+/** ช่องกรอก 1 บรรทัด — ตัวอักษรนั่งบนเส้นจุดไข่ปลา (inline input ในการ์ด span) */
+function Line({
+  label,
+  labelX,
+  x0,
+  x1,
+  y,
+  value,
+  onChange,
+  aria,
+  bold = false,
+  size = BODY,
+  dotted = true,
+}: {
+  label?: string;
+  labelX?: number;
+  x0: number;
+  x1: number;
+  y: number;
+  value: string;
+  onChange: (v: string) => void;
+  aria: string;
+  bold?: boolean;
+  size?: number;
+  dotted?: boolean;
+}) {
+  return (
+    <>
+      {label ? (
+        <Lbl x={labelX ?? x0} y={y} size={size}>
+          {label}
+        </Lbl>
+      ) : null}
+      <span
+        className="sp-rule-cell"
+        style={{
+          position: "absolute",
+          left: `${x0.toFixed(2)}mm`,
+          top: `${(y + 0.7).toFixed(2)}mm`,
+          width: `${Math.max(2, x1 - x0).toFixed(2)}mm`,
+          height: `${RULE_DY.toFixed(2)}mm`,
+          borderBottom: dotted ? "0.5pt dotted #111" : undefined,
+          boxSizing: "border-box",
+        }}
+      >
+        <input
+          aria-label={aria}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          spellCheck={false}
+          className="sp-bare-field"
+          style={{
+            display: "block",
+            width: "100%",
+            minWidth: 0,
+            height: `${LINE.toFixed(2)}mm`,
+            marginTop: `${(RULE_DY - LINE).toFixed(2)}mm`,
+            fontFamily: FONT,
+            fontSize: `${size}pt`,
+            fontWeight: bold ? 700 : 400,
+            lineHeight: `${LINE.toFixed(2)}mm`,
+            boxSizing: "border-box",
+            padding: 0,
+            textAlign: "left",
+            textIndent: "4mm",
+          }}
+        />
+      </span>
+    </>
+  );
 }
 
-function CaseBrace() {
+/** ช่องหลายบรรทัดบนเส้นจุดไข่ปลา — บรรทัดแรกเยื้องหลังป้าย บรรทัดถัดไปชิดซ้าย */
+function FlowField({
+  spec,
+  lines,
+  textRuleStart,
+  value,
+  onChange,
+  dotted = true,
+}: {
+  spec: { key: "reason" | "orderText"; label: string; labelX: number; labelY: number; textX: number; textIndent: number };
+  lines: number;
+  textRuleStart: number;
+  value: string;
+  onChange: (v: string) => void;
+  dotted?: boolean;
+}) {
   return (
-    <div aria-hidden style={{ width: "4.2mm", height: "100%" }}>
+    <>
+      {dotted
+        ? Array.from({ length: lines }, (_, i) => (
+            <div
+              key={`${spec.key}-r${i}`}
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: `${spec.textX.toFixed(2)}mm`,
+                width: `${(RIGHT - spec.textX).toFixed(2)}mm`,
+                top: `${(textRuleStart + i * LINE).toFixed(2)}mm`,
+                borderTop: "0.5pt dotted #111",
+              }}
+            />
+          ))
+        : null}
+      <Lbl x={spec.labelX} y={spec.labelY}>
+        {spec.label}
+      </Lbl>
+      <textarea
+        aria-label={spec.label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        spellCheck={false}
+        className="sp-lined-notes"
+        style={{
+          position: "absolute",
+          left: `${spec.textX.toFixed(2)}mm`,
+          width: `${(RIGHT - spec.textX).toFixed(2)}mm`,
+          top: `${(textRuleStart - RULE_DY).toFixed(2)}mm`,
+          height: `${(lines * LINE).toFixed(2)}mm`,
+          fontFamily: FONT,
+          fontSize: `${BODY}pt`,
+          fontWeight: 400,
+          lineHeight: `${LINE}mm`,
+          color: "#111",
+          textIndent: `${spec.textIndent.toFixed(2)}mm`,
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          resize: "none",
+          border: "none",
+          background: "transparent",
+          padding: 0,
+          margin: 0,
+          overflow: "hidden",
+        }}
+      />
+    </>
+  );
+}
+
+function Brace({ top, height }: { top: number; height: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{ position: "absolute", left: "44.2mm", top: `${top.toFixed(2)}mm`, width: "3.4mm", height: `${height.toFixed(2)}mm` }}
+    >
       <svg viewBox="0 0 24 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
         <path
-          d="M20 1 C9 1 7 14 7 25 L7 40 C7 47 3 50 3 50 C3 50 7 53 7 60 L7 75 C7 86 9 99 20 99"
+          d="M21 1 C9 1 6 12 6 24 L6 39 C6 47 2 50 2 50 C2 50 6 53 6 61 L6 76 C6 88 9 99 21 99"
           fill="none"
           stroke="#111"
-          strokeWidth="2.2"
+          strokeWidth="2.6"
           strokeLinecap="round"
         />
       </svg>
@@ -101,15 +256,15 @@ function Sheet({ children, index }: { children: ReactNode; index: number }) {
       data-sheet-index={index}
       className="sp-a4-sheet relative mx-auto bg-white text-[#111] shadow-xl print:shadow-none"
       style={{
-        width: PAGE.w,
-        height: PAGE.h,
+        width: `${PAGE_W}mm`,
+        height: `${PAGE_H}mm`,
         boxSizing: "border-box",
         overflow: "hidden",
-        padding: "10mm 16mm 12mm",
+        position: "relative",
         fontFamily: FONT,
-        fontSize: BODY,
-        display: "flex",
-        flexDirection: "column",
+        fontSize: `${BODY}pt`,
+        lineHeight: `${LINE}mm`,
+        color: "#111",
       }}
     >
       {children}
@@ -117,105 +272,36 @@ function Sheet({ children, index }: { children: ReactNode; index: number }) {
   );
 }
 
-function FieldLines({
-  label,
-  value,
-  onChange,
-  lines,
-  ariaLabel,
-  showLabel = true,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  lines: number;
-  ariaLabel: string;
-  showLabel?: boolean;
-}) {
-  const labelRef = useRef<HTMLSpanElement | null>(null);
-  const [indentPx, setIndentPx] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!showLabel || !labelRef.current) {
-      setIndentPx(0);
-      return;
-    }
-    const parent = labelRef.current.parentElement;
-    const labelW = labelRef.current.getBoundingClientRect().width;
-    const max = parent ? Math.max(48, parent.clientWidth - 48) : labelW + 8;
-    setIndentPx(Math.ceil(Math.min(labelW + 8, max)));
-  }, [showLabel, label]);
-
-  const indent = showLabel
-    ? indentPx > 0
-      ? `${indentPx}px`
-      : `calc(${label.length + 1}ch + 1.5mm)`
-    : "0";
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        margin: "0 0 0.4mm",
-        height: `calc(${lines} * ${LINE})`,
-        flexShrink: 0,
-        overflow: "hidden",
-      }}
-    >
-      <div aria-hidden>
-        {Array.from({ length: lines }, (_, i) => (
-          <div key={i} style={{ height: LINE, borderBottom: "0.5pt dotted #111", boxSizing: "border-box" }} />
-        ))}
-      </div>
-      {showLabel ? (
-        <span
-          ref={labelRef}
-          aria-hidden
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            height: LINE,
-            lineHeight: LINE,
-            fontWeight: 700,
-            pointerEvents: "none",
-            zIndex: 1,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </span>
-      ) : null}
-      <textarea
-        aria-label={ariaLabel}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        spellCheck={false}
-        className="sp-lined-notes"
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          fontFamily: "inherit",
-          fontSize: BODY,
-          lineHeight: LINE,
-          color: "#111",
-          textIndent: indent,
-        }}
-      />
-    </div>
-  );
-}
-
-function measureHostLines(host: HTMLDivElement, text: string, indentCh: number): number {
+function measureLines(host: HTMLDivElement, text: string, indentMm: number): number {
   if (!text) return 0;
-  host.style.textIndent = indentCh > 0 ? `calc(${indentCh}ch + 1.5mm)` : "0";
+  host.style.textIndent = `${indentMm}mm`;
   host.textContent = text;
-  const linePx = parseFloat(getComputedStyle(host).lineHeight);
-  if (!Number.isFinite(linePx) || linePx <= 0) return estimateLines(text, indentCh);
-  return Math.max(1, Math.round(host.scrollHeight / linePx));
+  const lh = parseFloat(getComputedStyle(host).lineHeight);
+  if (!Number.isFinite(lh) || lh <= 0) return Math.ceil(text.length / 80);
+  return Math.max(1, Math.round(host.scrollHeight / lh));
 }
+
+const REASON = {
+  key: "reason" as const,
+  label: "ด้วยเหตุ",
+  labelX: 25.37,
+  labelY: 156.8,
+  textX: 25.37,
+  textIndent: 12.48,
+  firstRuleY: 162.5,
+  minLines: 2,
+};
+
+const ORDER = {
+  key: "orderText" as const,
+  label: "ฉะนั้นให้",
+  labelX: 44.12,
+  labelY: 173.2,
+  textX: 44.12,
+  textIndent: 25.1,
+  firstRuleY: 179,
+  minLines: 1,
+};
 
 export function OfficialWitnessSummonsDocument({
   fields,
@@ -227,21 +313,22 @@ export function OfficialWitnessSummonsDocument({
   onPageCount?: (n: number) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const [measureReady, setMeasureReady] = useState(false);
+  const [, setMeasureReady] = useState(false);
 
   useLayoutEffect(() => {
     const host = document.createElement("div");
     host.setAttribute("aria-hidden", "true");
     host.style.cssText = [
       "position:absolute",
-      "left:-9999px",
+      "left:-9999mm",
       "top:0",
-      "width:178mm",
+      `width:${RIGHT - REASON.textX}mm`,
       "visibility:hidden",
       "pointer-events:none",
       `font-family:${FONT}`,
-      `font-size:${BODY}`,
-      `line-height:${LINE}`,
+      `font-size:${BODY}pt`,
+      "font-weight:400",
+      `line-height:${LINE}mm`,
       "white-space:pre-wrap",
       "overflow-wrap:anywhere",
       "word-break:break-word",
@@ -255,535 +342,278 @@ export function OfficialWitnessSummonsDocument({
     };
   }, []);
 
-  const countLines = useCallback(
-    (text: string, indentCh: number) => {
-      const host = hostRef.current;
-      if (!host) return estimateLines(text, indentCh);
-      return measureHostLines(host, text, indentCh);
-    },
-    [measureReady],
-  );
+  const countLines = useCallback((text: string, indentMm: number) => {
+    const host = hostRef.current;
+    if (!host) return Math.max(1, Math.ceil(text.length / 80));
+    return measureLines(host, text, indentMm);
+  }, []);
 
-  const pages = useMemo(() => packWitnessSummonsPages(fields, countLines), [fields, countLines]);
+  const reasonLines = Math.max(REASON.minLines, countLines(fields.reason, REASON.textIndent));
+  const orderLines = Math.max(ORDER.minLines, countLines(fields.orderText, ORDER.textIndent));
+  const shift = (reasonLines - REASON.minLines + (orderLines - ORDER.minLines)) * LINE;
+
+  const y = (base: number) => (base > ORDER.firstRuleY ? base + shift : base);
+
+  const pageCount = useMemo(() => (220 + shift + 75 > PAGE_H - 3 ? 2 : 1), [shift]);
 
   useLayoutEffect(() => {
-    onPageCount?.(pages.length);
-  }, [onPageCount, pages.length]);
+    onPageCount?.(pageCount);
+  }, [onPageCount, pageCount]);
 
-  function patchFlow(key: WitnessSummonsFlowKey, sliceIndex: number, text: string) {
-    const slices: WitnessSummonsPageSlice[] = [];
-    for (const p of pages) {
-      slices.push(...p.reason.filter((b) => b.key === key), ...p.orderText.filter((b) => b.key === key));
-    }
-    onChange(key, slices.map((s, i) => (i === sliceIndex ? text : s.text)).join(""));
-  }
+  const reasonRuleStart = REASON.firstRuleY;
+  const orderRuleStart = reasonRuleStart + (reasonLines - 1) * LINE + (ORDER.firstRuleY - (reasonRuleStart + LINE));
 
   return (
     <div className="flex flex-col gap-6 pb-8 print:gap-0">
-      {pages.map((page) => (
-        <Sheet key={`ws-${page.index}`} index={page.index}>
-          {page.showPageNo ? (
-            <p style={{ margin: "0 0 3mm", textAlign: "center", fontSize: BODY, flexShrink: 0 }}>
-              -{thaiNumeral(page.index + 1)}-
-            </p>
-          ) : null}
+      <Sheet index={0}>
+        {/* ───────────── หัวแผ่น ───────────── */}
+        <Lbl x={25.37} y={25.07} size={TITLE} bold>
+          หมายเรียกพยาน
+        </Lbl>
 
-          {page.showHeader ? (
-            <>
-              <header style={{ flexShrink: 0 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/smart-police/garuda.png"
-                  alt=""
-                  width={96}
-                  height={110}
-                  style={{ display: "block", height: "24mm", width: "auto", margin: "0 auto" }}
-                />
-                <p
-                  style={{
-                    margin: "1mm 0 0",
-                    textAlign: "center",
-                    fontSize: TITLE,
-                    fontWeight: 700,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  สำนักงานตำรวจแห่งชาติ
-                </p>
-                <p
-                  style={{
-                    margin: "1mm 0 2mm",
-                    textAlign: "center",
-                    fontSize: BODY,
-                    fontWeight: 700,
-                    textDecoration: "underline",
-                    textUnderlineOffset: "1mm",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  หมายเรียกพยาน
-                </p>
-              </header>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/smart-police/garuda.png"
+          alt=""
+          width={96}
+          height={110}
+          style={{ position: "absolute", left: "88.6mm", top: "21.4mm", width: "26.4mm", height: "26.8mm", objectFit: "contain" }}
+        />
 
-              {/* §หัวสถานที่บันทึก — กริด 3 ส่วน ช่องที่ 3 ชิดขวา */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  columnGap: "2mm",
-                  rowGap: "0.6mm",
-                  flexShrink: 0,
-                }}
-              >
-                <span aria-hidden />
-                <span aria-hidden />
-                <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                  <Row style={{ marginBottom: "0.6mm" }}>
-                    <T>สถานที่ออกหมาย</T>
-                    <Dot
-                      aria-label="สถานที่ออกหมาย"
-                      value={fields.issuePlace}
-                      onChange={(v) => onChange("issuePlace", v)}
-                      flex
-                      minCh={6}
-                    />
-                  </Row>
-                  <Row style={{ marginBottom: 0 }}>
-                    <T>วันที่</T>
-                    <Dot
-                      aria-label="วันที่ออกหมาย"
-                      value={fields.issueDay}
-                      onChange={(v) => onChange("issueDay", v)}
-                      minCh={3}
-                    />
-                    <T>เดือน</T>
-                    <Dot
-                      aria-label="เดือนที่ออกหมาย"
-                      value={fields.issueMonth}
-                      onChange={(v) => onChange("issueMonth", v)}
-                      minCh={4}
-                    />
-                    <T>พ.ศ.</T>
-                    <Dot
-                      aria-label="ปีพุทธศักราชที่ออกหมาย"
-                      value={fields.issueYear}
-                      onChange={(v) => onChange("issueYear", v)}
-                      minCh={4}
-                    />
-                  </Row>
-                </div>
-              </div>
+        <span
+          style={{
+            ...PROSE,
+            left: "73.0mm",
+            top: `${topFor(49.62, AGENCY).toFixed(2)}mm`,
+            fontSize: `${AGENCY}pt`,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}
+        >
+          สำนักงานตำรวจแห่งชาติ
+        </span>
 
-              <div style={{ flexShrink: 0 }}>
-                <Row>
-                  <T>คดีอาญาที่</T>
-                  <Dot
-                    aria-label="คดีอาญาที่"
-                    value={fields.caseNo}
-                    onChange={(v) => onChange("caseNo", v)}
-                    flex
-                    minCh={10}
-                  />
-                </Row>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "auto auto 1fr",
-                    alignItems: "stretch",
-                    columnGap: "2mm",
-                    margin: "0.4mm 0 1.6mm",
-                    height: "14.5mm",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", paddingTop: "0.4mm" }}>
-                    <T>คดีระหว่าง</T>
-                  </div>
-                  <CaseBrace />
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "flex-start",
-                      gap: "3.6mm",
-                      minWidth: 0,
-                      height: "100%",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: "2mm",
-                        width: "100%",
-                        lineHeight: LINE,
-                        fontSize: BODY,
-                      }}
-                    >
-                      <Dot
-                        aria-label="ผู้กล่าวหา"
-                        value={fields.complainant}
-                        onChange={(v) => onChange("complainant", v)}
-                        flex
-                        minCh={10}
-                      />
-                      <T>ผู้กล่าวหา</T>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: "2mm",
-                        width: "100%",
-                        lineHeight: LINE,
-                        fontSize: BODY,
-                      }}
-                    >
-                      <Dot
-                        aria-label="ผู้ต้องหา"
-                        value={fields.suspect}
-                        onChange={(v) => onChange("suspect", v)}
-                        flex
-                        minCh={10}
-                      />
-                      <T>ผู้ต้องหา</T>
-                    </div>
-                  </div>
-                </div>
-
-                <Row style={{ marginBottom: "1.2mm" }}>
-                  <span style={{ lineHeight: LINE }}>{WITNESS_SUMMONS_AUTHORITY}</span>
-                </Row>
-
-                <Row>
-                  <T>หมายมายัง</T>
-                  <Dot
-                    aria-label="หมายมายัง"
-                    value={fields.witnessName}
-                    onChange={(v) => onChange("witnessName", v)}
-                    flex
-                    minCh={10}
-                  />
-                </Row>
-                <Row>
-                  <T>บ้านเลขที่</T>
-                  <Dot
-                    aria-label="บ้านเลขที่"
-                    value={fields.houseNo}
-                    onChange={(v) => onChange("houseNo", v)}
-                    minCh={6}
-                  />
-                  <T>ถนน</T>
-                  <Dot aria-label="ถนน" value={fields.road} onChange={(v) => onChange("road", v)} flex minCh={6} />
-                  <T>แขวง/ตำบล</T>
-                  <Dot
-                    aria-label="แขวงหรือตำบล"
-                    value={fields.subDistrict}
-                    onChange={(v) => onChange("subDistrict", v)}
-                    minCh={6}
-                  />
-                </Row>
-                <Row>
-                  <T>เขต/อำเภอ</T>
-                  <Dot
-                    aria-label="เขตหรืออำเภอ"
-                    value={fields.district}
-                    onChange={(v) => onChange("district", v)}
-                    minCh={6}
-                  />
-                  <T>จังหวัด</T>
-                  <Dot
-                    aria-label="จังหวัด"
-                    value={fields.province}
-                    onChange={(v) => onChange("province", v)}
-                    flex
-                    minCh={6}
-                  />
-                </Row>
-                <Row>
-                  <T>ผู้ใหญ่บ้าน/กำนัน</T>
-                  <Dot
-                    aria-label="ผู้ใหญ่บ้านหรือกำนัน"
-                    value={fields.headman}
-                    onChange={(v) => onChange("headman", v)}
-                    flex
-                    minCh={10}
-                  />
-                </Row>
-              </div>
-            </>
-          ) : null}
-
-          {page.reason.map((slice) => (
-            <FieldLines
-              key={`rs-${slice.sliceIndex}`}
-              label={slice.label}
-              showLabel={slice.showLabel}
-              value={slice.text}
-              lines={slice.lines}
-              ariaLabel="ด้วยเหตุ"
-              onChange={(v) => patchFlow("reason", slice.sliceIndex, v)}
-            />
+        <div
+          style={{
+            position: "absolute",
+            left: "133.04mm",
+            top: "15.34mm",
+            width: "63.11mm",
+            height: "29.40mm",
+            boxSizing: "border-box",
+            border: "0.75pt solid #c00000",
+            color: "#ff0000",
+            fontSize: `${WARN}pt`,
+            fontWeight: 400,
+            lineHeight: "6.06mm",
+            padding: 0,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {[
+            ["คำเตือน ", "การขัดขืนหลีกเลี่ยงไม่มาตามหมายเรียก"],
+            ["", "ของพนักงานสอบสวน มีความผิดต้องระวางโทษ"],
+            ["", "จำคุกไม่เกินสามเดือน ปรับไม่เกินห้าพันบาท หรือ"],
+            ["", "ทั้งจำทั้งปรับตามประมวลกฎหมายอาญามาตรา ๑๖๘"],
+          ].map(([head, body], i) => (
+            <span
+              key={`warn-${i}`}
+              style={{
+                position: "absolute",
+                left: "2.2mm",
+                top: `${(2.3 + i * 6.06).toFixed(2)}mm`,
+                lineHeight: "6.06mm",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {head ? (
+                <span style={{ textDecoration: "underline", textUnderlineOffset: "0.5mm" }}>{head.trim()}</span>
+              ) : null}
+              {head ? " " : ""}
+              {body}
+            </span>
           ))}
+        </div>
 
-          {page.orderText.map((slice) => (
-            <FieldLines
-              key={`or-${slice.sliceIndex}`}
-              label={slice.label}
-              showLabel={slice.showLabel}
-              value={slice.text}
-              lines={slice.lines}
-              ariaLabel="ฉะนั้นให้"
-              onChange={(v) => patchFlow("orderText", slice.sliceIndex, v)}
-            />
-          ))}
+        {/* ───────────── หัวสถานที่ออกหมาย ───────────── */}
+        <Line labelX={72.87} label="สถานที่ออกหมาย" x0={99.71} x1={192.7} y={59.82} value={fields.issuePlace} onChange={(v) => onChange("issuePlace", v)} aria="สถานที่ออกหมาย" />
+        <Line labelX={82.86} label="ออกหมายวันที่" x0={105.48} x1={120.21} y={67.57} value={fields.issueDay} onChange={(v) => onChange("issueDay", v)} aria="วันที่ออกหมาย" />
+        <Line labelX={120.38} label="เดือน" x0={128.51} x1={162.55} y={67.57} value={fields.issueMonth} onChange={(v) => onChange("issueMonth", v)} aria="เดือนที่ออกหมาย" />
+        <Line labelX={162.89} label="พ.ศ." x0={169.83} x1={192.7} y={67.57} value={fields.issueYear} onChange={(v) => onChange("issueYear", v)} aria="ปีพุทธศักราชที่ออกหมาย" />
 
-          {page.showAppoint ? (
-            <div style={{ flexShrink: 0 }}>
-              <Row style={{ marginBottom: "0.4mm" }}>
-                <T>ไป ณ ที่</T>
-                <Dot
-                  aria-label="สถานที่ให้ไปพบ"
-                  value={fields.placeToGo}
-                  onChange={(v) => onChange("placeToGo", v)}
-                  flex
-                  minCh={10}
-                />
-              </Row>
-              <Row style={{ flexWrap: "wrap", marginBottom: "1.2mm" }}>
-                <T>ในวันที่</T>
-                <Dot
-                  aria-label="วันนัดพบ"
-                  value={fields.appointDay}
-                  onChange={(v) => onChange("appointDay", v)}
-                  minCh={3}
-                />
-                <T>เดือน</T>
-                <Dot
-                  aria-label="เดือนนัดพบ"
-                  value={fields.appointMonth}
-                  onChange={(v) => onChange("appointMonth", v)}
-                  minCh={4}
-                />
-                <T>พ.ศ.</T>
-                <Dot
-                  aria-label="ปีพุทธศักราชนัดพบ"
-                  value={fields.appointYear}
-                  onChange={(v) => onChange("appointYear", v)}
-                  minCh={4}
-                />
-                <T>เวลา</T>
-                <Dot
-                  aria-label="เวลานัดพบ"
-                  value={fields.appointTime}
-                  onChange={(v) => onChange("appointTime", v)}
-                  minCh={4}
-                />
-                <T>นาฬิกา</T>
-              </Row>
-            </div>
-          ) : null}
+        {/* ความอาญา — หัวข้อเท่านั้น ไม่มีช่องพิมพ์/จุดไข่ปลา */}
+        <Lbl x={92.85} y={74.71} size={CASE_NO} bold>
+          ความอาญา
+        </Lbl>
 
-          {page.showTail ? (
-            <>
-              <div
-                style={{
-                  width: "62%",
-                  marginLeft: "auto",
-                  marginTop: "2mm",
-                  flexShrink: 0,
-                  display: "grid",
-                  gridTemplateColumns: "auto minmax(0, 1fr) auto",
-                  columnGap: "1.5mm",
-                  rowGap: "0.2mm",
-                  alignItems: "baseline",
-                }}
-              >
-                <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ลงชื่อ</span>
-                <Dot
-                  aria-label="ลงชื่อผู้ออกหมาย"
-                  value={fields.signName}
-                  onChange={(v) => onChange("signName", v)}
-                  flex
-                  minCh={8}
-                />
-                <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ผู้ออกหมาย</span>
-                <span aria-hidden />
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "nowrap",
-                    alignItems: "baseline",
-                    gap: "1.5mm",
-                    minHeight: SIGN_LINE,
-                    lineHeight: SIGN_LINE,
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={{ flexShrink: 0 }}>(</span>
-                  <Dot
-                    aria-label="ชื่อตัวบรรจงผู้ออกหมาย"
-                    value={fields.signPrinted}
-                    onChange={(v) => onChange("signPrinted", v)}
-                    flex
-                    minCh={8}
-                  />
-                  <span style={{ flexShrink: 0 }}>)</span>
-                </div>
-                <span aria-hidden />
-                <span style={{ flexShrink: 0, lineHeight: SIGN_LINE }}>ตำแหน่ง</span>
-                <Dot
-                  aria-label="ตำแหน่งผู้ออกหมาย"
-                  value={fields.signPosition}
-                  onChange={(v) => onChange("signPosition", v)}
-                  flex
-                  minCh={8}
-                />
-                <span aria-hidden />
-              </div>
+        {/* ───────────── คดีระหว่าง ───────────── */}
+        <Brace top={88.9} height={25.2} />
+        <Lbl x={25.37} y={95.6}>
+          คดีระหว่าง
+        </Lbl>
+        <Line x0={47.84} x1={177.41} y={83.12} value={fields.complainant} onChange={(v) => onChange("complainant", v)} aria="ผู้กล่าวหา" />
+        <Lbl right={194.4} y={83.12}>
+          ผู้กล่าวหา
+        </Lbl>
+        <Line x0={47.84} x1={180.42} y={106.4} value={fields.suspect} onChange={(v) => onChange("suspect", v)} aria="ผู้ต้องหา" />
+        <Lbl right={194.69} y={106.4}>
+          ผู้ต้องหา
+        </Lbl>
 
-              <div
-                style={{
-                  border: "0.55pt solid #111",
-                  padding: "1.2mm 2mm",
-                  margin: "2.5mm 0 0",
-                  flexShrink: 0,
-                  fontSize: BODY,
-                  lineHeight: 1.25,
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>คำเตือน&nbsp;&nbsp;</span>
-                {WITNESS_SUMMONS_WARNING}
-              </div>
+        <Lbl x={44.12} y={116.26} nowrap={false} width={139.3}>
+          {WITNESS_SUMMONS_AUTHORITY}
+        </Lbl>
 
-              {/* ใบรับหมายตำรวจ — ท่อนที่ผู้นำส่งหมายนำกลับมาคืน */}
-              <div
-                aria-hidden
-                style={{ borderTop: "0.5pt dashed #111", margin: "3mm 0 1.5mm", flexShrink: 0 }}
-              />
+        {/* ───────────── ที่อยู่ผู้รับหมาย ───────────── */}
+        <Line labelX={44.12} label="หมายมายัง" x0={61.14} x1={192.74} y={124.01} value={fields.witnessName} onChange={(v) => onChange("witnessName", v)} aria="หมายมายัง" />
 
-              <p
-                style={{
-                  margin: "0 0 0.6mm",
-                  textAlign: "center",
-                  fontWeight: 700,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "0.8mm",
-                  lineHeight: LINE,
-                  flexShrink: 0,
-                }}
-              >
-                ใบรับหมายตำรวจ
-              </p>
-              <Row style={{ flexWrap: "wrap" }}>
-                <T>วันที่</T>
-                <Dot
-                  aria-label="วันที่รับหมาย"
-                  value={fields.receiptDay}
-                  onChange={(v) => onChange("receiptDay", v)}
-                  minCh={3}
-                />
-                <T>เดือน</T>
-                <Dot
-                  aria-label="เดือนที่รับหมาย"
-                  value={fields.receiptMonth}
-                  onChange={(v) => onChange("receiptMonth", v)}
-                  minCh={4}
-                />
-                <T>พ.ศ.</T>
-                <Dot
-                  aria-label="ปีพุทธศักราชที่รับหมาย"
-                  value={fields.receiptYear}
-                  onChange={(v) => onChange("receiptYear", v)}
-                  minCh={4}
-                />
-                <T>เวลา</T>
-                <Dot
-                  aria-label="เวลารับหมาย"
-                  value={fields.receiptTime}
-                  onChange={(v) => onChange("receiptTime", v)}
-                  minCh={4}
-                />
-                <T>นาฬิกา</T>
-              </Row>
-              <Row style={{ flexWrap: "wrap" }}>
-                <span style={{ flexShrink: 0 }}>{WITNESS_SUMMONS_RECEIPT_TEXT}</span>
-                <Dot
-                  aria-label="สถานที่ที่กำหนดให้ไปในใบรับหมาย"
-                  value={fields.receiptPlace}
-                  onChange={(v) => onChange("receiptPlace", v)}
-                  flex
-                  minCh={10}
-                />
-              </Row>
-              <Row style={{ flexWrap: "wrap", marginBottom: "2mm" }}>
-                <T>ในวันที่</T>
-                <Dot
-                  aria-label="วันนัดพบในใบรับหมาย"
-                  value={fields.appointDay2}
-                  onChange={(v) => onChange("appointDay2", v)}
-                  minCh={3}
-                />
-                <T>เดือน</T>
-                <Dot
-                  aria-label="เดือนนัดพบในใบรับหมาย"
-                  value={fields.appointMonth2}
-                  onChange={(v) => onChange("appointMonth2", v)}
-                  minCh={4}
-                />
-                <T>พ.ศ.</T>
-                <Dot
-                  aria-label="ปีพุทธศักราชนัดพบในใบรับหมาย"
-                  value={fields.appointYear2}
-                  onChange={(v) => onChange("appointYear2", v)}
-                  minCh={4}
-                />
-                <T>เวลา</T>
-                <Dot
-                  aria-label="เวลานัดพบในใบรับหมาย"
-                  value={fields.appointTime2}
-                  onChange={(v) => onChange("appointTime2", v)}
-                  minCh={4}
-                />
-                <T>นาฬิกา</T>
-                <span style={{ flexShrink: 0 }}>{WITNESS_SUMMONS_RECEIPT_TAIL}</span>
-              </Row>
+        <Line labelX={25.37} label="บ้านเลขที่" x0={40.44} x1={100.9} y={131.81} value={fields.houseNo} onChange={(v) => onChange("houseNo", v)} aria="บ้านเลขที่" />
+        <Line labelX={101.66} label="ถนน" x0={108.78} x1={139.77} y={131.81} value={fields.road} onChange={(v) => onChange("road", v)} aria="ถนน" />
+        <Line labelX={140.4} label="แขวง/ตำบล" x0={159.38} x1={RIGHT} y={131.81} value={fields.subDistrict} onChange={(v) => onChange("subDistrict", v)} aria="แขวงหรือตำบล" />
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  columnGap: "8mm",
-                  flexShrink: 0,
-                  fontSize: BODY,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", gap: "1.5mm", minWidth: 0 }}>
-                  <span style={{ flexShrink: 0 }}>(ลงชื่อ)</span>
-                  <Dot
-                    aria-label="ชื่อผู้รับหมาย"
-                    value={fields.receiverName}
-                    onChange={(v) => onChange("receiverName", v)}
-                    flex
-                    minCh={6}
-                  />
-                  <span style={{ flexShrink: 0 }}>ผู้รับหมาย</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: "1.5mm", minWidth: 0 }}>
-                  <span style={{ flexShrink: 0 }}>(ลงชื่อ)</span>
-                  <Dot
-                    aria-label="ชื่อผู้ส่งหมาย"
-                    value={fields.delivererName}
-                    onChange={(v) => onChange("delivererName", v)}
-                    flex
-                    minCh={6}
-                  />
-                  <span style={{ flexShrink: 0 }}>ผู้ส่งหมาย</span>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </Sheet>
-      ))}
+        <Line labelX={25.37} label="เขต/อำเภอ" x0={42.64} x1={141.67} y={139.55} value={fields.district} onChange={(v) => onChange("district", v)} aria="เขตหรืออำเภอ" />
+        <Line labelX={141.67} label="จังหวัด" x0={152.52} x1={RIGHT} y={139.55} value={fields.province} onChange={(v) => onChange("province", v)} aria="จังหวัด" />
+
+        <Line labelX={25.37} label="ผู้ใหญ่บ้าน" x0={41.71} x1={100.14} y={147.3} value={fields.headman} onChange={(v) => onChange("headman", v)} aria="ผู้ใหญ่บ้าน" />
+        <Line labelX={100.39} label="กำนัน" x0={109.41} x1={193.25} y={147.3} value={fields.kamnan} onChange={(v) => onChange("kamnan", v)} aria="กำนัน" />
+
+        {/* ───────────── ด้วยเหตุ / ฉะนั้นให้ ───────────── */}
+        <FlowField spec={REASON} lines={reasonLines} textRuleStart={reasonRuleStart} value={fields.reason} onChange={(v) => onChange("reason", v)} />
+        <FlowField spec={ORDER} lines={orderLines} textRuleStart={orderRuleStart} value={fields.orderText} onChange={(v) => onChange("orderText", v)} />
+
+        {/* ───────────── นัดพบ — เส้นเดียวต่อเนื่อง พิมพ์เองได้ทั้งแถว ───────────── */}
+        <Lbl x={25.37} y={y(179.87)}>
+          ไป ณ ที่
+        </Lbl>
+        <span
+          className="sp-rule-cell"
+          style={{
+            position: "absolute",
+            left: "37.56mm",
+            top: `${(y(179.87) + 0.7).toFixed(2)}mm`,
+            width: `${(RIGHT - 37.56).toFixed(2)}mm`,
+            height: `${RULE_DY.toFixed(2)}mm`,
+            borderBottom: "0.5pt dotted #111",
+            boxSizing: "border-box",
+          }}
+        >
+          <input
+            aria-label="สถานที่ให้ไปพบและพนักงานสอบสวนเจ้าของคดี"
+            value={fields.placeToGo}
+            onChange={(e) => onChange("placeToGo", e.target.value)}
+            spellCheck={false}
+            className="sp-bare-field"
+            style={{
+              display: "block",
+              width: "100%",
+              minWidth: 0,
+              height: `${LINE.toFixed(2)}mm`,
+              marginTop: `${(RULE_DY - LINE).toFixed(2)}mm`,
+              fontFamily: FONT,
+              fontSize: `${BODY}pt`,
+              fontWeight: 400,
+              lineHeight: `${LINE.toFixed(2)}mm`,
+              boxSizing: "border-box",
+              padding: 0,
+              textAlign: "left",
+              textIndent: "4mm",
+            }}
+          />
+        </span>
+
+        <Line labelX={25.37} label="ในวันที่" x0={36.37} x1={55.17} y={y(187.63)} value={fields.appointDay} onChange={(v) => onChange("appointDay", v)} aria="วันนัดพบ" />
+        <Line labelX={55.34} label="เดือน" x0={63.48} x1={95.35} y={y(187.63)} value={fields.appointMonth} onChange={(v) => onChange("appointMonth", v)} aria="เดือนนัดพบ" />
+        <Line labelX={95.35} label="พ.ศ." x0={102.29} x1={122.11} y={y(187.63)} value={fields.appointYear} onChange={(v) => onChange("appointYear", v)} aria="ปีพุทธศักราชนัดพบ" />
+        <Line labelX={122.88} label="เวลา" x0={130.33} x1={162.34} y={y(187.63)} value={fields.appointTime} onChange={(v) => onChange("appointTime", v)} aria="เวลานัดพบ" />
+        <Lbl x={162.89} y={y(187.63)}>
+          นาฬิกา
+        </Lbl>
+
+        {/* ───────────── ลงชื่อผู้ออกหมาย ───────────── */}
+        <Line labelX={110.39} label="ลงชื่อ" x0={118.98} x1={172.33} y={y(195.38)} value={fields.signName} onChange={(v) => onChange("signName", v)} aria="ลงชื่อผู้ออกหมาย" />
+        <Lbl x={172.88} y={y(195.38)}>
+          ผู้ออกหมาย
+        </Lbl>
+
+        <Lbl x={117.92} y={y(202.28)}>
+          (
+        </Lbl>
+        <Line x0={120.6} x1={172.6} y={y(202.28)} value={fields.signPrinted} onChange={(v) => onChange("signPrinted", v)} aria="ชื่อตัวบรรจงผู้ออกหมาย" />
+        <Lbl x={172.92} y={y(202.28)}>
+          )
+        </Lbl>
+
+        <Line labelX={105.39} label="ตำแหน่ง" x0={118.52} x1={172.88} y={y(210.91)} value={fields.signPosition} onChange={(v) => onChange("signPosition", v)} aria="ตำแหน่งผู้ออกหมาย" />
+        <Line labelX={112.97} label="โทร" x0={118.52} x1={172.88} y={y(218.32)} value={fields.signPhone} onChange={(v) => onChange("signPhone", v)} aria="โทรศัพท์ผู้ออกหมาย" />
+
+        {/* ───────────── ใบรับหมายตำรวจ ───────────── */}
+        <div
+          aria-hidden
+          style={{ position: "absolute", left: "0.79mm", width: "207.70mm", top: `${y(227.11).toFixed(2)}mm`, borderTop: "0.75pt dashed #111" }}
+        />
+
+        <Lbl x={25.15} y={y(226.69)} size={RECEIPT_TITLE} width={167.56} align="center" underline bold nowrap={false}>
+          ใบรับหมายตำรวจ
+        </Lbl>
+
+        <Line labelX={60.37} label="วันที่" x0={67.41} x1={87.22} y={y(235.26)} value={fields.receiptDay} onChange={(v) => onChange("receiptDay", v)} aria="วันที่รับหมาย" />
+        <Line labelX={87.86} label="เดือน" x0={95.99} x1={127.87} y={y(235.26)} value={fields.receiptMonth} onChange={(v) => onChange("receiptMonth", v)} aria="เดือนที่รับหมาย" />
+        <Line labelX={127.87} label="พ.ศ." x0={134.81} x1={152.6} y={y(235.26)} value={fields.receiptYear} onChange={(v) => onChange("receiptYear", v)} aria="ปีพุทธศักราชที่รับหมาย" />
+        <Line labelX={152.9} label="เวลา" x0={160.35} x1={180.16} y={y(235.26)} value={fields.receiptTime} onChange={(v) => onChange("receiptTime", v)} aria="เวลารับหมาย" />
+        <Lbl x={180.42} y={y(235.26)}>
+          นาฬิกา
+        </Lbl>
+
+        <Line labelX={25.37} label="ข้าพเจ้า" x0={37.6} x1={86.6} y={y(243.01)} value={fields.receiptName} onChange={(v) => onChange("receiptName", v)} aria="ชื่อผู้รับหมาย" />
+        <Lbl x={87.86} y={y(243.01)}>
+          {WITNESS_SUMMONS_RECEIPT_TEXT}
+        </Lbl>
+        <Line x0={162.0} x1={193.0} y={y(243.01)} value={fields.receiptRelation} onChange={(v) => onChange("receiptRelation", v)} aria="รายละเอียดเพิ่มเติมในใบรับหมาย" />
+
+        <Line x0={25.37} x1={87.86} y={y(250.8)} value={fields.receiptPlace} onChange={(v) => onChange("receiptPlace", v)} aria="ผู้มอบหมายในใบรับหมาย" />
+        <Lbl x={87.86} y={y(250.8)}>
+          ซึ่งกำหนดให้ข้าพเจ้าไปยัง
+        </Lbl>
+        <Line x0={127.45} x1={193.0} y={y(250.8)} value={fields.appointPlace2} onChange={(v) => onChange("appointPlace2", v)} aria="สถานที่ที่กำหนดให้ไปในใบรับหมาย" />
+
+        <Line labelX={25.37} label="ในวันที่" x0={36.37} x1={60.25} y={y(258.55)} value={fields.appointDay2} onChange={(v) => onChange("appointDay2", v)} aria="วันนัดพบในใบรับหมาย" />
+        <Line labelX={60.37} label="เดือน" x0={68.51} x1={97.47} y={y(258.55)} value={fields.appointMonth2} onChange={(v) => onChange("appointMonth2", v)} aria="เดือนนัดพบในใบรับหมาย" />
+        <Line labelX={97.89} label="พ.ศ." x0={104.84} x1={129.73} y={y(258.55)} value={fields.appointYear2} onChange={(v) => onChange("appointYear2", v)} aria="ปีพุทธศักราชนัดพบในใบรับหมาย" />
+        <Line labelX={130.41} label="เวลา" x0={137.86} x1={167.84} y={y(258.55)} value={fields.appointTime2} onChange={(v) => onChange("appointTime2", v)} aria="เวลานัดพบในใบรับหมาย" />
+        <Lbl x={167.89} y={y(258.55)}>
+          นาฬิกา {WITNESS_SUMMONS_RECEIPT_TAIL}
+        </Lbl>
+
+        <Lbl x={115.38} y={y(268.41)}>
+          (ลงชื่อ)
+        </Lbl>
+        <Line x0={126.64} x1={174.91} y={y(268.41)} value={fields.receiverName} onChange={(v) => onChange("receiverName", v)} aria="ชื่อผู้รับหมาย" />
+        <Lbl right={193.4} y={y(268.41)}>
+          ผู้รับหมาย
+        </Lbl>
+
+        <Lbl x={115.38} y={y(276.2)}>
+          (ลงชื่อ)
+        </Lbl>
+        <Line x0={126.64} x1={174.91} y={y(276.2)} value={fields.delivererName} onChange={(v) => onChange("delivererName", v)} aria="ชื่อผู้ส่งหมาย" />
+        <Lbl right={191.86} y={y(276.2)}>
+          ผู้ส่งหมาย
+        </Lbl>
+
+        <span
+          style={{
+            ...PROSE,
+            left: "26.68mm",
+            top: `${topFor(y(284.59), NOTE).toFixed(2)}mm`,
+            fontSize: `${NOTE}pt`,
+            fontWeight: 400,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {WITNESS_SUMMONS_TAIL_NOTE}
+        </span>
+      </Sheet>
     </div>
   );
 }

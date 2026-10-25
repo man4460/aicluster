@@ -67,6 +67,13 @@ const TONE_BY_SLUG: Record<string, "violet" | "rose" | "sky" | "amber"> = {
   "investigate-notice": "sky",
   "official-memo": "violet",
   "witness-summons": "sky",
+  "suspect-summons": "rose",
+  "document-summons": "sky",
+  "arrest-warrant": "rose",
+  "search-warrant": "rose",
+  "arrest-warrant-request": "violet",
+  "search-warrant-request": "violet",
+  "detention-request": "amber",
 };
 
 type TemplateRow = OfficialFormTemplateMeta & {

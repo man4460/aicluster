@@ -19,6 +19,13 @@ import {
   isInvestigateNoticeFormSlug,
   isOfficialMemoFormSlug,
   isWitnessSummonsFormSlug,
+  isSuspectSummonsFormSlug,
+  isDocumentSummonsFormSlug,
+  isArrestWarrantFormSlug,
+  isSearchWarrantFormSlug,
+  isArrestWarrantRequestFormSlug,
+  isSearchWarrantRequestFormSlug,
+  isDetentionRequestFormSlug,
   isCompensationSettlementFormSlug,
   isRightsNoticeFormSlug,
   isExhibitListFormSlug,
@@ -200,6 +207,48 @@ export default async function SmartPoliceOfficialFormPreviewPage({
       "@/systems/smart-police/components/SmartPoliceWitnessSummonsPreviewClient"
     );
     return <SmartPoliceWitnessSummonsPreviewClient />;
+  }
+  if (isSuspectSummonsFormSlug(slug)) {
+    const { SmartPoliceSuspectSummonsPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceSuspectSummonsPreviewClient"
+    );
+    return <SmartPoliceSuspectSummonsPreviewClient />;
+  }
+  if (isDocumentSummonsFormSlug(slug)) {
+    const { SmartPoliceDocumentSummonsPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceDocumentSummonsPreviewClient"
+    );
+    return <SmartPoliceDocumentSummonsPreviewClient />;
+  }
+  if (isArrestWarrantFormSlug(slug)) {
+    const { SmartPoliceArrestWarrantPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceArrestWarrantPreviewClient"
+    );
+    return <SmartPoliceArrestWarrantPreviewClient />;
+  }
+  if (isSearchWarrantFormSlug(slug)) {
+    const { SmartPoliceSearchWarrantPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceSearchWarrantPreviewClient"
+    );
+    return <SmartPoliceSearchWarrantPreviewClient />;
+  }
+  if (isArrestWarrantRequestFormSlug(slug)) {
+    const { SmartPoliceArrestWarrantRequestPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceArrestWarrantRequestPreviewClient"
+    );
+    return <SmartPoliceArrestWarrantRequestPreviewClient />;
+  }
+  if (isSearchWarrantRequestFormSlug(slug)) {
+    const { SmartPoliceSearchWarrantRequestPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceSearchWarrantRequestPreviewClient"
+    );
+    return <SmartPoliceSearchWarrantRequestPreviewClient />;
+  }
+  if (isDetentionRequestFormSlug(slug)) {
+    const { SmartPoliceDetentionRequestPreviewClient } = await import(
+      "@/systems/smart-police/components/SmartPoliceDetentionRequestPreviewClient"
+    );
+    return <SmartPoliceDetentionRequestPreviewClient />;
   }
   notFound();
 }

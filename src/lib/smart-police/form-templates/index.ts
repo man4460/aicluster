@@ -58,6 +58,20 @@ export {
   OFFICIAL_MEMO_TEMPLATE_TITLE,
   WITNESS_SUMMONS_FORM_TITLE,
   WITNESS_SUMMONS_TEMPLATE_TITLE,
+  SUSPECT_SUMMONS_FORM_TITLE,
+  SUSPECT_SUMMONS_TEMPLATE_TITLE,
+  DOCUMENT_SUMMONS_FORM_TITLE,
+  DOCUMENT_SUMMONS_TEMPLATE_TITLE,
+  ARREST_WARRANT_FORM_TITLE,
+  ARREST_WARRANT_TEMPLATE_TITLE,
+  SEARCH_WARRANT_FORM_TITLE,
+  SEARCH_WARRANT_TEMPLATE_TITLE,
+  ARREST_WARRANT_REQUEST_FORM_TITLE,
+  ARREST_WARRANT_REQUEST_TEMPLATE_TITLE,
+  SEARCH_WARRANT_REQUEST_FORM_TITLE,
+  SEARCH_WARRANT_REQUEST_TEMPLATE_TITLE,
+  DETENTION_REQUEST_FORM_TITLE,
+  DETENTION_REQUEST_TEMPLATE_TITLE,
   SMART_POLICE_OFFICIAL_FORM_TEMPLATES,
   SMART_POLICE_PROPERTY_LIST_TEMPLATE,
   SMART_POLICE_PROPERTY_LIST_TEMPLATES,
@@ -86,6 +100,13 @@ export {
   SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE,
   SMART_POLICE_OFFICIAL_MEMO_TEMPLATE,
   SMART_POLICE_WITNESS_SUMMONS_TEMPLATE,
+  SMART_POLICE_SUSPECT_SUMMONS_TEMPLATE,
+  SMART_POLICE_DOCUMENT_SUMMONS_TEMPLATE,
+  SMART_POLICE_ARREST_WARRANT_TEMPLATE,
+  SMART_POLICE_SEARCH_WARRANT_TEMPLATE,
+  SMART_POLICE_ARREST_WARRANT_REQUEST_TEMPLATE,
+  SMART_POLICE_SEARCH_WARRANT_REQUEST_TEMPLATE,
+  SMART_POLICE_DETENTION_REQUEST_TEMPLATE,
   getOfficialFormTemplateMeta,
   isCompensationSettlementFormSlug,
   isExhibitListFormSlug,
@@ -108,6 +129,13 @@ export {
   isInvestigateNoticeFormSlug,
   isOfficialMemoFormSlug,
   isWitnessSummonsFormSlug,
+  isSuspectSummonsFormSlug,
+  isDocumentSummonsFormSlug,
+  isArrestWarrantFormSlug,
+  isSearchWarrantFormSlug,
+  isArrestWarrantRequestFormSlug,
+  isSearchWarrantRequestFormSlug,
+  isDetentionRequestFormSlug,
   isOralPleaFormSlug,
   isPropertyListFormSlug,
   isSceneMapFormSlug,
@@ -135,6 +163,13 @@ export {
   type InvestigateNoticeTemplateSlug,
   type OfficialMemoTemplateSlug,
   type WitnessSummonsTemplateSlug,
+  type SuspectSummonsTemplateSlug,
+  type DocumentSummonsTemplateSlug,
+  type ArrestWarrantTemplateSlug,
+  type SearchWarrantTemplateSlug,
+  type ArrestWarrantRequestTemplateSlug,
+  type SearchWarrantRequestTemplateSlug,
+  type DetentionRequestTemplateSlug,
   type OfficialFormKind,
   type OfficialFormTemplateMeta,
   type ExhibitListTemplateSlug,
@@ -282,6 +317,40 @@ export {
   WITNESS_SUMMONS_WARNING,
   type WitnessSummonsFields,
 } from "@/lib/smart-police/form-templates/witness-summons";
+export {
+  createEmptySuspectSummonsFields,
+  packSuspectSummonsPages,
+  SUSPECT_SUMMONS_AUTHORITY,
+  SUSPECT_SUMMONS_LINE_MM,
+  SUSPECT_SUMMONS_RECEIPT_TEXT,
+  SUSPECT_SUMMONS_WARNING,
+  type SuspectSummonsFields,
+} from "@/lib/smart-police/form-templates/suspect-summons";
+export {
+  createEmptyDocumentSummonsFields,
+  DOCUMENT_SUMMONS_AUTHORITY,
+  type DocumentSummonsFields,
+} from "@/lib/smart-police/form-templates/document-summons";
+export {
+  createEmptyArrestWarrantFields,
+  type ArrestWarrantFields,
+} from "@/lib/smart-police/form-templates/arrest-warrant";
+export {
+  createEmptySearchWarrantFields,
+  type SearchWarrantFields,
+} from "@/lib/smart-police/form-templates/search-warrant";
+export {
+  createEmptyArrestWarrantRequestFields,
+  type ArrestWarrantRequestFields,
+} from "@/lib/smart-police/form-templates/arrest-warrant-request";
+export {
+  createEmptySearchWarrantRequestFields,
+  type SearchWarrantRequestFields,
+} from "@/lib/smart-police/form-templates/search-warrant-request";
+export {
+  createEmptyDetentionRequestFields,
+  type DetentionRequestFields,
+} from "@/lib/smart-police/form-templates/detention-request";
 export {
   ORAL_PLEA_DEFAULT_QA,
   createEmptyOralPleaFields,

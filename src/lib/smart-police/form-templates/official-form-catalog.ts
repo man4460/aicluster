@@ -27,7 +27,14 @@ export type OfficialFormKind =
   | "bail-bond"
   | "investigate-notice"
   | "official-memo"
-  | "witness-summons";
+  | "witness-summons"
+  | "suspect-summons"
+  | "document-summons"
+  | "arrest-warrant"
+  | "search-warrant"
+  | "arrest-warrant-request"
+  | "search-warrant-request"
+  | "detention-request";
 
 export type PropertyListTemplateSlug =
   | "property-damaged"
@@ -59,6 +66,13 @@ export type BailBondTemplateSlug = "bail-bond";
 export type InvestigateNoticeTemplateSlug = "investigate-notice";
 export type OfficialMemoTemplateSlug = "official-memo";
 export type WitnessSummonsTemplateSlug = "witness-summons";
+export type SuspectSummonsTemplateSlug = "suspect-summons";
+export type DocumentSummonsTemplateSlug = "document-summons";
+export type ArrestWarrantTemplateSlug = "arrest-warrant";
+export type SearchWarrantTemplateSlug = "search-warrant";
+export type ArrestWarrantRequestTemplateSlug = "arrest-warrant-request";
+export type SearchWarrantRequestTemplateSlug = "search-warrant-request";
+export type DetentionRequestTemplateSlug = "detention-request";
 
 export type OfficialFormTemplateSlug =
   | "statement-complainant"
@@ -89,7 +103,14 @@ export type OfficialFormTemplateSlug =
   | BailBondTemplateSlug
   | InvestigateNoticeTemplateSlug
   | OfficialMemoTemplateSlug
-  | WitnessSummonsTemplateSlug;
+  | WitnessSummonsTemplateSlug
+  | SuspectSummonsTemplateSlug
+  | DocumentSummonsTemplateSlug
+  | ArrestWarrantTemplateSlug
+  | SearchWarrantTemplateSlug
+  | ArrestWarrantRequestTemplateSlug
+  | SearchWarrantRequestTemplateSlug
+  | DetentionRequestTemplateSlug;
 
 export type OfficialFormTemplateMeta = {
   slug: OfficialFormTemplateSlug;
@@ -383,6 +404,76 @@ export const SMART_POLICE_WITNESS_SUMMONS_TEMPLATE: OfficialFormTemplateMeta = {
   blankFormId: "35",
 };
 
+export const SUSPECT_SUMMONS_FORM_TITLE = "หมายเรียกผู้ต้องหา";
+export const SUSPECT_SUMMONS_TEMPLATE_TITLE = "หมายเรียกผู้ต้องหา";
+
+export const SMART_POLICE_SUSPECT_SUMMONS_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "suspect-summons",
+  title: SUSPECT_SUMMONS_TEMPLATE_TITLE,
+  kind: "suspect-summons",
+  blankFormId: "36",
+};
+
+export const DOCUMENT_SUMMONS_FORM_TITLE = "หมายเรียกพยานเอกสาร";
+export const DOCUMENT_SUMMONS_TEMPLATE_TITLE = "หมายเรียกพยานเอกสาร";
+
+export const SMART_POLICE_DOCUMENT_SUMMONS_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "document-summons",
+  title: DOCUMENT_SUMMONS_TEMPLATE_TITLE,
+  kind: "document-summons",
+  blankFormId: "37",
+};
+
+export const ARREST_WARRANT_FORM_TITLE = "หมายจับ";
+export const ARREST_WARRANT_TEMPLATE_TITLE = "หมายจับ";
+
+export const SMART_POLICE_ARREST_WARRANT_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "arrest-warrant",
+  title: ARREST_WARRANT_TEMPLATE_TITLE,
+  kind: "arrest-warrant",
+  blankFormId: "40",
+};
+
+export const SEARCH_WARRANT_FORM_TITLE = "หมายค้น";
+export const SEARCH_WARRANT_TEMPLATE_TITLE = "หมายค้น";
+
+export const SMART_POLICE_SEARCH_WARRANT_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "search-warrant",
+  title: SEARCH_WARRANT_TEMPLATE_TITLE,
+  kind: "search-warrant",
+  blankFormId: "41",
+};
+
+export const ARREST_WARRANT_REQUEST_FORM_TITLE = "คำร้องขอหมายจับ";
+export const ARREST_WARRANT_REQUEST_TEMPLATE_TITLE = "คำร้องขอหมายจับ";
+
+export const SMART_POLICE_ARREST_WARRANT_REQUEST_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "arrest-warrant-request",
+  title: ARREST_WARRANT_REQUEST_TEMPLATE_TITLE,
+  kind: "arrest-warrant-request",
+  blankFormId: "42",
+};
+
+export const SEARCH_WARRANT_REQUEST_FORM_TITLE = "คำร้องขอหมายค้น";
+export const SEARCH_WARRANT_REQUEST_TEMPLATE_TITLE = "คำร้องขอหมายค้น";
+
+export const SMART_POLICE_SEARCH_WARRANT_REQUEST_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "search-warrant-request",
+  title: SEARCH_WARRANT_REQUEST_TEMPLATE_TITLE,
+  kind: "search-warrant-request",
+  blankFormId: "43",
+};
+
+export const DETENTION_REQUEST_FORM_TITLE = "คำร้องฝากขัง";
+export const DETENTION_REQUEST_TEMPLATE_TITLE = "คำร้องฝากขัง";
+
+export const SMART_POLICE_DETENTION_REQUEST_TEMPLATE: OfficialFormTemplateMeta = {
+  slug: "detention-request",
+  title: DETENTION_REQUEST_TEMPLATE_TITLE,
+  kind: "detention-request",
+  blankFormId: "38",
+};
+
 export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = [
   ...SMART_POLICE_STATEMENT_TEMPLATES.map((t) => ({
     slug: t.slug,
@@ -416,6 +507,13 @@ export const SMART_POLICE_OFFICIAL_FORM_TEMPLATES: OfficialFormTemplateMeta[] = 
   SMART_POLICE_INVESTIGATE_NOTICE_TEMPLATE,
   SMART_POLICE_OFFICIAL_MEMO_TEMPLATE,
   SMART_POLICE_WITNESS_SUMMONS_TEMPLATE,
+  SMART_POLICE_SUSPECT_SUMMONS_TEMPLATE,
+  SMART_POLICE_DOCUMENT_SUMMONS_TEMPLATE,
+  SMART_POLICE_ARREST_WARRANT_TEMPLATE,
+  SMART_POLICE_SEARCH_WARRANT_TEMPLATE,
+  SMART_POLICE_ARREST_WARRANT_REQUEST_TEMPLATE,
+  SMART_POLICE_SEARCH_WARRANT_REQUEST_TEMPLATE,
+  SMART_POLICE_DETENTION_REQUEST_TEMPLATE,
 ];
 
 export function getOfficialFormTemplateMeta(
@@ -538,4 +636,32 @@ export function isOfficialMemoFormSlug(slug: string): slug is OfficialMemoTempla
 
 export function isWitnessSummonsFormSlug(slug: string): slug is WitnessSummonsTemplateSlug {
   return slug === "witness-summons";
+}
+
+export function isSuspectSummonsFormSlug(slug: string): slug is SuspectSummonsTemplateSlug {
+  return slug === "suspect-summons";
+}
+
+export function isDocumentSummonsFormSlug(slug: string): slug is DocumentSummonsTemplateSlug {
+  return slug === "document-summons";
+}
+
+export function isArrestWarrantFormSlug(slug: string): slug is ArrestWarrantTemplateSlug {
+  return slug === "arrest-warrant";
+}
+
+export function isSearchWarrantFormSlug(slug: string): slug is SearchWarrantTemplateSlug {
+  return slug === "search-warrant";
+}
+
+export function isArrestWarrantRequestFormSlug(slug: string): slug is ArrestWarrantRequestTemplateSlug {
+  return slug === "arrest-warrant-request";
+}
+
+export function isSearchWarrantRequestFormSlug(slug: string): slug is SearchWarrantRequestTemplateSlug {
+  return slug === "search-warrant-request";
+}
+
+export function isDetentionRequestFormSlug(slug: string): slug is DetentionRequestTemplateSlug {
+  return slug === "detention-request";
 }
