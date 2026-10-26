@@ -7,6 +7,7 @@
  * - กลุ่มอื่น (ที่เกินสิทธิ์): redirect /dashboard/plans?upgrade=1
  */
 import { notFound, redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { canAccessAppModule } from "@/lib/modules/access";
@@ -19,6 +20,33 @@ import {
   listModuleSlugsChargedToday,
 } from "@/lib/tokens/module-daily-deduction";
 import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
+
+/**
+ * ตรวจสิทธิ์โมดูลสำหรับ API route — ห้ามใช้ requireModulePage ใน API
+ * เพราะ redirect() จะทำให้ route handler โยน error แล้วกลายเป็น HTTP 500
+ * คืน NextResponse แทนเมื่อไม่มีสิทธิ์ (เรียกใช้: const guard = await requireModuleApi(slug); if (guard) return guard;)
+ */
+export async function requireModuleApi(slug: string): Promise<NextResponse | null> {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const mod = await prisma.appModule.findFirst({ where: { slug, isActive: true } });
+  if (!mod) {
+    return NextResponse.json({ error: "ไม่พบโมดูล" }, { status: 404 });
+  }
+
+  const ctx = await getModuleBillingContext(session.sub);
+  if (!ctx) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (ctx.isStaff && !STAFF_ALLOWED_MODULE_SLUGS.has(mod.slug)) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ใช้โมดูลนี้" }, { status: 403 });
+  }
+
+  return null;
+}
 
 export async function requireModulePage(slug: string) {
   const session = await getSession();

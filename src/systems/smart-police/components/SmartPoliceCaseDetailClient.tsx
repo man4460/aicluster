@@ -203,6 +203,8 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
   );
   const day1Summary = useMemo(() => day1ChecklistSummary(day1Items), [day1Items]);
 
+  const [suspectBusyPartyId, setSuspectBusyPartyId] = useState<string | null>(null);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
@@ -280,6 +282,32 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
     setEditingPartyId(null);
     setPartyForm(emptyParty);
     await load();
+  }
+
+  /** ส่งผู้ต้องหาในคดีนี้เข้าเป็น "บุคคลต้องสงสัย" ของงานสืบสวน (ผูกคดีให้อัตโนมัติ) */
+  async function addPartyAsSuspect(p: SmartPolicePartyDto) {
+    if (suspectBusyPartyId) return;
+    setSuspectBusyPartyId(p.id);
+    try {
+      const res = await fetch("/api/smart-police/investigation/suspects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: p.fullName,
+          riskLevel: "MEDIUM",
+          caseIds: [caseId],
+          description: p.caseRelation ? `เกี่ยวกับคดี: ${p.caseRelation}` : null,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        showToast(body?.error ?? "ส่งเข้าเป็นบุคคลต้องสงสัยไม่สำเร็จ");
+        return;
+      }
+      showToast(`เพิ่ม ${p.fullName} เป็นบุคคลต้องสงสัยแล้ว`);
+    } finally {
+      setSuspectBusyPartyId(null);
+    }
   }
 
   async function deleteParty(p: SmartPolicePartyDto) {
@@ -421,6 +449,13 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
             </div>
           </div>
           <div className={smartPoliceHeaderActionShellClass}>
+            <Link
+              href={`/dashboard/smart-police/investigation/graph?caseId=${caseId}`}
+              className={cn(smartPolicePrimaryButtonClass, "whitespace-nowrap")}
+              title="เปิดผังเชื่อมโยงเฉพาะคดีนี้"
+            >
+              ผังเชื่อมโยง
+            </Link>
             <Link
               href="/dashboard/smart-police/cases"
               className={cn(
@@ -828,6 +863,18 @@ export function SmartPoliceCaseDetailClient({ caseId }: { caseId: string }) {
                     >
                       คำให้การ
                     </button>
+                    {p.role === "SUSPECT" ? (
+                      <button
+                        type="button"
+                        className={smartPoliceRowIconButtonClass}
+                        title="เพิ่มเป็นบุคคลต้องสงสัย (งานสืบสวน)"
+                        aria-label={`เพิ่ม ${p.fullName} เป็นบุคคลต้องสงสัย`}
+                        disabled={suspectBusyPartyId === p.id}
+                        onClick={() => void addPartyAsSuspect(p)}
+                      >
+                        {suspectBusyPartyId === p.id ? "…" : "สืบสวน"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className={smartPoliceRowIconButtonClass}

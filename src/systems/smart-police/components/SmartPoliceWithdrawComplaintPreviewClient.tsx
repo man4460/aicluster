@@ -10,11 +10,12 @@ import {
 } from "@/lib/smart-police/form-templates/withdraw-complaint";
 import { OfficialWithdrawComplaintDocument } from "@/systems/smart-police/components/OfficialWithdrawComplaintSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPoliceWithdrawComplaintPreviewClient() {
+export function SmartPoliceWithdrawComplaintPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [fields, setFields] = useState<WithdrawComplaintFields>(() => createEmptyWithdrawComplaintFields());
 
   function patch<K extends keyof WithdrawComplaintFields>(key: K, value: WithdrawComplaintFields[K]) {
@@ -38,6 +39,11 @@ export function SmartPoliceWithdrawComplaintPreviewClient() {
         <p className="mr-1 min-w-0 truncate text-xs font-bold sm:text-sm" title={WITHDRAW_COMPLAINT_FORM_TITLE}>
           {WITHDRAW_COMPLAINT_FORM_TITLE}
         </p>
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={fields}
+          onFilled={setFields}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

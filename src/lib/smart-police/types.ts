@@ -145,6 +145,26 @@ export type SmartPoliceChargeDto = {
   isOwnerCustom: boolean;
 };
 
+export type SmartPoliceCasePresetDto = {
+  id: string;
+  key: string;
+  caseType: string;
+  title: string;
+  chargeId: string | null;
+  defaultChargeText: string;
+  defaultLawRefs: string | null;
+  defaultCourtType: string | null;
+  defaultCustodyMode: string | null;
+  /** ค่าตั้งต้นที่เติมให้ฟอร์ม: { "form.field.key": "ค่า" } */
+  starterFields: Record<string, string>;
+  /** slug ฟอร์มที่คดีประเภทนี้ต้องทำ (เรียงตามลำดับงาน) */
+  formSlugs: string[];
+  isBuiltin: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  isOwnerCustom: boolean;
+};
+
 /** หมวดคลังข้อหา — จัดตามกลุ่มข้อหาที่พงส./อัยการใช้บ่อย */
 export const SMART_POLICE_CHARGE_CATEGORIES = [
   "ชีวิตและร่างกาย",

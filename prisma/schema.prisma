@@ -420,6 +420,11 @@ model User {
   smartPoliceFormTemplates           SmartPoliceFormTemplate[]
   smartPoliceOfficers                SmartPoliceOfficer[]
   smartPoliceCharges                 SmartPoliceCharge[]
+  smartPoliceCasePresets             SmartPoliceCasePreset[]
+  smartPoliceSuspects                SmartPoliceSuspect[]
+  smartPoliceInvestigationLogs       SmartPoliceInvestigationLog[]
+  smartPoliceInvestigationReports    SmartPoliceInvestigationReport[]
+  smartPoliceLinks                   SmartPoliceLink[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -7022,8 +7027,206 @@ model SmartPoliceCharge {
   @@index([ownerUserId, isActive, category], map: "spcharge_owner_active_cat_idx")
   @@index([isBuiltin, isActive], map: "spcharge_builtin_active_idx")
   @@map("smart_police_charges")
+
+  presets SmartPoliceCasePreset[]
 }
 
+/// แม่แบบตั้งต้นคดี — ประเภทคดี + ข้อหา → ข้อมูลตั้งต้น + ชุดเอกสารที่ต้องทำ
+/// ที่มาจากฐานคดีเก่า 48 คดี (ดู src/lib/smart-police/case-presets/catalog.ts)
+model SmartPoliceCasePreset {
+  id              String              @id @default(cuid())
+  ownerUserId     String?             @map("owner_user_id") @db.VarChar(191)
+  owner           User?               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  key             String              @db.VarChar(64)
+  caseType        String              @map("case_type") @db.VarChar(80)
+  title           String              @db.VarChar(200)
+  chargeId        String?             @map("charge_id") @db.VarChar(191)
+  charge          SmartPoliceCharge?  @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+  defaultChargeText String            @map("default_charge_text") @db.Text
+  defaultLawRefs  String?             @map("default_law_refs") @db.Text
+  defaultCourtType String?            @map("default_court_type") @db.VarChar(80)
+  defaultCustodyMode SmartPoliceCustodyMode? @map("default_custody_mode")
+  /// JSON: { "form.field.key": "ค่าตั้งต้น" }
+  starterFieldsJson String            @map("starter_fields_json") @db.MediumText
+  /// JSON array ของ slug ฟอร์ม: ["case-cover", "scene-inspect", ...]
+  formSlugs         String            @map("form_slugs") @db.Text
+  isBuiltin       Boolean             @default(false) @map("is_builtin")
+  isActive        Boolean             @default(true) @map("is_active")
+  sortOrder       Int                 @default(0) @map("sort_order")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, key], map: "sppreset_owner_key_uidx")
+  @@index([caseType, isActive, sortOrder], map: "sppreset_type_active_idx")
+  @@map("smart_police_case_presets")
+}
+
+/// บุคคลต้องสงสัย — ประวัติที่ใช้ต่อเนื่องหลายคดี (ไม่ผูกกับคดีเดียว)
+/// รูปภาพของบุคคลต้องสงสัย (หลายรูปต่อคน) — เตรียมช่อง faceEmbedding ไว้ทำค้นหาจากภาพ
+model SmartPoliceSuspectPhoto {
+  id            String   @id @default(cuid())
+  suspectId     String   @map("suspect_id") @db.VarChar(191)
+  suspect       SmartPoliceSuspect @relation(fields: [suspectId], references: [id], onDelete: Cascade)
+  url           String   @db.VarChar(512)
+  /// มุม/ลักษณะภาพ: FRONT | SIDE | FULL | TATTOO | OTHER
+  kind          String   @default("FRONT") @db.VarChar(16)
+  caption       String?  @db.VarChar(255)
+  width         Int?
+  height        Int?
+  bytes         Int?
+  /// ลายนิ้วมือดิจิทัลของใบหน้า (JSON float[]) — ใส่ภายหลังเมื่อทำระบบค้นหาจากภาพ
+  faceEmbedding String?  @map("face_embedding") @db.MediumText
+  /// ชื่อโมเดลที่สร้าง embedding เช่น face-api / insightface (null = ยังไม่ประมวลผล)
+  embeddingModel String? @map("embedding_model") @db.VarChar(64)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([suspectId], map: "spphoto_suspect_idx")
+  @@index([suspectId, kind], map: "spphoto_suspect_kind_idx")
+  @@map("smart_police_suspect_photos")
+}
+model SmartPoliceSuspect {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  fullName       String   @map("full_name") @db.VarChar(200)
+  alias          String?  @db.VarChar(200)
+  nickname       String?  @db.VarChar(120)
+  nationalId     String?  @map("national_id") @db.VarChar(32)
+  birthDate      DateTime? @map("birth_date")
+  gender         String?  @db.VarChar(16)
+  photoUrl       String?  @map("photo_url") @db.VarChar(512)
+  phone          String?  @db.VarChar(32)
+  occupation     String?  @db.VarChar(200)
+  /// หมายเหตุรูปพรรณ/เครื่องหมายพิเศษ
+  description    String?  @db.Text
+  /// ระดับความน่าสนใจ/ опасность: LOW | MEDIUM | HIGH
+  riskLevel      String   @default("MEDIUM") @map("risk_level") @db.VarChar(16)
+  status         String   @default("ACTIVE") @db.VarChar(16)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  addresses  SmartPoliceSuspectAddress[]
+  linksFrom  SmartPoliceLink[]           @relation("SpLinkFrom")
+  linksTo    SmartPoliceLink[]           @relation("SpLinkTo")
+  logs       SmartPoliceInvestigationLog[]
+  cases      SmartPoliceSuspectCase[]
+  photos     SmartPoliceSuspectPhoto[]
+
+  @@index([ownerUserId, status], map: "spsuspect_owner_status_idx")
+  @@index([ownerUserId, fullName], map: "spsuspect_owner_name_idx")
+  @@map("smart_police_suspects")
+}
+
+/// พิกัดที่อยู่ของบุคคลต้องสงสัย (บ้าน/ที่ทำงาน/ที่ซ่อน/จุดพบเห็น)
+model SmartPoliceSuspectAddress {
+  id         String             @id @default(cuid())
+  suspectId  String             @map("suspect_id") @db.VarChar(191)
+  suspect    SmartPoliceSuspect @relation(fields: [suspectId], references: [id], onDelete: Cascade)
+  /// HOME | WORK | HIDEOUT | SEEN | OTHER
+  kind       String             @default("HOME") @db.VarChar(16)
+  label      String?            @db.VarChar(200)
+  address    String             @db.Text
+  latitude   Float?
+  longitude  Float?
+  accuracyM  Int?               @map("accuracy_m")
+  source     String?            @db.VarChar(120)
+  verifiedAt DateTime?          @map("verified_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  @@index([suspectId], map: "spaddr_suspect_idx")
+  @@map("smart_police_suspect_addresses")
+}
+
+/// ประวัติการลงพื้นที่สืบสวน (ไทม์ไลน์)
+model SmartPoliceInvestigationLog {
+  id          String              @id @default(cuid())
+  ownerUserId String              @map("owner_user_id") @db.VarChar(191)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  caseId      String?             @map("case_id") @db.VarChar(191)
+  case        SmartPoliceCase?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  suspectId   String?             @map("suspect_id") @db.VarChar(191)
+  suspect     SmartPoliceSuspect? @relation(fields: [suspectId], references: [id], onDelete: SetNull)
+  occurredAt  DateTime            @map("occurred_at")
+  place       String?             @db.Text
+  latitude    Float?
+  longitude   Float?
+  officerName String?             @map("officer_name") @db.VarChar(200)
+  /// SUMMARY | SURVEILLANCE | INTERVIEW | CHECKPOINT | OTHER
+  activity    String              @default("SUMMARY") @db.VarChar(20)
+  result      String?             @db.Text
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  @@index([ownerUserId, occurredAt], map: "splog_owner_time_idx")
+  @@index([caseId], map: "splog_case_idx")
+  @@index([suspectId], map: "splog_suspect_idx")
+  @@map("smart_police_investigation_logs")
+}
+
+/// รายงานผลการสืบสวน (แนบกับคดีได้)
+model SmartPoliceInvestigationReport {
+  id          String           @id @default(cuid())
+  ownerUserId String           @map("owner_user_id") @db.VarChar(191)
+  owner       User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  caseId      String?          @map("case_id") @db.VarChar(191)
+  case        SmartPoliceCase? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  title       String           @db.VarChar(255)
+  reportNo    String?          @map("report_no") @db.VarChar(64)
+  reportedAt  DateTime         @default(now()) @map("reported_at")
+  officerName String?          @map("officer_name") @db.VarChar(200)
+  summary     String?          @db.Text
+  body        String           @db.MediumText
+  finding     String?          @db.Text
+  attachmentUrl String?        @map("attachment_url") @db.VarChar(512)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, reportedAt], map: "spreport_owner_time_idx")
+  @@index([caseId], map: "spreport_case_idx")
+  @@map("smart_police_investigation_reports")
+}
+
+/// เส้นเชื่อมสำหรับผังเครือข่าย (link analysis แบบ i2)
+model SmartPoliceLink {
+  id          String              @id @default(cuid())
+  ownerUserId String              @map("owner_user_id") @db.VarChar(191)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  fromId      String              @map("from_id") @db.VarChar(191)
+  from        SmartPoliceSuspect  @relation("SpLinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId        String              @map("to_id") @db.VarChar(191)
+  to          SmartPoliceSuspect  @relation("SpLinkTo", fields: [toId], references: [id], onDelete: Cascade)
+  /// FAMILY | KNOWN | GANG | MONEY | PHONE | CO_SUSPECT | OTHER
+  kind        String              @default("KNOWN") @db.VarChar(20)
+  label       String?             @db.VarChar(200)
+  directed    Boolean             @default(false)
+  weight      Int                 @default(1)
+  strength    Int                 @default(1)
+  caseId      String?             @map("case_id") @db.VarChar(191)
+  notes       String?             @db.Text
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, fromId, toId, kind], map: "splink_owner_pair_kind_uidx")
+  @@index([ownerUserId], map: "splink_owner_idx")
+  @@index([fromId], map: "splink_from_idx")
+  @@index([toId], map: "splink_to_idx")
+  @@map("smart_police_links")
+}
+
+/// ความเชื่อมโยงบุคคลต้องสงสัย ↔ คดี (เพื่อกรองกราฟตามคดี)
+model SmartPoliceSuspectCase {
+  id        String             @id @default(cuid())
+  suspectId String             @map("suspect_id") @db.VarChar(191)
+  suspect   SmartPoliceSuspect @relation(fields: [suspectId], references: [id], onDelete: Cascade)
+  caseId    String             @map("case_id") @db.VarChar(191)
+  case      SmartPoliceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  role      String?            @db.VarChar(120)
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  @@unique([suspectId, caseId], map: "spsuspectcase_uidx")
+  @@index([caseId], map: "spsuspectcase_case_idx")
+  @@map("smart_police_suspect_cases")
+}
 model SmartPoliceCase {
   id                     String                         @id @default(cuid())
   ownerUserId            String                         @map("owner_user_id") @db.VarChar(191)
@@ -7062,6 +7265,9 @@ model SmartPoliceCase {
   @@index([ownerUserId, status, updatedAt], map: "spcase_owner_status_idx")
   @@index([investigatorOfficerId], map: "spcase_officer_idx")
   @@map("smart_police_cases")
+  suspectLinks   SmartPoliceSuspectCase[]
+  investigationLogs SmartPoliceInvestigationLog[]
+  investigationReports SmartPoliceInvestigationReport[]
 }
 
 model SmartPoliceParty {

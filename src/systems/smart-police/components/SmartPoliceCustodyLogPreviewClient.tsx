@@ -10,11 +10,12 @@ import {
 } from "@/lib/smart-police/form-templates/custody-log";
 import { OfficialCustodyLogDocument } from "@/systems/smart-police/components/OfficialCustodyLogSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPoliceCustodyLogPreviewClient() {
+export function SmartPoliceCustodyLogPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [fields, setFields] = useState<CustodyLogFields>(() => createEmptyCustodyLogFields());
   const [pageIndex, setPageIndex] = useState(0);
   const [pageCount, setPageCount] = useState(2);
@@ -68,6 +69,11 @@ export function SmartPoliceCustodyLogPreviewClient() {
             </button>
           ))}
         </nav>
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={fields}
+          onFilled={setFields}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

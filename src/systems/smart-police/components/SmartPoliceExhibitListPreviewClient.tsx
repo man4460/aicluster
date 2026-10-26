@@ -14,11 +14,12 @@ import {
 import type { PropertyListRow } from "@/lib/smart-police/form-templates/property-list";
 import { OfficialExhibitListDocument } from "@/systems/smart-police/components/OfficialExhibitListSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPoliceExhibitListPreviewClient() {
+export function SmartPoliceExhibitListPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [header, setHeader] = useState<ExhibitListHeader>(() => createEmptyExhibitListHeader());
   const [rows, setRows] = useState<PropertyListRow[]>(() => createDefaultExhibitListRows());
   const [pageIndex, setPageIndex] = useState(0);
@@ -89,6 +90,11 @@ export function SmartPoliceExhibitListPreviewClient() {
             ลบแถวสุดท้าย
           </button>
         ) : null}
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={header}
+          onFilled={setHeader}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

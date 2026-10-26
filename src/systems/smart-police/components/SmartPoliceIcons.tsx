@@ -15,6 +15,16 @@ export function IconSpCase({ className }: { className?: string }) {
   );
 }
 
+export function IconSpInvestigation({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M16 16l4.5 4.5" strokeLinecap="round" />
+      <path d="M8.5 11h5M11 8.5v5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconSpTemplate({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>

@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import {
   IconSpCase,
   IconSpForm,
+  IconSpInvestigation,
   IconSpHome,
   IconSpReport,
   IconSpSettings,
@@ -25,6 +26,7 @@ import {
 function dockIcon(key: SmartPoliceMainKey) {
   if (key === "overview") return IconSpHome;
   if (key === "cases") return IconSpCase;
+  if (key === "investigation") return IconSpInvestigation;
   if (key === "forms") return IconSpForm;
   if (key === "templates") return IconSpTemplate;
   if (key === "reports") return IconSpReport;
@@ -37,7 +39,7 @@ export function SmartPoliceMobileDock() {
 
   return (
     <AppMobileDockShell ariaLabel="เมนูล่าง Smart Police">
-      <ul className={cn(appMobileDockGridClass, "grid-cols-6")}>
+      <ul className={cn(appMobileDockGridClass, "grid-cols-7")}>
         {smartPoliceMainMenuItems.map((item) => {
           const active = activeMain === item.key;
           const Icon = dockIcon(item.key);

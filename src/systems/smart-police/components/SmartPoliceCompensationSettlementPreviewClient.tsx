@@ -1,5 +1,6 @@
 "use client";
 
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useState } from "react";
@@ -27,7 +28,7 @@ const OfficialCompensationSettlementDocument = dynamic(
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPoliceCompensationSettlementPreviewClient() {
+export function SmartPoliceCompensationSettlementPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [fields, setFields] = useState<CompensationSettlementFields>(() =>
     createEmptyCompensationSettlementFields(),
   );
@@ -56,6 +57,7 @@ export function SmartPoliceCompensationSettlementPreviewClient() {
         <p className="mr-1 min-w-0 truncate text-xs font-bold sm:text-sm" title={COMPENSATION_SETTLEMENT_FORM_TITLE}>
           {COMPENSATION_SETTLEMENT_FORM_TITLE}
         </p>
+        <SmartPoliceCaseFillBar caseId={caseId} fields={fields} onFilled={setFields} />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

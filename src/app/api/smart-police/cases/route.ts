@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireModulePage } from "@/lib/modules/guard";
+import type { SmartPoliceCustodyMode } from "@/generated/prisma/enums";
 import { SMART_POLICE_MODULE_SLUG } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { withSmartPoliceOwner } from "@/lib/smart-police/api-route";
 import { getOrCreateSmartPoliceProfile } from "@/lib/smart-police/api-owner";
 import { nextSmartPoliceCaseNumber } from "@/lib/smart-police/case-number";
 import { generateSmartPoliceDocs } from "@/lib/smart-police/generate-docs";
+import { ensureSmartPoliceCasePresets } from "@/lib/smart-police/case-presets/ensure-builtin";
+import { SMART_POLICE_OFFICIAL_FORM_TEMPLATES } from "@/lib/smart-police/form-templates/official-form-catalog";
 import { mapSmartPoliceCaseDetail, mapSmartPoliceCaseListItem } from "@/lib/smart-police/serialize";
 import { appOriginFromRequest } from "@/lib/smart-police/word-file";
 import { bangkokDateKey, formatBangkokTimeHm } from "@/lib/time/bangkok";
@@ -174,19 +177,59 @@ export async function POST(req: Request) {
     }
   }
 
+  // แม่แบบตั้งต้นคดี (ไม่บังคับ): เติมข้อหา/ศาล/วิธีควบคุมตัว + สร้างรายการเอกสารตั้งต้น
+  let preset: {
+    defaultChargeText: string;
+    defaultLawRefs: string | null;
+    defaultCourtType: string | null;
+    defaultCustodyMode: string | null;
+    formSlugs: string;
+    caseType: string;
+  } | null = null;
+  const presetId = typeof body.presetId === "string" ? body.presetId.trim() : "";
+  const presetKey = typeof body.presetKey === "string" ? body.presetKey.trim() : "";
+  if (presetId || presetKey) {
+    await ensureSmartPoliceCasePresets(gate.ctx.ownerUserId);
+    preset = await prisma.smartPoliceCasePreset.findFirst({
+      where: {
+        ownerUserId: gate.ctx.ownerUserId,
+        ...(presetId ? { id: presetId } : { key: presetKey }),
+      },
+      select: {
+        defaultChargeText: true,
+        defaultLawRefs: true,
+        defaultCourtType: true,
+        defaultCustodyMode: true,
+        formSlugs: true,
+        caseType: true,
+      },
+    });
+    if (!preset) {
+      return NextResponse.json({ error: "ไม่พบแม่แบบคดี" }, { status: 404 });
+    }
+  }
+
+  const resolvedChargeText = chargeText ?? preset?.defaultChargeText ?? null;
+  const resolvedLawRefs = lawRefs ?? preset?.defaultLawRefs ?? null;
+
   const created = await prisma.smartPoliceCase.create({
     data: {
       ownerUserId: gate.ctx.ownerUserId,
       caseNumber,
       title,
-      caseType: typeof body.caseType === "string" ? body.caseType.trim() || "คดีอาญา" : "คดีอาญา",
+      caseType:
+        (typeof body.caseType === "string" ? body.caseType.trim() : "") ||
+        preset?.caseType ||
+        "คดีอาญา",
+      courtType: preset?.defaultCourtType ?? null,
+      custodyMode: (preset?.defaultCustodyMode ?? null) as SmartPoliceCustodyMode | null,
       status: "OPEN",
       priority,
       incidentAt: incidentAt && !Number.isNaN(incidentAt.getTime()) ? incidentAt : null,
       incidentPlace: typeof body.incidentPlace === "string" ? body.incidentPlace.trim() || null : null,
       summary: typeof body.summary === "string" ? body.summary.trim() || null : null,
-      chargeText,
-      lawRefs,
+      chargeText: resolvedChargeText,
+      lawRefs: resolvedLawRefs,
       receivedAt,
       receivedTimeHm,
       parties:
@@ -217,6 +260,34 @@ export async function POST(req: Request) {
     },
     include: CASE_DETAIL_INCLUDE,
   });
+
+  // สร้างรายการเอกสารตั้งต้นตาม preset (title ตามแคตตาล็อกฟอร์ม, content ว่างให้กรอกในหน้า preview)
+  if (preset) {
+    try {
+      const slugs = JSON.parse(preset.formSlugs) as string[];
+      const bySlug = new Map(
+        SMART_POLICE_OFFICIAL_FORM_TEMPLATES.map((t) => [t.slug as string, t]),
+      );
+      const rows = slugs
+        .map((slug, idx) => {
+          const meta = bySlug.get(slug);
+          if (!meta) return null;
+          return {
+            caseId: created.id,
+            kind: "OTHER" as const,
+            title: meta.title,
+            content: "",
+            sortOrder: idx,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => Boolean(r));
+      if (rows.length > 0) {
+        await prisma.smartPoliceDocument.createMany({ data: rows });
+      }
+    } catch {
+      // คดีถูกสร้างแล้ว — สร้างเอกสารซ้ำจาก checklist ได้
+    }
+  }
 
   if (bootstrap && body.generateDay1 !== false) {
     try {

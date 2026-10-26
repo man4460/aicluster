@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { SMART_POLICE_BUILTIN_CHARGES } from "@/lib/smart-police/charge-catalog-seed";
+import { ensureSmartPoliceCasePresets } from "@/lib/smart-police/case-presets/ensure-builtin";
 import { SMART_POLICE_BUILTIN_TEMPLATES } from "@/lib/smart-police/default-templates";
 import type { SmartPoliceProfileDto } from "@/lib/smart-police/types";
 
@@ -153,6 +154,7 @@ export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
   if (existing) {
     await ensureSmartPoliceBuiltinTemplates(ownerUserId);
     await ensureSmartPoliceBuiltinCharges(ownerUserId);
+    await ensureSmartPoliceCasePresets(ownerUserId);
     return mapSmartPoliceProfile(existing);
   }
   const created = await prisma.smartPoliceProfile.create({
@@ -164,5 +166,6 @@ export async function getOrCreateSmartPoliceProfile(ownerUserId: string) {
   });
   await ensureSmartPoliceBuiltinTemplates(ownerUserId);
   await ensureSmartPoliceBuiltinCharges(ownerUserId);
+  await ensureSmartPoliceCasePresets(ownerUserId);
   return mapSmartPoliceProfile(created);
 }

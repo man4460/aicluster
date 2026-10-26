@@ -19,6 +19,7 @@ import {
 } from "@/lib/smart-police/form-templates/sheet-layout";
 import { OfficialArrestWarrantDocument } from "@/systems/smart-police/components/OfficialArrestWarrantSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const SLUG = "arrest-warrant";
 
@@ -35,7 +36,7 @@ function newLineId(): string {
   return `ln-${Date.now().toString(36)}-${lineSeq}`;
 }
 
-export function SmartPoliceArrestWarrantPreviewClient() {
+export function SmartPoliceArrestWarrantPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [fields, setFields] = useState<ArrestWarrantFields>(() => createEmptyArrestWarrantFields());
   const [layout, setLayout] = useState<SheetLayout>(() => emptySheetLayout());
   const [edit, setEdit] = useState(false);
@@ -281,6 +282,11 @@ export function SmartPoliceArrestWarrantPreviewClient() {
           รีเซ็ต
         </button>
         {hint ? <span className="text-[11px] text-emerald-300">{hint}</span> : null}
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={fields}
+          onFilled={setFields}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

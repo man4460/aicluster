@@ -1,5 +1,7 @@
 "use client";
 
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
+
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
@@ -26,7 +28,13 @@ const barBtnClass =
  * ดู/ทดลองพิมพ์บนแม่แบบคำให้การ — จากหน้า /templates
  * พิมพ์ล้นหน้าแล้วไหลไปหน้าถัดไป / ต่อใบต่อให้อัตโนมัติ
  */
-export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: StatementTemplateSlug }) {
+export function SmartPoliceStatementTemplatePreviewClient({
+  slug,
+  caseId,
+}: {
+  slug: StatementTemplateSlug;
+  caseId?: string;
+}) {
   const meta = getStatementTemplateMeta(slug);
   const [header, setHeader] = useState<StatementHeaderFields>(() =>
     normalizeStatementHeader({
@@ -110,6 +118,13 @@ export function SmartPoliceStatementTemplatePreviewClient({ slug }: { slug: Stat
             </button>
           ) : null}
         </nav>
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={header as unknown as Record<string, unknown>}
+          onFilled={(next) =>
+            setHeader((h) => ({ ...h, ...(next as unknown as Partial<StatementHeaderFields>) }))
+          }
+        />
         <Link
           href="/dashboard/smart-police/cases"
           className={cn(smartPolicePrimaryButtonClass, "ml-auto")}

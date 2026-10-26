@@ -14,7 +14,7 @@ import {
   SMART_POLICE_CASE_STATUS_LABEL,
   SMART_POLICE_CASE_TYPES,
 } from "@/lib/smart-police/types";
-import type { SmartPoliceCaseListItem } from "@/lib/smart-police/types";
+import type { SmartPoliceCaseListItem, SmartPoliceCasePresetDto } from "@/lib/smart-police/types";
 import { bangkokDateKey, formatBangkokTimeHm } from "@/lib/time/bangkok";
 import { SmartPoliceChargePickerModal } from "@/systems/smart-police/components/SmartPoliceChargePickerModal";
 import { IconSpPlus } from "@/systems/smart-police/components/SmartPoliceIcons";
@@ -61,6 +61,9 @@ type WizardParty = {
 
 type WizardState = {
   step: number;
+  /** แม่แบบตั้งต้นคดีที่เลือก (ขั้น 1) — ใช้เป็นต้นแบบฟอร์ม/ข้อหา/เอกสาร */
+  presetKey: string | null;
+  presetTitle: string;
   caseType: string;
   title: string;
   incidentPlace: string;
@@ -75,6 +78,8 @@ type WizardState = {
 
 const emptyWizard = (): WizardState => ({
   step: 0,
+  presetKey: null,
+  presetTitle: "",
   caseType: SMART_POLICE_CASE_TYPES[0] as string,
   title: "",
   incidentPlace: "",
@@ -96,11 +101,14 @@ const emptyWizard = (): WizardState => ({
 });
 
 const WIZARD_TITLES = [
-  "ขั้น 1 · ข้อมูลคดี",
-  "ขั้น 2 · ข้อหา",
-  "ขั้น 3 · บุคคลหลัก",
-  "ขั้น 4 · ยืนยัน",
+  "ขั้น 1 · เลือกแม่แบบคดี",
+  "ขั้น 2 · ข้อมูลคดี",
+  "ขั้น 3 · ข้อหา",
+  "ขั้น 4 · บุคคลหลัก",
+  "ขั้น 5 · ยืนยัน",
 ];
+
+const WIZARD_STEPS = [0, 1, 2, 3, 4];
 
 type CaseStatusFilter = "" | SmartPoliceCaseStatus | "active";
 type CasePriorityFilter = "" | SmartPoliceCasePriority | "elevated";
@@ -121,6 +129,8 @@ export function SmartPoliceCasesClient() {
   const [error, setError] = useState<string | null>(null);
   const [wizard, setWizard] = useState<WizardState>(emptyWizard);
   const [chargePickerOpen, setChargePickerOpen] = useState(false);
+  const [presets, setPresets] = useState<SmartPoliceCasePresetDto[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(false);
 
   const filtersActive = Boolean(q.trim() || status || priority || prosecutor || overdueOnly);
 
@@ -144,6 +154,23 @@ export function SmartPoliceCasesClient() {
       setLoading(false);
     })();
   }, [refresh]);
+
+  const loadPresets = useCallback(async () => {
+    setPresetsLoading(true);
+    try {
+      const res = await fetch("/api/smart-police/case-presets", { cache: "no-store" });
+      if (res.ok) {
+        const data = (await res.json()) as { presets: SmartPoliceCasePresetDto[] };
+        setPresets(data.presets ?? []);
+      }
+    } finally {
+      setPresetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen && presets.length === 0) void loadPresets();
+  }, [modalOpen, presets.length, loadPresets]);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
@@ -174,13 +201,30 @@ export function SmartPoliceCasesClient() {
   }, [searchParams]);
 
   const canNext = useMemo(() => {
-    if (wizard.step === 0) return Boolean(wizard.title.trim());
-    if (wizard.step === 1) return Boolean(wizard.chargeText.trim());
-    if (wizard.step === 2) {
+    if (wizard.step === 0) return Boolean(wizard.presetKey);
+    if (wizard.step === 1) return Boolean(wizard.title.trim());
+    if (wizard.step === 2) return Boolean(wizard.chargeText.trim());
+    if (wizard.step === 3) {
       return Boolean(wizard.complainant.fullName.trim() && wizard.suspect.fullName.trim());
     }
     return true;
   }, [wizard]);
+
+  const selectedPreset = useMemo(
+    () => presets.find((p) => p.key === wizard.presetKey) ?? null,
+    [presets, wizard.presetKey],
+  );
+
+  function applyPreset(preset: SmartPoliceCasePresetDto) {
+    setWizard((w) => ({
+      ...w,
+      presetKey: preset.key,
+      presetTitle: preset.title,
+      caseType: preset.caseType,
+      chargeText: preset.defaultChargeText,
+      lawRefs: preset.defaultLawRefs ?? "",
+    }));
+  }
 
   function closeWizard() {
     setModalOpen(false);
@@ -219,6 +263,7 @@ export function SmartPoliceCasesClient() {
       body: JSON.stringify({
         bootstrap: true,
         generateDay1: true,
+        presetKey: wizard.presetKey,
         title,
         caseType: wizard.caseType,
         incidentPlace: wizard.incidentPlace,
@@ -447,7 +492,7 @@ export function SmartPoliceCasesClient() {
         mobileCentered
         size="lg"
         footer={
-          wizard.step < 3 ? (
+          wizard.step < 4 ? (
             <FormModalFooterActions
               onCancel={
                 wizard.step === 0
@@ -461,7 +506,7 @@ export function SmartPoliceCasesClient() {
             />
           ) : (
             <FormModalFooterActions
-              onCancel={() => setWizard((w) => ({ ...w, step: 2 }))}
+              onCancel={() => setWizard((w) => ({ ...w, step: 3 }))}
               cancelLabel="ย้อนกลับ"
               onSubmit={() => void submitWizard()}
               submitLabel={saving ? "กำลังสร้าง…" : "สร้างสำนวน + เอกสารวันแรก"}
@@ -473,7 +518,7 @@ export function SmartPoliceCasesClient() {
       >
         <div className={smartPoliceModalFormClass}>
           <div className="flex gap-1" aria-hidden>
-            {[0, 1, 2, 3].map((i) => (
+            {WIZARD_STEPS.map((i) => (
               <span
                 key={i}
                 className={cn(
@@ -486,7 +531,67 @@ export function SmartPoliceCasesClient() {
 
           {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
 
-          {wizard.step === 0 ? (
+                    {wizard.step === 0 ? (
+            <div className="space-y-2">
+              <p className={smartPoliceFormSectionTitleClass}>เลือกแม่แบบคดี</p>
+              <p className={smartPoliceMutedTextClass}>
+                ประเภทคดี + ข้อหาตั้งต้น + ชุดเอกสารที่ต้องทำ (มาจากฐานคดีเดิมของสถานี)
+              </p>
+              {presetsLoading ? (
+                <p className={smartPoliceMutedTextClass}>กำลังโหลดแม่แบบ…</p>
+              ) : presets.length === 0 ? (
+                <p className={smartPoliceMutedTextClass}>ยังไม่มีแม่แบบคดีในระบบ</p>
+              ) : (
+                <ul className="flex max-h-[46vh] flex-col gap-2 overflow-y-auto pr-1">
+                  {presets.map((preset) => {
+                    const active = preset.key === wizard.presetKey;
+                    return (
+                      <li key={preset.id}>
+                        <button
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => applyPreset(preset)}
+                          className={cn(
+                            "w-full rounded-lg border p-3 text-left transition",
+                            active
+                              ? "border-[#5b61ff] bg-[#f2f3ff] shadow-sm"
+                              : "border-slate-200 bg-white hover:border-[#a9aefc]",
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold text-[#1e1b4b]">{preset.caseType}</span>
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-[#4d47b6]">
+                              {preset.formSlugs.length} เอกสาร
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[13px] text-[#3b3864]">
+                            {preset.defaultChargeText}
+                          </p>
+                          {preset.defaultLawRefs ? (
+                            <p className="mt-1 line-clamp-1 text-[11px] text-[#66638c]">
+                              {preset.defaultLawRefs}
+                            </p>
+                          ) : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {selectedPreset ? (
+                <div className="rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+                  <p className="text-[12px] font-bold text-[#4d47b6]">
+                    ชุดเอกสารตั้งต้น ({selectedPreset.formSlugs.length})
+                  </p>
+                  <p className="mt-1 line-clamp-3 text-[12px] text-[#3b3864]">
+                    {selectedPreset.formSlugs.join(" · ")}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {wizard.step === 1 ? (
             <div className="space-y-2">
               <p className={smartPoliceFormSectionTitleClass}>ข้อมูลคดี</p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -564,7 +669,7 @@ export function SmartPoliceCasesClient() {
             </div>
           ) : null}
 
-          {wizard.step === 1 ? (
+          {wizard.step === 2 ? (
             <div className="space-y-2">
               <p className={smartPoliceFormSectionTitleClass}>ข้อหา</p>
               <label className={smartPoliceLabelClass}>
@@ -596,7 +701,7 @@ export function SmartPoliceCasesClient() {
             </div>
           ) : null}
 
-          {wizard.step === 2 ? (
+          {wizard.step === 3 ? (
             <div className="space-y-3">
               <p className={smartPoliceFormSectionTitleClass}>บุคคลหลัก</p>
               <p className={smartPoliceMutedTextClass}>อย่างน้อยผู้กล่าวหาและผู้ต้องหา</p>
@@ -669,7 +774,7 @@ export function SmartPoliceCasesClient() {
             </div>
           ) : null}
 
-          {wizard.step === 3 ? (
+          {wizard.step === 4 ? (
             <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3 text-sm text-[#1e1b4b]">
               <p>
                 <span className="font-bold text-[#4d47b6]">ประเภท:</span> {wizard.caseType}
@@ -691,8 +796,15 @@ export function SmartPoliceCasesClient() {
               <p>
                 <span className="font-bold text-[#4d47b6]">ผู้ต้องหา:</span> {wizard.suspect.fullName}
               </p>
+              {selectedPreset ? (
+                <p>
+                  <span className="font-bold text-[#4d47b6]">แม่แบบ:</span> {selectedPreset.key} ·{" "}
+                  {selectedPreset.formSlugs.length} เอกสารตั้งต้น
+                </p>
+              ) : null}
               <p className={smartPoliceMutedTextClass}>
-                ระบบจะสร้างคดี + คำให้การ/บันทึก/บัญชีของกลาง (วันแรก) แล้วเปิดแท็บเอกสาร
+                ระบบจะสร้างคดี + เอกสารตั้งต้นตามแม่แบบ + คำให้การ/บันทึก/บัญชีของกลาง (วันแรก)
+                แล้วเปิดแท็บเอกสาร
               </p>
             </div>
           ) : null}

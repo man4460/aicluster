@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import {
   IconSpCase,
   IconSpForm,
+  IconSpInvestigation,
   IconSpHome,
   IconSpReport,
   IconSpSettings,
@@ -28,6 +29,7 @@ import {
 function navIcon(key: SmartPoliceMainKey) {
   if (key === "overview") return IconSpHome;
   if (key === "cases") return IconSpCase;
+  if (key === "investigation") return IconSpInvestigation;
   if (key === "forms") return IconSpForm;
   if (key === "templates") return IconSpTemplate;
   if (key === "reports") return IconSpReport;

@@ -10,11 +10,12 @@ import {
 } from "@/lib/smart-police/form-templates/victim-rights";
 import { OfficialVictimRightsDocument } from "@/systems/smart-police/components/OfficialVictimRightsSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPoliceVictimRightsPreviewClient() {
+export function SmartPoliceVictimRightsPreviewClient({ caseId }: { caseId?: string } = {}) {
   const [fields, setFields] = useState<VictimRightsFields>(() => createEmptyVictimRightsFields());
   const [pageIndex, setPageIndex] = useState(0);
 
@@ -62,6 +63,11 @@ export function SmartPoliceVictimRightsPreviewClient() {
             </button>
           ))}
         </nav>
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={fields}
+          onFilled={setFields}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

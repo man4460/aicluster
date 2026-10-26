@@ -40,10 +40,13 @@ import type { StatementTemplateSlug } from "@/lib/smart-police/form-templates";
 
 export default async function SmartPoliceOfficialFormPreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ caseId?: string }>;
 }) {
   const { slug } = await params;
+  const { caseId } = await searchParams;
   const meta = getOfficialFormTemplateMeta(slug);
   if (!meta) notFound();
   if (isStatementFormSlug(slug)) {
@@ -134,7 +137,7 @@ export default async function SmartPoliceOfficialFormPreviewPage({
     const { SmartPoliceCaseCoverPreviewClient } = await import(
       "@/systems/smart-police/components/SmartPoliceCaseCoverPreviewClient"
     );
-    return <SmartPoliceCaseCoverPreviewClient />;
+    return <SmartPoliceCaseCoverPreviewClient caseId={caseId} />;
   }
   if (isInquiryReportFormSlug(slug)) {
     const { SmartPoliceInquiryReportPreviewClient } = await import(
@@ -158,7 +161,7 @@ export default async function SmartPoliceOfficialFormPreviewPage({
     const { SmartPoliceSceneInspectPreviewClient } = await import(
       "@/systems/smart-police/components/SmartPoliceSceneInspectPreviewClient"
     );
-    return <SmartPoliceSceneInspectPreviewClient />;
+    return <SmartPoliceSceneInspectPreviewClient caseId={caseId} />;
   }
   if (isCaseProgressFormSlug(slug)) {
     const { SmartPoliceCaseProgressPreviewClient } = await import(

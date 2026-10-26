@@ -262,82 +262,103 @@ export function OfficialDetentionRequestDocument({
           การแจ้งสิทธิแก่ผู้ต้องหา
         </Lbl>
 
-        <CheckBox x={24.5} y={37.8} checked={fields.stageArrest} onToggle={toggle("stageArrest")} label="ชั้นจับกุม" />
-        <CheckBox x={24.5} y={46.6} checked={fields.stageReceive} onToggle={toggle("stageReceive")} label="ชั้นรับตัวผู้ถูกจับ" />
-        <CheckBox x={24.5} y={55.4} checked={fields.stageInterrogate} onToggle={toggle("stageInterrogate")} label="ชั้นสอบปากคำ" />
+        <CheckBox x={30.0} y={37.8} checked={fields.stageArrest} onToggle={toggle("stageArrest")} label="ชั้นจับกุม" />
+        <CheckBox x={30.0} y={46.6} checked={fields.stageReceive} onToggle={toggle("stageReceive")} label="ชั้นรับตัวผู้ถูกจับ" />
+        <CheckBox x={30.0} y={55.4} checked={fields.stageInterrogate} onToggle={toggle("stageInterrogate")} label="ชั้นสอบปากคำ" />
 
-        <Lbl x={24.5} y={64.2}>
+        <Lbl x={36.4} y={64.2}>
           ในชั้นสอบสวนผู้ต้องหาให้การ
         </Lbl>
-        <Line x0={72.00} x1={193.38} y={64.2} value={fields.interrogationStatement} onChange={(v) => onChange("interrogationStatement", v)} aria="ให้การชั้นสอบสวน" />
+        <Line x0={86.00} x1={193.38} y={64.2} value={fields.interrogationStatement} onChange={(v) => onChange("interrogationStatement", v)} aria="ให้การชั้นสอบสวน" />
 
-        <Lbl x={24.5} y={73.0} nowrap={false}>
-          ข้อ ๒. พนักงานสอบสวนได้สอบสวนเนื้อหื่นแล้วเห็นว่า
+        <Lbl x={36.4} y={73.0} nowrap={false} w={155}>
+          ข้อ ๒. พนักงานสอบสวนได้สอบสวนเบื้องต้นแล้วเห็นว่า
         </Lbl>
 
-        <CheckBox x={24.5} y={81.8} checked={fields.genuineSuspect} onToggle={toggle("genuineSuspect")} label="ผู้ต้องหาที่ถูกจับเป็นบุคคลผู้ถูกกล่าวหาจริง" />
+        <CheckBox x={30.0} y={81.8} checked={fields.genuineSuspect} onToggle={toggle("genuineSuspect")} label="ผู้ต้องหาที่ถูกจับเป็นบุคคลผู้ถูกกล่าวหาจริง" />
 
-        <CheckBox x={24.5} y={90.6} checked={fields.arrestByWarrant} onToggle={toggle("arrestByWarrant")} label="เป็นการจับกุมตามหมายจับของศาล" />
-        <Line x0={92.00} x1={145.0} y={90.6} value={fields.warrantNo} onChange={(v) => onChange("warrantNo", v)} aria="หมายจับเลขที่" />
-        <Lbl x={148.0} y={90.6}>
-          เลขที่
-        </Lbl>
-        <Line x0={163.00} x1={193.38} y={90.6} value={fields.warrantNoRef} onChange={(v) => onChange("warrantNoRef", v)} aria="หมายจับเลขที่อ้าง" />
+        <CheckBox x={30.0} y={90.6} checked={fields.arrestByWarrant} onToggle={toggle("arrestByWarrant")} label="เป็นการจับกุมตามหมายจับของศาล" />
+        <Line x0={36.40} x1={193.38} y={90.6} value={fields.warrantNo} onChange={(v) => onChange("warrantNo", v)} aria="หมายจับเลขที่" />
 
-        <Lbl x={30.0} y={99.4}>
+        <Lbl x={36.4} y={99.4}>
           ลงวันที่
         </Lbl>
-        <Line x0={48.00} x1={100.0} y={99.4} value={fields.warrantDate} onChange={(v) => onChange("warrantDate", v)} aria="หมายจับลงวันที่" />
+        <Line x0={36.40} x1={100.0} y={99.4} value={fields.warrantDate} onChange={(v) => onChange("warrantDate", v)} aria="หมายจับลงวันที่" />
 
-        <CheckBox x={24.5} y={108.2} checked={fields.arrestNoWarrant} onToggle={toggle("arrestNoWarrant")} label="เป็นการจับกุมโดยไม่มีหมายจับ ตาม ป.วิ.อ. มาตรา ๗๘" />
-        <Line x0={128.00} x1={193.38} y={108.2} value={fields.noWarrantRef} onChange={(v) => onChange("noWarrantRef", v)} aria="ไม่มีหมายจับอ้าง" />
+        <CheckBox x={30.0} y={108.2} checked={fields.arrestNoWarrant} onToggle={toggle("arrestNoWarrant")} label="เป็นการจับกุมโดยไม่มีหมายจับ ตาม ป.วิ.อ. มาตรา ๗๘" />
 
-        <Lbl x={24.5} y={117.0}>
-          เอกสารแนบด้วยคำร้อง
+        <Lbl x={36.4} y={117.0} bold>
+          เอกสารแนบท้ายคำร้อง
         </Lbl>
 
-        <CheckBox x={24.5} y={125.8} checked={fields.docArrestRecord} onToggle={toggle("docArrestRecord")} label="สำเนาภาพถ่ายบันทึกการจับกุมของเจ้าพนักงานผู้จับ" />
-        <CheckBox x={24.5} y={134.6} checked={fields.docWarrantCopy} onToggle={toggle("docWarrantCopy")} label="สำเนาหมายจับ" />
-        <CheckBox x={24.5} y={143.4} checked={fields.docSignature} onToggle={toggle("docSignature")} label="สำเนาภาพถ่ายผู้ต้องหารับรองสำเนาถูกต้องโดยเจ้าพนักงานผู้จับ" />
-        <CheckBox x={24.5} y={152.2} checked={fields.docIdCard} onToggle={toggle("docIdCard")} label="สำเนาภาพถ่ายบัตรประจำตัวประชาชน/สำเนาทะเบียนบ้านผู้ต้องหา" />
+        <CheckBox x={30.0} y={125.8} checked={fields.docArrestRecord} onToggle={toggle("docArrestRecord")} label="สำเนาภาพถ่ายบันทึกการจับกุมของเจ้าพนักงานผู้จับ" />
+        <CheckBox x={30.0} y={134.6} checked={fields.docWarrantCopy} onToggle={toggle("docWarrantCopy")} label="สำเนาหมายจับ" />
+        <CheckBox x={30.0} y={143.4} checked={fields.docSignature} onToggle={toggle("docSignature")} label="สำเนาภาพถ่ายผู้ต้องหารับรองสำเนาถูกต้องโดยเจ้าพนักงานผู้จับ" />
 
-        <CheckBox x={24.5} y={161.0} checked={fields.docEvidence} onToggle={toggle("docEvidence")} label="พยานหลักฐานที่แสดงว่า ผู้ต้องหาได้กระทำความผิด ได้แก่" />
-        <Line x0={145.00} x1={193.38} y={161.0} value={fields.evidenceDetail} onChange={(v) => onChange("evidenceDetail", v)} aria="พยานหลักฐานได้แก่" />
-        <Lbl x={30.0} y={169.8} nowrap={false}>
-          (ผลการตรวจพิสูจน์ทางวิทยาศาสตร์ ภาพถ่ายที่เกี่ยวข้อง หรือพยานหลักฐานสำคัญอื่นๆ)
-        </Lbl>
+        <CheckBox x={30.0} y={152.2} checked={fields.docIdCard} onToggle={toggle("docIdCard")} label="สำเนาภาพถ่ายบัตรประจำตัวประชาชน/สำเนาทะเบียนบ้านผู้ต้องหา" />
 
-        <Lbl x={24.5} y={178.6}>
+        <CheckBox x={30.0} y={161.0} checked={fields.docEvidence} onToggle={toggle("docEvidence")} label="พยานหลักฐานที่แสดงว่าผู้ต้องหาได้กระทำความผิด ได้แก่" />
+        <AutoLinedField
+          k="det-evidence-detail"
+          aria="พยานหลักฐานได้แก่"
+          value={fields.evidenceDetail}
+          onChange={(v) => onChange("evidenceDetail", v)}
+          left={24.5}
+          top={161.0}
+          width={168.88}
+          minLines={2}
+          indent={76.6}
+          firstLeft={113.0}
+          firstWidth={80.38}
+          restLeft={24.5}
+          restWidth={168.88}
+        />
+
+        <Lbl x={36.4} y={178.6} nowrap={false}>
           และมีเหตุอันควรเชื่อว่า
         </Lbl>
 
         <CheckBox x={30.0} y={187.4} checked={fields.escapeReason} onToggle={toggle("escapeReason")} label="ผู้ต้องหาจะหลบหนี เนื่องจาก" />
-        <Line x0={90.00} x1={193.38} y={187.4} value={fields.escapeBecause} onChange={(v) => onChange("escapeBecause", v)} aria="หลบหนีเนื่องจาก" />
+        <Line x0={98.50} x1={193.38} y={187.4} value={fields.escapeBecause} onChange={(v) => onChange("escapeBecause", v)} aria="หลบหนีเนื่องจาก" />
 
         <CheckBox x={30.0} y={196.2} checked={fields.tamperReason} onToggle={toggle("tamperReason")} label="ผู้ต้องหาจะไปยุ่งเหยิงกับพยานหลักฐาน เนื่องจาก" />
-        <Line x0={122.00} x1={193.38} y={196.2} value={fields.tamperBecause} onChange={(v) => onChange("tamperBecause", v)} aria="ยุ่งเหยิงเนื่องจาก" />
+        <Line x0={123.50} x1={193.38} y={196.2} value={fields.tamperBecause} onChange={(v) => onChange("tamperBecause", v)} aria="ยุ่งเหยิงเนื่องจาก" />
 
         <CheckBox x={30.0} y={205.0} checked={fields.dangerReason} onToggle={toggle("dangerReason")} label="ผู้ต้องหาจะก่อเหตุอันตราย หรือความเสียหาย เนื่องจาก" />
-        <Line x0={129.00} x1={193.38} y={205.0} value={fields.dangerBecause} onChange={(v) => onChange("dangerBecause", v)} aria="ก่อเหตุอันตรายเนื่องจาก" />
+        <Line x0={134.30} x1={193.38} y={205.0} value={fields.dangerBecause} onChange={(v) => onChange("dangerBecause", v)} aria="ก่อเหตุอันตรายเนื่องจาก" />
 
-        <Lbl x={24.5} y={213.8} nowrap={false}>
+        <Lbl x={36.4} y={213.8} nowrap={false} w={143}>
           ข้อ ๓. พนักงานสอบสวนได้ทำการสอบสวนและควบคุมตัวผู้ต้องหามาจะครบ ๔๘ ชั่วโมงในวันนี้แล้ว
           แต่การสอบสวนยังไม่เสร็จสิ้น เนื่องจาก
         </Lbl>
 
         <CheckBox x={30.0} y={231.4} checked={fields.anotherWitness} onToggle={toggle("anotherWitness")} label="ต้องสอบสวนพยานอีก" />
-        <Line x0={74.00} x1={95.0} y={231.4} value={fields.witnessCount} onChange={(v) => onChange("witnessCount", v)} aria="จำนวนพยาน" />
-        <Lbl x={96.0} y={231.4} nowrap={false}>
-          ปาก (ให้ระบุความเกี่ยวข้องกับคดี เช่น เป็นประจักษ์พยาน, พยานแวดล้อมกรณี)
+        <Line x0={36.40} x1={95.0} y={231.4} value={fields.witnessCount} onChange={(v) => onChange("witnessCount", v)} aria="จำนวนพยาน" />
+        <Lbl x={96.0} y={231.4}>
+          ปาก
         </Lbl>
+        <AutoLinedField
+          k="det-witness-note"
+          aria="รายละเอียดพยาน"
+          value={fields.witnessNote}
+          onChange={(v) => onChange("witnessNote", v)}
+          left={24.5}
+          top={231.4}
+          width={168.88}
+          minLines={2}
+          indent={71.5}
+          firstLeft={103.5}
+          firstWidth={76}
+          restLeft={24.5}
+          restWidth={168.88}
+        />
 
         <CheckBox x={30.0} y={240.2} checked={fields.waitEvidence} onToggle={toggle("waitEvidence")} label="รอผลการตรวจพิสูจน์ของกลาง" />
-        <Line x0={92.00} x1={193.38} y={240.2} value={fields.waitEvidenceDetail} onChange={(v) => onChange("waitEvidenceDetail", v)} aria="รอผลพิสูจน์ของกลาง" />
 
         <CheckBox x={30.0} y={249.0} checked={fields.waitFingerprint} onToggle={toggle("waitFingerprint")} label="รอผลการตรวจลายพิมพ์นิ้วมือผู้ต้องหาและประวัติต้องโทษของผู้ต้องหา" />
 
         <CheckBox x={30.0} y={257.8} checked={fields.otherReason} onToggle={toggle("otherReason")} label="อื่น ๆ" />
-        <Line x0={55.00} x1={193.38} y={257.8} value={fields.otherDetail} onChange={(v) => onChange("otherDetail", v)} aria="อื่นๆ" />
+        <Line x0={36.40} x1={179.50} y={257.8} value={fields.otherDetail} onChange={(v) => onChange("otherDetail", v)} aria="อื่นๆ" />
       </Sheet>
     </div>
     </SheetCtx.Provider>

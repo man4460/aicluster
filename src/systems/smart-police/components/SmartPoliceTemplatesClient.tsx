@@ -74,6 +74,8 @@ const TONE_BY_SLUG: Record<string, "violet" | "rose" | "sky" | "amber"> = {
   "arrest-warrant-request": "violet",
   "search-warrant-request": "violet",
   "detention-request": "amber",
+  "detention-round2": "amber",
+  "interesting-case-report": "sky",
 };
 
 type TemplateRow = OfficialFormTemplateMeta & {

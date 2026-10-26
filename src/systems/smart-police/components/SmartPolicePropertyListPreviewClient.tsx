@@ -17,11 +17,18 @@ import {
 } from "@/lib/smart-police/form-templates/property-list";
 import { OfficialPropertyListDocument } from "@/systems/smart-police/components/OfficialPropertyListSheet";
 import { smartPolicePrimaryButtonClass } from "@/systems/smart-police/lib/ui-tokens";
+import { SmartPoliceCaseFillBar } from "@/systems/smart-police/components/SmartPoliceCaseFillBar";
 
 const barBtnClass =
   "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600";
 
-export function SmartPolicePropertyListPreviewClient({ slug }: { slug: PropertyListTemplateSlug }) {
+export function SmartPolicePropertyListPreviewClient({
+  slug,
+  caseId,
+}: {
+  slug: PropertyListTemplateSlug;
+  caseId?: string;
+}) {
   const formTitle = propertyListTitleForSlug(slug);
   const [header, setHeader] = useState<PropertyListHeader>(() => createEmptyPropertyListHeader());
   const [rows, setRows] = useState<PropertyListRow[]>(() => createDefaultPropertyListRows());
@@ -93,6 +100,11 @@ export function SmartPolicePropertyListPreviewClient({ slug }: { slug: PropertyL
             ลบแถวสุดท้าย
           </button>
         ) : null}
+        <SmartPoliceCaseFillBar
+          caseId={caseId}
+          fields={header}
+          onFilled={setHeader}
+        />
         <Link href="/dashboard/smart-police/cases" className={cn(smartPolicePrimaryButtonClass, "ml-auto")}>
           ไปใช้ในคดี
         </Link>

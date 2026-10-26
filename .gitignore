@@ -127,3 +127,5 @@ next-env.d.ts
 # DB backup local config (อาจมี SSH path / password ต้นทาง)
 /scripts/backup-db.env
 !/scripts/backup-db.env.example
+__pycache__/
+*.pyc

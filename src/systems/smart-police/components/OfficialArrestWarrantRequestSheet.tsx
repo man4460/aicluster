@@ -74,7 +74,7 @@ export function OfficialArrestWarrantRequestDocument({
         </Lbl>
         <Line labelX={95.0} label="วันที่" x0={105.0} x1={119.0} y={55.60} value={fields.dateDay} onChange={(v) => onChange("dateDay", v)} aria="วันที่" />
         <Line labelX={119.0} label="เดือน" x0={127.0} x1={141.0} y={55.60} value={fields.dateMonth} onChange={(v) => onChange("dateMonth", v)} aria="เดือน" />
-        <Line labelX={141.0} label="พุทธศักราช" x0={156.0} x1={193.38} y={55.60} value={fields.dateYear} onChange={(v) => onChange("dateYear", v)} aria="พุทธศักราช" />
+        <Line labelX={141.0} label="พุทธศักราช" x0={159.0} x1={193.38} y={55.60} value={fields.dateYear} onChange={(v) => onChange("dateYear", v)} aria="พุทธศักราช" />
 
         <Lbl x={53.5} y={64.40}>
           ผู้พิพากษา
@@ -295,7 +295,7 @@ export function OfficialArrestWarrantRequestDocument({
         <Lbl x={24.5} y={96.40}>
           เป็นการกระทำความผิดฐาน
         </Lbl>
-        <Line x0={63.00} x1={193.38} y={96.40} value={fields.offenseBase} onChange={(v) => onChange("offenseBase", v)} aria="ฐานความผิด" />
+        <Line x0={66.00} x1={193.38} y={96.40} value={fields.offenseBase} onChange={(v) => onChange("offenseBase", v)} aria="ฐานความผิด" />
         <Lbl x={24.5} y={105.20}>
           ตามกฎหมาย
         </Lbl>
